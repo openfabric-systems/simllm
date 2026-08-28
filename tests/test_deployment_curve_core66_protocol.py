@@ -11,6 +11,9 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 READER_PATH = ROOT / "examples/deployment_curve_v1/core66_field_reader.py"
 PROTOCOL_PATH = ROOT / "examples/deployment_curve_v1/core66_reader_protocol.json"
+EP8_EXPECTATIONS_PATH = (
+    ROOT / "examples/deployment_curve_v1/core66_ep8_expectations.json"
+)
 
 
 def _load_reader() -> ModuleType:
@@ -170,6 +173,47 @@ def test_protocol_freezes_feasible_cell_and_publication_gate() -> None:
         "core65_physical_binding_result.json"
     )
     assert protocol["service_multiplier_freeze"] == {
+        "common": "61/4",
+        "dense": 1,
+        "moe": 58,
+        "output": 1,
+        "step": 1,
+    }
+
+
+def test_ep8_expectations_freeze_cell_scheduler_and_survivable_exposure() -> None:
+    expectations = json.loads(EP8_EXPECTATIONS_PATH.read_text(encoding="utf-8"))
+    capture = expectations["capture_freeze"]
+
+    assert expectations["task"] == "CORE-66"
+    assert capture["hardware"] == {
+        "gpu_model": "NVIDIA GH200",
+        "gpus_per_node": 4,
+        "node_count": 2,
+        "rank_count": 8,
+    }
+    assert capture["model"] == {
+        "expert_parallel_width": 8,
+        "logical_experts_per_rank": 4,
+        "physical_expert_slots_per_rank": 4,
+        "routed_expert_total": 32,
+        "weights": "dummy-only",
+    }
+    assert capture["scheduler"] == {
+        "account": "merlin",
+        "cluster": "gmerlin7",
+        "partition": "gh-hourly",
+        "qos": "gpu_hourly",
+        "submission_limit": 1,
+    }
+    assert expectations["comparison_gate"]["never_publish_downward_correction_alone"]
+    assert expectations["disclosure_guard"]["fatal_not_survivable"]["disposition"] == (
+        "the run is void and CORE-66 remains open"
+    )
+    exposure = expectations["disclosure_guard"]["incidental_exposure"]
+    assert exposure["disposition"].startswith("survivable")
+    assert "zero free or fitted parameters" in exposure["reason"]
+    assert expectations["service_multiplier_freeze"] == {
         "common": "61/4",
         "dense": 1,
         "moe": 58,
