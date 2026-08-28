@@ -60,3 +60,22 @@
   A miss publishes its signed non-linearity and registers only the literal
   residual under reserved identifier CORE-63. A second startup failure remains
   a published exact error with CORE-61 open.
+
+### Scope update after the freeze
+
+- Trigger: the completed depth-8 base capture proved that a smaller scheduler
+  cap starts, but its built-in profiler ranges split the requests into groups of
+  eight. Preserving batch 32 therefore requires both the staggered-prompt
+  alignment driver and a read-only scheduler observer for the pinned legacy
+  vLLM runner.
+- Added file family: one task-owned capture driver, one narrow observer hook,
+  one Nsys boundary analyzer and one short Slurm wrapper under
+  `examples/deployment_curve_v1/core61_depth_retry_*`, plus their focused local
+  tests. These remain study harness code and do not enter `simllm` production.
+- Revised task-owned capture and scoring code range: 950 to 1,100 handwritten
+  lines. The upper range includes the Slurm retention and digest wrapper plus
+  explicit fail-closed identity, scheduler, boundary and no-weight checks; the
+  test and documentation ranges remain unchanged.
+- Confidence: medium-high. The same alignment and scheduler fields already ran
+  in the staged repeat-distribution probe; uncertainty is limited to the
+  DeepSeek legacy-runner import point and exact Nsys range resolution.
