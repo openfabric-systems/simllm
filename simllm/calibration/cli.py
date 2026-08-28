@@ -10,10 +10,6 @@ from pathlib import Path
 from typing import Any, TextIO
 
 _UNIMPLEMENTED = {
-    "run": (
-        "no collector or simulator backend is installed; select a build with "
-        "a declared local backend"
-    ),
     "pack": "package creation is not implemented in this build",
     "submit": (
         "authenticated data-only submission is not implemented in this build"
@@ -52,9 +48,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     run_parser = subparsers.add_parser(
         "run",
-        help="run a declared local collector or offline simulator",
+        help="run one declared local-shard kernel collector target",
     )
     run_parser.add_argument("--suite-root", type=Path)
+    run_parser.add_argument("--request", type=Path)
+    run_parser.add_argument("--target")
+    run_parser.add_argument("--target-arg", action="append", default=[])
+    run_parser.add_argument("--output-root", type=Path)
 
     validate_parser = subparsers.add_parser(
         "validate",
@@ -102,6 +102,9 @@ def _dispatch(arguments: argparse.Namespace, output: TextIO) -> int:
     if arguments.command == "extract":
         _write_json(_call_extractor(arguments), output)
         return 0
+    if arguments.command == "run":
+        _write_json(_call_local_shard_runner(arguments), output)
+        return 0
     if arguments.command == "validate":
         result = _call_validator(arguments.path)
         if result is not None:
@@ -112,6 +115,31 @@ def _dispatch(arguments: argparse.Namespace, output: TextIO) -> int:
     except KeyError as error:
         raise AssertionError(f"unhandled command: {arguments.command}") from error
     raise CommandUnavailable(reason)
+
+
+def _call_local_shard_runner(arguments: argparse.Namespace) -> dict[str, Any]:
+    required = {
+        "--request": arguments.request,
+        "--target": arguments.target,
+        "--output-root": arguments.output_root,
+    }
+    missing = [name for name, value in required.items() if value is None]
+    if missing:
+        raise CommandUnavailable(
+            "local shard capture requires " + ", ".join(missing)
+        )
+    try:
+        from .local_shard import run_local_shard_capture
+
+        run = run_local_shard_capture(
+            arguments.request.read_bytes(),
+            target=arguments.target,
+            target_args=tuple(arguments.target_arg),
+            output_root=arguments.output_root,
+        )
+    except (OSError, TypeError, ValueError) as error:
+        raise CommandUnavailable(f"local shard capture failed: {error}") from error
+    return run.to_obj()
 
 
 def _inert_doctor_record() -> dict[str, Any]:
