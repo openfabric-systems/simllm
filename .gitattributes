@@ -397,6 +397,7 @@ examples/nvlink_credit_arbitration_v1/*.md text eol=lf
 examples/nvlink_credit_arbitration_v1/*.py text eol=lf
 tests/test_nvlink_credit_arbitration_*.py text eol=lf
 notes/2026-08-28-nvfair-worker-sizing.md text eol=lf
+simllm/backends/__init__.py text eol=lf
 examples/frontier_comparison_v1/*.json text eol=lf
 examples/frontier_comparison_v1/*.md text eol=lf
 examples/frontier_comparison_v1/*.py text eol=lf
