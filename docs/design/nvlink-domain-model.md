@@ -66,6 +66,14 @@ occupancy. Logical bytes are counted from the input extents. Wire bytes are
 counted after packet headers have been added. This separation prevents a
 packet overhead hypothesis from silently changing the application payload.
 
+`serve` is the explicitly pinned compatibility entry for every merged study.
+Its default is the former static-interleave behavior, named by
+`LEGACY_NVLINK_FLOW_POLICY`. New incast studies use `serve_arbitrated`, whose
+explicit default is `DEFAULT_NVLINK_ARBITRATION_POLICY`, release-aware round
+robin. It accepts static interleave and greedy capture as alternatives. This
+separation keeps the merged ledger byte-identical while making the physical
+contention policy visible at every new call site.
+
 The module timestamps are htsim-style local evidence, not core `QueueVisit`
 records. Their mapping is:
 
@@ -155,6 +163,13 @@ is the unfair work-conserving alternative in which the first full-rate input
 wins whenever it is ready. All three policies are selectable. Their evidence
 classes are declared candidates, not measurements.
 
+The frozen simulation matrix passes all 15 policy and degree instances with
+all 105 fatal guards intact. At physical degree 3, release-aware round robin
+predicts raw wire shares of 87.159, 59.921 and 59.921 GB/s; static interleave
+predicts 60.000 GB/s per source with unused receiver service; greedy capture
+predicts 99.760, 53.621 and 53.621 GB/s. These are behavioral predictions for
+the registered hardware discriminator, not policy-identification evidence.
+
 The background sources are NVIDIA's vendor
 [NVLink overview](https://www.nvidia.com/en-us/data-center/nvlink/), NVIDIA's
 [NVSwitch technical overview](https://images.nvidia.com/content/pdf/nvswitch-technical-overview.pdf),
@@ -199,10 +214,12 @@ hardware measurement.
 The same `NvlinkSwitch` box also supports `queued`. The input-placement form
 shown in Figure 1 has one cursor per source port feeding a contention point.
 The implementation may instead key the cursor by output destination or use one
-shared cursor. Release-aware round robin is the declared default candidate;
-static interleave and greedy capture are explicit alternatives. Enabling or
-disabling head-of-line blocking controls whether an extent receives a separate
-cursor under the selected placement.
+shared cursor. Its internal v1 queue discipline is FIFO. Enabling or disabling
+head-of-line blocking controls whether an extent receives a separate cursor
+under the selected placement. The TRAF-73 selectable policies sit at the
+downstream destination-service seam used by the direct NV4 receiver. A future
+NVSwitch-class profile must locate that arbitration at its physical crossbar
+output rather than infer it from this direct-mesh profile.
 
 A queued profile must supply placement, service rate, buffer capacity,
 arbitration and head-of-line policy together. V1 verifies that an individual
@@ -291,7 +308,7 @@ capture is `COMPLETE_VOID_86_OF_86` and identifies no TX or RX parameter.
 | TX packet geometry and direction | 256-byte maximum payload; 16-byte header; write data in request; read control in request and read data in response | **DECLARED CANDIDATE**, `declared_candidate_not_hardware_measurement` | No packet-format or direction parameter is calibrated |
 | TX bond and rates | Four links per peer; 25 GB/s per link; 300 GB/s endpoint egress; earliest-available packet striping | **DECLARED CANDIDATE**, `declared_candidate_not_hardware_measurement` | The published rates constrain an envelope but do not identify bonding |
 | TX credits | 256 per physical link per implicit modeled virtual channel; 272 bytes per credit | **PUBLIC ARCHITECTURE STRUCTURE plus DECLARED NUMERIC CANDIDATES**, not our measurement | Effective unit, window, return and physical virtual-channel count remain unmeasured |
-| Incast arbitration | Release-aware round robin default; static interleave and greedy capture alternatives | **DECLARED POLICY CANDIDATES**, not our measurement | TRAF-73 registers a sustained unequal-offer discriminator |
+| Incast arbitration | Release-aware round robin default; static interleave and greedy capture alternatives | **DECLARED POLICY CANDIDATES plus BEHAVIORAL SIMULATION PREDICTIONS**, not our measurement | All 15 simulated instances pass; TRAF-73 registers a sustained unequal-offer hardware discriminator |
 | A100 switch | Exact pass-through with zero byte and time effect | **STRUCTURAL DIRECT-MESH INVARIANT, NOT MEASURED** | It stands because the selected topology has no switch, not because TRAF-65 measured it |
 | NVSwitch-class switch | Queued interface with input, output or shared placement, FIFO arbitration and optional head-of-line partitioning | **PARAMETERIZED INTERFACE, NO SHIPPED PROFILE VALUES** | H100 and GH200 need architecture-specific queue and service evidence |
 | RX ingress and delivery | 300 GB/s ingress; 1 MiB capacity; 200,000 ps credit return; extent-sequence reassembly; per-extent delivery | **DECLARED CANDIDATE**, `declared_candidate_not_hardware_measurement` | No RX rate, capacity, return or ordering parameter is calibrated |
@@ -309,9 +326,10 @@ envelope. They do not select the composition's internal explanation.
 
 ## Nonclaims and next gate
 
-This documentation study performs no simulation, scored comparison or
-registry transition. It does not change TRAF-65, TRAF-70 or the candidate
-profile. It also does not treat the H100 or GH200 switch path as populated.
+The TRAF-73 simulation matrix performs a scored comparison of the three
+declared policies and preserves every fatal guard. It does not change TRAF-65,
+TRAF-70 or the candidate profile. It also does not treat the H100 or GH200
+switch path as populated.
 
 TRAF-73 owns the remaining credit-window, pool-scope and arbitration
 identification. Its simulation arms are predictions only, while its three

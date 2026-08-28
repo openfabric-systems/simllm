@@ -1057,6 +1057,15 @@ round robin is therefore the documented declared default candidate, with
 static interleave and greedy capture selectable as alternatives. None of these
 policy labels is a hardware measurement.
 
+The [TRAF-73 simulation result](../../examples/nvlink_credit_arbitration_v1/RESULTS.md)
+passes all 15 frozen policy and degree instances with all 105 fatal guards
+intact. The physical degree-3 cell predicts raw wire shares of 87.159, 59.921
+and 59.921 GB/s for release-aware round robin; 60.000 GB/s per source for
+static interleave; and 99.760, 53.621 and 53.621 GB/s for greedy capture.
+Degrees 4, 8 and 16 remain labeled simulated mesh extrapolations. These values
+are frozen predictions for the registered hardware discriminator, not a
+promotion of any arbitration policy.
+
 NVLink hardware incast identification is long-flow only. Sender launches on
 the real node serialize through sequential PCIe writes, so nanosecond-scale
 true synchronous small-flow co-arrival cannot be constructed. Simulated
@@ -1706,6 +1715,16 @@ route to those higher degrees.
   is a nonvoid hardware classification under the frozen rules, including an
   honest inconclusive result with no promotion. Until then all credit numbers
   and arbitration policies remain declared candidates and TRAF-73 stays open.
+
+  The simulation slice is complete: all 15 policy and degree instances pass
+  their frozen per-source share bands, all 105 fatal guards pass, the candidate
+  profile is unchanged, and the 89-file merged-study preservation lock is
+  byte-identical. The first run retained two false aggregate refutations
+  because its aggregate quantization bound allowed one packet for a sum over
+  16 sources. The post-specified correction multiplies that already frozen
+  per-source packet bound by degree; workloads, windows, per-source results and
+  expectations remain unchanged. H1, H2 and H3 are registered but not run, so
+  no candidate value or policy is promoted and TRAF-73 remains open.
 
 ### Completeness
 
