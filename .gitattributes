@@ -310,3 +310,8 @@ examples/frontier_ladder_v1/*.py text eol=lf
 examples/frontier_ladder_v1/figures/*.pdf -text -diff
 examples/frontier_ladder_v1/figures/*.png -text -diff
 tests/test_frontier_ladder*.py text eol=lf
+examples/loggopsim_acceptance_v1/*.csv text eol=lf
+examples/loggopsim_acceptance_v1/*.json text eol=lf
+examples/loggopsim_acceptance_v1/*.md text eol=lf
+examples/loggopsim_acceptance_v1/*.py text eol=lf
+tests/test_loggopsim_acceptance_study.py text eol=lf
