@@ -17,7 +17,7 @@ def _synthetic_rows() -> list[dict[str, object]]:
         rows.append(
             {
                 "count_per_step": 1.0,
-                "first_launch_order": float(order),
+                "first_launch_order": str(order),
                 "graph_record_count": 1,
                 "name": f"kernel_{order}",
                 "record_count": 1,
