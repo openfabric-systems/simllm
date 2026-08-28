@@ -1,0 +1,55 @@
+{
+  "access_tranches": [
+    {
+      "access_ledger": "<wave-runs>/core66c/ep4/reader/access-core65-candidates.jsonl",
+      "access_ledger_bytes": 484,
+      "access_ledger_sha256": "38df418cdd57ac5351b75e61e86280dd4f177ac2b94fb2d1a16bea8e7bb96814",
+      "forbidden_ledger": "<wave-runs>/core66c/ep4/reader/forbidden-core65-candidates.jsonl",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "selector": "/candidate_verdicts"
+    },
+    {
+      "access_ledger": "<wave-runs>/core66c/ep4/reader/access-core65-physical-binding.jsonl",
+      "access_ledger_bytes": 481,
+      "access_ledger_sha256": "91d7008e9645304242096202b2fafd2f0cfeb7e1049af64c604d07a7487ec34d",
+      "forbidden_ledger": "<wave-runs>/core66c/ep4/reader/forbidden-core65-physical-binding.jsonl",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "selector": "/physical_binding"
+    },
+    {
+      "access_ledger": "<wave-runs>/core66c/ep4/reader/access-core66-task-before.jsonl",
+      "access_ledger_bytes": 480,
+      "access_ledger_sha256": "24c27c34f6ba27f320d33933f6e24272f5726a05c0fb999b75e11e4873971288",
+      "forbidden_ledger": "<wave-runs>/core66c/ep4/reader/forbidden-core66-task-before.jsonl",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "selector": "markdown-task:CORE-66"
+    },
+    {
+      "access_ledger": "<wave-runs>/core66c/ep4/reader/access-core66-task-after.jsonl",
+      "access_ledger_bytes": 480,
+      "access_ledger_sha256": "ebf810edb7089096e21bacfe9aeb4ff29894523f6535faf05f49edd35d1a6cd9",
+      "disposition": "intermediate registry verification before the current-policy correction",
+      "forbidden_ledger": "<wave-runs>/core66c/ep4/reader/forbidden-core66-task-after.jsonl",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "selector": "markdown-task:CORE-66"
+    },
+    {
+      "access_ledger": "<wave-runs>/core66c/ep4/reader/access-core66-task-final.jsonl",
+      "access_ledger_bytes": 480,
+      "access_ledger_sha256": "3b826b6c9e2fe1e3d2f69954a3f64566ca46c44920c5bc2a68b4c42904acda10",
+      "disposition": "final registry verification",
+      "forbidden_ledger": "<wave-runs>/core66c/ep4/reader/forbidden-core66-task-final.jsonl",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "selector": "markdown-task:CORE-66"
+    }
+  ],
+  "all_reader_forbidden_ledgers_empty": true,
+  "reader_access_event_count": 10,
+  "schema": "simllm-deployment-curve-core66d-reader-access-manifest-v1",
+  "task": "CORE-66"
+}

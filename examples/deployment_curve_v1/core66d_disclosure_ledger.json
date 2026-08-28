@@ -1,0 +1,8 @@
+{
+  "fatal_held_out_use_occurred": false,
+  "incidental_exposure_count": 0,
+  "incidental_exposures": [],
+  "result_interpretable": true,
+  "schema": "simllm-deployment-curve-core66d-disclosure-v1",
+  "task": "CORE-66"
+}

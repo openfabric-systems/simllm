@@ -17,6 +17,9 @@ EP8_EXPECTATIONS_PATH = (
 EP4_EXPECTATIONS_PATH = (
     ROOT / "examples/deployment_curve_v1/core66_ep4_expectations.json"
 )
+EP4_RESULT_PATH = (
+    ROOT / "examples/deployment_curve_v1/core66_ep4_capture_result.json"
+)
 
 
 def _load_reader() -> ModuleType:
@@ -266,3 +269,48 @@ def test_ep4_expectations_are_a_new_single_gpu_general_cell() -> None:
         "output": 1,
         "step": 1,
     }
+
+
+def test_ep4_result_preserves_failed_capture_and_null_movement() -> None:
+    result = json.loads(EP4_RESULT_PATH.read_text(encoding="utf-8"))
+
+    assert result["status"] == "VOID_LAUNCH_ENVIRONMENT_NO_PHYSICAL_CAPTURE"
+    assert result["achieved_capture_configuration"] is None
+    assert result["hardware"] == {
+        "allocated_gpu_count": 4,
+        "allocated_job_id": 200879,
+        "allocated_node": "gpu002",
+        "elapsed_seconds": 14,
+        "exit_code": "127:0",
+        "feasible_cell_status": "ALLOCATED_LAUNCH_FAILED_BEFORE_SGLANG",
+        "gpu_hours_consumed": 56 / 3600,
+        "gpu_seconds_consumed": 56,
+        "partition": "gh-hourly",
+        "qos": "gpu_general",
+        "registered_ep72_status": "BLOCKED_IMPOSSIBLE_ON_PROJECT_CLUSTER",
+        "scheduler_state": "FAILED",
+        "started_at": "2026-08-28T16:17:49",
+        "finished_at": "2026-08-28T16:18:03",
+        "submission_count": 1,
+    }
+    assert result["launch_failure"] == {
+        "counter_pass_status": "not-run",
+        "failure_phase": "before the SGLang process and before CUDA profiling",
+        "frozen_module_request": "cuda/13.2.1",
+        "module_error": "module load: module does not exist -- cuda/13.2.1",
+        "profiler_error": (
+            "core66d_node_capture.sh: line 56: nsys: command not found"
+        ),
+        "timing_pass_exit_code": 127,
+    }
+    identities = result["identity_and_physics"]
+    assert identities["physical_identity_binding_count"] == 0
+    assert identities["physical_identity_binding_target"] == 37
+    assert identities["deep_ep_dispatch_launch_count"] == 0
+    assert identities["deep_ep_combine_launch_count"] == 0
+    assert identities["hbm_counter_permission"] == "NOT_REACHED"
+    movement = result["calibration_only"]
+    assert movement["signed_movement_tokens_per_second_per_node"] is None
+    assert movement["service_multipliers_applied"] is False
+    assert movement["downward_correction_published_alone"] is False
+    assert result["protocol"]["fatal_held_out_use_occurred"] is False

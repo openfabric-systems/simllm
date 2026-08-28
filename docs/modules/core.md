@@ -1198,10 +1198,18 @@ correction direction can be priced. CORE-66 remains open.
   `core66_ep8_expectations.json`, but its scheduler preflight failed before job
   creation with `allocation failure: Invalid qos specification`: `gh-hourly`
   and the `gpu_hourly` definition both admit eight GPUs, while the requesting
-  user association admits only `gpu_general`. Add `gpu_hourly` to that
-  association, then submit the frozen EP8 cell once. The zero-allocation result
-  and its full deviation ledger are registered in
-  `core66_ep8_capture_result.json`.
+  user association admits only `gpu_general`. That association remains limited
+  to four GPUs per job, so EP8 is infeasible under current policy. The
+  zero-allocation result and its full deviation ledger are registered in
+  `core66_ep8_capture_result.json`. The separately frozen EP4 ceiling in
+  `core66_ep4_expectations.json` received one four-GPU allocation under
+  `gpu_general`, but the compute node lacked the requested `cuda/13.2.1`
+  module and the `nsys` executable. The timing pass exited 127 before SGLang,
+  the counter pass did not run and zero physical rows were bound. The void
+  capture and its EP4-to-EP72 deviation ledger are registered in
+  `core66_ep4_capture_result.json`. CORE-66 remains open on an independently
+  validated GH200 profiler environment and hardware capable of the registered
+  EP72 cell; no further feasible-cell submission is authorized by this result.
 
 - CORE-53 (Precision; P1; M): replace the first disaggregated session slice's
   roofline bootstrap with the accepted COMP-64 kernel-cycle lookup record.
