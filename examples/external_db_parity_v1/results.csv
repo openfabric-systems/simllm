@@ -1,0 +1,65 @@
+family,id,kind,passed,expected_hex,local_hex,external_hex,ulp_distance,detail
+I1,I1-01,scored,True,0x1.4d4fa15555555p+5,0x1.4d4fa15555555p+5,,,representative raw binary64 row
+I1,I1-02,scored,True,0x1.9da0d77777778p-7,0x1.9da0d77777778p-7,,,representative raw binary64 row
+I1,I1-03,scored,True,0x1.03b2840000000p-7,0x1.03b2840000000p-7,,,representative raw binary64 row
+I1,I1-04,scored,True,0x1.b6d43d5555555p-4,0x1.b6d43d5555555p-4,,,representative raw binary64 row
+I1,I1-05,scored,True,0x1.007923d70a3d7p+2,0x1.007923d70a3d7p+2,,,representative raw binary64 row
+I1,I1-06,scored,True,0x1.5b7571999999ap-2,0x1.5b7571999999ap-2,,,representative raw binary64 row
+I1,I1-07,scored,True,0x1.356a966666667p+1,0x1.356a966666667p+1,,,representative raw binary64 row
+I1,I1-count-compute_scale,scored,True,,,,,"expected 1628 rows, found 1628"
+I1,I1-count-context_attention,scored,True,,,,,"expected 50574 rows, found 50574"
+I1,I1-count-context_mla,scored,True,,,,,"expected 1760 rows, found 1760"
+I1,I1-count-context_mla_module,scored,True,,,,,"expected 3873 rows, found 3873"
+I1,I1-count-custom_allreduce,scored,True,,,,,"expected 69 rows, found 69"
+I1,I1-count-encoder_attention,scored,True,,,,,"expected 6314 rows, found 6314"
+I1,I1-count-gdn,scored,True,,,,,"expected 1862 rows, found 1862"
+I1,I1-count-gemm,scored,True,,,,,"expected 101010 rows, found 101010"
+I1,I1-count-generation_attention,scored,True,,,,,"expected 24438 rows, found 24438"
+I1,I1-count-generation_dsa_module,scored,True,,,,,"expected 2944 rows, found 2944"
+I1,I1-count-generation_mla,scored,True,,,,,"expected 2896 rows, found 2896"
+I1,I1-count-generation_mla_module,scored,True,,,,,"expected 5888 rows, found 5888"
+I1,I1-count-mamba2,scored,True,,,,,"expected 469 rows, found 469"
+I1,I1-count-mla_bmm,scored,True,,,,,"expected 848 rows, found 848"
+I1,I1-count-moe,scored,True,,,,,"expected 74358 rows, found 74358"
+I1,I1-count-scale_matrix,scored,True,,,,,"expected 1628 rows, found 1628"
+I1,I1-count-wideep_moe,scored,True,,,,,"expected 4158 rows, found 4158"
+I1,I1-count-total,scored,True,,,,,"expected 284717 rows, found 284717"
+I2,I2-01,scored,True,,0x1.4d4fa15555555p+5,0x1.4d4fa15555555p+5,0,exact nested GEMM hit returned verbatim after load-time SOL correction
+I2,I2-02,scored,True,,0x1.8636fe6a07118p+5,0x1.8636fe6a07118p+5,0,GEMM raw-m linear interpolation inside one exact n-k site
+I2,I2-03,scored,True,,0x1.03c8324862f30p-5,0x1.03c8324862f30p-5,0,GEMM cross-site inverse-square utilization blend in joint log2 n-k space
+I2,I2-04,scored,True,,0x1.c239080000000p+2,0x1.c239080000000p+2,0,GEMM upper boundary holds the median utilization of the final three m anchors
+I2,I2-05,scored,True,,0x1.1a6ed00000000p+3,0x1.1a6ed00000000p+3,0,context attention exact nested grid hit
+I2,I2-06,scored,True,,0x1.eb48815e0a895p+2,0x1.eb48815e0a895p+2,0,context attention interpolates in sqrt latency only on the sequence axis
+I2,I2-07,scored,True,,0x1.08c7e30000000p+3,0x1.08c7e30000000p+3,0,context prefix resolves at full sequence then applies the frozen quadratic prefix fraction
+I2,I2-08,scored,True,,0x1.1a6ed00000000p+4,0x1.1a6ed00000000p+4,0,context attention beyond the ragged batch boundary holds boundary utilization
+I2,I2-09,scored,True,,0x1.ac4d0074b0848p-4,0x1.ac4d0074b0848p-4,0,generation attention averages five integer sequence samples from 0.9s through 1.1s
+I2,I2-10,scored,True,,0x1.02dbc46666666p-7,0x1.02dbc46666666p-7,0,generation attention smoothing preserves repeated integer samples near the sequence floor
+I2,I2-11,scored,True,,0x1.db8e4cda85dfap-4,0x1.db8e4cda85dfap-4,0,generation attention raw-latency grid interpolation applies on batch and sequence
+I2,I2-12,scored,True,,0x1.b6d43d5555555p-4,0x1.b6d43d5555555p-4,0,standard MoE exact token-curve hit
+I2,I2-13,scored,True,,0x1.b003680000000p-4,0x1.b003680000000p-4,0,standard MoE raw linear interpolation on the token curve
+I2,I2-14,scored,True,,0x1.06a4b0c600000p+0,0x1.06a4b0c600000p+0,0,standard MoE upper token boundary holds utilization
+I2,I2-15,scored,True,,0x1.007923d70a3d7p+2,0x1.007923d70a3d7p+2,0,custom all-reduce exact hit uses the bfloat16-to-half lookup rekey
+I2,I2-16,scored,True,,0x1.cd4770a3d70a4p-6,0x1.cd4770a3d70a4p-6,0,custom all-reduce raw linear interpolation on message bytes
+I2,I2-17,scored,True,,0x1.815f666666666p-10,0x1.815f666666666p-10,0,custom all-reduce lower message boundary holds utilization
+I2,I2-18,scored,True,,0x1.007923d70a3d7p+3,0x1.007923d70a3d7p+3,0,custom all-reduce upper message boundary holds utilization
+I2,I2-19,scored,True,,0x1.5b7571999999ap-2,0x1.5b7571999999ap-2,0,GDN generation exact hit uses the canonical recurrence-kernel rekey
+I2,I2-20,scored,True,,0x1.038b706666666p-1,0x1.038b706666666p-1,0,GDN generation raw linear interpolation on batch
+I2,I2-21,scored,True,,0x1.595c280000000p+0,0x1.595c280000000p+0,0,GDN generation upper batch boundary holds utilization
+I2,I2-22,scored,True,,0x1.356a966666667p+1,0x1.356a966666667p+1,0,compute-scale exact two-dimensional grid hit
+I2,I2-23,scored,True,,0x1.8bedafbfae0efp-5,0x1.8bedafbfae0efp-5,0,compute-scale raw two-dimensional grid interpolation
+I2,I2-24,scored,True,,0x1.87e3466666666p-8,0x1.87e3466666666p-8,0,compute-scale holds the clamped global boundary value flat
+I2,I2-25,scored,True,,0x1.943710a8afa7ap-6,0x1.943710a8afa7ap-6,0,scale-matrix raw two-dimensional grid interpolation
+I2,I2-26,scored,True,,0x1.80db044444444p+2,0x1.80db044444444p+2,0,scale-matrix clamps coordinates then restores query SOL by boundary-utilization scaling
+P1,P1-01,scored,True,0x1.8d2164d537eb3p+6,0x1.8d2164d537eb3p+6,0x1.8d2164d537eb3p+6,0,bit-equal total and per-term composition
+P1,P1-02,scored,True,0x1.6344a3614677ep+3,0x1.6344a3614677ep+3,0x1.6344a3614677ep+3,0,bit-equal total and per-term composition
+P1,P1-03,scored,True,0x1.7b53c1bc0e6d2p+6,0x1.7b53c1bc0e6d2p+6,0x1.7b53c1bc0e6d2p+6,0,bit-equal total and per-term composition
+P1,P1-04,scored,True,0x1.66a63c02685c1p+3,0x1.66a63c02685c1p+3,0x1.66a63c02685c1p+3,0,bit-equal total and per-term composition
+W,W-01,scored,True,,,,,conversion plus evaluation took 78.428689 seconds
+FG,FG-1,fatal,True,,,,,installed hashes and tracked conversion identity
+FG,FG-2,fatal,True,,,,,"license, notices and modified-file statement"
+FG,FG-3,fatal,True,,,,,all converted rows come from the primary version
+FG,FG-4,fatal,True,,,,,every served value carries frozen external identity
+FG,FG-5,fatal,True,,,,,frozen below-SOL cell and mutation counts
+FG,FG-6,fatal,True,,,,,both sides repeated bit-equal in fresh processes
+FG,FG-7,fatal,True,,,,,declared mappings reject gaps and overlap
+FG,FG-8,fatal,True,,,,,"freeze commits precede attempt 0001: {'expectations': True, 'resolver_queries': True, 'mutation_guard': True}"

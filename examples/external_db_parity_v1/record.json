@@ -1,0 +1,784 @@
+{
+  "artifact": {
+    "directory_identity": "85e72f990f00ea457de522d0b773e678f5e067740689912df5646f6296273284",
+    "files": {
+      "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "MODIFIED": "0f93928e72da11eae92a95d3396884b3edb1b75ab58cbb329eee4f3be0dd3133",
+      "THIRD_PARTY_NOTICE": "3abf9540ea9cebf33fae0a796c52097a0b591cb1cccf0718705d0dd8a4f3a4bb",
+      "family-mapping.json": "63a65ff85d1e45835d550bac31127a17f38a0c3b3a7d46733048067db63dc248",
+      "manifest.json": "650b0c40c5e78ad1b4ce1fc39bb4bf3cf664ae7b88113b26087a47384b7a3317",
+      "model-config.json": "15f594725b6ac2a481d1abbed79890ef3527cc2f92ac25129bec6dad9dfab824",
+      "rows-0f606718c5e413e898d9ad33a3d7e803e532d5d5bd8a1c29929e7f8b2458e8ef.jsonl.xz": "0f606718c5e413e898d9ad33a3d7e803e532d5d5bd8a1c29929e7f8b2458e8ef",
+      "source-files.sha256": "85e72f990f00ea457de522d0b773e678f5e067740689912df5646f6296273284",
+      "system.json": "29403ee2385dc4b150d1ca802b1ba1ddf75e9cd978c6366dcddbc4f8651d9127"
+    },
+    "payload_sha256": "0f606718c5e413e898d9ad33a3d7e803e532d5d5bd8a1c29929e7f8b2458e8ef"
+  },
+  "attempt": "attempt-0001",
+  "bulk_evidence": "${SIMLLM_P3X_T1_BULK_ROOT}/attempt-0001",
+  "elapsed_seconds": 78.42868915852159,
+  "expectations_sha256": "efecb44a4cc51a0c4f9c4dec74fe6aeedc1151d7ddfede560bc145b8554b4253",
+  "family_tallies": {
+    "I1": {
+      "denominator": 25,
+      "passed": 25
+    },
+    "I2": {
+      "denominator": 26,
+      "passed": 26
+    },
+    "P1": {
+      "denominator": 4,
+      "passed": 4
+    },
+    "W": {
+      "denominator": 1,
+      "passed": 1
+    }
+  },
+  "fatal_guards": {
+    "FG-1": true,
+    "FG-2": true,
+    "FG-3": true,
+    "FG-4": true,
+    "FG-5": true,
+    "FG-6": true,
+    "FG-7": true,
+    "FG-8": true
+  },
+  "freeze_ancestry": {
+    "expectations": true,
+    "mutation_guard": true,
+    "resolver_queries": true
+  },
+  "freeze_commits": {
+    "expectations": "44959ef",
+    "mutation_guard": "f7ec05a",
+    "resolver_queries": "afe7ee6"
+  },
+  "licensing": {
+    "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "MODIFIED": "0f93928e72da11eae92a95d3396884b3edb1b75ab58cbb329eee4f3be0dd3133",
+    "THIRD_PARTY_NOTICE": "3abf9540ea9cebf33fae0a796c52097a0b591cb1cccf0718705d0dd8a4f3a4bb"
+  },
+  "machine": {
+    "architecture": "x86_64",
+    "cpu": "AMD Ryzen 9 3950X 16-Core Processor",
+    "logical_cpus": 32,
+    "python": "3.10.18",
+    "system": "Linux"
+  },
+  "query_config_sha256": "6ea189213e88e5b0726139790c0c0e053a94de485ff3d6dca29c970de6979e60",
+  "rows": [
+    {
+      "detail": "representative raw binary64 row",
+      "expected_hex": "0x1.4d4fa15555555p+5",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-01",
+      "kind": "scored",
+      "local_hex": "0x1.4d4fa15555555p+5",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "representative raw binary64 row",
+      "expected_hex": "0x1.9da0d77777778p-7",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-02",
+      "kind": "scored",
+      "local_hex": "0x1.9da0d77777778p-7",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "representative raw binary64 row",
+      "expected_hex": "0x1.03b2840000000p-7",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-03",
+      "kind": "scored",
+      "local_hex": "0x1.03b2840000000p-7",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "representative raw binary64 row",
+      "expected_hex": "0x1.b6d43d5555555p-4",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-04",
+      "kind": "scored",
+      "local_hex": "0x1.b6d43d5555555p-4",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "representative raw binary64 row",
+      "expected_hex": "0x1.007923d70a3d7p+2",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-05",
+      "kind": "scored",
+      "local_hex": "0x1.007923d70a3d7p+2",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "representative raw binary64 row",
+      "expected_hex": "0x1.5b7571999999ap-2",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-06",
+      "kind": "scored",
+      "local_hex": "0x1.5b7571999999ap-2",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "representative raw binary64 row",
+      "expected_hex": "0x1.356a966666667p+1",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-07",
+      "kind": "scored",
+      "local_hex": "0x1.356a966666667p+1",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "expected 1628 rows, found 1628",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-count-compute_scale",
+      "kind": "scored",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "expected 50574 rows, found 50574",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-count-context_attention",
+      "kind": "scored",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "expected 1760 rows, found 1760",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-count-context_mla",
+      "kind": "scored",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "expected 3873 rows, found 3873",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-count-context_mla_module",
+      "kind": "scored",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "expected 69 rows, found 69",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-count-custom_allreduce",
+      "kind": "scored",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "expected 6314 rows, found 6314",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-count-encoder_attention",
+      "kind": "scored",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "expected 1862 rows, found 1862",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-count-gdn",
+      "kind": "scored",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "expected 101010 rows, found 101010",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-count-gemm",
+      "kind": "scored",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "expected 24438 rows, found 24438",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-count-generation_attention",
+      "kind": "scored",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "expected 2944 rows, found 2944",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-count-generation_dsa_module",
+      "kind": "scored",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "expected 2896 rows, found 2896",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-count-generation_mla",
+      "kind": "scored",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "expected 5888 rows, found 5888",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-count-generation_mla_module",
+      "kind": "scored",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "expected 469 rows, found 469",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-count-mamba2",
+      "kind": "scored",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "expected 848 rows, found 848",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-count-mla_bmm",
+      "kind": "scored",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "expected 74358 rows, found 74358",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-count-moe",
+      "kind": "scored",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "expected 1628 rows, found 1628",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-count-scale_matrix",
+      "kind": "scored",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "expected 4158 rows, found 4158",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-count-wideep_moe",
+      "kind": "scored",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "expected 284717 rows, found 284717",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "I1",
+      "id": "I1-count-total",
+      "kind": "scored",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "exact nested GEMM hit returned verbatim after load-time SOL correction",
+      "expected_hex": "",
+      "external_hex": "0x1.4d4fa15555555p+5",
+      "family": "I2",
+      "id": "I2-01",
+      "kind": "scored",
+      "local_hex": "0x1.4d4fa15555555p+5",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "GEMM raw-m linear interpolation inside one exact n-k site",
+      "expected_hex": "",
+      "external_hex": "0x1.8636fe6a07118p+5",
+      "family": "I2",
+      "id": "I2-02",
+      "kind": "scored",
+      "local_hex": "0x1.8636fe6a07118p+5",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "GEMM cross-site inverse-square utilization blend in joint log2 n-k space",
+      "expected_hex": "",
+      "external_hex": "0x1.03c8324862f30p-5",
+      "family": "I2",
+      "id": "I2-03",
+      "kind": "scored",
+      "local_hex": "0x1.03c8324862f30p-5",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "GEMM upper boundary holds the median utilization of the final three m anchors",
+      "expected_hex": "",
+      "external_hex": "0x1.c239080000000p+2",
+      "family": "I2",
+      "id": "I2-04",
+      "kind": "scored",
+      "local_hex": "0x1.c239080000000p+2",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "context attention exact nested grid hit",
+      "expected_hex": "",
+      "external_hex": "0x1.1a6ed00000000p+3",
+      "family": "I2",
+      "id": "I2-05",
+      "kind": "scored",
+      "local_hex": "0x1.1a6ed00000000p+3",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "context attention interpolates in sqrt latency only on the sequence axis",
+      "expected_hex": "",
+      "external_hex": "0x1.eb48815e0a895p+2",
+      "family": "I2",
+      "id": "I2-06",
+      "kind": "scored",
+      "local_hex": "0x1.eb48815e0a895p+2",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "context prefix resolves at full sequence then applies the frozen quadratic prefix fraction",
+      "expected_hex": "",
+      "external_hex": "0x1.08c7e30000000p+3",
+      "family": "I2",
+      "id": "I2-07",
+      "kind": "scored",
+      "local_hex": "0x1.08c7e30000000p+3",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "context attention beyond the ragged batch boundary holds boundary utilization",
+      "expected_hex": "",
+      "external_hex": "0x1.1a6ed00000000p+4",
+      "family": "I2",
+      "id": "I2-08",
+      "kind": "scored",
+      "local_hex": "0x1.1a6ed00000000p+4",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "generation attention averages five integer sequence samples from 0.9s through 1.1s",
+      "expected_hex": "",
+      "external_hex": "0x1.ac4d0074b0848p-4",
+      "family": "I2",
+      "id": "I2-09",
+      "kind": "scored",
+      "local_hex": "0x1.ac4d0074b0848p-4",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "generation attention smoothing preserves repeated integer samples near the sequence floor",
+      "expected_hex": "",
+      "external_hex": "0x1.02dbc46666666p-7",
+      "family": "I2",
+      "id": "I2-10",
+      "kind": "scored",
+      "local_hex": "0x1.02dbc46666666p-7",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "generation attention raw-latency grid interpolation applies on batch and sequence",
+      "expected_hex": "",
+      "external_hex": "0x1.db8e4cda85dfap-4",
+      "family": "I2",
+      "id": "I2-11",
+      "kind": "scored",
+      "local_hex": "0x1.db8e4cda85dfap-4",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "standard MoE exact token-curve hit",
+      "expected_hex": "",
+      "external_hex": "0x1.b6d43d5555555p-4",
+      "family": "I2",
+      "id": "I2-12",
+      "kind": "scored",
+      "local_hex": "0x1.b6d43d5555555p-4",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "standard MoE raw linear interpolation on the token curve",
+      "expected_hex": "",
+      "external_hex": "0x1.b003680000000p-4",
+      "family": "I2",
+      "id": "I2-13",
+      "kind": "scored",
+      "local_hex": "0x1.b003680000000p-4",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "standard MoE upper token boundary holds utilization",
+      "expected_hex": "",
+      "external_hex": "0x1.06a4b0c600000p+0",
+      "family": "I2",
+      "id": "I2-14",
+      "kind": "scored",
+      "local_hex": "0x1.06a4b0c600000p+0",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "custom all-reduce exact hit uses the bfloat16-to-half lookup rekey",
+      "expected_hex": "",
+      "external_hex": "0x1.007923d70a3d7p+2",
+      "family": "I2",
+      "id": "I2-15",
+      "kind": "scored",
+      "local_hex": "0x1.007923d70a3d7p+2",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "custom all-reduce raw linear interpolation on message bytes",
+      "expected_hex": "",
+      "external_hex": "0x1.cd4770a3d70a4p-6",
+      "family": "I2",
+      "id": "I2-16",
+      "kind": "scored",
+      "local_hex": "0x1.cd4770a3d70a4p-6",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "custom all-reduce lower message boundary holds utilization",
+      "expected_hex": "",
+      "external_hex": "0x1.815f666666666p-10",
+      "family": "I2",
+      "id": "I2-17",
+      "kind": "scored",
+      "local_hex": "0x1.815f666666666p-10",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "custom all-reduce upper message boundary holds utilization",
+      "expected_hex": "",
+      "external_hex": "0x1.007923d70a3d7p+3",
+      "family": "I2",
+      "id": "I2-18",
+      "kind": "scored",
+      "local_hex": "0x1.007923d70a3d7p+3",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "GDN generation exact hit uses the canonical recurrence-kernel rekey",
+      "expected_hex": "",
+      "external_hex": "0x1.5b7571999999ap-2",
+      "family": "I2",
+      "id": "I2-19",
+      "kind": "scored",
+      "local_hex": "0x1.5b7571999999ap-2",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "GDN generation raw linear interpolation on batch",
+      "expected_hex": "",
+      "external_hex": "0x1.038b706666666p-1",
+      "family": "I2",
+      "id": "I2-20",
+      "kind": "scored",
+      "local_hex": "0x1.038b706666666p-1",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "GDN generation upper batch boundary holds utilization",
+      "expected_hex": "",
+      "external_hex": "0x1.595c280000000p+0",
+      "family": "I2",
+      "id": "I2-21",
+      "kind": "scored",
+      "local_hex": "0x1.595c280000000p+0",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "compute-scale exact two-dimensional grid hit",
+      "expected_hex": "",
+      "external_hex": "0x1.356a966666667p+1",
+      "family": "I2",
+      "id": "I2-22",
+      "kind": "scored",
+      "local_hex": "0x1.356a966666667p+1",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "compute-scale raw two-dimensional grid interpolation",
+      "expected_hex": "",
+      "external_hex": "0x1.8bedafbfae0efp-5",
+      "family": "I2",
+      "id": "I2-23",
+      "kind": "scored",
+      "local_hex": "0x1.8bedafbfae0efp-5",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "compute-scale holds the clamped global boundary value flat",
+      "expected_hex": "",
+      "external_hex": "0x1.87e3466666666p-8",
+      "family": "I2",
+      "id": "I2-24",
+      "kind": "scored",
+      "local_hex": "0x1.87e3466666666p-8",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "scale-matrix raw two-dimensional grid interpolation",
+      "expected_hex": "",
+      "external_hex": "0x1.943710a8afa7ap-6",
+      "family": "I2",
+      "id": "I2-25",
+      "kind": "scored",
+      "local_hex": "0x1.943710a8afa7ap-6",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "scale-matrix clamps coordinates then restores query SOL by boundary-utilization scaling",
+      "expected_hex": "",
+      "external_hex": "0x1.80db044444444p+2",
+      "family": "I2",
+      "id": "I2-26",
+      "kind": "scored",
+      "local_hex": "0x1.80db044444444p+2",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "bit-equal total and per-term composition",
+      "expected_hex": "0x1.8d2164d537eb3p+6",
+      "external_hex": "0x1.8d2164d537eb3p+6",
+      "family": "P1",
+      "id": "P1-01",
+      "kind": "scored",
+      "local_hex": "0x1.8d2164d537eb3p+6",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "bit-equal total and per-term composition",
+      "expected_hex": "0x1.6344a3614677ep+3",
+      "external_hex": "0x1.6344a3614677ep+3",
+      "family": "P1",
+      "id": "P1-02",
+      "kind": "scored",
+      "local_hex": "0x1.6344a3614677ep+3",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "bit-equal total and per-term composition",
+      "expected_hex": "0x1.7b53c1bc0e6d2p+6",
+      "external_hex": "0x1.7b53c1bc0e6d2p+6",
+      "family": "P1",
+      "id": "P1-03",
+      "kind": "scored",
+      "local_hex": "0x1.7b53c1bc0e6d2p+6",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "bit-equal total and per-term composition",
+      "expected_hex": "0x1.66a63c02685c1p+3",
+      "external_hex": "0x1.66a63c02685c1p+3",
+      "family": "P1",
+      "id": "P1-04",
+      "kind": "scored",
+      "local_hex": "0x1.66a63c02685c1p+3",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "conversion plus evaluation took 78.428689 seconds",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "W",
+      "id": "W-01",
+      "kind": "scored",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "installed hashes and tracked conversion identity",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "FG",
+      "id": "FG-1",
+      "kind": "fatal",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "license, notices and modified-file statement",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "FG",
+      "id": "FG-2",
+      "kind": "fatal",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "all converted rows come from the primary version",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "FG",
+      "id": "FG-3",
+      "kind": "fatal",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "every served value carries frozen external identity",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "FG",
+      "id": "FG-4",
+      "kind": "fatal",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "frozen below-SOL cell and mutation counts",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "FG",
+      "id": "FG-5",
+      "kind": "fatal",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "both sides repeated bit-equal in fresh processes",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "FG",
+      "id": "FG-6",
+      "kind": "fatal",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "declared mappings reject gaps and overlap",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "FG",
+      "id": "FG-7",
+      "kind": "fatal",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    },
+    {
+      "detail": "freeze commits precede attempt 0001: {'expectations': True, 'resolver_queries': True, 'mutation_guard': True}",
+      "expected_hex": "",
+      "external_hex": "",
+      "family": "FG",
+      "id": "FG-8",
+      "kind": "fatal",
+      "local_hex": "",
+      "passed": true,
+      "ulp_distance": ""
+    }
+  ],
+  "run_commit": "df5344a7234de46e2fd22c5ad8bc0c3dfec49913",
+  "run_state": "nonvoid",
+  "schema": "simllm-external-db-parity-record-v1",
+  "study": "external_db_parity_v1",
+  "ulp_findings": [],
+  "voiding_guards": []
+}
