@@ -1,0 +1,179 @@
+{
+  "architecture_background": {
+    "credit_ownership": "hard_allocated_per_physical_link_per_link_layer_virtual_channel",
+    "evidence_class": "public_architecture_background_not_our_measurement",
+    "incast_contention": [
+      "destination_ingress",
+      "memory_acceptance",
+      "nvswitch_output_port_when_present"
+    ],
+    "modeled_virtual_channels": 1,
+    "sources": [
+      {
+        "kind": "vendor_overview",
+        "title": "NVIDIA NVLink and NVLink Switch System",
+        "url": "https://www.nvidia.com/en-us/data-center/nvlink/"
+      },
+      {
+        "kind": "vendor_technical_overview",
+        "title": "NVIDIA NVSwitch Technical Overview",
+        "url": "https://images.nvidia.com/content/pdf/nvswitch-technical-overview.pdf"
+      },
+      {
+        "kind": "encyclopedic_description",
+        "title": "WikiChip NVLink",
+        "url": "https://en.wikichip.org/wiki/nvidia/nvlink"
+      }
+    ]
+  },
+  "candidate": {
+    "arbitration_default": {
+      "evidence_class": "declared_default_candidate_not_hardware_measurement",
+      "value": "release_aware_round_robin"
+    },
+    "credit_return_latency_ps": 200000,
+    "credit_unit_bytes": 272,
+    "credits_per_link_per_modeled_virtual_channel": 256,
+    "links_per_pair": 4,
+    "payload_bytes_per_packet": 256,
+    "profile_path": "examples/a100_nvlink_packet_v1/candidate-profile.json",
+    "profile_sha256": "d33ef5b2c6fa87cc97e1e7b45a43a841a5da45f5462311e3981fbc903c56deb2",
+    "rx_ingress_rate_bytes_per_second": 207101921876
+  },
+  "hardware_cells": {
+    "credit_window": {
+      "directed_pairs": "all_12_nv4_directed_pairs",
+      "expected_candidate_payload_window_bytes": 262144,
+      "expected_candidate_wire_window_bytes": 278528,
+      "payload_sizes_bytes": [
+        4096,
+        8192,
+        16384,
+        32768,
+        65536,
+        131072,
+        196608,
+        229376,
+        245760,
+        253952,
+        258048,
+        260096,
+        261120,
+        261632,
+        261888,
+        262144,
+        262400,
+        262656,
+        263168,
+        264192,
+        266240,
+        270336,
+        278528,
+        294912,
+        327680,
+        393216,
+        524288,
+        1048576,
+        2097152,
+        4194304,
+        8388608
+      ],
+      "randomization_seed": 7301,
+      "timed_repetitions": 200,
+      "warmups": 32
+    },
+    "pool_scope": {
+      "payload_sizes_bytes": [
+        131072,
+        196608,
+        229376,
+        245760,
+        253952,
+        258048,
+        260096,
+        261120,
+        261632,
+        261888,
+        262144,
+        262400,
+        262656,
+        263168,
+        264192,
+        266240,
+        270336,
+        278528,
+        294912,
+        327680,
+        393216,
+        524288,
+        1048576
+      ],
+      "receiver": 3,
+      "source_sets": [
+        [0],
+        [0, 1],
+        [0, 1, 2]
+      ],
+      "timed_repetitions": 200,
+      "warmups": 64
+    },
+    "sustained_arbitration": {
+      "chunk_bytes": 8388608,
+      "drain_ms": 50,
+      "greedy_role_sources": [0, 1, 2],
+      "measurement_ms": 500,
+      "offered_rates_bytes_per_second": [
+        100000000000,
+        60000000000,
+        60000000000
+      ],
+      "receiver": 3,
+      "warmup_ms": 50
+    }
+  },
+  "physical_sanity": {
+    "bond_packet_cadence_ps": 2720,
+    "candidate_credit_return_ps": 200000,
+    "candidate_per_link_window_serialization_ps": 2785280,
+    "per_link_packet_serialization_ps": 10880,
+    "prediction": "candidate_credit_returns_before_slot_reuse_so_no_nominal_stall_knee"
+  },
+  "preservation_lock": {
+    "candidate_profile_sha256": "d33ef5b2c6fa87cc97e1e7b45a43a841a5da45f5462311e3981fbc903c56deb2",
+    "path_content_digest_sha256": "61af15faf7c7080f40a33f8f9d5503b3b0278f15be15997e90c6895cddf85c72",
+    "root_paths": [
+      "examples/a100_nvlink_packet_v1",
+      "examples/a100_nvlink_packet_v2",
+      "examples/nvlink_flow_dynamics_v1",
+      "examples/nvlink_rnic_comparison_v1",
+      "examples/nvlink_rnic_comparison_v2"
+    ],
+    "tracked_bytes": 6429838,
+    "tracked_file_count": 89
+  },
+  "schema": "simllm-nvlink-credit-arbitration-expectations-v1",
+  "simulation": {
+    "degrees": [
+      2,
+      3,
+      4,
+      8,
+      16
+    ],
+    "extrapolated_degrees": [
+      4,
+      8,
+      16
+    ],
+    "greedy_offered_rate_bytes_per_second": 100000000000,
+    "packets_per_sender": 240,
+    "policies": [
+      "release_aware_round_robin",
+      "static_interleave",
+      "greedy_capture"
+    ],
+    "small_offered_rate_bytes_per_second": 60000000000,
+    "steady_excluded_packets_each_edge": 40
+  },
+  "task_id": "TRAF-73"
+}

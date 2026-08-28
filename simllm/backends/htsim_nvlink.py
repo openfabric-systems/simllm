@@ -22,6 +22,7 @@ from collections import deque
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, replace
 from enum import Enum
+from heapq import heappop, heappush
 from pathlib import Path
 from typing import Generic, TypeVar
 
@@ -61,10 +62,24 @@ class NvlinkSwitchMode(str, Enum):
 
 
 class NvlinkFlowPolicy(str, Enum):
-    """How multiple extents enter the independently parameterized modules."""
+    """Compatibility scheduling used by merged pre-TRAF-73 consumers."""
 
     STATIC_INTERLEAVE = "static_interleave"
     RELEASE_AWARE_ROUND_ROBIN = "release_aware_round_robin"
+
+
+LEGACY_NVLINK_FLOW_POLICY = NvlinkFlowPolicy.STATIC_INTERLEAVE
+
+
+class NvlinkArbitrationPolicy(str, Enum):
+    """How a contended receiver chooses among independently credited links."""
+
+    RELEASE_AWARE_ROUND_ROBIN = "release_aware_round_robin"
+    STATIC_INTERLEAVE = "static_interleave"
+    GREEDY_CAPTURE = "greedy_capture"
+
+
+DEFAULT_NVLINK_ARBITRATION_POLICY = NvlinkArbitrationPolicy.RELEASE_AWARE_ROUND_ROBIN
 
 
 class NvlinkFifoPlacement(str, Enum):
@@ -85,16 +100,24 @@ class NvlinkTransfer:
     payload_bytes: int
     operation: NvlinkOperation = NvlinkOperation.PEER_WRITE
     released_at_ps: int = 0
+    topology_endpoint_count: int = 4
+    offered_rate_bytes_per_second: int | None = None
 
     def __post_init__(self) -> None:
         _require_text("extent_id", self.extent_id)
-        _require_endpoint("source", self.source)
-        _require_endpoint("destination", self.destination)
+        _require_positive_int("topology_endpoint_count", self.topology_endpoint_count)
+        _require_endpoint("source", self.source, self.topology_endpoint_count)
+        _require_endpoint("destination", self.destination, self.topology_endpoint_count)
         if self.source == self.destination:
             raise ValueError("NVLink source and destination must differ")
         _require_positive_int("payload_bytes", self.payload_bytes)
         _require_enum("operation", self.operation, NvlinkOperation)
         _require_nonnegative_int("released_at_ps", self.released_at_ps)
+        if self.offered_rate_bytes_per_second is not None:
+            _require_positive_int(
+                "offered_rate_bytes_per_second",
+                self.offered_rate_bytes_per_second,
+            )
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -124,8 +147,8 @@ class NvlinkPacket:
         for name in ("extent_id", "attempt_id"):
             _require_text(name, getattr(self, name))
         _require_nonnegative_int("sequence", self.sequence)
-        _require_endpoint("source", self.source)
-        _require_endpoint("destination", self.destination)
+        _require_nonnegative_int("source", self.source)
+        _require_nonnegative_int("destination", self.destination)
         if self.source == self.destination:
             raise ValueError("NVLink packet source and destination must differ")
         _require_enum("direction", self.direction, NvlinkPacketDirection)
@@ -463,17 +486,21 @@ class NvlinkTx:
         if not isinstance(transfer, NvlinkTransfer):
             raise TypeError("transfer must be an NvlinkTransfer")
         packets: list[NvlinkPacket] = []
+        offered_wire_bytes = 0
         if transfer.operation is NvlinkOperation.PEER_READ:
-            packets.append(
-                self._packet(
-                    transfer=transfer,
-                    sequence=0,
-                    source=transfer.source,
-                    destination=transfer.destination,
-                    direction=NvlinkPacketDirection.REQUEST,
-                    payload_bytes=0,
-                )
+            request = self._packet(
+                transfer=transfer,
+                sequence=0,
+                source=transfer.source,
+                destination=transfer.destination,
+                direction=NvlinkPacketDirection.REQUEST,
+                payload_bytes=0,
+                released_at_ps=self._offered_release_ps(
+                    transfer, offered_wire_bytes
+                ),
             )
+            packets.append(request)
+            offered_wire_bytes += request.wire_bytes
             data_source = transfer.destination
             data_destination = transfer.source
             data_direction = NvlinkPacketDirection.RESPONSE
@@ -487,19 +514,34 @@ class NvlinkTx:
         sequence = first_sequence
         while remaining:
             payload_bytes = min(remaining, self.config.max_payload_bytes)
-            packets.append(
-                self._packet(
-                    transfer=transfer,
-                    sequence=sequence,
-                    source=data_source,
-                    destination=data_destination,
-                    direction=data_direction,
-                    payload_bytes=payload_bytes,
-                )
+            packet = self._packet(
+                transfer=transfer,
+                sequence=sequence,
+                source=data_source,
+                destination=data_destination,
+                direction=data_direction,
+                payload_bytes=payload_bytes,
+                released_at_ps=self._offered_release_ps(
+                    transfer, offered_wire_bytes
+                ),
             )
+            packets.append(packet)
+            offered_wire_bytes += packet.wire_bytes
             remaining -= payload_bytes
             sequence += 1
         return tuple(packets)
+
+    @staticmethod
+    def _offered_release_ps(
+        transfer: NvlinkTransfer,
+        wire_bytes_before: int,
+    ) -> int:
+        if transfer.offered_rate_bytes_per_second is None or wire_bytes_before == 0:
+            return transfer.released_at_ps
+        return transfer.released_at_ps + _serialize_ps(
+            wire_bytes_before,
+            transfer.offered_rate_bytes_per_second,
+        )
 
     def transmit(
         self,
@@ -512,25 +554,38 @@ class NvlinkTx:
         _require_nonnegative_int("credit_return_latency_ps", credit_return_latency_ps)
         link_cursors: dict[tuple[int, int, int], int] = {}
         endpoint_cursors: dict[int, int] = {}
-        credit_slots: dict[tuple[int, int], list[int]] = {}
+        credit_slots: dict[tuple[int, int, int], list[int]] = {}
+        link_visits: dict[tuple[int, int, int], int] = {}
         scheduled = []
         for packet in packets:
             if not isinstance(packet, NvlinkPacket):
                 raise TypeError("packets must contain NvlinkPacket records")
             pair = (packet.source, packet.destination)
-            slots = credit_slots.setdefault(pair, [0] * self.config.credits_per_destination)
-            slot_index = packet.sequence % self.config.credits_per_destination
-            links = [
-                link_cursors.get((packet.source, packet.destination, link), 0)
-                for link in range(self.config.links_per_peer)
-            ]
-            link_index = min(range(len(links)), key=lambda candidate: (links[candidate], candidate))
+            link_ready = []
+            for link in range(self.config.links_per_peer):
+                link_key = (*pair, link)
+                slots = credit_slots.setdefault(
+                    link_key,
+                    [0] * self.config.credits_per_destination,
+                )
+                visit = link_visits.get(link_key, 0)
+                slot_index = visit % self.config.credits_per_destination
+                link_ready.append(
+                    max(link_cursors.get(link_key, 0), slots[slot_index])
+                )
+            link_index = min(
+                range(len(link_ready)),
+                key=lambda candidate: (link_ready[candidate], candidate),
+            )
             link_key = (packet.source, packet.destination, link_index)
+            slots = credit_slots[link_key]
+            visit = link_visits.get(link_key, 0)
+            slot_index = visit % self.config.credits_per_destination
+            link_visits[link_key] = visit + 1
             started_at_ps = max(
                 packet.released_at_ps,
-                links[link_index],
+                link_ready[link_index],
                 endpoint_cursors.get(packet.source, 0),
-                slots[slot_index],
             )
             link_duration = _serialize_ps(
                 packet.wire_bytes, self.config.per_link_rate_bytes_per_second
@@ -613,8 +668,8 @@ class NvlinkTx:
         now_ps = 0
         link_cursors: dict[tuple[int, int, int], int] = {}
         endpoint_cursors: dict[int, int] = {}
-        credit_slots: dict[tuple[int, int], list[int]] = {}
-        pair_visits: dict[tuple[int, int], int] = {}
+        credit_slots: dict[tuple[int, int, int], list[int]] = {}
+        link_visits: dict[tuple[int, int, int], int] = {}
         scheduled: list[tuple[int, NvlinkPacket]] = []
 
         def activate_ready() -> None:
@@ -638,25 +693,31 @@ class NvlinkTx:
             transfer_order, packets = groups[group_index]
             packet = packets[positions[group_index]]
             pair = (packet.source, packet.destination)
-            slots = credit_slots.setdefault(
-                pair, [0] * self.config.credits_per_destination
-            )
-            visit = pair_visits.get(pair, 0)
-            slot_index = visit % self.config.credits_per_destination
-            pair_visits[pair] = visit + 1
-            links = [
-                link_cursors.get((packet.source, packet.destination, link), 0)
-                for link in range(self.config.links_per_peer)
-            ]
+            link_ready = []
+            for link in range(self.config.links_per_peer):
+                link_key = (*pair, link)
+                slots = credit_slots.setdefault(
+                    link_key,
+                    [0] * self.config.credits_per_destination,
+                )
+                visit = link_visits.get(link_key, 0)
+                slot_index = visit % self.config.credits_per_destination
+                link_ready.append(
+                    max(link_cursors.get(link_key, 0), slots[slot_index])
+                )
             link_index = min(
-                range(len(links)), key=lambda candidate: (links[candidate], candidate)
+                range(len(link_ready)),
+                key=lambda candidate: (link_ready[candidate], candidate),
             )
             link_key = (packet.source, packet.destination, link_index)
+            slots = credit_slots[link_key]
+            visit = link_visits.get(link_key, 0)
+            slot_index = visit % self.config.credits_per_destination
+            link_visits[link_key] = visit + 1
             started_at_ps = max(
                 packet.released_at_ps,
-                links[link_index],
+                link_ready[link_index],
                 endpoint_cursors.get(packet.source, 0),
-                slots[slot_index],
             )
             link_duration = _serialize_ps(
                 packet.wire_bytes, self.config.per_link_rate_bytes_per_second
@@ -695,6 +756,7 @@ class NvlinkTx:
         destination: int,
         direction: NvlinkPacketDirection,
         payload_bytes: int,
+        released_at_ps: int,
     ) -> NvlinkPacket:
         return NvlinkPacket(
             extent_id=transfer.extent_id,
@@ -706,7 +768,7 @@ class NvlinkTx:
             payload_bytes=payload_bytes,
             header_bytes=self.config.header_bytes,
             wire_bytes=payload_bytes + self.config.header_bytes,
-            released_at_ps=transfer.released_at_ps,
+            released_at_ps=released_at_ps,
         )
 
 
@@ -917,9 +979,191 @@ class NvlinkRx:
         )
         return tuple(packet for _, _, packet in delivered), max_occupancy
 
+    def receive_arbitrated(
+        self,
+        packets: Sequence[NvlinkPacket],
+        *,
+        policy: NvlinkArbitrationPolicy = DEFAULT_NVLINK_ARBITRATION_POLICY,
+    ) -> tuple[tuple[NvlinkPacket, ...], int]:
+        """Arbitrate independently credited input links at each destination."""
+
+        _require_enum("policy", policy, NvlinkArbitrationPolicy)
+        by_destination: dict[int, list[tuple[int, NvlinkPacket]]] = {}
+        for index, packet in enumerate(packets):
+            if not isinstance(packet, NvlinkPacket):
+                raise TypeError("packets must contain NvlinkPacket records")
+            if packet.switch_finished_at_ps is None and packet.tx_finished_at_ps is None:
+                raise ValueError("RX input packet has no upstream completion")
+            by_destination.setdefault(packet.destination, []).append((index, packet))
+
+        delivered: list[tuple[int, NvlinkPacket]] = []
+        max_occupancy = 0
+        for destination_packets in by_destination.values():
+            scheduled, occupancy = self._receive_one_destination(
+                destination_packets,
+                policy=policy,
+            )
+            delivered.extend(scheduled)
+            max_occupancy = max(max_occupancy, occupancy)
+        delivered.sort(
+            key=lambda item: (
+                item[1].delivered_at_ps,
+                item[0],
+                item[1].sequence,
+            )
+        )
+        return tuple(packet for _, packet in delivered), max_occupancy
+
+    def _receive_one_destination(
+        self,
+        indexed_packets: list[tuple[int, NvlinkPacket]],
+        *,
+        policy: NvlinkArbitrationPolicy,
+    ) -> tuple[list[tuple[int, NvlinkPacket]], int]:
+        arrivals = sorted(
+            (
+                (
+                    _packet_arrival_ps(packet),
+                    original_index,
+                    packet,
+                )
+                for original_index, packet in indexed_packets
+            ),
+            key=lambda item: (item[0], item[1]),
+        )
+        source_order = list(dict.fromkeys(packet.source for _, _, packet in arrivals))
+        queues: dict[int, deque[tuple[int, NvlinkPacket]]] = {
+            source: deque() for source in source_order
+        }
+        future_arrivals: dict[int, deque[int]] = {source: deque() for source in source_order}
+        for arrival, _, packet in arrivals:
+            future_arrivals[packet.source].append(arrival)
+
+        release_events: list[tuple[int, int, int]] = []
+        arrival_index = 0
+        event_index = 0
+        occupancy = 0
+        max_occupancy = 0
+        now_ps = 0
+        round_robin_index = 0
+        static_index = 0
+        greedy_index = 0
+        captured_source = source_order[0]
+        scheduled: list[tuple[int, NvlinkPacket]] = []
+
+        def retire(until_ps: int) -> None:
+            nonlocal occupancy
+            while release_events and release_events[0][0] <= until_ps:
+                _, _, released_bytes = heappop(release_events)
+                occupancy -= released_bytes
+
+        def enqueue(until_ps: int) -> None:
+            nonlocal arrival_index, max_occupancy, occupancy
+            while arrival_index < len(arrivals) and arrivals[arrival_index][0] <= until_ps:
+                arrival, original_index, packet = arrivals[arrival_index]
+                retire(arrival)
+                future_arrivals[packet.source].popleft()
+                queues[packet.source].append((original_index, packet))
+                occupancy += packet.wire_bytes
+                if occupancy > self.config.buffer_capacity_bytes:
+                    raise ValueError("packets exceed declared NVLink RX buffer occupancy")
+                max_occupancy = max(max_occupancy, occupancy)
+                arrival_index += 1
+            retire(until_ps)
+
+        def source_is_active(source: int) -> bool:
+            return bool(queues[source] or future_arrivals[source])
+
+        def ready_round_robin(start_index: int, *, skip_source: int | None = None) -> int | None:
+            for offset in range(len(source_order)):
+                index = (start_index + offset) % len(source_order)
+                source = source_order[index]
+                if source == skip_source:
+                    continue
+                if queues[source]:
+                    return index
+            return None
+
+        while len(scheduled) < len(arrivals):
+            enqueue(now_ps)
+            selected_index: int | None = None
+            if policy is NvlinkArbitrationPolicy.STATIC_INTERLEAVE:
+                while selected_index is None:
+                    source = source_order[static_index]
+                    if queues[source]:
+                        selected_index = static_index
+                        static_index = (static_index + 1) % len(source_order)
+                        break
+                    if future_arrivals[source]:
+                        now_ps = max(now_ps, future_arrivals[source][0])
+                        enqueue(now_ps)
+                        continue
+                    static_index = (static_index + 1) % len(source_order)
+            elif policy is NvlinkArbitrationPolicy.GREEDY_CAPTURE:
+                if queues[captured_source]:
+                    selected_index = source_order.index(captured_source)
+                else:
+                    selected_index = ready_round_robin(
+                        greedy_index,
+                        skip_source=captured_source,
+                    )
+                    if selected_index is not None:
+                        greedy_index = (selected_index + 1) % len(source_order)
+            else:
+                selected_index = ready_round_robin(round_robin_index)
+                if selected_index is not None:
+                    round_robin_index = (selected_index + 1) % len(source_order)
+
+            if selected_index is None:
+                if arrival_index >= len(arrivals):
+                    raise AssertionError("NVLink arbitration has packets but no ready source")
+                now_ps = max(now_ps, arrivals[arrival_index][0])
+                continue
+
+            source = source_order[selected_index]
+            original_index, packet = queues[source].popleft()
+            started_at_ps = max(now_ps, _packet_arrival_ps(packet))
+            finished_at_ps = started_at_ps + _serialize_ps(
+                packet.wire_bytes,
+                self.config.ingress_rate_bytes_per_second,
+            )
+            event_index += 1
+            heappush(
+                release_events,
+                (
+                    finished_at_ps + self.config.credit_return_latency_ps,
+                    event_index,
+                    packet.wire_bytes,
+                ),
+            )
+            scheduled.append(
+                (
+                    original_index,
+                    replace(
+                        packet,
+                        rx_started_at_ps=started_at_ps,
+                        rx_finished_at_ps=finished_at_ps,
+                        delivered_at_ps=finished_at_ps,
+                    ),
+                )
+            )
+            now_ps = finished_at_ps
+
+            if not source_is_active(captured_source):
+                active = [source for source in source_order if source_is_active(source)]
+                if active:
+                    captured_source = active[0]
+
+        return scheduled, max_occupancy
+
 
 class NvlinkDomainService(Generic[_AnalyticResult]):
-    """Compose TX, switch, and RX, or preserve the analytical bypass exactly."""
+    """Compose TX, switch, and RX, or preserve the analytical bypass exactly.
+
+    ``serve`` retains the merged pre-TRAF-73 flow-policy behavior so preserved
+    studies keep their exact bytes. ``serve_arbitrated`` is the contention
+    entry point and defaults to the documented release-aware round robin.
+    """
 
     def __init__(self, profile: NvlinkCandidateProfile | None = None) -> None:
         if profile is not None and not isinstance(profile, NvlinkCandidateProfile):
@@ -932,9 +1176,9 @@ class NvlinkDomainService(Generic[_AnalyticResult]):
         *,
         analytic_result: _AnalyticResult,
         include_switch: bool = True,
-        flow_policy: NvlinkFlowPolicy = NvlinkFlowPolicy.STATIC_INTERLEAVE,
+        flow_policy: NvlinkFlowPolicy = LEGACY_NVLINK_FLOW_POLICY,
     ) -> _AnalyticResult | NvlinkDomainResult:
-        """Return the exact bypass object or the selected packet service."""
+        """Return the exact bypass object or the pinned compatibility service."""
 
         if self.profile is None:
             return analytic_result
@@ -962,6 +1206,51 @@ class NvlinkDomainService(Generic[_AnalyticResult]):
             delivered, max_occupancy = rx.receive(forwarded)
         else:
             delivered, max_occupancy = rx.receive_arrivals(forwarded)
+        return self._result(transfers, delivered, max_occupancy)
+
+    def serve_arbitrated(
+        self,
+        transfers: Sequence[NvlinkTransfer],
+        *,
+        analytic_result: _AnalyticResult,
+        include_switch: bool = True,
+        policy: NvlinkArbitrationPolicy = DEFAULT_NVLINK_ARBITRATION_POLICY,
+    ) -> _AnalyticResult | NvlinkDomainResult:
+        """Serve independently credited links through a selected RX arbiter."""
+
+        if self.profile is None:
+            return analytic_result
+        if type(include_switch) is not bool:
+            raise TypeError("include_switch must be a boolean")
+        _require_enum("policy", policy, NvlinkArbitrationPolicy)
+        tx = NvlinkTx(self.profile.tx)
+        packetized = tuple(
+            packet
+            for transfer in transfers
+            for packet in tx.packetize(transfer)
+        )
+        transmitted = tx.transmit(
+            packetized,
+            credit_return_latency_ps=self.profile.rx.credit_return_latency_ps,
+        )
+        if include_switch:
+            forwarded = NvlinkSwitch(self.profile.switch).forward(transmitted)
+        else:
+            forwarded = transmitted
+        delivered, max_occupancy = NvlinkRx(self.profile.rx).receive_arbitrated(
+            forwarded,
+            policy=policy,
+        )
+        return self._result(transfers, delivered, max_occupancy)
+
+    def _result(
+        self,
+        transfers: Sequence[NvlinkTransfer],
+        delivered: tuple[NvlinkPacket, ...],
+        max_occupancy: int,
+    ) -> NvlinkDomainResult:
+        if self.profile is None:
+            raise AssertionError("an NVLink domain result requires a profile")
         request_packets = tuple(
             packet for packet in delivered if packet.direction is NvlinkPacketDirection.REQUEST
         )
@@ -1042,6 +1331,7 @@ def validate_candidate_against_published_a100_envelope(
             )
         ],
         analytic_result=None,
+        flow_policy=LEGACY_NVLINK_FLOW_POLICY,
     )
     fanout = service.serve(
         [
@@ -1054,6 +1344,7 @@ def validate_candidate_against_published_a100_envelope(
             for destination in (1, 2, 3)
         ],
         analytic_result=None,
+        flow_policy=LEGACY_NVLINK_FLOW_POLICY,
     )
     if not isinstance(pair, NvlinkDomainResult) or not isinstance(fanout, NvlinkDomainResult):
         raise TypeError("candidate profile did not produce composed NVLink results")
@@ -1087,6 +1378,17 @@ def sha256_file(path: str | Path) -> str:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def _packet_arrival_ps(packet: NvlinkPacket) -> int:
+    arrival = (
+        packet.switch_finished_at_ps
+        if packet.switch_finished_at_ps is not None
+        else packet.tx_finished_at_ps
+    )
+    if arrival is None:
+        raise ValueError("RX input packet has no upstream completion")
+    return arrival
 
 
 def _serialize_ps(byte_count: int, rate_bytes_per_second: int) -> int:
@@ -1294,7 +1596,9 @@ def _require_nonnegative_int(name: str, value: object) -> None:
         raise ValueError(f"{name} must be non-negative")
 
 
-def _require_endpoint(name: str, value: object) -> None:
+def _require_endpoint(name: str, value: object, endpoint_count: int = 4) -> None:
     _require_nonnegative_int(name, value)
-    if int(value) > 3:
-        raise ValueError(f"{name} must identify one of four A100 endpoints")
+    if int(value) >= endpoint_count:
+        raise ValueError(
+            f"{name} must identify one of {endpoint_count} declared endpoints"
+        )

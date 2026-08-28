@@ -1,0 +1,959 @@
+{
+  "corrected_mapping": {
+    "active_entity": "one queued ordered source-destination pair class",
+    "degree_rows": [
+      {
+        "aggregate_capacity_bytes_per_second": 100000000000,
+        "binding_capacity": "ordered-pair class cap",
+        "degree": 1,
+        "full_membership_per_class_bytes_per_second": 100000000000
+      },
+      {
+        "aggregate_capacity_bytes_per_second": 200000000000,
+        "binding_capacity": "ordered-pair class cap",
+        "degree": 2,
+        "full_membership_per_class_bytes_per_second": 100000000000
+      },
+      {
+        "aggregate_capacity_bytes_per_second": 207101921876,
+        "binding_capacity": "RX ingress plateau",
+        "degree": 3,
+        "full_membership_per_class_bytes_per_second": 69033973958.66667
+      },
+      {
+        "aggregate_capacity_bytes_per_second": 207101921876,
+        "binding_capacity": "RX ingress plateau",
+        "degree": 4,
+        "full_membership_per_class_bytes_per_second": 51775480469.0
+      },
+      {
+        "aggregate_capacity_bytes_per_second": 207101921876,
+        "binding_capacity": "RX ingress plateau",
+        "degree": 8,
+        "full_membership_per_class_bytes_per_second": 25887740234.5
+      },
+      {
+        "aggregate_capacity_bytes_per_second": 207101921876,
+        "binding_capacity": "RX ingress plateau",
+        "degree": 16,
+        "full_membership_per_class_bytes_per_second": 12943870117.25
+      }
+    ],
+    "destination_rx_ingress_capacity_bytes_per_second": 207101921876,
+    "fluid_allocator": "htsim RnicFluidManifold with the same asymmetric maps",
+    "later_transfer_rule": "wait at the class mapping boundary until the active extent drains",
+    "max_active_entities_per_pair": 1,
+    "packet_allocator": "htsim RnicMaxMinAllocator grants feed RnicPacketizedSlotCalendar",
+    "source_ordered_pair_capacity_bytes_per_second": 100000000000,
+    "source_tx_egress_plateau_bytes_per_second": 160795737454,
+    "zero_fitted_constants": true
+  },
+  "evidence_classes": {
+    "behavioral": "H1 through H4, reported separately from fatal guards",
+    "exact_oracle": "mapping arithmetic, byte ledgers, capacity ledgers, and fluid class service",
+    "run_configuration": "42 rung-degree cells, nine seeds, three transports",
+    "simulation": "all FCT, tail, and fairness observations; no new hardware evidence",
+    "structural": "preservation locks, topology labels, and figure disclosures"
+  },
+  "fatal_guards": [
+    "the TRAF-71 tree differs by one byte or tracked object",
+    "a degree 1 to 3 release tuple differs from TRAF-69",
+    "a corrected source class is granted above 100000000000 byte/s",
+    "the corrected destination aggregate exceeds 207101921876 byte/s",
+    "more than one rnic flow is active for one ordered-pair class",
+    "any transport loses, duplicates, or changes a flow release or payload",
+    "rnic-nn packet geometry differs from 256 payload plus 16 header bytes",
+    "rnic-nn-fluid emits a packet, header, ACK, control byte, or reverse byte",
+    "a CDF is nonmonotone or its final pointwise band does not equal one",
+    "a reported fairness value is outside [0,1] or degree 1 differs from one",
+    "a degree 4, 8, or 16 figure omits the simulated-mesh disclosure",
+    "a small-flow figure omits the hardware-identification caveat"
+  ],
+  "frozen_hypotheses": [
+    {
+      "bar": "legacy/corrected p50 is within 5 percent of 601/360 and the corrected p50 is at or left of corrected NVLink",
+      "claim": "The corrected degree-3 rnic-nn 512 KiB p50 moves left of TRAF-71 by the fair-share entity correction and no raw capacity change.",
+      "id": "H1"
+    },
+    {
+      "bar": "every fluid completion is within 1 ps of the analytical class-fluid oracle and fluid p50, p99, and worst are no larger in all 42 cells",
+      "claim": "rnic-nn-fluid has no tail beyond its exact capacity-bound class-service oracle and sits at or left of both packet transports.",
+      "id": "H2"
+    },
+    {
+      "bar": "for 256 B, 1 KiB, and 4 KiB, both references are strictly left at every mesh degree and their relative advantages are nondecreasing",
+      "claim": "At degrees 4, 8, and 16, rnic-nn and fluid increasingly beat NVLink on small-flow p99 and worst-flow FCT.",
+      "id": "H3"
+    },
+    {
+      "bar": "for the three small-flow rungs, rnic-nn and fluid Jain fairness are no lower at degrees 4, 8, and 16 and the gap is nondecreasing",
+      "claim": "Global fair share increasingly improves concurrent-flow fairness over the NVLink credit domain at mesh degrees.",
+      "id": "H4"
+    },
+    {
+      "bar": "no source or destination service exceeds its cap; packet wire and fluid payload ledgers are exact; every flow completes",
+      "claim": "Long-flow service stays within the mapped physical capacity and fluid removes only packet overhead, not required queued work.",
+      "id": "H5"
+    }
+  ],
+  "htsim_authority": {
+    "commit": "1dcbfec36a33753bf978cf6323bade1a6645fe4f",
+    "fluid_primitive": "RnicFluidManifold",
+    "fluid_semantics": "continuous bytes, no packetization, perfectly fair max-min service, zero propagation on this mapping",
+    "fluid_transport": "rnic-nn-fluid",
+    "packet_primitives": [
+      "RnicMaxMinAllocator",
+      "RnicPacketizedSlotCalendar"
+    ],
+    "packet_transport": "rnic-nn"
+  },
+  "mapping_audit": {
+    "correction": "Keep one active htsim fair-share entity per ordered source-destination class. Later released transfers wait in that class until its active transfer drains. Allocate the class against a 100 GB/s source cap and the shared 207.101921876 GB/s destination cap.",
+    "degree_3_aggregate_below_nvlink": false,
+    "degree_3_aggregate_capacity_ratio": 1.0,
+    "degree_3_nvlink_effective_ingress_bytes_per_second": 207101921876,
+    "degree_3_rnic_receiver_grant_bytes_per_second": 207101921876,
+    "legacy_degree_3_512k_p50_ps": {
+      "nvlink_credit": 18145397.111111112,
+      "observed_ratio": 1.6645530503499466,
+      "rnic_nn": 30203976.111111112
+    },
+    "legacy_formula": "min(degree*pair_raw, degree*tx_plateau, rx_plateau)",
+    "normalized_queue_arithmetic": {
+      "pair_class_fifo_nearest_rank_p50_service_units": "9/4",
+      "per_transfer_max_min_nearest_rank_p50_service_units": "601/160",
+      "predicted_ratio": "601/360",
+      "predicted_ratio_decimal": 1.6694444444444445,
+      "relative_error_from_observed": 0.002938563053589416,
+      "release_interval": "3S/4",
+      "wave_service_symbol": "S"
+    },
+    "plain_verdict": "mapping deficit, not a genuine packet-transport tail: the aggregate capacity was correct, but each overlapping transfer was mapped as an independent max-min flow instead of one queued ordered-pair class",
+    "rows": [
+      {
+        "binding_capacity": "ordered-pair class cap",
+        "degree": 1,
+        "full_membership_per_source_share_bytes_per_second": 100000000000.0,
+        "legacy_receiver_capacity_bps": 800000000000,
+        "legacy_receiver_capacity_bytes_per_second": 100000000000,
+        "ordered_pair_class_cap_bytes_per_second": 100000000000,
+        "rx_ingress_plateau_bytes_per_second": 207101921876,
+        "tx_egress_plateau_aggregate_bytes_per_second": 160795737454
+      },
+      {
+        "binding_capacity": "ordered-pair class cap",
+        "degree": 2,
+        "full_membership_per_source_share_bytes_per_second": 100000000000.0,
+        "legacy_receiver_capacity_bps": 1600000000000,
+        "legacy_receiver_capacity_bytes_per_second": 200000000000,
+        "ordered_pair_class_cap_bytes_per_second": 200000000000,
+        "rx_ingress_plateau_bytes_per_second": 207101921876,
+        "tx_egress_plateau_aggregate_bytes_per_second": 321591474908
+      },
+      {
+        "binding_capacity": "RX ingress plateau",
+        "degree": 3,
+        "full_membership_per_source_share_bytes_per_second": 69033973958.66667,
+        "legacy_receiver_capacity_bps": 1656815375008,
+        "legacy_receiver_capacity_bytes_per_second": 207101921876,
+        "ordered_pair_class_cap_bytes_per_second": 300000000000,
+        "rx_ingress_plateau_bytes_per_second": 207101921876,
+        "tx_egress_plateau_aggregate_bytes_per_second": 482387212362
+      }
+    ],
+    "verdict": "MAPPING_DEFICIT_IN_FAIR_SHARE_ENTITY_NOT_CAPACITY_VALUE"
+  },
+  "measurement_caveat": {
+    "hardware_identification_scope": "LONG-FLOW ONLY",
+    "reason": "sender launches serialize through sequential PCIe writes, so real hardware cannot construct nanosecond-scale true-sync small-flow co-arrival",
+    "required_figure_disclosure": "SMALL-FLOW INCAST IS A MODEL PREDICTION; real true-sync launch is not constructible through sequential PCIe writes; hardware identification is long-flow only",
+    "small_flow_class": "simulated model prediction with no direct hardware check"
+  },
+  "metrics": {
+    "capacity_bound": "source classes are capped at 100 GB/s and their aggregate at the 207.101921876 GB/s receiver plateau",
+    "cdf": "mean empirical CDF across nine seeds with a pointwise seed min-max band",
+    "fairness": "for each release wave, Jain J=(sum g_i)^2/(n*sum g_i^2), g_i=payload_bytes/FCT_ps across its concurrently released senders; publish the mean across waves and seeds with seed min-max",
+    "tail": "per transport, degree, rung, and seed: nearest-rank p50, p99, and maximum flow-completion time; publish seed mean and min-max"
+  },
+  "physical_constants": {
+    "credit_return_ps": 200000,
+    "credit_unit_bytes": 272,
+    "credits_per_destination": 256,
+    "header_bytes": 16,
+    "links_per_ordered_pair": 4,
+    "max_payload_bytes": 256,
+    "max_wire_bytes": 272,
+    "pair_raw_bytes_per_second": 100000000000,
+    "per_link_bytes_per_second": 25000000000,
+    "propagation_ps": 0,
+    "rx_ingress_bytes_per_second": 207101921876,
+    "tx_endpoint_egress_bytes_per_second": 160795737454
+  },
+  "plot_contract": {
+    "bands": "pointwise minimum to maximum across nine seeds",
+    "cdf_mesh_stem": "nvlink-rnic-fluid-fct-cdf-mesh",
+    "cdf_physical_stem": "nvlink-rnic-fluid-fct-cdf-physical",
+    "fairness_stem": "nvlink-rnic-fluid-fairness",
+    "formats": [
+      "pdf",
+      "png"
+    ],
+    "layout": "split physical and extrapolated CDF figures; one panel per rung; tail and fairness figures use one panel per rung; mapping audit directly overlays TRAF-71 and corrected degree-3 curves",
+    "mapping_audit_stem": "nvlink-rnic-mapping-audit-degree-3",
+    "path_rendering": "POSIX",
+    "tail_stem": "nvlink-rnic-fluid-tail",
+    "transport_styles": {
+      "nvlink-credit": "solid",
+      "rnic-nn": "dashed",
+      "rnic-nn-fluid": "dotted"
+    }
+  },
+  "preservation_lock": {
+    "artifact_count": 16,
+    "artifacts": [
+      {
+        "bytes": 1092,
+        "path": "examples/nvlink_rnic_comparison_v1/CMakeLists.txt",
+        "sha256": "9e1e796fb560e0c79efbae92ef7d8f3d3a1c2825b59182646d30cb9b0f3e3085"
+      },
+      {
+        "bytes": 7129,
+        "path": "examples/nvlink_rnic_comparison_v1/RESULTS.md",
+        "sha256": "fc7ac95a3ad5ae145271ca4638e6d703452f13bb0741d111e953d03e054b7b5b"
+      },
+      {
+        "bytes": 21887,
+        "path": "examples/nvlink_rnic_comparison_v1/build_expectations.py",
+        "sha256": "c2980f58720e4457603116540a4516142b7cc4e3fc7d8a600830959a7bece187"
+      },
+      {
+        "bytes": 2047,
+        "path": "examples/nvlink_rnic_comparison_v1/dispersion.csv",
+        "sha256": "04edfd5e5f0ed1b32942ce573cd4592c64bc5c3798665baa7210a91358a627e7"
+      },
+      {
+        "bytes": 23799,
+        "path": "examples/nvlink_rnic_comparison_v1/expectations.json",
+        "sha256": "4b60365d8251b5fd3c7627dbe38c66ad1fc1c096b21fdfada4fc744320a5bdfa"
+      },
+      {
+        "bytes": 10880,
+        "path": "examples/nvlink_rnic_comparison_v1/expectations.md",
+        "sha256": "c8d6f414a26dbf5d9cb4f672a47f7d56498154a97e08eef0edacea5c17741e92"
+      },
+      {
+        "bytes": 17365,
+        "path": "examples/nvlink_rnic_comparison_v1/figures/nvlink-rnic-dispersion.pdf",
+        "sha256": "a62eb4e70a9948013aaf25db3840cb3f6fbdd4ac11f5469ce608eec975c5acf2"
+      },
+      {
+        "bytes": 123249,
+        "path": "examples/nvlink_rnic_comparison_v1/figures/nvlink-rnic-dispersion.png",
+        "sha256": "702d7b7dc8780d5d01ce8cea1ad9c95d2246997d7b4c4834bad076a2aa39220c"
+      },
+      {
+        "bytes": 162155,
+        "path": "examples/nvlink_rnic_comparison_v1/figures/nvlink-rnic-fct-cdf.pdf",
+        "sha256": "16823bc792f32d61a3bfb850a53593c182b1a48a14f191387069cbc3a8071ed1"
+      },
+      {
+        "bytes": 280309,
+        "path": "examples/nvlink_rnic_comparison_v1/figures/nvlink-rnic-fct-cdf.png",
+        "sha256": "1e250b237fdeacffa4658525facab717c1f8fc52780b449d61ec93401993a4f3"
+      },
+      {
+        "bytes": 532,
+        "path": "examples/nvlink_rnic_comparison_v1/htsim_logged_minimal.cpp",
+        "sha256": "88f5818bbf2cc0bbc9d4ca3f8f4ab93155512434e0087a7d7a9e02648d8484c3"
+      },
+      {
+        "bytes": 9822,
+        "path": "examples/nvlink_rnic_comparison_v1/plot_study.py",
+        "sha256": "6a9d17cc54a65fec0e69ac7575f565804cccb1b394db1fcbeab1a2a6a8556a8a"
+      },
+      {
+        "bytes": 16071,
+        "path": "examples/nvlink_rnic_comparison_v1/publish_study.py",
+        "sha256": "fda00c15bda1abee10c6f207aa01bd9d0c124af582c8bc7d8ad7cbafe924bd7a"
+      },
+      {
+        "bytes": 42924,
+        "path": "examples/nvlink_rnic_comparison_v1/results.json",
+        "sha256": "c01a64f65a514b96c1e869e7ce2cf0ea2ed9d63c11446ce6bbb8b8ddc564392b"
+      },
+      {
+        "bytes": 13915,
+        "path": "examples/nvlink_rnic_comparison_v1/rnic_nn_schedule.cpp",
+        "sha256": "ce63f57fe05f14c3f64281576e52efeddfe2fc18ac312815e5d16e579ba79547"
+      },
+      {
+        "bytes": 34490,
+        "path": "examples/nvlink_rnic_comparison_v1/run_study.py",
+        "sha256": "c889062576d7161c6d5a85fce4ef1cc98038bca9a12db0bebef1d56f097601b2"
+      }
+    ],
+    "legacy_study": "examples/nvlink_rnic_comparison_v1",
+    "policy": "TRAF-71 stays byte-identical and its degree-3 interpretation is superseded only by reference from TRAF-72",
+    "recursive_object_list_sha256": "3b052bca52fd684080b7c419075d27dbea43b0fe5d7d27b5d3ffff1b83cac7bb"
+  },
+  "schema": "simllm-nvlink-rnic-comparison-expectations-v2",
+  "source_authority": {
+    "flow_expectations_path": "examples/nvlink_flow_dynamics_v1/expectations.json",
+    "flow_expectations_sha256": "6e6e8f0ed7c79572f1ef893f7f7869d8a4e854200bdee514b4338b87955e1261",
+    "legacy_expectations_path": "examples/nvlink_rnic_comparison_v1/expectations.json",
+    "legacy_expectations_sha256": "4b60365d8251b5fd3c7627dbe38c66ad1fc1c096b21fdfada4fc744320a5bdfa",
+    "legacy_freeze_commit": "6224d90fea2eed788b8e6ba876787fe7f0e52319",
+    "legacy_result_path": "examples/nvlink_rnic_comparison_v1/results.json",
+    "legacy_result_sha256": "c01a64f65a514b96c1e869e7ce2cf0ea2ed9d63c11446ce6bbb8b8ddc564392b",
+    "profile_path": "examples/a100_nvlink_packet_v1/candidate-profile.json",
+    "profile_sha256": "d33ef5b2c6fa87cc97e1e7b45a43a841a5da45f5462311e3981fbc903c56deb2",
+    "repository_commit": "6c1ea0b"
+  },
+  "study": {
+    "freeze_date": "2026-08-28",
+    "name": "nvlink_rnic_comparison_v2",
+    "prohibited_writeback": "No TRAF-72 observation may change this freeze. Refutations publish with the thresholds and direction signs unchanged.",
+    "status": "expectations_only"
+  },
+  "task_id": "TRAF-72",
+  "topology": {
+    "extrapolated": "degrees 4, 8, and 16 are a simulated mesh using the same per-endpoint scored constants on more endpoints",
+    "hardware_counterpart": "none on NV4; an NVSwitch-class configuration is the physical route to higher incast degrees",
+    "physical": "NV4 four-GPU direct mesh only for degrees 1, 2, and 3",
+    "required_figure_disclosure": "SIMULATED MESH EXTRAPOLATION at degrees 4/8/16; no NV4 hardware counterpart; NVSwitch-class hardware is the physical route"
+  },
+  "workload": {
+    "cells": [
+      {
+        "degree": 1,
+        "destination": 3,
+        "release_interval_ps": 9145,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "6ef2bdb659ec7abb74adb297906bc2a1767f441a62fa5d3c15c33b64ff8fd2c5",
+        "single_flow_physical_floor_ps": 12194,
+        "size_bytes": 256,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 12194
+      },
+      {
+        "degree": 1,
+        "destination": 3,
+        "release_interval_ps": 12952,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "01a886d11212179756f89dfc02be01153380202cad2786b6fb61e57409e8ee55",
+        "single_flow_physical_floor_ps": 17270,
+        "size_bytes": 1024,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 17270
+      },
+      {
+        "degree": 1,
+        "destination": 3,
+        "release_interval_ps": 37432,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "e11a334009069e0be3cb284d2b67fcbbd58716be7d39f323e122b8d702c36750",
+        "single_flow_physical_floor_ps": 49910,
+        "size_bytes": 4096,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 49910
+      },
+      {
+        "degree": 1,
+        "destination": 3,
+        "release_interval_ps": 135352,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "3b40fdf51d93da94774648e86860480101a3b8226edccfc84dc30c71eb9ceef3",
+        "single_flow_physical_floor_ps": 180470,
+        "size_bytes": 16384,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 180470
+      },
+      {
+        "degree": 1,
+        "destination": 3,
+        "release_interval_ps": 527032,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "01882ef4893a877a666ce2a9c9f0c70493d7a6ffa3ae8fa1062aeecc2e50cdd5",
+        "single_flow_physical_floor_ps": 702710,
+        "size_bytes": 65536,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 702710
+      },
+      {
+        "degree": 1,
+        "destination": 3,
+        "release_interval_ps": 2093752,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "2c81a776b05e9400f9c112391b00507031fc3e9602ea780f506d00edfd967974",
+        "single_flow_physical_floor_ps": 2791670,
+        "size_bytes": 262144,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 2791670
+      },
+      {
+        "degree": 1,
+        "destination": 3,
+        "release_interval_ps": 4182712,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "00c1f922f0d6cf26bdf677338197674526db9184822d6d1be6422ddd6bf803c2",
+        "single_flow_physical_floor_ps": 5576950,
+        "size_bytes": 524288,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 5576950
+      },
+      {
+        "degree": 2,
+        "destination": 3,
+        "release_interval_ps": 9145,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "f4b17409ebf1d2c5019103d7384e14df8ace840f557bb4f8520930c6178ec986",
+        "single_flow_physical_floor_ps": 12194,
+        "size_bytes": 256,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 12194
+      },
+      {
+        "degree": 2,
+        "destination": 3,
+        "release_interval_ps": 12952,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "acbde09643a5956053f9a792fedc40389e9e95fe669647eef538aa3829ee8aa3",
+        "single_flow_physical_floor_ps": 17270,
+        "size_bytes": 1024,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 17270
+      },
+      {
+        "degree": 2,
+        "destination": 3,
+        "release_interval_ps": 37432,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "ca655084392c712761b6bc8cd845d16d192e70676b501a1650fe39917be9f431",
+        "single_flow_physical_floor_ps": 49910,
+        "size_bytes": 4096,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 49910
+      },
+      {
+        "degree": 2,
+        "destination": 3,
+        "release_interval_ps": 135352,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "db5056b2f7f96bcecfbd2ffc22dca291d74f19c154d3ab6225d342f725188f2d",
+        "single_flow_physical_floor_ps": 180470,
+        "size_bytes": 16384,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 180470
+      },
+      {
+        "degree": 2,
+        "destination": 3,
+        "release_interval_ps": 527032,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "2a47e0151dc294286958ab288a204bd1e16ade9cfa23b876075191781bad2c4a",
+        "single_flow_physical_floor_ps": 702710,
+        "size_bytes": 65536,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 702710
+      },
+      {
+        "degree": 2,
+        "destination": 3,
+        "release_interval_ps": 2093752,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "14fda8336fa3d3f1e1796c0a714a97439dfc57520e633ba2ff8c07f52e75a165",
+        "single_flow_physical_floor_ps": 2791670,
+        "size_bytes": 262144,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 2791670
+      },
+      {
+        "degree": 2,
+        "destination": 3,
+        "release_interval_ps": 4182712,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "0712adfda81185b74105d294ec9999369ce4aec2af83075a9bc4fc0dd0a9fc18",
+        "single_flow_physical_floor_ps": 5576950,
+        "size_bytes": 524288,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 5576950
+      },
+      {
+        "degree": 3,
+        "destination": 3,
+        "release_interval_ps": 11115,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "7dbc515b49935075a690321ee91bd63808484feb71a6530d9e5f89156370b07d",
+        "single_flow_physical_floor_ps": 12194,
+        "size_bytes": 256,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 14821
+      },
+      {
+        "degree": 3,
+        "destination": 3,
+        "release_interval_ps": 19980,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "466e8360e201b6ba4c599fded17ae9d2aea27938ec844a85a5faf3f5eaa13e24",
+        "single_flow_physical_floor_ps": 17270,
+        "size_bytes": 1024,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 26641
+      },
+      {
+        "degree": 3,
+        "destination": 3,
+        "release_interval_ps": 55441,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "5f7fad8e8b299ce30d7f6da200a8291a30db1daa7f7a695f702c95bf976be431",
+        "single_flow_physical_floor_ps": 49910,
+        "size_bytes": 4096,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 73922
+      },
+      {
+        "degree": 3,
+        "destination": 3,
+        "release_interval_ps": 197284,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "76dbfb087acaf402d281c2d7e4ab51f11a7f98989cfe2805588b456252afc527",
+        "single_flow_physical_floor_ps": 180470,
+        "size_bytes": 16384,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 263046
+      },
+      {
+        "degree": 3,
+        "destination": 3,
+        "release_interval_ps": 764657,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "bb922bbca26e140502dd7680aa1eb58bb9a55c5b5dfcdc687aaeb7d4ccd9f57e",
+        "single_flow_physical_floor_ps": 702710,
+        "size_bytes": 65536,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 1019543
+      },
+      {
+        "degree": 3,
+        "destination": 3,
+        "release_interval_ps": 3034149,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "640f95a6b78a377e8e0ce6311d43239043d08909dbb7d69ece99379763606d85",
+        "single_flow_physical_floor_ps": 2791670,
+        "size_bytes": 262144,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 4045532
+      },
+      {
+        "degree": 3,
+        "destination": 3,
+        "release_interval_ps": 6060137,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "031321d1f7d9a58ab8db0b1210f583a37e0c67b3d753887b328aa4513d12aebf",
+        "single_flow_physical_floor_ps": 5576950,
+        "size_bytes": 524288,
+        "source_relation": "byte-identical TRAF-69 tuples",
+        "wave_service_ps": 8080183
+      },
+      {
+        "degree": 4,
+        "destination": 4,
+        "release_interval_ps": 12100,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "fbfb3d3e6d4b12685ae915bc95348a071771ceeb506c58526e6d68d37db23978",
+        "single_flow_physical_floor_ps": 12194,
+        "size_bytes": 256,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 16134
+      },
+      {
+        "degree": 4,
+        "destination": 4,
+        "release_interval_ps": 23920,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "827d90eeb72213da4f26db79ad01b766d3944437c2ba6d11f7a0bfddf6a90c68",
+        "single_flow_physical_floor_ps": 17270,
+        "size_bytes": 1024,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 31894
+      },
+      {
+        "degree": 4,
+        "destination": 4,
+        "release_interval_ps": 71202,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "28a2c3234baeb3641051b4777ff71394972b403834e8877d0a487a99c8511c93",
+        "single_flow_physical_floor_ps": 49910,
+        "size_bytes": 4096,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 94936
+      },
+      {
+        "degree": 4,
+        "destination": 4,
+        "release_interval_ps": 260325,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "40acb6ead0e211d41391750987d72791ceed74a305fe6898d5f00abfaa928855",
+        "single_flow_physical_floor_ps": 180470,
+        "size_bytes": 16384,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 347101
+      },
+      {
+        "degree": 4,
+        "destination": 4,
+        "release_interval_ps": 1016823,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "73fa57ed8c3e9f0d5bada5aaf25f8c9c480339be304b7257d1db03a48b11b188",
+        "single_flow_physical_floor_ps": 702710,
+        "size_bytes": 65536,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 1355764
+      },
+      {
+        "degree": 4,
+        "destination": 4,
+        "release_interval_ps": 4042811,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "c13b917e49bbc669c07ca374c3b28275bdc0591f8ea5c9b46057629cc89e64a1",
+        "single_flow_physical_floor_ps": 2791670,
+        "size_bytes": 262144,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 5390415
+      },
+      {
+        "degree": 4,
+        "destination": 4,
+        "release_interval_ps": 8077462,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "8213b9ec9ae35925a6cb73bdc5753380e3ba6165c6e59110cc58e5e8825811b2",
+        "single_flow_physical_floor_ps": 5576950,
+        "size_bytes": 524288,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 10769950
+      },
+      {
+        "degree": 8,
+        "destination": 8,
+        "release_interval_ps": 16040,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "2b26c654e8217b766fcbff417315e35c1e919d90432c8b26c694dcc3cd47f751",
+        "single_flow_physical_floor_ps": 12194,
+        "size_bytes": 256,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 21387
+      },
+      {
+        "degree": 8,
+        "destination": 8,
+        "release_interval_ps": 39681,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "3c62c0e8237cd7ef72e78e663e152ded6815594a87996f5e8761ede9d1065d9d",
+        "single_flow_physical_floor_ps": 17270,
+        "size_bytes": 1024,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 52908
+      },
+      {
+        "degree": 8,
+        "destination": 8,
+        "release_interval_ps": 134243,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "6c4e6e56c001e0a1121ee67dccafbf31eecb7af0423d642d4dfe5384f93a9b2b",
+        "single_flow_physical_floor_ps": 49910,
+        "size_bytes": 4096,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 178991
+      },
+      {
+        "degree": 8,
+        "destination": 8,
+        "release_interval_ps": 512491,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "5b6bf6279da55de6b69d8d6b032e8ccd1d2d2f35eb0af1ed2a4d32648c686a48",
+        "single_flow_physical_floor_ps": 180470,
+        "size_bytes": 16384,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 683322
+      },
+      {
+        "degree": 8,
+        "destination": 8,
+        "release_interval_ps": 2025486,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "bc8724581726ef8606d4fb68dfdd29e1a4d620952f8b264f3b01eabf093dc474",
+        "single_flow_physical_floor_ps": 702710,
+        "size_bytes": 65536,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 2700648
+      },
+      {
+        "degree": 8,
+        "destination": 8,
+        "release_interval_ps": 8077462,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "cdd3dcc011fe28a059931bfd34cfed415bbddd5694128a5670e188390ef3f890",
+        "single_flow_physical_floor_ps": 2791670,
+        "size_bytes": 262144,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 10769950
+      },
+      {
+        "degree": 8,
+        "destination": 8,
+        "release_interval_ps": 16146765,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "f49e2b4710684a5873eb44b166d0f34986c0bb04fbb853a7bb503e58856906aa",
+        "single_flow_physical_floor_ps": 5576950,
+        "size_bytes": 524288,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 21529020
+      },
+      {
+        "degree": 16,
+        "destination": 16,
+        "release_interval_ps": 23920,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "4dffff427e666044f2366fb38751297bc6e3dfd1cffbff7ff093b8093e6addb8",
+        "single_flow_physical_floor_ps": 12194,
+        "size_bytes": 256,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 31894
+      },
+      {
+        "degree": 16,
+        "destination": 16,
+        "release_interval_ps": 71202,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "09520dc7d47dbaf738a41813834a841277d962f67c559d9483ea93024bc7048d",
+        "single_flow_physical_floor_ps": 17270,
+        "size_bytes": 1024,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 94936
+      },
+      {
+        "degree": 16,
+        "destination": 16,
+        "release_interval_ps": 260325,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "baf85cf132279d1548a809887e18922bd0ac1fc46bc6955e0b576fff98c4e77e",
+        "single_flow_physical_floor_ps": 49910,
+        "size_bytes": 4096,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 347101
+      },
+      {
+        "degree": 16,
+        "destination": 16,
+        "release_interval_ps": 1016823,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "86123ec48d5f50765d4b83fdbeffc286a1683ed88676326b0ec74dd0c7f2a1fc",
+        "single_flow_physical_floor_ps": 180470,
+        "size_bytes": 16384,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 1355764
+      },
+      {
+        "degree": 16,
+        "destination": 16,
+        "release_interval_ps": 4042811,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "5864770bcc6749cbc730fb483aa12cafbfb3fe7641683a5e868058443c493b3d",
+        "single_flow_physical_floor_ps": 702710,
+        "size_bytes": 65536,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 5390415
+      },
+      {
+        "degree": 16,
+        "destination": 16,
+        "release_interval_ps": 16146765,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "992b99beec60e1b80590d786bb9a7f6f21f34a68d4fd21b964c0f6afc65d2323",
+        "single_flow_physical_floor_ps": 2791670,
+        "size_bytes": 262144,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 21529020
+      },
+      {
+        "degree": 16,
+        "destination": 16,
+        "release_interval_ps": 32285369,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "f64b69168eae60fc66215b514b527e9225e3443b89d4cf0157362e64a6681e8d",
+        "single_flow_physical_floor_ps": 5576950,
+        "size_bytes": 524288,
+        "source_relation": "same frozen generator extrapolated to the declared mesh",
+        "wave_service_ps": 43047159
+      }
+    ],
+    "degrees": [
+      1,
+      2,
+      3,
+      4,
+      8,
+      16
+    ],
+    "flow_sizes_bytes": [
+      256,
+      1024,
+      4096,
+      16384,
+      65536,
+      262144,
+      524288
+    ],
+    "offered_load": "release interval is three quarters of the frozen wave-service bound",
+    "physical_degrees": [
+      1,
+      2,
+      3
+    ],
+    "release_generator": "Random(seed*1000003 + degree*10007 + size_bytes); each later wave adds release_interval_ps plus randint(jitter_low_ps,jitter_high_ps); each source adds randint(0,jitter_high_ps)",
+    "samples_per_seed_per_sender": 12,
+    "seed_count": 9,
+    "seeds": [
+      1103,
+      1907,
+      2801,
+      3691,
+      4513,
+      5381,
+      6271,
+      7159,
+      8053
+    ],
+    "simulated_mesh_degrees": [
+      4,
+      8,
+      16
+    ]
+  }
+}
