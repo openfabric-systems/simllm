@@ -10,6 +10,7 @@ from simllm.core import RequestPhase, ScheduledRequest, StepRecord
 from simllm.traffic import (
     EXPERT_PARALLEL_TP_ALLREDUCE_SITES,
     TP_ALLREDUCE_SITES,
+    MoeActivationPrecision,
     layer_tp_allreduce_sites,
     render_step_goal,
     renders_expert_combine,
@@ -231,7 +232,7 @@ def test_expert_parallel_moe_renders_one_allreduce_and_two_a2avs_per_layer():
     assert min(moe_tags) == 1000 + 24 * 2 * (len(tp_ranks) - 1)
 
 
-def test_uniform_full_population_emits_every_directed_ep_pair():
+def test_uniform_full_population_routes_only_realized_assignments():
     dims = replace(
         TINY_MOE_DIMS,
         num_layers=1,
@@ -250,21 +251,36 @@ def test_uniform_full_population_emits_every_directed_ep_pair():
         dims,
         ep_ranks,
         uniform_tokens_per_rank=4,
+        activation_precision=MoeActivationPrecision(
+            dispatch_bytes_per_element=1,
+            combine_bytes_per_element=2,
+        ),
     )
     assert sum(len(operation.pair_payload_bytes) for operation in single_engine) == 510
-    assert sum(len(operation.pair_payload_bytes) for operation in full_population) == 130560
-    assert {
-        payload_bytes
-        for operation in full_population
-        for _, _, payload_bytes in operation.pair_payload_bytes
-    } == {384}
-    assert sum(
-        payload_bytes
-        for operation in full_population
-        for _, _, payload_bytes in operation.pair_payload_bytes
-    ) == 50135040
-    assert 130560 * 65 == 8486400
-    assert 50135040 * 65 == 3258777600
+    dispatch, combine = full_population
+    assert len(dispatch.pair_payload_bytes) == len(combine.pair_payload_bytes) == 7820
+    assert all(payload_bytes % 3072 == 0 for _, _, payload_bytes in dispatch.pair_payload_bytes)
+    assert all(payload_bytes % 6144 == 0 for _, _, payload_bytes in combine.pair_payload_bytes)
+    assert sum(payload for _, _, payload in dispatch.pair_payload_bytes) == 25_067_520
+    assert sum(payload for _, _, payload in combine.pair_payload_bytes) == 50_135_040
+    assert (25_067_520 + 50_135_040) // 256 == 293_760
+
+    destinations = {rank: set() for rank in ep_ranks}
+    fabric_senders = {rank: set() for rank in ep_ranks}
+    for source, destination, _ in dispatch.pair_payload_bytes:
+        destinations[source].add(destination)
+        if source // 8 != destination // 8:
+            fabric_senders[destination].add(source)
+    expected_destinations = 255 * (1 - (31 / 32) ** 4)
+    expected_fabric_senders = 248 * (1 - (31 / 32) ** 4)
+    realized_destinations = sum(map(len, destinations.values())) / 256
+    realized_fabric_senders = sum(map(len, fabric_senders.values())) / 256
+    assert realized_destinations == 30.546875
+    assert realized_destinations == pytest.approx(expected_destinations, rel=0.01)
+    assert realized_fabric_senders == 29.78125
+    assert realized_fabric_senders == pytest.approx(expected_fabric_senders, rel=0.01)
+    assert max(map(len, fabric_senders.values())) == 32
+    assert max(map(len, fabric_senders.values())) <= 1.2 * expected_fabric_senders
 
     phases = step_communication_phases(
         record,
@@ -272,9 +288,38 @@ def test_uniform_full_population_emits_every_directed_ep_pair():
         [0],
         ep_ranks=ep_ranks,
         uniform_tokens_per_rank=4,
+        activation_precision=MoeActivationPrecision(1, 2),
     )
     assert len(phases) == 2
-    assert all(len(phase.segments) == 65280 for phase in phases)
+    assert all(len(phase.segments) == 7820 for phase in phases)
+
+
+def test_moe_activation_precision_defaults_to_model_dtype_and_validates():
+    record = decode_record(num_new_tokens=4)
+    default = step_moe_alltoalls(
+        record,
+        TINY_MOE_DIMS,
+        [0, 1],
+        uniform_tokens_per_rank=4,
+    )
+    explicit = step_moe_alltoalls(
+        record,
+        TINY_MOE_DIMS,
+        [0, 1],
+        uniform_tokens_per_rank=4,
+        activation_precision=MoeActivationPrecision(2, 2),
+    )
+    assert default == explicit
+
+    with pytest.raises(ValueError, match="combine_bytes_per_element"):
+        MoeActivationPrecision(1, 0)
+    with pytest.raises(TypeError, match="MoeActivationPrecision"):
+        step_moe_alltoalls(
+            record,
+            TINY_MOE_DIMS,
+            [0, 1],
+            activation_precision=(1, 2),
+        )
 
 
 @pytest.mark.parametrize("tokens", (0, 3, 5))
