@@ -1328,8 +1328,8 @@ class HtsimStepSink:
             registration_events=registration_events,
         )
 
-    @staticmethod
     def _run_goal(
+        self,
         plan: _PlannedStep,
         goal_path: Path,
         completion_csv: Path,
@@ -1348,8 +1348,7 @@ class HtsimStepSink:
             )
         )
 
-    @staticmethod
-    def _execute_plan(plan: _PlannedStep) -> _SimulatedStep:
+    def _execute_plan(self, plan: _PlannedStep) -> _SimulatedStep:
         """Execute checked artifacts in their authoritative graph order."""
 
         backend_artifact_count = sum(
@@ -1392,7 +1391,7 @@ class HtsimStepSink:
                         hashlib.sha256(payload).hexdigest()
                     )
                     authority_artifact_bytes.append(len(payload))
-                run = HtsimStepSink._run_goal(
+                run = self._run_goal(
                     plan,
                     artifact.goal_path,
                     artifact.completion_csv,
@@ -1424,7 +1423,7 @@ class HtsimStepSink:
         cross_check_report = None
         if plan.dependency_cross_check is not None:
             cross_check = plan.dependency_cross_check
-            cross_check_run = HtsimStepSink._run_goal(
+            cross_check_run = self._run_goal(
                 plan,
                 cross_check.goal_path,
                 cross_check.completion_csv,

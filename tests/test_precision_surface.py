@@ -13,7 +13,11 @@ from pathlib import Path
 
 import pytest
 
-from simllm.backends import HtsimStepSink, HtsimStepSinkConfig
+from simllm.backends import (
+    HtsimStepSink,
+    HtsimStepSinkConfig,
+    LogGopsimStepSinkConfig,
+)
 from simllm.backends.htsim_rnic import HtsimRnicConfig, build_htsim_rnic_command
 from simllm.compute import (
     ComputeProvider,
@@ -257,6 +261,7 @@ def test_the_refusal_survives_the_parser_and_never_degrades_silently():
     ("network", "rnic_hardware"),
     [
         (NetworkLevel.RNIC_NN_FLUID, RnicHardwareLevel.TIMING_NEUTRAL_BYPASS),
+        (NetworkLevel.LOGGOPSIM_IDEAL, RnicHardwareLevel.TIMING_NEUTRAL_BYPASS),
         (NetworkLevel.PACKET_LEVEL, RnicHardwareLevel.TIMING_NEUTRAL_BYPASS),
         (NetworkLevel.PACKET_LEVEL, RnicHardwareLevel.COMPOSED_NATIVE),
     ],
@@ -274,6 +279,25 @@ def test_the_three_legal_network_hardware_cells_are_accepted(network, rnic_hardw
     )
     assert config.network is network
     assert config.rnic_hardware is rnic_hardware
+
+
+def test_loggopsim_ideal_with_composed_native_hardware_is_refused_exactly():
+    with pytest.raises(ValueError) as error:
+        PrecisionConfig(
+            workload=WorkloadLevel.FIXED_TRACE,
+            request_outcome=RequestOutcomeLevel.FABRICATED,
+            framework=FrameworkLevel.RECORDED_STEPS,
+            compute=ComputeLevel.ROOFLINE,
+            dependency=DependencyLevel.SERIAL,
+            locality=LocalityLevel.ALL_REMOTE,
+            network=NetworkLevel.LOGGOPSIM_IDEAL,
+            rnic_hardware=RnicHardwareLevel.COMPOSED_NATIVE,
+        )
+    assert str(error.value) == (
+        "precision.rnic_hardware='composed-native' is incompatible with "
+        "precision.network='loggopsim-ideal'; select "
+        "rnic_hardware='timing-neutral-bypass' or network='packet-level'"
+    )
 
 
 # --- the provenance stamp --------------------------------------------------
@@ -535,6 +559,20 @@ def test_the_step_sink_config_reports_every_seam_it_selects(tmp_path):
         "locality": LocalityLevel.ANALYTIC_NVLINK,
         "network": NetworkLevel.RNIC_NN_FLUID,
     }
+
+    loggopsim = LogGopsimStepSinkConfig(
+        tp_ranks=(0, 1),
+        dims=_DIMS,
+        workdir=tmp_path / "loggopsim",
+        latency_ns=100,
+    )
+    assert loggopsim.selected_precision_levels == {
+        "compute": ComputeLevel.ROOFLINE,
+        "dependency": DependencyLevel.SERIAL,
+        "locality": LocalityLevel.ALL_REMOTE,
+        "network": NetworkLevel.LOGGOPSIM_IDEAL,
+    }
+    assert not loggopsim.workdir.exists()
 
 
 @pytest.mark.parametrize(

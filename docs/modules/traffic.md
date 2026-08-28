@@ -95,6 +95,14 @@ the flow-level work the GOAL emitter renders.
   source-local issue dependencies. The aggregate APIs above remain the
   default and expose no second fidelity selector; `simllm.core.PrecisionConfig`
   is the one selection surface.
+- `NetworkLevel.LOGGOPSIM_IDEAL` selects the ideal-network step sink. It
+  preserves the graph-owned collective plan, GOAL rendering, analytic
+  intra-node service and standard `StepResult` metric path while replacing
+  only remote packet execution with the LogGOP cost model. The level records
+  declared `L`, `o`, `g`, `G`, `O` and `S` values, including the exact `G`
+  string derived from bit rate. It rejects composed-native RNIC hardware at
+  precision validation because those two remote-network authorities cannot
+  own the same step.
 - `plan_step_locality` expands TP ring rounds and MoE dispatch/combine tables
   into ordered directed phases over semantic global ranks, then joins an
   optional placement manifest through `RankMapper.is_intra_node` before any
@@ -480,6 +488,27 @@ diagnostic switch and names no seam level.
 Historical
 `examples/breakdown` fabric-TP columns remain byte-unchanged and are the
 all-remote, cross-node what-if under this model.
+
+The `loggopsim-ideal` level passes the frozen
+[ideal-network study](../../examples/loggopsim_ideal_v1/RESULTS.md): 30 of 30
+exact arithmetic observables, 3 of 3 live metric-chain identities and 3 of 3
+wall-time ceilings in separate evidence classes, with all fatal guards held.
+The live step's independently reproduced network makespan and its TTFT delta
+against the zero-collective control are both exactly 202,000 ps. The
+[frontier ladder](../../examples/frontier_ladder_v1/RESULTS.md) measures
+modeled error against pinned packet observations through M-1, M-2 and M-3,
+but executes no packet reference and therefore measures no packet wall clock.
+The level refuses overlapping multi-source receiver fan-in by default, with
+an explicit acknowledgment and provenance stamp for deliberate envelope
+measurements. The separately frozen
+[acceptance study](../../examples/loggopsim_acceptance_v1/RESULTS.md) executes
+both arms seven times on each of the twelve byte-identical flow sets. The
+packet arm reproduces all twelve pinned completions exactly and all three
+enforcement predicates pass, but the full qualification is honestly REFUTED:
+1.088866981 packet seconds over 0.029767114 ideal seconds is 36.579528x,
+below the frozen 50x floor. All four fatal guards hold, so TRAF-20 stays open
+on that speed miss rather than on packet anchoring or envelope enforcement.
+
 TRAF-7 is complete for observation-driven step lowering and the coarse live
 metric chain. The frozen two-layer study crossed `C/D` from 1/2 to 2 and
 realized independent, two-stage pipeline and serial graphs at their exact
@@ -903,8 +932,9 @@ visible residual moves from -0.592425 percent to -23.423673 percent, exactly
 reproducing the -22.831248 percentage-point movement, and all 27 prior-artifact
 locks pass. No 2K or 4K value was accessed or compared, no scored run was
 performed, and decode pricing, TRAF-65 and the NVLink scope remain untouched.
-The third scored run alone owns the held-out comparison; TRAF-68 remains the
-next reserved traffic ID.
+The third scored run alone owns the held-out comparison. The frontier ladder
+below carries the next fabric-specific comparison without rescoring those
+held-out anchors.
 
 The first frozen
 [two-network bottleneck map](../../examples/deployment_frontier_v1/RESULTS.md)
@@ -915,12 +945,38 @@ packetization throughout, with zero pass-through switch contention. Seventeen
 points are roofline-bound, one B100 batch-32 point is intra-node-bound and no
 point is inter-node-bound. The nine-node batch-32 raw incast excess is
 6.743004420 ms but remains off critical below the 9.535537623 ms H100 roofline.
-That misses the frozen positive elapsed-incast direction, so the published
-study is a refutation and TRAF-68 stays open. The A100 NVLink3 profile remains
-cross-architecture candidate evidence, not H100 or B100 measurement evidence.
-The TX, switch and RX queues, analytic identity bypass, frozen identification
-map and current evidence split are documented in the
-[NVLink domain-model study](../design/nvlink-domain-model.md).
+That misses the frozen positive elapsed-incast direction, so the step-level
+study remains an honest refutation of its positive elapsed-incast prediction.
+The A100 NVLink3 profile remains cross-architecture candidate evidence, not
+H100 or B100 measurement evidence. The TX, switch and RX queues, analytic
+identity bypass, frozen identification map and current evidence split are
+documented in the [NVLink domain-model study](../design/nvlink-domain-model.md).
+
+The
+[frontier ladder](../../examples/frontier_ladder_v1/RESULTS.md) carries 24
+ESTIMATE and 30 SIMULATED points without merging their authorities. The six
+B100 ideal-rung points are closed-form ESTIMATE points with no execution; the
+twelve H100 ideal-rung points execute from rendered GOALs through the
+digest-pinned binary with the exact `G` string `0.02`. All twelve native legs
+match the frozen literals across seven repetitions, and all four fatal guards
+reject genuine mutations.
+At batch 32, the packet-to-ideal quotient is 1.015637 for the serialized
+two-node shape, 8.110405 for eight-into-one incast and 1.015682 for the
+isolated incast control. The mechanism is explicit: the ideal receiver charges
+no per-byte gap, while the packet receiver serializes the shared ingress. At
+step level, the H100 kernel masks every fabric difference and the sole rung
+movement remains the pinned B100 batch-32 intra-node excess. The original
+published median is 0.034612 seconds for all twelve ideal legs. The quantified
+packet-error envelope completes TRAF-20's modeled-error half. The
+[acceptance study](../../examples/loggopsim_acceptance_v1/RESULTS.md) executes
+the same twelve byte-identical flow sets through both arms with seven samples
+per arm. B passes 12 of 12 with every packet quotient exactly 1.0, and C passes
+3 of 3 for refusal, acknowledged fan-in, and clean-path identity. A passes
+only 1 of 2: the 0.029767114-second ideal total meets its one-second ceiling,
+but the 1.088866981-second packet total yields 36.579528x rather than the
+required 50x. The valid refutation keeps TRAF-20 open. The fabric-leg view
+that exposes the contention masked by the original step map closes TRAF-68.
+Neither result makes an absolute-accuracy claim against silicon.
 
 The scored NV4 domain now publishes its packet-level flow joins, convergence,
 divergence and flow-completion-time distributions in
@@ -944,18 +1000,30 @@ bar.
 
 ### Precision
 
-- TRAF-68 (Precision; P1; M): publish the two-network bottleneck study for the
-  CORE-62 frontier. At every frozen configuration and batch, retain the
-  inter-node htsim excess over ideal zero-contention wire service and the
-  intra-node three-module NVLink candidate excess over ideal pair wire service,
-  then name the binding network and its dominant mechanism or module. The
-  study must distinguish fabric protocol, serialization and incast from
-  candidate TX credits and packetization, switch contention and RX return;
-  disclose the A100 candidate's cross-architecture status wherever it prices
-  H100 or B100; render analytical lines, roofline dots and stacked elapsed
-  attribution; and leave every prior scored flagship artifact byte-identical.
-  Close only if all swept points have complete byte and mechanism evidence.
-
+- TRAF-20 (Precision; P2; M): qualify the delivered `loggopsim-ideal`
+  fast level for schedule-shape studies that do not need per-flow transport
+  behavior. The
+  [frontier ladder](../../examples/frontier_ladder_v1/RESULTS.md) measures the
+  modeled-error half against pinned packet observations through M-1, M-2 and
+  M-3: batch-32 packet over ideal is 1.015637 for serialized traffic, 8.110405
+  for incast and 1.015682 for the isolated incast control. It executes no
+  packet reference and therefore measures no packet wall clock. The level now
+  computes receiver fan-in from each rendered GOAL and refuses overlapping
+  flows from multiple sources by default, naming the unmodeled receiver
+  per-byte gap, the about 8x frozen-cell optimism and the ladder evidence. An
+  explicit `acknowledge_fan_in=True` permits a deliberate run and stamps both
+  fan-in and acknowledgment in provenance; fan-in-free runs preserve their
+  accepted GOAL bytes. The
+  [acceptance study](../../examples/loggopsim_acceptance_v1/RESULTS.md)
+  satisfies the live packet anchoring and enforcement clauses: all twelve
+  packet completions reproduce the pinned record exactly, and default refusal,
+  explicit acknowledgment with stamp, and the byte-identical clean path all
+  pass. Its full verdict is REFUTED because the measured packet-over-ideal
+  wall-clock gain is 36.579528x against the frozen 50x floor, even though the
+  0.029767114-second ideal total meets its one-second ceiling. All four fatal
+  guards hold. TRAF-20 therefore remains open solely on the registered speed
+  qualification; neither the passing subfamilies nor a future repetition may
+  be presented as closure unless every frozen scored predicate passes.
 - TRAF-51 (Precision; P1; L): complete the Slingshot fabric calibration
   beyond the steady-state partial. The wave-19 comparison
   ([merlin ss fabric calibration](../../examples/merlin_ss_fabric_calibration_v1/RESULTS.md),
@@ -1277,14 +1345,6 @@ bar.
   against. Acceptance compares fitted quantiles against held-out
   packet-level runs at registered accuracy, and states plainly that a
   marginal fit does not reproduce correlations it never observed.
-- TRAF-20 (Precision; P2; M): add a fluid LogGOPSim fast level for
-  schedule-shape studies that do not need per-flow transport behavior.
-  The GOAL already compiles to the LogGOPSim toolchain, so this level
-  reuses it analytically and bypasses the event-driven RNIC path. Its
-  purpose is sweep throughput, so acceptance must state the measured
-  wall-clock gain and the measured error against the packet-level
-  reference on the same schedules, and it must refuse configurations
-  whose questions it cannot answer rather than returning a number.
 - TRAF-56 (Precision; P1; M): calibrate the collective registration cost and
   the model choices around it. `DECLARED_NCCL_CHANNEL_REGISTRATION_COST` charges
   20,000,000 ps per `(communicator, generation, channel, buffer)` identity, and

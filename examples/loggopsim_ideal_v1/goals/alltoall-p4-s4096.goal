@@ -1,0 +1,33 @@
+num_ranks 4
+rank 0 {
+r0op0: send 4096b to 1 tag 200
+r0op1: send 4096b to 2 tag 200
+r0op2: send 4096b to 3 tag 200
+r0op3: recv 4096b from 1 tag 200
+r0op4: recv 4096b from 2 tag 200
+r0op5: recv 4096b from 3 tag 200
+}
+rank 1 {
+r1op0: recv 4096b from 0 tag 200
+r1op1: send 4096b to 0 tag 200
+r1op2: send 4096b to 2 tag 200
+r1op3: send 4096b to 3 tag 200
+r1op4: recv 4096b from 2 tag 200
+r1op5: recv 4096b from 3 tag 200
+}
+rank 2 {
+r2op0: recv 4096b from 0 tag 200
+r2op1: recv 4096b from 1 tag 200
+r2op2: send 4096b to 0 tag 200
+r2op3: send 4096b to 1 tag 200
+r2op4: send 4096b to 3 tag 200
+r2op5: recv 4096b from 3 tag 200
+}
+rank 3 {
+r3op0: recv 4096b from 0 tag 200
+r3op1: recv 4096b from 1 tag 200
+r3op2: recv 4096b from 2 tag 200
+r3op3: send 4096b to 0 tag 200
+r3op4: send 4096b to 1 tag 200
+r3op5: send 4096b to 2 tag 200
+}

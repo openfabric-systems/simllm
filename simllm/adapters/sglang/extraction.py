@@ -13,6 +13,7 @@ from urllib.parse import unquote, urlparse
 from simllm.calibration.extraction import (
     FrameworkConfigurationProjection,
     FrameworkDeepseekStack,
+    FrameworkDenseStack,
     FrameworkTextStack,
     extract_model_inventory,
 )
@@ -32,6 +33,8 @@ SGLANG_CONFIGURATION_SEAM = (
 )
 SGLANG_QWEN35_BINDING = "python/sglang/srt/models/qwen3_5.py:2319"
 SGLANG_QWEN35_IMPLEMENTATION = "Qwen3_5GatedDeltaNet with RadixLinearAttention"
+SGLANG_QWEN3_BINDING = "python/sglang/srt/models/qwen3.py:718"
+SGLANG_QWEN3_IMPLEMENTATION = "Qwen3Attention"
 SGLANG_DEEPSEEK_V3_BINDING = "python/sglang/srt/models/deepseek_v2.py:3231"
 SGLANG_DEEPSEEK_V3_IMPLEMENTATION = (
     "DeepseekV2AttentionMLA and DeepseekV2MoE"
@@ -144,6 +147,70 @@ def _qwen35_projection(
                 "one-layer-mtp-speculative-head",
             ),
         ),
+    )
+
+
+def _qwen3_projection(
+    model_config: Any,
+    framework: FrameworkIdentity,
+) -> FrameworkConfigurationProjection | None:
+    hf = model_config.hf_config
+    architectures = tuple(hf.architectures or ())
+    if architectures != ("Qwen3ForCausalLM",):
+        return None
+    from sglang.srt.models import qwen3
+
+    architecture = architectures[0]
+    if (
+        qwen3.EntryClass.__name__ != architecture
+        or qwen3.Qwen3Attention.__name__ != "Qwen3Attention"
+    ):
+        raise RuntimeError("SGLang Qwen3 architecture binding does not match the pin")
+    quantization = hf.quantization_config
+    if not isinstance(quantization, dict):
+        raise TypeError("SGLang Qwen3 quantization config is not an object")
+    geometry = ModelGeometry(
+        layers=hf.num_hidden_layers,
+        hidden_size=hf.hidden_size,
+        intermediate_size=hf.intermediate_size,
+        num_heads=hf.num_attention_heads,
+        num_kv_heads=hf.num_key_value_heads,
+        head_size=hf.head_dim,
+        num_experts=0,
+        top_k=0,
+        vocab_size=hf.vocab_size,
+    )
+    return FrameworkConfigurationProjection(
+        framework=framework,
+        configuration_seam=SGLANG_CONFIGURATION_SEAM,
+        architecture_binding=SGLANG_QWEN3_BINDING,
+        text_implementation=SGLANG_QWEN3_IMPLEMENTATION,
+        dense_stack=FrameworkDenseStack(
+            architecture=architecture,
+            model_type=hf.model_type,
+            scope="text-only",
+            geometry=geometry,
+            attention_mechanism="grouped-query causal self-attention",
+            quantization="fp8-e4m3-block-128x128",
+            weight_block_size=tuple(quantization["weight_block_size"]),
+            excluded_components=("input-embedding-family", "normalization-family"),
+        ),
+    )
+
+
+def _qwen3_dims(stack: FrameworkDenseStack) -> ModelDims:
+    geometry = stack.geometry
+    return ModelDims(
+        num_layers=geometry.layers,
+        hidden_size=geometry.hidden_size,
+        intermediate_size=geometry.intermediate_size,
+        num_heads=geometry.num_heads,
+        num_kv_heads=geometry.num_kv_heads,
+        head_size=geometry.head_size,
+        vocab_size=geometry.vocab_size,
+        dtype_bytes=2,
+        weight_dtype_bytes=1,
+        kv_dtype_bytes=2,
     )
 
 
@@ -274,8 +341,13 @@ def _configuration(
         enable_multimodal=False,
     )
     framework = _framework_identity()
+    qwen3_projection = _qwen3_projection(model_config, framework)
     deepseek_projection = _deepseek_v3_projection(model_config, framework)
-    if deepseek_projection is not None:
+    if qwen3_projection is not None:
+        assert qwen3_projection.dense_stack is not None
+        dims = _qwen3_dims(qwen3_projection.dense_stack)
+        projection = qwen3_projection
+    elif deepseek_projection is not None:
         assert deepseek_projection.deepseek_stack is not None
         dims = _deepseek_v3_dims(deepseek_projection.deepseek_stack)
         projection = deepseek_projection
@@ -318,6 +390,8 @@ __all__ = [
     "SGLANG_DEEPSEEK_V3_BINDING",
     "SGLANG_DEEPSEEK_V3_IMPLEMENTATION",
     "SGLANG_EXTRACTION_SEAM",
+    "SGLANG_QWEN3_BINDING",
+    "SGLANG_QWEN3_IMPLEMENTATION",
     "SGLANG_QWEN35_BINDING",
     "SGLANG_QWEN35_IMPLEMENTATION",
     "SGLANG_SOURCE_COMMIT",

@@ -1,0 +1,250 @@
+{
+  "schema": "simllm-transformer-dag-suite-v1",
+  "suite": "qwen3-32b-fp8-text-v1-frameworks-2026-08-28",
+  "state": "authored-inputs-only",
+  "reference_model": {
+    "name": "Qwen/Qwen3-32B-FP8",
+    "revision": "aa55da1ecc13d006e8b8e4f54579b1ea8c3db2df",
+    "config_sha256": "e546dacd2c772660270233f5579e9ab923cc2a7ec5ed3c58c27c2bc62cbf5169",
+    "parameter_count": 32762123264,
+    "weight_sha256": "80ce47beb772bd057b497ba29aecc6202f80fea8d87e183ba86dff17bc034ef3",
+    "weight_bytes": 34322567640,
+    "weight_identity_source": "hugging-face-api-metadata",
+    "weight_identity_revision_url": "https://huggingface.co/api/models/Qwen/Qwen3-32B-FP8/revision/aa55da1ecc13d006e8b8e4f54579b1ea8c3db2df?expand[]=sha&expand[]=safetensors",
+    "weight_identity_tree_url": "https://huggingface.co/api/models/Qwen/Qwen3-32B-FP8/tree/aa55da1ecc13d006e8b8e4f54579b1ea8c3db2df?recursive=true&expand=true",
+    "weight_manifest_rule": "sha256-of-canonical-json-array-of-name-sha256-bytes-records-sorted-by-name",
+    "local_weight_byte_verification": false,
+    "local_weight_verification_policy": "intentionally-not-performed",
+    "weight_shards": [
+      {
+        "name": "model-00001-of-00007.safetensors",
+        "sha256": "da9c68c52d48dd8671566ae5e7068521fca20622c2663fcec9b57e7e2dbf9add",
+        "bytes": 4969518200
+      },
+      {
+        "name": "model-00002-of-00007.safetensors",
+        "sha256": "1343763a405e48de2b058ec46a015a4e449ecc5d72a277ac98b154c6645bb0bd",
+        "bytes": 4971089136
+      },
+      {
+        "name": "model-00003-of-00007.safetensors",
+        "sha256": "fbe4f078f9f5147609cce1a9cc669eddbaed618a4f9c741d744cb35e1d06d7f6",
+        "bytes": 4876704184
+      },
+      {
+        "name": "model-00004-of-00007.safetensors",
+        "sha256": "69fc087a0c4ec20b611b854c7d1ea4f0481d2088187fdb7b2232dc74ef879119",
+        "bytes": 4876704184
+      },
+      {
+        "name": "model-00005-of-00007.safetensors",
+        "sha256": "bbdd9ad55fa7e9df335985ed1ae99253d4e13c017e7b6e1d47b810157ace7bd2",
+        "bytes": 4876704184
+      },
+      {
+        "name": "model-00006-of-00007.safetensors",
+        "sha256": "d149ccf3d3c15cc0b207096f31a9cffd316d46af7eae6e6a46c1a1d768d2a0b9",
+        "bytes": 4876704184
+      },
+      {
+        "name": "model-00007-of-00007.safetensors",
+        "sha256": "7eba6f7914d4bf020d28886d6a17c039dfdb092d1ba6ca105ed7a4dae81b1edf",
+        "bytes": 4875143568
+      }
+    ],
+    "dtype": "bfloat16",
+    "quantization": "fp8-e4m3-block-128x128",
+    "architecture": "Qwen3ForCausalLM",
+    "model_type": "qwen3",
+    "geometry": {
+      "layers": 64,
+      "hidden_size": 5120,
+      "intermediate_size": 25600,
+      "num_heads": 64,
+      "num_kv_heads": 8,
+      "head_size": 128,
+      "num_experts": 0,
+      "top_k": 0,
+      "vocab_size": 151936
+    },
+    "dense_stack": {
+      "scope": "text-only",
+      "attention_mechanism": "grouped-query causal self-attention",
+      "quantization": "fp8-e4m3-block-128x128",
+      "weight_block_size": [128, 128],
+      "excluded_components": [
+        "input-embedding-family",
+        "normalization-family"
+      ]
+    }
+  },
+  "frameworks": [
+    {
+      "id": "vllm",
+      "version": "0.27.1",
+      "source_commit": "6e448d0ea9bf3d88d898b65449ca6dc2aec170ac",
+      "architecture_binding": "model_executor/models/registry.py:199",
+      "text_implementation": "Qwen3Attention"
+    },
+    {
+      "id": "sglang",
+      "version": "0.5.19.dev345+gbfeae4e79",
+      "source_commit": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
+      "source_tree": "9ffe149f40e1cd5bff7dadc6806ad1927d312e69",
+      "architecture_binding": "python/sglang/srt/models/qwen3.py:718",
+      "text_implementation": "Qwen3Attention"
+    }
+  ],
+  "phase_scope": {
+    "mode": "text-only",
+    "included_phases": ["prefill", "decode"],
+    "excluded_components": [
+      "input-embedding-family",
+      "normalization-family"
+    ],
+    "unsupported_mechanism_policy": "reject-non-dense-or-non-fp8-stack"
+  },
+  "base_parallelism": {
+    "tensor": 1,
+    "pipeline": 1,
+    "data": 1,
+    "expert": 1
+  },
+  "graph_cells": [
+    {
+      "id": "cp-train-r4-t128",
+      "family": "compute-prefill",
+      "phase": "prefill",
+      "split": "train",
+      "requests": 4,
+      "prompt_tokens_per_request": 32,
+      "total_prompt_tokens": 128
+    },
+    {
+      "id": "cp-train-r4-t768",
+      "family": "compute-prefill",
+      "phase": "prefill",
+      "split": "train",
+      "requests": 4,
+      "prompt_tokens_per_request": 192,
+      "total_prompt_tokens": 768
+    },
+    {
+      "id": "cp-train-r4-t2048",
+      "family": "compute-prefill",
+      "phase": "prefill",
+      "split": "train",
+      "requests": 4,
+      "prompt_tokens_per_request": 512,
+      "total_prompt_tokens": 2048
+    },
+    {
+      "id": "cp-validation-r4-t512",
+      "family": "compute-prefill",
+      "phase": "prefill",
+      "split": "validation",
+      "requests": 4,
+      "prompt_tokens_per_request": 128,
+      "total_prompt_tokens": 512
+    },
+    {
+      "id": "cp-test-r4-t1024",
+      "family": "compute-prefill",
+      "phase": "prefill",
+      "split": "test",
+      "requests": 4,
+      "prompt_tokens_per_request": 256,
+      "total_prompt_tokens": 1024
+    },
+    {
+      "id": "md-train-b4-c128",
+      "family": "memory-decode",
+      "phase": "decode",
+      "split": "train",
+      "batch": 4,
+      "context_tokens": 128,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "md-train-b4-c1024",
+      "family": "memory-decode",
+      "phase": "decode",
+      "split": "train",
+      "batch": 4,
+      "context_tokens": 1024,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "md-train-b4-c8192",
+      "family": "memory-decode",
+      "phase": "decode",
+      "split": "train",
+      "batch": 4,
+      "context_tokens": 8192,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "md-validation-b4-c512",
+      "family": "memory-decode",
+      "phase": "decode",
+      "split": "validation",
+      "batch": 4,
+      "context_tokens": 512,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "md-test-b4-c2048",
+      "family": "memory-decode",
+      "phase": "decode",
+      "split": "test",
+      "batch": 4,
+      "context_tokens": 2048,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "db-train-b1-c2048",
+      "family": "dense-batch-decode",
+      "phase": "decode",
+      "split": "train",
+      "batch": 1,
+      "context_tokens": 2048,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "db-train-b16-c2048",
+      "family": "dense-batch-decode",
+      "phase": "decode",
+      "split": "train",
+      "batch": 16,
+      "context_tokens": 2048,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "db-train-b64-c2048",
+      "family": "dense-batch-decode",
+      "phase": "decode",
+      "split": "train",
+      "batch": 64,
+      "context_tokens": 2048,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "db-validation-b4-c2048",
+      "family": "dense-batch-decode",
+      "phase": "decode",
+      "split": "validation",
+      "batch": 4,
+      "context_tokens": 2048,
+      "new_tokens_per_request": 1
+    },
+    {
+      "id": "db-test-b8-c2048",
+      "family": "dense-batch-decode",
+      "phase": "decode",
+      "split": "test",
+      "batch": 8,
+      "context_tokens": 2048,
+      "new_tokens_per_request": 1
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+evidence_class,family,id,expected,observed,units,passed,scored
+wall-time,A,A-1,packet_total / ideal_total >= 50,36.57952803217672,ratio,false,true
+wall-time,A,A-2,ideal_total <= 1 second,0.029767114,seconds,true,true
+wall-time,A,A-3-serialized-b1,reported,13.434238193418706,ratio,,false
+wall-time,A,A-3-serialized-b2,reported,15.939226771480369,ratio,,false
+wall-time,A,A-3-serialized-b4,reported,15.750965997684014,ratio,,false
+wall-time,A,A-3-serialized-b8,reported,19.313772759563044,ratio,,false
+wall-time,A,A-3-serialized-b16,reported,26.560108149020923,ratio,,false
+wall-time,A,A-3-serialized-b32,reported,35.78666537113266,ratio,,false
+wall-time,A,A-3-incast-b1,reported,17.193818833858494,ratio,,false
+wall-time,A,A-3-incast-b2,reported,20.368994776263786,ratio,,false
+wall-time,A,A-3-incast-b4,reported,27.511235768553757,ratio,,false
+wall-time,A,A-3-incast-b8,reported,40.932251282009815,ratio,,false
+wall-time,A,A-3-incast-b16,reported,69.48839849040965,ratio,,false
+wall-time,A,A-3-incast-b32,reported,133.3353694264438,ratio,,false
+packet-reference-anchoring,B,B-serialized-b1,"[0.98, 1.02]",1.0,quotient,true,true
+packet-reference-anchoring,B,B-serialized-b2,"[0.98, 1.02]",1.0,quotient,true,true
+packet-reference-anchoring,B,B-serialized-b4,"[0.98, 1.02]",1.0,quotient,true,true
+packet-reference-anchoring,B,B-serialized-b8,"[0.98, 1.02]",1.0,quotient,true,true
+packet-reference-anchoring,B,B-serialized-b16,"[0.98, 1.02]",1.0,quotient,true,true
+packet-reference-anchoring,B,B-serialized-b32,"[0.98, 1.02]",1.0,quotient,true,true
+packet-reference-anchoring,B,B-incast-b1,"[0.98, 1.02]",1.0,quotient,true,true
+packet-reference-anchoring,B,B-incast-b2,"[0.98, 1.02]",1.0,quotient,true,true
+packet-reference-anchoring,B,B-incast-b4,"[0.98, 1.02]",1.0,quotient,true,true
+packet-reference-anchoring,B,B-incast-b8,"[0.98, 1.02]",1.0,quotient,true,true
+packet-reference-anchoring,B,B-incast-b16,"[0.98, 1.02]",1.0,quotient,true,true
+packet-reference-anchoring,B,B-incast-b32,"[0.98, 1.02]",1.0,quotient,true,true
+enforced-envelope,C,C-1,default refusal before execution with mechanism and ladder diagnostic,predicate held,predicate,true,true
+enforced-envelope,C,C-2,acknowledged incast executes and carries both fan-in stamps,predicate held,predicate,true,true
+enforced-envelope,C,C-3,clean records are byte-identical apart from the recorded option,predicate held,predicate,true,true

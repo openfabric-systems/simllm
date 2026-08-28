@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -22,7 +22,7 @@ COLORS = {
     "h100-two-node-serialized": "#d17c0f",
     "h100-nine-node-incast": "#27845c",
 }
-FIXED_TIMESTAMP = datetime(2026, 8, 27, tzinfo=UTC)
+FIXED_TIMESTAMP = datetime(2026, 8, 27, tzinfo=timezone.utc)
 
 
 def prepare_study_plot(result: dict[str, Any]) -> dict[str, Any]:
