@@ -968,9 +968,16 @@ the isolated incast control. It executes no packet reference and therefore
 measures no packet wall clock. The level refuses overlapping multi-source
 receiver fan-in by default because its receiver per-byte gap is unmodeled; an
 explicit acknowledgment permits the run and is stamped in provenance.
-TRAF-20 remains open for wall-clock gain against an actually measured packet
-reference on identical flow sets and for the separately frozen enforcement
-acceptance study.
+The separately frozen
+[acceptance study](../../examples/loggopsim_acceptance_v1/RESULTS.md) executes
+both repository runners seven times on each of the same twelve GOAL binaries.
+All twelve packet completions exactly reproduce the pinned reference, and all
+three enforcement cells pass. The full acceptance is nevertheless REFUTED:
+the packet total is 1.088866981 seconds, the ideal total is 0.029767114
+seconds, and their 36.579528x ratio misses the frozen 50x floor. All four
+fatal guards hold, so TRAF-20 remains open specifically on the speed
+qualification. The backend evidence does not extend packet or silicon
+fidelity beyond the pinned frontier record.
 
 HTSIM-25 and HTSIM-8 closed on 2026-08-13, each against its own acceptance
 clauses. An exact bound-authorship reproduction classified all 17 previously

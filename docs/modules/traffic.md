@@ -500,9 +500,14 @@ modeled error against pinned packet observations through M-1, M-2 and M-3,
 but executes no packet reference and therefore measures no packet wall clock.
 The level refuses overlapping multi-source receiver fan-in by default, with
 an explicit acknowledgment and provenance stamp for deliberate envelope
-measurements. TRAF-20 remains open for measured packet-reference wall-clock
-gain on identical flow sets and the separately frozen enforcement acceptance
-study.
+measurements. The separately frozen
+[acceptance study](../../examples/loggopsim_acceptance_v1/RESULTS.md) executes
+both arms seven times on each of the twelve byte-identical flow sets. The
+packet arm reproduces all twelve pinned completions exactly and all three
+enforcement predicates pass, but the full qualification is honestly REFUTED:
+1.088866981 packet seconds over 0.029767114 ideal seconds is 36.579528x,
+below the frozen 50x floor. All four fatal guards hold, so TRAF-20 stays open
+on that speed miss rather than on packet anchoring or envelope enforcement.
 
 TRAF-7 is complete for observation-driven step lowering and the coarse live
 metric chain. The frozen two-layer study crossed `C/D` from 1/2 to 2 and
@@ -962,8 +967,14 @@ no per-byte gap, while the packet receiver serializes the shared ingress. At
 step level, the H100 kernel masks every fabric difference and the sole rung
 movement remains the pinned B100 batch-32 intra-node excess. The original
 published median is 0.034612 seconds for all twelve ideal legs. The quantified
-packet-error envelope completes TRAF-20's modeled-error half, while its packet
-wall-clock and enforcement-acceptance halves remain open. The fabric-leg view
+packet-error envelope completes TRAF-20's modeled-error half. The
+[acceptance study](../../examples/loggopsim_acceptance_v1/RESULTS.md) executes
+the same twelve byte-identical flow sets through both arms with seven samples
+per arm. B passes 12 of 12 with every packet quotient exactly 1.0, and C passes
+3 of 3 for refusal, acknowledged fan-in, and clean-path identity. A passes
+only 1 of 2: the 0.029767114-second ideal total meets its one-second ceiling,
+but the 1.088866981-second packet total yields 36.579528x rather than the
+required 50x. The valid refutation keeps TRAF-20 open. The fabric-leg view
 that exposes the contention masked by the original step map closes TRAF-68.
 Neither result makes an absolute-accuracy claim against silicon.
 
@@ -984,12 +995,17 @@ Neither result makes an absolute-accuracy claim against silicon.
   per-byte gap, the about 8x frozen-cell optimism and the ladder evidence. An
   explicit `acknowledge_fan_in=True` permits a deliberate run and stamps both
   fan-in and acknowledgment in provenance; fan-in-free runs preserve their
-  accepted GOAL bytes. The post-specified ladder correction exercises that
-  acknowledgment for L-B but is not enforcement acceptance. Remaining
-  acceptance is limited to (a) wall-clock gain against an actually measured
-  packet reference on identical flow sets and (b) a separately frozen study
-  that exercises default refusal, explicit acknowledgment and stamp, and the
-  byte-identical clean path through the supported metric chain.
+  accepted GOAL bytes. The
+  [acceptance study](../../examples/loggopsim_acceptance_v1/RESULTS.md)
+  satisfies the live packet anchoring and enforcement clauses: all twelve
+  packet completions reproduce the pinned record exactly, and default refusal,
+  explicit acknowledgment with stamp, and the byte-identical clean path all
+  pass. Its full verdict is REFUTED because the measured packet-over-ideal
+  wall-clock gain is 36.579528x against the frozen 50x floor, even though the
+  0.029767114-second ideal total meets its one-second ceiling. All four fatal
+  guards hold. TRAF-20 therefore remains open solely on the registered speed
+  qualification; neither the passing subfamilies nor a future repetition may
+  be presented as closure unless every frozen scored predicate passes.
 - TRAF-51 (Precision; P1; L): complete the Slingshot fabric calibration
   beyond the steady-state partial. The wave-19 comparison
   ([merlin ss fabric calibration](../../examples/merlin_ss_fabric_calibration_v1/RESULTS.md),
