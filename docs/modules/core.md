@@ -1191,6 +1191,41 @@ correction direction can be priced. CORE-66 remains open.
   read/write bytes. Then derive any standard-decode service movement against
   the 22,282 tokens/s/node anchor without fitting a calibration constant. The
   exact cell and command are registered in `core66_hardware_remainder.json`.
+  The residency-matched EP8 remainder is frozen in
+  `core66_ep8_expectations.json`, but its scheduler preflight failed before job
+  creation with `allocation failure: Invalid qos specification`: `gh-hourly`
+  and the `gpu_hourly` definition both admit eight GPUs, while the requesting
+  user association admits only `gpu_general`. That association remains limited
+  to four GPUs per job, so EP8 is infeasible under current policy. The
+  zero-allocation result and its full deviation ledger are registered in
+  `core66_ep8_capture_result.json`. The separately frozen EP4 ceiling in
+  `core66_ep4_expectations.json` received one four-GPU allocation under
+  `gpu_general`, but the compute node lacked the requested `cuda/13.2.1`
+  module and the `nsys` executable. The timing pass exited 127 before SGLang,
+  the counter pass did not run and zero physical rows were bound. The void
+  capture and its EP4-to-EP72 deviation ledger are registered in
+  `core66_ep4_capture_result.json`. The environment-only retry in
+  `core66_ep4_env_retry_expectations.json` then reused the exact successful
+  CORE-61 CUDA 12.9 modules, profiler tools and ARM Python 3.11 interpreter.
+  Job `200891` verified that environment but stopped before profiling because
+  the staged `sgl-deep-ep` wheel requires CUDA 13 and is tagged for CPython
+  3.12 x86-64, while the recovered environment is cu129, CPython 3.11 and ARM
+  aarch64. The fail-fast result is registered in
+  `core66_ep4_env_retry_result.json`. CORE-66 remains open on a compatible
+  cu129, CPython 3.11, ARM aarch64 DeepEP build and hardware capable of the
+  registered EP72 cell; no further submission is authorized by that result.
+  The distinct fallback freeze in `core66_ep4_fallback_expectations.json` then
+  disabled DeepEP and selected SGLang's standard `none` mixture-of-experts
+  backend so non-DeepEP kernel identities and memory bytes could still be
+  captured. Job `200961` allocated four GPUs under `gpu_general`, verified the
+  recovered CUDA 12.9 profiler and Python environment, then failed closed
+  before profiling because importing pinned SGLang required the absent
+  `orjson` module. Zero of 37 rows bound; timing, counters and routing did not
+  run; and movement remains null. The final fallback result is registered in
+  `core66_ep4_fallback_result.json`. CORE-66 remains open on a runnable pinned
+  SGLang dependency set for the CUDA 12.9, CPython 3.11, ARM environment, a
+  compatible DeepEP build and hardware capable of the registered EP72 cell.
+  No further submission is authorized by this result.
 
 - CORE-53 (Precision; P1; M): replace the first disaggregated session slice's
   roofline bootstrap with the accepted COMP-64 kernel-cycle lookup record.

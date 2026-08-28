@@ -1,0 +1,150 @@
+{
+  "achieved_capture_configuration": null,
+  "calibration_only": {
+    "downward_correction_published_alone": false,
+    "missing_requirements": [
+      "DeepEP dispatch and combine launches with rank, peers, payload bytes and durations",
+      "rank-preserving per-kernel and per-step HBM read and write bytes"
+    ],
+    "signed_movement_tokens_per_second_per_node": null,
+    "status": "NULL_NO_HARDWARE_CAPTURE"
+  },
+  "declared_deviation_ledger": [
+    {
+      "difference": "expert-parallel peer count",
+      "expected_signed_effect": "fewer peers bias dispatch and combine service downward",
+      "feasible": 8,
+      "registered": 72
+    },
+    {
+      "difference": "routed expert total",
+      "expected_signed_effect": "the smaller unique expert population biases uniform-routing remote traffic downward; grouped-kernel occupancy remains indeterminate",
+      "feasible": 32,
+      "registered": 256
+    },
+    {
+      "difference": "physical expert-slot population and redundancy",
+      "expected_signed_effect": "the feasible capture omits the redundant-slot cohort, leaving routing-locality and duplicate-residency effects indeterminate",
+      "feasible": "32 unique experts in 32 slots",
+      "registered": "256 unique experts in 288 slots"
+    },
+    {
+      "difference": "transformer depth",
+      "expected_signed_effect": "four layers reduce raw step service; only separately identified per-layer services may use the frozen multipliers",
+      "feasible": 4,
+      "registered": 61
+    },
+    {
+      "difference": "node count",
+      "expected_signed_effect": "fewer nodes and participants bias aggregate communication service downward",
+      "feasible": 2,
+      "registered": 9
+    },
+    {
+      "difference": "GPUs per node",
+      "expected_signed_effect": "four rather than eight GPUs per node raises the cross-node peer fraction and can increase per-byte fabric service",
+      "feasible": 4,
+      "registered": 8
+    },
+    {
+      "difference": "expert residency per rank",
+      "expected_signed_effect": "matched; no routed-weight residency bias is expected",
+      "feasible": 4,
+      "registered": 4
+    },
+    {
+      "difference": "CUDA graph launch mode",
+      "expected_signed_effect": "eager launch raises host overhead but leaves deterministic kernel and DeepEP service identifiable; raw eager step time cannot become registered graph-mode service",
+      "feasible": "disabled for semantic instrumentation",
+      "registered": "standard graph decode"
+    },
+    {
+      "difference": "backend fallback",
+      "expected_signed_effect": "any fallback invalidates DeepEP pricing and forces null signed movement",
+      "feasible": "none accepted",
+      "registered": "DeepEP"
+    },
+    {
+      "difference": "weight materialization",
+      "expected_signed_effect": "dummy weights preserve tensor shapes and byte demand but do not provide production routing statistics",
+      "feasible": "dummy weights",
+      "registered": "pre-staged local DeepSeek-V3 model"
+    }
+  ],
+  "frozen_capture_configuration": {
+    "attention_parallelism": "data-parallel",
+    "backend_fallback_permitted": false,
+    "batch_per_rank": 32,
+    "captured_layer_count": 4,
+    "cuda_graph_enabled": false,
+    "deepep_enabled": true,
+    "dense_layer_count": 3,
+    "expert_parallel_width": 8,
+    "gpus_per_node": 4,
+    "kv_length_per_rank": 2000,
+    "lm_head_parallelism": "data-parallel",
+    "logical_experts_per_rank": 4,
+    "measured_decode_iterations": 1,
+    "moe_layer_count": 1,
+    "mtp_enabled": false,
+    "node_count": 2,
+    "routed_expert_total": 32,
+    "sglang_commit": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
+    "weights": "dummy-only"
+  },
+  "hardware": {
+    "actual_submission_count": 0,
+    "allocated_job_id": null,
+    "feasible_cell_status": "NOT_SUBMITTED_INVALID_QOS_SPECIFICATION",
+    "preflight_test_count": 1,
+    "registered_ep72_status": "BLOCKED_IMPOSSIBLE_ON_PROJECT_CLUSTER",
+    "shared_gh200_gpu_hours_consumed": 0
+  },
+  "identity_and_physics": {
+    "deep_ep_combine_launches": null,
+    "deep_ep_dispatch_launches": null,
+    "hbm_read_write_bytes": null,
+    "physical_identity_binding_count": 0,
+    "physical_identity_bindings": null,
+    "routing_assignments_and_local_slots": null,
+    "status": "UNAVAILABLE_SCHEDULER_REFUSAL_BEFORE_ALLOCATION"
+  },
+  "project_disposition": {
+    "core_66": "OPEN_BLOCKED_ON_GPU_HOURLY_QOS_ASSOCIATION",
+    "fifth_scored_run_performed": false,
+    "milestone_movement": null,
+    "next_authorized_action": "add gpu_hourly to the gmerlin7 merlin user association, then submit the frozen EP8 cell once"
+  },
+  "protocol": {
+    "disclosure_incident_count": 0,
+    "expectations_commits": [
+      "92e0ebe",
+      "991ac0b"
+    ],
+    "fatal_held_out_use_occurred": false,
+    "parameters_fitted": false,
+    "reader_forbidden_ledgers_empty": true,
+    "status": "PASS_NO_HELD_OUT_USE"
+  },
+  "scale_checks": {
+    "assignment_scale_1_over_9": "UNAVAILABLE_NO_ROUTING_CAPTURE",
+    "count_and_weight_scale_1_over_64": "UNAVAILABLE_NO_HBM_OR_ROUTING_CAPTURE"
+  },
+  "scheduler_refusal": {
+    "account": "merlin",
+    "cluster": "gmerlin7",
+    "error": "allocation failure: Invalid qos specification",
+    "partition": "gh-hourly",
+    "partition_default_qos": "gpu_hourly",
+    "qos": "gpu_hourly",
+    "qos_definition_max_gpus_per_job": 8,
+    "qos_definition_max_gpus_per_user": 8,
+    "request_gpu_count": 8,
+    "user_association_allowed_qos": [
+      "gpu_general"
+    ]
+  },
+  "schema": "simllm-deployment-curve-core66-ep8-capture-result-v1",
+  "status": "BLOCKED_QOS_ASSOCIATION_NO_HARDWARE_SUBMISSION",
+  "task": "CORE-66"
+}

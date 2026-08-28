@@ -11,6 +11,27 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 READER_PATH = ROOT / "examples/deployment_curve_v1/core66_field_reader.py"
 PROTOCOL_PATH = ROOT / "examples/deployment_curve_v1/core66_reader_protocol.json"
+EP8_EXPECTATIONS_PATH = (
+    ROOT / "examples/deployment_curve_v1/core66_ep8_expectations.json"
+)
+EP4_EXPECTATIONS_PATH = (
+    ROOT / "examples/deployment_curve_v1/core66_ep4_expectations.json"
+)
+EP4_RESULT_PATH = (
+    ROOT / "examples/deployment_curve_v1/core66_ep4_capture_result.json"
+)
+EP4_ENV_RETRY_EXPECTATIONS_PATH = (
+    ROOT / "examples/deployment_curve_v1/core66_ep4_env_retry_expectations.json"
+)
+EP4_ENV_RETRY_RESULT_PATH = (
+    ROOT / "examples/deployment_curve_v1/core66_ep4_env_retry_result.json"
+)
+EP4_FALLBACK_EXPECTATIONS_PATH = (
+    ROOT / "examples/deployment_curve_v1/core66_ep4_fallback_expectations.json"
+)
+EP4_FALLBACK_RESULT_PATH = (
+    ROOT / "examples/deployment_curve_v1/core66_ep4_fallback_result.json"
+)
 
 
 def _load_reader() -> ModuleType:
@@ -176,3 +197,285 @@ def test_protocol_freezes_feasible_cell_and_publication_gate() -> None:
         "output": 1,
         "step": 1,
     }
+
+
+def test_ep8_expectations_freeze_cell_scheduler_and_survivable_exposure() -> None:
+    expectations = json.loads(EP8_EXPECTATIONS_PATH.read_text(encoding="utf-8"))
+    capture = expectations["capture_freeze"]
+
+    assert expectations["task"] == "CORE-66"
+    assert capture["hardware"] == {
+        "gpu_model": "NVIDIA GH200",
+        "gpus_per_node": 4,
+        "node_count": 2,
+        "rank_count": 8,
+    }
+    assert capture["model"] == {
+        "expert_parallel_width": 8,
+        "logical_experts_per_rank": 4,
+        "physical_expert_slots_per_rank": 4,
+        "routed_expert_total": 32,
+        "weights": "dummy-only",
+    }
+    assert capture["scheduler"] == {
+        "account": "merlin",
+        "cluster": "gmerlin7",
+        "partition": "gh-hourly",
+        "qos": "gpu_hourly",
+        "submission_limit": 1,
+    }
+    assert capture["execution"] == {
+        "cuda_graph_enabled": False,
+        "reason": (
+            "eager execution preserves per-layer routing identities and semantic launch "
+            "ranges; kernel service remains deterministic across launch modes"
+        ),
+    }
+    assert expectations["comparison_gate"]["never_publish_downward_correction_alone"]
+    assert expectations["disclosure_guard"]["fatal_not_survivable"]["disposition"] == (
+        "the run is void and CORE-66 remains open"
+    )
+    exposure = expectations["disclosure_guard"]["incidental_exposure"]
+    assert exposure["disposition"].startswith("survivable")
+    assert "zero free or fitted parameters" in exposure["reason"]
+    assert expectations["service_multiplier_freeze"] == {
+        "common": "61/4",
+        "dense": 1,
+        "moe": 58,
+        "output": 1,
+        "step": 1,
+    }
+
+
+def test_ep4_expectations_are_a_new_single_gpu_general_cell() -> None:
+    expectations = json.loads(EP4_EXPECTATIONS_PATH.read_text(encoding="utf-8"))
+    capture = expectations["capture_freeze"]
+
+    assert capture["hardware"] == {
+        "gpu_model": "NVIDIA GH200",
+        "gpus_per_node": 4,
+        "node_count": 1,
+        "rank_count": 4,
+    }
+    assert capture["model"] == {
+        "expert_parallel_width": 4,
+        "logical_experts_per_rank": 4,
+        "physical_expert_slots_per_rank": 4,
+        "routed_expert_total": 16,
+        "weights": "dummy-only",
+    }
+    assert capture["scheduler"] == {
+        "account": "merlin",
+        "cluster": "gmerlin7",
+        "partition": "gh-hourly",
+        "qos": "gpu_general",
+        "submission_limit": 1,
+        "time_limit": "00:55:00",
+    }
+    assert expectations["chronology"]["prior_refusal_records_may_be_amended"] is False
+    assert expectations["comparison_gate"]["never_publish_downward_correction_alone"]
+    assert expectations["service_multiplier_freeze"] == {
+        "common": "61/4",
+        "dense": 1,
+        "moe": 58,
+        "output": 1,
+        "step": 1,
+    }
+
+
+def test_ep4_fallback_freeze_is_distinct_and_forces_null_movement() -> None:
+    expectations = json.loads(
+        EP4_FALLBACK_EXPECTATIONS_PATH.read_text(encoding="utf-8")
+    )
+    capture = expectations["capture_freeze"]
+
+    assert capture["hardware"] == {
+        "gpu_model": "NVIDIA GH200",
+        "gpus_per_node": 4,
+        "node_count": 1,
+        "rank_count": 4,
+    }
+    assert capture["model"] == {
+        "expert_parallel_width": 4,
+        "logical_experts_per_rank": 4,
+        "physical_expert_slots_per_rank": 4,
+        "routed_expert_total": 16,
+        "weights": "dummy-only",
+    }
+    backend = capture["backend"]
+    assert backend["deep_ep_enabled"] is False
+    assert backend["moe_a2a_backend_argument"] == "none"
+    assert backend["moe_dispatcher"].endswith(".StandardDispatcher")
+    assert backend["source_builds_forbidden"] == ["DeepEP", "NVSHMEM"]
+    assert expectations["chronology"]["this_is_a_new_cell"] is True
+    assert expectations["chronology"]["prior_records_may_be_amended"] is False
+    gate = expectations["comparison_gate"]
+    assert gate["deep_ep_status_for_this_cell"] == "UNPRICED_BY_CONSTRUCTION"
+    assert gate["signed_movement_tokens_per_second_per_node"] is None
+    assert gate["never_publish_downward_correction_alone"] is True
+    differences = {
+        row["difference"] for row in expectations["declared_extrapolation_ledger"]
+    }
+    assert "MoE communication backend" in differences
+    assert expectations["service_multiplier_freeze"] == {
+        "common": "61/4",
+        "dense": 1,
+        "moe": 58,
+        "output": 1,
+        "step": 1,
+    }
+
+
+def test_ep4_fallback_result_stops_at_missing_orjson() -> None:
+    result = json.loads(EP4_FALLBACK_RESULT_PATH.read_text(encoding="utf-8"))
+
+    assert result["status"] == (
+        "FAILED_CLOSED_PREFLIGHT_MISSING_ORJSON_NO_PHYSICAL_CAPTURE"
+    )
+    assert result["achieved_capture_configuration"] is None
+    assert result["hardware"]["allocated_job_id"] == 200961
+    assert result["hardware"]["allocated_gpu_count"] == 4
+    assert result["hardware"]["partition"] == "gh-hourly"
+    assert result["hardware"]["qos"] == "gpu_general"
+    assert result["hardware"]["submission_count"] == 1
+    assert result["environment_preflight"]["failure"] == {
+        "exception": "ModuleNotFoundError",
+        "missing_module": "orjson",
+        "source_import_path": "sglang.srt.utils.common",
+    }
+    assert result["environment_preflight"]["profiler_call_count"] == 0
+    identity = result["identity_and_physics"]
+    assert identity["physical_identity_binding_count"] == 0
+    assert identity["physical_identity_binding_target"] == 37
+    assert identity["hbm_counter_permission"] == "NOT_REACHED"
+    assert identity["hbm_read_write_bytes"] is None
+    assert identity["routing_assignment_record_count"] == 0
+    calibration = result["calibration_only"]
+    assert calibration["signed_movement_tokens_per_second_per_node"] is None
+    assert calibration["downward_correction_published_alone"] is False
+    assert calibration["service_multipliers_applied"] is False
+    assert result["project_disposition"]["next_authorized_action"] is None
+
+
+def test_ep4_result_preserves_failed_capture_and_null_movement() -> None:
+    result = json.loads(EP4_RESULT_PATH.read_text(encoding="utf-8"))
+
+    assert result["status"] == "VOID_LAUNCH_ENVIRONMENT_NO_PHYSICAL_CAPTURE"
+    assert result["achieved_capture_configuration"] is None
+    assert result["hardware"] == {
+        "allocated_gpu_count": 4,
+        "allocated_job_id": 200879,
+        "allocated_node": "gpu002",
+        "elapsed_seconds": 14,
+        "exit_code": "127:0",
+        "feasible_cell_status": "ALLOCATED_LAUNCH_FAILED_BEFORE_SGLANG",
+        "gpu_hours_consumed": 56 / 3600,
+        "gpu_seconds_consumed": 56,
+        "partition": "gh-hourly",
+        "qos": "gpu_general",
+        "registered_ep72_status": "BLOCKED_IMPOSSIBLE_ON_PROJECT_CLUSTER",
+        "scheduler_state": "FAILED",
+        "started_at": "2026-08-28T16:17:49",
+        "finished_at": "2026-08-28T16:18:03",
+        "submission_count": 1,
+    }
+    assert result["launch_failure"] == {
+        "counter_pass_status": "not-run",
+        "failure_phase": "before the SGLang process and before CUDA profiling",
+        "frozen_module_request": "cuda/13.2.1",
+        "module_error": "module load: module does not exist -- cuda/13.2.1",
+        "profiler_error": (
+            "core66d_node_capture.sh: line 56: nsys: command not found"
+        ),
+        "timing_pass_exit_code": 127,
+    }
+    identities = result["identity_and_physics"]
+    assert identities["physical_identity_binding_count"] == 0
+    assert identities["physical_identity_binding_target"] == 37
+    assert identities["deep_ep_dispatch_launch_count"] == 0
+    assert identities["deep_ep_combine_launch_count"] == 0
+    assert identities["hbm_counter_permission"] == "NOT_REACHED"
+    movement = result["calibration_only"]
+    assert movement["signed_movement_tokens_per_second_per_node"] is None
+    assert movement["service_multipliers_applied"] is False
+    assert movement["downward_correction_published_alone"] is False
+    assert result["protocol"]["fatal_held_out_use_occurred"] is False
+
+
+def test_ep4_environment_retry_reuses_core61_and_keeps_cell_unchanged() -> None:
+    expectations = json.loads(
+        EP4_ENV_RETRY_EXPECTATIONS_PATH.read_text(encoding="utf-8")
+    )
+
+    assert expectations["status"] == "EXPECTATIONS_ONLY"
+    reference = expectations["capture_reference"]
+    assert reference["cell_changes_permitted"] is False
+    assert reference["deviation_ledger_changes_permitted"] is False
+    assert reference["ep4_expectations_sha256"] == (
+        "8202f70f578408fd3aaa985bc7fa3ab3a88726019d8cbef896ae0d049f781d35"
+    )
+    provenance = expectations["environment_provenance"]
+    assert provenance["core61_decode_job"] == 200138
+    assert provenance["core61_decode_job_state"] == "COMPLETED"
+    assert provenance["core61_merged_script_sha256"] == (
+        provenance["core61_remote_script_sha256"]
+    )
+    environment = expectations["environment_selection"]
+    assert environment["module_commands"] == [
+        "module purge",
+        "module load gcc/12.3.0",
+        "module load cuda/12.9.1",
+    ]
+    assert environment["path_prefix"] == "${SIMLLM_CORE66E_GH200_VENV}/bin"
+    assert environment["interpreter"] == (
+        "${SIMLLM_CORE66E_GH200_VENV}/bin/python"
+    )
+    assert environment["python_version"] == "3.11.11"
+    assert environment["interpreter_machine"] == "aarch64"
+    assert environment["torch_version"] == "2.13.0+cu129"
+    assert environment["torch_cuda_version"] == "12.9"
+    preflight = expectations["fail_fast_preflight"]
+    assert preflight["status"] == "FROZEN_FAIL_CLOSED"
+    assert len(preflight["required_before_profiler"]) == 10
+    assert expectations["retry_submission"]["submission_limit"] == 1
+    assert expectations["comparison_gate"][
+        "never_publish_downward_correction_alone"
+    ]
+
+
+def test_ep4_environment_retry_fails_closed_on_deepep_cuda_major() -> None:
+    result = json.loads(EP4_ENV_RETRY_RESULT_PATH.read_text(encoding="utf-8"))
+
+    assert result["status"] == "VOID_PREFLIGHT_DEEP_EP_CUDA_MAJOR_MISMATCH"
+    assert result["achieved_capture_configuration"] is None
+    assert result["hardware"]["allocated_job_id"] == 200891
+    assert result["hardware"]["allocated_gpu_count"] == 4
+    assert result["hardware"]["elapsed_seconds"] == 75
+    assert result["hardware"]["exit_code"] == "4:0"
+    assert result["hardware"]["gpu_hours_consumed"] == 300 / 3600
+    preflight = result["environment_preflight"]
+    assert preflight["status"] == "FAILED_CLOSED_BEFORE_PROFILER"
+    assert preflight["profiler_call_count"] == 0
+    assert preflight["passed_by_direct_record"]["loaded_modules"] == [
+        "gcc/12.3.0",
+        "cuda/12.9.1",
+    ]
+    assert preflight["passed_by_direct_record"]["nvcc_version"] == "12.9.86"
+    assert preflight["passed_by_direct_record"]["nsys_version"].startswith(
+        "2025.1.3.140"
+    )
+    deep_ep = preflight["deep_ep"]
+    assert deep_ep["build_expected_cuda_major"] == 13
+    assert deep_ep["build_cuda_tag"] == "cu130"
+    assert deep_ep["selected_interpreter_machine"] == "aarch64"
+    assert deep_ep["static_wheel_tags_compatible"] is False
+    identities = result["identity_and_physics"]
+    assert identities["physical_identity_binding_count"] == 0
+    assert identities["deep_ep_dispatch_launch_count"] == 0
+    assert identities["deep_ep_combine_launch_count"] == 0
+    assert identities["hbm_counter_permission"] == "NOT_REACHED"
+    movement = result["calibration_only"]
+    assert movement["signed_movement_tokens_per_second_per_node"] is None
+    assert movement["service_multipliers_applied"] is False
+    assert movement["downward_correction_published_alone"] is False
+    assert result["protocol"]["fatal_held_out_use_occurred"] is False
