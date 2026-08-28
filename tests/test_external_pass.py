@@ -58,6 +58,15 @@ def test_minimax_pass_matches_frozen_live_oracles(
     assert post_dispatch.hex() == frozen["live_post_dispatch_hex"]
     assert (pre_dispatch + post_dispatch).hex() == frozen["live_dispatch_hex"]
     assert result.total.hex == frozen["live_decode_step_hex"]
+    dispatch_terms = [
+        entry
+        for entry in result.operations
+        if entry.operation in {
+            "generation_moe_pre_dispatch",
+            "generation_moe_post_dispatch",
+        }
+    ]
+    assert {entry.source.backend for entry in dispatch_terms} == {"nccl"}
     assert len(result.operations) == 13
 
 

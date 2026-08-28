@@ -503,10 +503,15 @@ class ExternalPassModel:
             ranks=config.expert_parallel,
             message_size=tokens * config.hidden_size * config.expert_parallel,
         )
-        return self._result(
-            base.latency_ms * self._layer_repeats,
-            operation,
-            f"{base.rule};half-message=tokens-times-hidden-times-expert-parallel",
+        return ExternalLatency(
+            latency_ms=base.latency_ms * self._layer_repeats,
+            source=base.source,
+            operation=operation,
+            rule=(
+                f"{base.rule};half-message="
+                "tokens-times-hidden-times-expert-parallel"
+            ),
+            evidence_class=base.evidence_class,
         )
 
     def _moe_generation_operations(
@@ -668,6 +673,8 @@ class ExternalPassModel:
         names: list[str] = []
         totals: dict[str, float] = {}
         rules: dict[str, str] = {}
+        sources: dict[str, Any] = {}
+        evidence_classes: dict[str, str] = {}
         for index in range(0, osl - 1, stride):
             if self.config.architecture == "dense":
                 sampled = self._dense_generation_operations(
@@ -685,9 +692,24 @@ class ExternalPassModel:
                     names.append(entry.operation)
                     totals[entry.operation] = 0.0
                     rules[entry.operation] = entry.rule
+                    sources[entry.operation] = entry.source
+                    evidence_classes[entry.operation] = entry.evidence_class
+                elif (
+                    entry.source != sources[entry.operation]
+                    or entry.evidence_class != evidence_classes[entry.operation]
+                ):
+                    raise ExternalDatabaseIdentityError(
+                        f"operation {entry.operation!r} changed provenance across strides"
+                    )
                 totals[entry.operation] += entry.latency_ms * repeat_count
         operations = tuple(
-            self._result(totals[name], name, f"{rules[name]};stride-repeat")
+            ExternalLatency(
+                latency_ms=totals[name],
+                source=sources[name],
+                operation=name,
+                rule=f"{rules[name]};stride-repeat",
+                evidence_class=evidence_classes[name],
+            )
             for name in names
         )
         total = math.fsum(entry.latency_ms for entry in operations)

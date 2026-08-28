@@ -172,6 +172,34 @@
           "line": 339
         }
       ]
+    },
+    {
+      "id": "A-13",
+      "behavior": "raise the rnic-cn Ring-CAM wire capacity to 2097152 bytes so the topology-derived EP 256 delay window satisfies the backend capacity invariant",
+      "sources": [
+        {
+          "file": "htsim/sim/datacenter/rnic_atlahs_driver.cpp",
+          "line": 62
+        },
+        {
+          "file": "htsim/sim/datacenter/rnic_atlahs_cli.cpp",
+          "line": 149
+        }
+      ]
+    },
+    {
+      "id": "A-14",
+      "behavior": "use a 33554432-byte switch-wide ns-tm3 shared pool, matching the backend's DCQCN physical-runtime default, so the synchronized full-population collective is evaluated without a fatal control-packet drop",
+      "sources": [
+        {
+          "file": "htsim/sim/datacenter/dcqcn_atlahs_runtime.h",
+          "line": 31
+        },
+        {
+          "file": "htsim/sim/datacenter/ns_tm3_switch.cpp",
+          "line": 309
+        }
+      ]
     }
   ],
   "operating_point": {
@@ -187,7 +215,9 @@
     "workload_distribution": "power_law",
     "gpus_per_node": 8,
     "link_rate_bits_per_second": 400000000000,
-    "packet_profile": "rnic-cn"
+    "packet_profile": "rnic-cn",
+    "ring_cam_wire_capacity_bytes": 2097152,
+    "switch_shared_buffer_bytes": 33554432
   },
   "packet_sampling": {
     "sampled": true,
@@ -195,9 +225,12 @@
       0
     ],
     "represented_layer_executions": 65,
-    "rule": "simulate layer 0 with every EP rank contributing four decode candidates to every remote rank, then multiply the serial dispatch-plus-combine layer makespan by 65",
-    "peer_population": "full at every sampled width",
-    "label": "sampled: one full-population layer of 65"
+    "rule": "simulate layer 0 and multiply the serial dispatch-plus-combine layer makespan by 65; widths through EP 128 retain every directed pair, while EP 256 retains every source and one receiver at GPU-local index zero per node",
+    "peer_population": "full through EP 128; at EP 256 sample one receiver per 8-GPU node with all 256 sources retained",
+    "full_population_max_width": 128,
+    "receiver_stride_at_widest": 8,
+    "label_full": "sampled layer: full peer population, one layer of 65",
+    "label_receiver_subset": "sampled layer and peers: one receiver per node with full sender fan-in, one layer of 65"
   },
   "widths": [
     {

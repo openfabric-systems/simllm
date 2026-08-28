@@ -19,7 +19,7 @@ import tempfile
 from bisect import bisect_left
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 if __package__ in (None, ""):
@@ -318,8 +318,16 @@ def _write_worker_artifact(output_root: Path) -> Path:
             "shared_layer": False,
             "estimator_surface": "python",
             "data_slice_sha256": source_hash,
-            "source_path": (
-                "systems/data/h200_sxm/comm/nccl/2.26.2/nccl_perf.parquet"
+            "source_path": os.fspath(
+                PurePosixPath(
+                    "systems",
+                    "data",
+                    EXPECTED_NCCL_SYSTEM,
+                    "comm",
+                    "nccl",
+                    EXPECTED_NCCL_COLLECTION_VERSION,
+                    "nccl_perf.parquet",
+                )
             ),
             "parquet_sha256": EXPECTED_NCCL_PARQUET_HASH,
             "collection_metadata_sha256": EXPECTED_NCCL_METADATA_HASH,
