@@ -1,4 +1,7 @@
+import copy
 import dataclasses
+import hashlib
+import json
 import re
 from collections import Counter
 from itertools import pairwise
@@ -8,11 +11,13 @@ from xml.etree import ElementTree
 import pytest
 
 from simllm.backends.htsim_nvlink import (
-    NVLINK_CANDIDATE_EVIDENCE_CLASS,
+    NVLINK_SCORED_EVIDENCE_CLASS,
+    NVLINK_SCORED_PROFILE_STATUS,
     NvlinkCandidateProfile,
     NvlinkDomainResult,
     NvlinkDomainService,
     NvlinkFifoPlacement,
+    NvlinkFlowPolicy,
     NvlinkOperation,
     NvlinkPacketDirection,
     NvlinkRx,
@@ -28,6 +33,15 @@ from simllm.backends.htsim_nvlink import (
 
 ROOT = Path(__file__).resolve().parents[1]
 STUDY = ROOT / "examples" / "a100_nvlink_packet_v1"
+TRAF65_FREEZE_SHA256 = (
+    "212a7a26f54e444c9b18f1e528bd0d00b5a28e4f9e005b0dc137f477ad642571"
+)
+TRAF70_FREEZE_SHA256 = (
+    "f0ab026e054873a56614af63ab3a7ae3219dc0b045423808cb41522910fa6da6"
+)
+PUBLISHED_PROFILE_SHA256 = (
+    "d33ef5b2c6fa87cc97e1e7b45a43a841a5da45f5462311e3981fbc903c56deb2"
+)
 FIGURE = ROOT / "resources" / "figures" / "nvlink-domain-model.svg"
 FREEZE_SHA256 = "212a7a26f54e444c9b18f1e528bd0d00b5a28e4f9e005b0dc137f477ad642571"
 SVG = "{http://www.w3.org/2000/svg}"
@@ -130,12 +144,57 @@ def candidate() -> NvlinkCandidateProfile:
     return load_nvlink_candidate_profile(STUDY / "candidate-profile.json")
 
 
-def test_candidate_handoff_is_digest_bound_and_not_measured(candidate):
-    assert sha256_file(STUDY / "expectations.json") == FREEZE_SHA256
-    assert candidate.freeze_sha256 == FREEZE_SHA256
-    assert candidate.status == "candidate"
-    assert candidate.evidence_class == NVLINK_CANDIDATE_EVIDENCE_CLASS
+def test_scored_handoff_keeps_parameter_evidence_distinct(candidate):
+    assert sha256_file(STUDY / "expectations.json") == TRAF65_FREEZE_SHA256
+    assert sha256_file(STUDY / "candidate-profile.json") == PUBLISHED_PROFILE_SHA256
+    assert candidate.freeze_sha256 == TRAF70_FREEZE_SHA256
+    assert candidate.status == NVLINK_SCORED_PROFILE_STATUS
+    assert candidate.evidence_class == NVLINK_SCORED_EVIDENCE_CLASS
     assert candidate.switch.mode is NvlinkSwitchMode.PASS_THROUGH
+    assert candidate.tx.endpoint_egress_rate_bytes_per_second == 160_795_737_454
+    assert candidate.rx.ingress_rate_bytes_per_second == 207_101_921_876
+
+    tx_rate = candidate.evidence_for("tx", "endpoint_egress_rate_bytes_per_second")
+    rx_rate = candidate.evidence_for("rx", "ingress_rate_bytes_per_second")
+    payload = candidate.evidence_for("tx", "max_payload_bytes")
+    switch = candidate.evidence_for("switch", "mode")
+    assert (tx_rate.status, tx_rate.candidate_relation) == (
+        "IDENTIFIED",
+        "REFUTED_AND_REPLACED",
+    )
+    assert (rx_rate.status, rx_rate.candidate_relation) == (
+        "IDENTIFIED",
+        "REFUTED_AND_REPLACED",
+    )
+    assert payload.status == "INCONCLUSIVE"
+    assert switch.status == "STRUCTURAL"
+
+
+def test_scored_handoff_rejects_runtime_values_without_matching_evidence(tmp_path):
+    raw = json.loads((STUDY / "candidate-profile.json").read_text(encoding="utf-8"))
+    changed = copy.deepcopy(raw)
+    changed["tx"]["endpoint_egress_rate_bytes_per_second"] += 1
+    path = tmp_path / "changed-profile.json"
+    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+        json.dump(changed, handle)
+        handle.write("\n")
+
+    with pytest.raises(ValueError, match="does not match runtime parameter"):
+        load_nvlink_candidate_profile(path)
+
+
+def test_scored_handoff_rejects_unpublished_identification(tmp_path):
+    raw = json.loads((STUDY / "candidate-profile.json").read_text(encoding="utf-8"))
+    raw["traf70_score_publication"]["runtime_changes"] = raw[
+        "traf70_score_publication"
+    ]["runtime_changes"][1:]
+    path = tmp_path / "missing-publication.json"
+    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+        json.dump(raw, handle)
+        handle.write("\n")
+
+    with pytest.raises(ValueError, match="exactly match identified parameters"):
+        load_nvlink_candidate_profile(path)
 
 
 def test_tx_packetizes_write_at_the_declared_boundary(candidate):
@@ -293,6 +352,184 @@ def test_analytic_bypass_returns_the_callers_object_by_identity():
     assert result is analytic
 
 
+def test_static_flow_policy_preserves_the_preimplementation_canonical_bytes(candidate):
+    transfers = [
+        NvlinkTransfer(
+            extent_id="identity-write-a",
+            source=0,
+            destination=1,
+            payload_bytes=769,
+        ),
+        NvlinkTransfer(
+            extent_id="identity-write-b",
+            source=0,
+            destination=2,
+            payload_bytes=513,
+            released_at_ps=17000,
+        ),
+        NvlinkTransfer(
+            extent_id="identity-read-c",
+            source=3,
+            destination=1,
+            payload_bytes=1025,
+            operation=NvlinkOperation.PEER_READ,
+            released_at_ps=9000,
+        ),
+    ]
+
+    implicit = NvlinkDomainService(candidate).serve(transfers, analytic_result=None)
+    explicit = NvlinkDomainService(candidate).serve(
+        transfers,
+        analytic_result=None,
+        flow_policy=NvlinkFlowPolicy.STATIC_INTERLEAVE,
+    )
+
+    assert isinstance(implicit, NvlinkDomainResult)
+    assert isinstance(explicit, NvlinkDomainResult)
+    assert implicit.canonical_json_bytes() == explicit.canonical_json_bytes()
+    assert hashlib.sha256(implicit.canonical_json_bytes()).hexdigest() == (
+        "2f2af64619ed3c6341b209d877d9f1e6984a67e44b97b5eb176a157294a6c252"
+    )
+
+
+def test_release_aware_join_matches_the_frozen_open_identity(candidate):
+    join_ps = 696320
+    result = NvlinkDomainService(candidate).serve(
+        [
+            NvlinkTransfer(
+                extent_id="incumbent",
+                source=0,
+                destination=1,
+                payload_bytes=1048576,
+            ),
+            NvlinkTransfer(
+                extent_id="joiner",
+                source=0,
+                destination=1,
+                payload_bytes=262144,
+                released_at_ps=join_ps,
+            ),
+        ],
+        analytic_result=None,
+        flow_policy=NvlinkFlowPolicy.RELEASE_AWARE_ROUND_ROBIN,
+    )
+
+    assert isinstance(result, NvlinkDomainResult)
+    boundary = next(
+        packet
+        for packet in result.packets
+        if packet.extent_id == "incumbent" and packet.sequence == 256
+    )
+    first_joiner = next(
+        packet for packet in result.packets if packet.extent_id == "joiner"
+    )
+    assert boundary.tx_started_at_ps == join_ps
+    assert first_joiner.tx_started_at_ps == join_ps + 1692
+    assert first_joiner.delivered_at_ps == join_ps + 13886
+
+
+def test_release_aware_exit_matches_the_frozen_phase_identity(candidate):
+    result = NvlinkDomainService(candidate).serve(
+        [
+            NvlinkTransfer(
+                extent_id="remaining",
+                source=0,
+                destination=1,
+                payload_bytes=1048576,
+            ),
+            NvlinkTransfer(
+                extent_id="departing",
+                source=0,
+                destination=1,
+                payload_bytes=65536,
+            ),
+        ],
+        analytic_result=None,
+        flow_policy=NvlinkFlowPolicy.RELEASE_AWARE_ROUND_ROBIN,
+    )
+
+    assert isinstance(result, NvlinkDomainResult)
+    departing_end = max(
+        packet.delivered_at_ps or 0
+        for packet in result.packets
+        if packet.extent_id == "departing"
+    )
+    after_exit = [
+        packet.delivered_at_ps or 0
+        for packet in result.packets
+        if packet.extent_id == "remaining"
+        and (packet.delivered_at_ps or 0) > departing_end
+    ]
+    assert after_exit[4] - departing_end == 16684
+
+
+def test_release_aware_incast_respects_pair_and_receiver_ceilings(candidate):
+    payload_ceiling = {1: 94.11764705882354, 2: 188.23529411764707, 3: 194.91945588329412}
+    for degree in (1, 2, 3):
+        result = NvlinkDomainService(candidate).serve(
+            [
+                NvlinkTransfer(
+                    extent_id=f"incast-{source}",
+                    source=source,
+                    destination=3,
+                    payload_bytes=524288,
+                )
+                for source in range(degree)
+            ],
+            analytic_result=None,
+            flow_policy=NvlinkFlowPolicy.RELEASE_AWARE_ROUND_ROBIN,
+        )
+        assert isinstance(result, NvlinkDomainResult)
+        aggregate_gbps = result.logical_bytes * 1000 / result.completion_time_ps
+        assert aggregate_gbps <= payload_ceiling[degree]
+
+
+def test_release_aware_rx_waits_for_credit_instead_of_overrunning_buffer(candidate):
+    tx = NvlinkTx(candidate.tx)
+    transfers = [
+        NvlinkTransfer(
+            extent_id=f"credit-source-{source}",
+            source=source,
+            destination=3,
+            payload_bytes=256,
+        )
+        for source in range(3)
+    ]
+    sent = tx.transmit_flows(
+        transfers,
+        credit_return_latency_ps=candidate.rx.credit_return_latency_ps,
+    )
+    rx = NvlinkRx(dataclasses.replace(candidate.rx, buffer_capacity_bytes=544))
+
+    delivered, max_occupancy = rx.receive_arrivals(sent)
+
+    assert max_occupancy == 544
+    assert delivered[2].rx_started_at_ps == (
+        delivered[0].rx_finished_at_ps + candidate.rx.credit_return_latency_ps
+    )
+
+
+def test_release_aware_flow_policy_preserves_read_direction_and_extent_order(candidate):
+    result = NvlinkDomainService(candidate).serve(
+        [
+            NvlinkTransfer(
+                extent_id="read-flow",
+                source=0,
+                destination=2,
+                payload_bytes=1025,
+                operation=NvlinkOperation.PEER_READ,
+            )
+        ],
+        analytic_result=None,
+        flow_policy=NvlinkFlowPolicy.RELEASE_AWARE_ROUND_ROBIN,
+    )
+
+    assert isinstance(result, NvlinkDomainResult)
+    assert result.request_payload_bytes == 0
+    assert result.response_payload_bytes == 1025
+    assert [packet.sequence for packet in result.packets] == list(range(6))
+
+
 def test_composition_conserves_write_and_read_directions(candidate):
     result = NvlinkDomainService(candidate).serve(
         [
@@ -317,14 +554,14 @@ def test_composition_conserves_write_and_read_directions(candidate):
     assert all(packet.delivered_at_ps is not None for packet in result.packets)
 
 
-def test_declared_candidate_contains_the_published_envelope(candidate):
+def test_scored_profile_reports_its_derived_published_envelope_comparison(candidate):
     validation = validate_candidate_against_published_a100_envelope(candidate)
 
-    assert validation.within_registered_error
-    assert 94.0 <= validation.predicted_pair_payload_rate_gbps <= 94.07
-    assert validation.pair_worst_relative_error < 0.0008
-    assert validation.predicted_fanout_payload_rate_gbps == pytest.approx(281.6991815868504)
-    assert validation.fanout_relative_error < 0.0002
+    assert not validation.within_registered_error
+    assert validation.predicted_pair_payload_rate_gbps == pytest.approx(94.009808228512)
+    assert validation.pair_worst_relative_error < 0.0007
+    assert validation.predicted_fanout_payload_rate_gbps == pytest.approx(151.14754255896753)
+    assert validation.fanout_relative_error == pytest.approx(0.4633497512552191)
 
 
 def test_domain_figure_routes_are_continuous_and_clear_of_blocks_and_text():

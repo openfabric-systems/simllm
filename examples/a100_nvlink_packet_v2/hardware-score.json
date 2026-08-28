@@ -1,0 +1,2856 @@
+{
+  "bulk_root": "/data3/yifeng/simllm-dev/wave-runs/traf70/hardware",
+  "case_scores": [
+    {
+      "case_name": "CORNER_NVPKT_001_payload_bytes",
+      "corner": "packetization",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "note": "The fit searches the frozen parameter grid before comparing any candidate value.",
+        "secondary_high": 1,
+        "secondary_low": -1,
+        "secondary_metric": "candidate_blind_packet_fit_holdout_residual",
+        "secondary_unit": "counter quantum",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_PACKET_PAYLOAD_AND_HEADER",
+        "RX_DELIVERY",
+        "RX_DELIVERY",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 1,
+      "row_count": 4608
+    },
+    {
+      "case_name": "CORNER_NVPKT_002_candidate_boundaries",
+      "corner": "packetization",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "note": "The fit searches the frozen parameter grid before comparing any candidate value.",
+        "secondary_high": 1,
+        "secondary_low": -1,
+        "secondary_metric": "candidate_blind_packet_fit_holdout_residual",
+        "secondary_unit": "counter quantum",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_PACKET_PAYLOAD_AND_HEADER",
+        "RX_DELIVERY",
+        "RX_DELIVERY",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 2,
+      "row_count": 432
+    },
+    {
+      "case_name": "CORNER_NVPKT_003_256b_residuals",
+      "corner": "packetization",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "note": "The fit searches the frozen parameter grid before comparing any candidate value.",
+        "secondary_high": 1,
+        "secondary_low": -1,
+        "secondary_metric": "candidate_blind_packet_fit_holdout_residual",
+        "secondary_unit": "counter quantum",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_PACKET_PAYLOAD_AND_HEADER",
+        "RX_DELIVERY",
+        "RX_DELIVERY",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 3,
+      "row_count": 270
+    },
+    {
+      "case_name": "CORNER_NVPKT_004_destination_alignment",
+      "corner": "packetization",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "note": "The fit searches the frozen parameter grid before comparing any candidate value.",
+        "secondary_high": 1,
+        "secondary_low": -1,
+        "secondary_metric": "candidate_blind_packet_fit_holdout_residual",
+        "secondary_unit": "counter quantum",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_PACKET_PAYLOAD_AND_HEADER",
+        "RX_DELIVERY",
+        "RX_DELIVERY",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 4,
+      "row_count": 126
+    },
+    {
+      "case_name": "CORNER_NVPKT_005_source_alignment",
+      "corner": "packetization",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "note": "The fit searches the frozen parameter grid before comparing any candidate value.",
+        "secondary_high": 1,
+        "secondary_low": -1,
+        "secondary_metric": "candidate_blind_packet_fit_holdout_residual",
+        "secondary_unit": "counter quantum",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_PACKET_PAYLOAD_AND_HEADER",
+        "RX_DELIVERY",
+        "RX_DELIVERY",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 5,
+      "row_count": 126
+    },
+    {
+      "case_name": "CORNER_NVPKT_006_access_width",
+      "corner": "packetization",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "note": "The fit searches the frozen parameter grid before comparing any candidate value.",
+        "secondary_high": 1,
+        "secondary_low": -1,
+        "secondary_metric": "candidate_blind_packet_fit_holdout_residual",
+        "secondary_unit": "counter quantum",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_PACKET_PAYLOAD_AND_HEADER",
+        "RX_DELIVERY",
+        "RX_DELIVERY",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 6,
+      "row_count": 30
+    },
+    {
+      "case_name": "CORNER_NVPKT_007_active_warp_lanes",
+      "corner": "packetization",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "note": "The fit searches the frozen parameter grid before comparing any candidate value.",
+        "secondary_high": 1,
+        "secondary_low": -1,
+        "secondary_metric": "candidate_blind_packet_fit_holdout_residual",
+        "secondary_unit": "counter quantum",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_PACKET_PAYLOAD_AND_HEADER",
+        "RX_DELIVERY",
+        "RX_DELIVERY",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 7,
+      "row_count": 36
+    },
+    {
+      "case_name": "CORNER_NVPKT_008_lane_mask_shape",
+      "corner": "packetization",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "note": "The fit searches the frozen parameter grid before comparing any candidate value.",
+        "secondary_high": 1,
+        "secondary_low": -1,
+        "secondary_metric": "candidate_blind_packet_fit_holdout_residual",
+        "secondary_unit": "counter quantum",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_PACKET_PAYLOAD_AND_HEADER",
+        "RX_DELIVERY",
+        "RX_DELIVERY",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 8,
+      "row_count": 24
+    },
+    {
+      "case_name": "CORNER_NVPKT_009_address_stride",
+      "corner": "packetization",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "note": "The fit searches the frozen parameter grid before comparing any candidate value.",
+        "secondary_high": 1,
+        "secondary_low": -1,
+        "secondary_metric": "candidate_blind_packet_fit_holdout_residual",
+        "secondary_unit": "counter quantum",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_PACKET_PAYLOAD_AND_HEADER",
+        "RX_DELIVERY",
+        "RX_DELIVERY",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 9,
+      "row_count": 42
+    },
+    {
+      "case_name": "CORNER_NVPKT_010_fixed_total_bytes",
+      "corner": "packetization",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "note": "The fit searches the frozen parameter grid before comparing any candidate value.",
+        "secondary_high": 1,
+        "secondary_low": -1,
+        "secondary_metric": "candidate_blind_packet_fit_holdout_residual",
+        "secondary_unit": "counter quantum",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_PACKET_PAYLOAD_AND_HEADER",
+        "RX_DELIVERY",
+        "RX_DELIVERY",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 10,
+      "row_count": 63
+    },
+    {
+      "case_name": "CORNER_NVPKT_011_fixed_message_size",
+      "corner": "packetization",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "note": "The fit searches the frozen parameter grid before comparing any candidate value.",
+        "secondary_high": 1,
+        "secondary_low": -1,
+        "secondary_metric": "candidate_blind_packet_fit_holdout_residual",
+        "secondary_unit": "counter quantum",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_PACKET_PAYLOAD_AND_HEADER",
+        "RX_DELIVERY",
+        "RX_DELIVERY",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 11,
+      "row_count": 63
+    },
+    {
+      "case_name": "CORNER_NVPKT_012_address_reuse",
+      "corner": "packetization",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "note": "The fit searches the frozen parameter grid before comparing any candidate value.",
+        "secondary_high": 1,
+        "secondary_low": -1,
+        "secondary_metric": "candidate_blind_packet_fit_holdout_residual",
+        "secondary_unit": "counter quantum",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_PACKET_PAYLOAD_AND_HEADER",
+        "RX_DELIVERY",
+        "RX_DELIVERY",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 12,
+      "row_count": 18
+    },
+    {
+      "case_name": "CORNER_NVPKT_013_peer_write",
+      "corner": "packetization",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "note": "The fit searches the frozen parameter grid before comparing any candidate value.",
+        "secondary_high": 1,
+        "secondary_low": -1,
+        "secondary_metric": "candidate_blind_packet_fit_holdout_residual",
+        "secondary_unit": "counter quantum",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_PACKET_PAYLOAD_AND_HEADER",
+        "TX_REQUEST_RESPONSE_DIRECTION",
+        "RX_DELIVERY",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 13,
+      "row_count": 108
+    },
+    {
+      "case_name": "CORNER_NVPKT_014_peer_read",
+      "corner": "packetization",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "note": "The fit searches the frozen parameter grid before comparing any candidate value.",
+        "secondary_high": 1,
+        "secondary_low": -1,
+        "secondary_metric": "candidate_blind_packet_fit_holdout_residual",
+        "secondary_unit": "counter quantum",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_PACKET_PAYLOAD_AND_HEADER",
+        "TX_REQUEST_RESPONSE_DIRECTION",
+        "RX_DELIVERY",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 14,
+      "row_count": 108
+    },
+    {
+      "case_name": "CORNER_NVPKT_015_producer_comparison",
+      "corner": "packetization",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "note": "The fit searches the frozen parameter grid before comparing any candidate value.",
+        "secondary_high": 1,
+        "secondary_low": -1,
+        "secondary_metric": "candidate_blind_packet_fit_holdout_residual",
+        "secondary_unit": "counter quantum",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_PACKET_PAYLOAD_AND_HEADER",
+        "TX_REQUEST_RESPONSE_DIRECTION",
+        "RX_DELIVERY",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 15,
+      "row_count": 9
+    },
+    {
+      "case_name": "CORNER_NVPKT_016_blind_holdout",
+      "corner": "packetization",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "note": "The fit searches the frozen parameter grid before comparing any candidate value.",
+        "secondary_high": 1,
+        "secondary_low": -1,
+        "secondary_metric": "candidate_blind_packet_fit_holdout_residual",
+        "secondary_unit": "counter quantum",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_PACKET_PAYLOAD_AND_HEADER",
+        "RX_DELIVERY",
+        "RX_DELIVERY",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 16,
+      "row_count": 288
+    },
+    {
+      "case_name": "CORNER_NVBOND_017_ordered_pair_matrix",
+      "corner": "bond_and_wire",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 94.07,
+        "low": 94.0,
+        "metric": "copy_engine_ordered_pair_payload_rate_gbps",
+        "provenance": "published A100 hardware envelope, not a TRAF-70 observation",
+        "unit": "GB/s"
+      },
+      "identification_rule_ids": [
+        "TX_LINK_COUNT_RATE_AND_BOND",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 17,
+      "row_count": 108
+    },
+    {
+      "case_name": "CORNER_NVBOND_018_per_link_balance",
+      "corner": "bond_and_wire",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.0,
+        "low": 0.9,
+        "metric": "minimum_active_link_raw_rate_over_maximum_active_link_raw_rate",
+        "required_active_link_count": 4,
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_LINK_COUNT_RATE_AND_BOND",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 18,
+      "row_count": 27
+    },
+    {
+      "case_name": "CORNER_NVBOND_019_stream_count",
+      "corner": "bond_and_wire",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.01,
+        "low": 0.0,
+        "metric": "observed_raw_rate_over_applicable_nameplate_ceiling",
+        "repeatability_ratio_high": 1.1,
+        "repeatability_ratio_low": 0.9,
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_LINK_COUNT_RATE_AND_BOND",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 19,
+      "row_count": 45
+    },
+    {
+      "case_name": "CORNER_NVBOND_020_producer_concurrency",
+      "corner": "bond_and_wire",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.01,
+        "low": 0.0,
+        "metric": "observed_raw_rate_over_applicable_nameplate_ceiling",
+        "repeatability_ratio_high": 1.1,
+        "repeatability_ratio_low": 0.9,
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_LINK_COUNT_RATE_AND_BOND",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 20,
+      "row_count": 27
+    },
+    {
+      "case_name": "CORNER_NVBOND_021_bandwidth_ramp",
+      "corner": "bond_and_wire",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.01,
+        "low": 0.0,
+        "metric": "observed_raw_rate_over_applicable_nameplate_ceiling",
+        "repeatability_ratio_high": 1.1,
+        "repeatability_ratio_low": 0.9,
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_LINK_COUNT_RATE_AND_BOND",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 21,
+      "row_count": 63
+    },
+    {
+      "case_name": "CORNER_NVBOND_022_offered_rate",
+      "corner": "bond_and_wire",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.01,
+        "low": 0.0,
+        "metric": "observed_raw_rate_over_applicable_nameplate_ceiling",
+        "repeatability_ratio_high": 1.1,
+        "repeatability_ratio_low": 0.9,
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_LINK_COUNT_RATE_AND_BOND",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 22,
+      "row_count": 42
+    },
+    {
+      "case_name": "CORNER_NVBOND_023_burst_length",
+      "corner": "bond_and_wire",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.01,
+        "low": 0.0,
+        "metric": "observed_raw_rate_over_applicable_nameplate_ceiling",
+        "repeatability_ratio_high": 1.1,
+        "repeatability_ratio_low": 0.9,
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_LINK_COUNT_RATE_AND_BOND",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 23,
+      "row_count": 42
+    },
+    {
+      "case_name": "CORNER_NVBOND_024_source_fanout",
+      "corner": "bond_and_wire",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 285.0,
+        "low": 275.0,
+        "metric": "copy_engine_three_way_fanout_payload_rate_gbps",
+        "published_anchor_gbps": 281.65,
+        "unit": "GB/s"
+      },
+      "identification_rule_ids": [
+        "TX_LINK_COUNT_RATE_AND_BOND",
+        "SWITCH_DIRECT_MESH_IDENTITY",
+        "TX_ENDPOINT_EGRESS_RATE"
+      ],
+      "ordinal": 24,
+      "row_count": 27
+    },
+    {
+      "case_name": "CORNER_NVBOND_025_destination_fanin",
+      "corner": "bond_and_wire",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.01,
+        "low": 0.0,
+        "metric": "observed_raw_rate_over_applicable_nameplate_ceiling",
+        "repeatability_ratio_high": 1.1,
+        "repeatability_ratio_low": 0.9,
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_LINK_COUNT_RATE_AND_BOND",
+        "SWITCH_DIRECT_MESH_IDENTITY",
+        "RX_INGRESS_RATE"
+      ],
+      "ordinal": 25,
+      "row_count": 27
+    },
+    {
+      "case_name": "CORNER_NVBOND_026_symmetric_bidirectional",
+      "corner": "bond_and_wire",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.01,
+        "low": 0.0,
+        "metric": "observed_raw_rate_over_applicable_nameplate_ceiling",
+        "repeatability_ratio_high": 1.1,
+        "repeatability_ratio_low": 0.9,
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_LINK_COUNT_RATE_AND_BOND",
+        "SWITCH_DIRECT_MESH_IDENTITY",
+        "TX_ENDPOINT_EGRESS_RATE"
+      ],
+      "ordinal": 26,
+      "row_count": 36
+    },
+    {
+      "case_name": "CORNER_NVBOND_027_asymmetric_bidirectional",
+      "corner": "bond_and_wire",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.01,
+        "low": 0.0,
+        "metric": "observed_raw_rate_over_applicable_nameplate_ceiling",
+        "repeatability_ratio_high": 1.1,
+        "repeatability_ratio_low": 0.9,
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_LINK_COUNT_RATE_AND_BOND",
+        "SWITCH_DIRECT_MESH_IDENTITY",
+        "TX_ENDPOINT_EGRESS_RATE"
+      ],
+      "ordinal": 27,
+      "row_count": 36
+    },
+    {
+      "case_name": "CORNER_NVBOND_028_disjoint_unidirectional",
+      "corner": "bond_and_wire",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.01,
+        "low": 0.0,
+        "metric": "observed_raw_rate_over_applicable_nameplate_ceiling",
+        "repeatability_ratio_high": 1.1,
+        "repeatability_ratio_low": 0.9,
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_LINK_COUNT_RATE_AND_BOND",
+        "SWITCH_DIRECT_MESH_IDENTITY",
+        "TX_ENDPOINT_EGRESS_RATE"
+      ],
+      "ordinal": 28,
+      "row_count": 9
+    },
+    {
+      "case_name": "CORNER_NVBOND_029_disjoint_bidirectional",
+      "corner": "bond_and_wire",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.01,
+        "low": 0.0,
+        "metric": "observed_raw_rate_over_applicable_nameplate_ceiling",
+        "repeatability_ratio_high": 1.1,
+        "repeatability_ratio_low": 0.9,
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_LINK_COUNT_RATE_AND_BOND",
+        "SWITCH_DIRECT_MESH_IDENTITY",
+        "TX_ENDPOINT_EGRESS_RATE"
+      ],
+      "ordinal": 29,
+      "row_count": 9
+    },
+    {
+      "case_name": "CORNER_NVBOND_030_full_mesh",
+      "corner": "bond_and_wire",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.01,
+        "low": 0.0,
+        "metric": "observed_raw_rate_over_applicable_nameplate_ceiling",
+        "repeatability_ratio_high": 1.1,
+        "repeatability_ratio_low": 0.9,
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_LINK_COUNT_RATE_AND_BOND",
+        "SWITCH_DIRECT_MESH_IDENTITY",
+        "TX_ENDPOINT_EGRESS_RATE"
+      ],
+      "ordinal": 30,
+      "row_count": 9
+    },
+    {
+      "case_name": "CORNER_NVBOND_031_startup_state",
+      "corner": "bond_and_wire",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.01,
+        "low": 0.0,
+        "metric": "observed_raw_rate_over_applicable_nameplate_ceiling",
+        "repeatability_ratio_high": 1.1,
+        "repeatability_ratio_low": 0.9,
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_LINK_COUNT_RATE_AND_BOND",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 31,
+      "row_count": 18
+    },
+    {
+      "case_name": "CORNER_NVBOND_032_node_time_repeatability",
+      "corner": "bond_and_wire",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.01,
+        "low": 0.0,
+        "metric": "observed_raw_rate_over_applicable_nameplate_ceiling",
+        "repeatability_ratio_high": 1.1,
+        "repeatability_ratio_low": 0.9,
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_LINK_COUNT_RATE_AND_BOND",
+        "SWITCH_DIRECT_MESH_IDENTITY"
+      ],
+      "ordinal": 32,
+      "row_count": 45
+    },
+    {
+      "case_name": "CORNER_NVINC_033_one_source",
+      "corner": "incast_and_destination_fifo",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 303.0,
+        "low": 0.0,
+        "metric": "destination_observed_raw_ingress_rate_gbps",
+        "note": "No lower-rate candidate band is frozen for incast.",
+        "unit": "GB/s"
+      },
+      "identification_rule_ids": [
+        "RX_INGRESS_RATE",
+        "RX_EFFECTIVE_BUFFER",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 33,
+      "row_count": 9
+    },
+    {
+      "case_name": "CORNER_NVINC_034_two_source",
+      "corner": "incast_and_destination_fifo",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 303.0,
+        "low": 0.0,
+        "metric": "destination_observed_raw_ingress_rate_gbps",
+        "note": "No lower-rate candidate band is frozen for incast.",
+        "unit": "GB/s"
+      },
+      "identification_rule_ids": [
+        "RX_INGRESS_RATE",
+        "RX_EFFECTIVE_BUFFER",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 34,
+      "row_count": 9
+    },
+    {
+      "case_name": "CORNER_NVINC_035_three_source",
+      "corner": "incast_and_destination_fifo",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 303.0,
+        "low": 0.0,
+        "metric": "destination_observed_raw_ingress_rate_gbps",
+        "note": "No lower-rate candidate band is frozen for incast.",
+        "unit": "GB/s"
+      },
+      "identification_rule_ids": [
+        "RX_INGRESS_RATE",
+        "RX_EFFECTIVE_BUFFER",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 35,
+      "row_count": 9
+    },
+    {
+      "case_name": "CORNER_NVINC_036_fixed_aggregate_rate",
+      "corner": "incast_and_destination_fifo",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 303.0,
+        "low": 0.0,
+        "metric": "destination_observed_raw_ingress_rate_gbps",
+        "note": "No lower-rate candidate band is frozen for incast.",
+        "unit": "GB/s"
+      },
+      "identification_rule_ids": [
+        "RX_INGRESS_RATE",
+        "RX_EFFECTIVE_BUFFER",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 36,
+      "row_count": 27
+    },
+    {
+      "case_name": "CORNER_NVINC_037_per_source_rate",
+      "corner": "incast_and_destination_fifo",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 303.0,
+        "low": 0.0,
+        "metric": "destination_observed_raw_ingress_rate_gbps",
+        "note": "No lower-rate candidate band is frozen for incast.",
+        "unit": "GB/s"
+      },
+      "identification_rule_ids": [
+        "RX_INGRESS_RATE",
+        "RX_EFFECTIVE_BUFFER",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 37,
+      "row_count": 72
+    },
+    {
+      "case_name": "CORNER_NVINC_038_start_skew",
+      "corner": "incast_and_destination_fifo",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 303.0,
+        "low": 0.0,
+        "metric": "destination_observed_raw_ingress_rate_gbps",
+        "note": "No lower-rate candidate band is frozen for incast.",
+        "unit": "GB/s"
+      },
+      "identification_rule_ids": [
+        "RX_INGRESS_RATE",
+        "RX_EFFECTIVE_BUFFER",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 38,
+      "row_count": 90
+    },
+    {
+      "case_name": "CORNER_NVINC_039_join_leave",
+      "corner": "incast_and_destination_fifo",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 303.0,
+        "low": 0.0,
+        "metric": "destination_observed_raw_ingress_rate_gbps",
+        "note": "No lower-rate candidate band is frozen for incast.",
+        "unit": "GB/s"
+      },
+      "identification_rule_ids": [
+        "RX_INGRESS_RATE",
+        "RX_EFFECTIVE_BUFFER",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 39,
+      "row_count": 18
+    },
+    {
+      "case_name": "CORNER_NVINC_040_burst_depth",
+      "corner": "incast_and_destination_fifo",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 303.0,
+        "low": 0.0,
+        "metric": "destination_observed_raw_ingress_rate_gbps",
+        "note": "No lower-rate candidate band is frozen for incast.",
+        "unit": "GB/s"
+      },
+      "identification_rule_ids": [
+        "RX_INGRESS_RATE",
+        "RX_EFFECTIVE_BUFFER",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 40,
+      "row_count": 108
+    },
+    {
+      "case_name": "CORNER_NVINC_041_equal_message_size",
+      "corner": "incast_and_destination_fifo",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 303.0,
+        "low": 0.0,
+        "metric": "destination_observed_raw_ingress_rate_gbps",
+        "note": "No lower-rate candidate band is frozen for incast.",
+        "unit": "GB/s"
+      },
+      "identification_rule_ids": [
+        "RX_INGRESS_RATE",
+        "RX_EFFECTIVE_BUFFER",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 41,
+      "row_count": 27
+    },
+    {
+      "case_name": "CORNER_NVINC_042_unequal_message_size",
+      "corner": "incast_and_destination_fifo",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 303.0,
+        "low": 0.0,
+        "metric": "destination_observed_raw_ingress_rate_gbps",
+        "note": "No lower-rate candidate band is frozen for incast.",
+        "unit": "GB/s"
+      },
+      "identification_rule_ids": [
+        "RX_INGRESS_RATE",
+        "RX_EFFECTIVE_BUFFER",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 42,
+      "row_count": 27
+    },
+    {
+      "case_name": "CORNER_NVINC_043_one_elephant_two_mice",
+      "corner": "incast_and_destination_fifo",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 303.0,
+        "low": 0.0,
+        "metric": "destination_observed_raw_ingress_rate_gbps",
+        "note": "No lower-rate candidate band is frozen for incast.",
+        "unit": "GB/s"
+      },
+      "identification_rule_ids": [
+        "RX_INGRESS_RATE",
+        "RX_EFFECTIVE_BUFFER",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 43,
+      "row_count": 27
+    },
+    {
+      "case_name": "CORNER_NVINC_044_two_elephants_one_mouse",
+      "corner": "incast_and_destination_fifo",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 303.0,
+        "low": 0.0,
+        "metric": "destination_observed_raw_ingress_rate_gbps",
+        "note": "No lower-rate candidate band is frozen for incast.",
+        "unit": "GB/s"
+      },
+      "identification_rule_ids": [
+        "RX_INGRESS_RATE",
+        "RX_EFFECTIVE_BUFFER",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 44,
+      "row_count": 27
+    },
+    {
+      "case_name": "CORNER_NVINC_045_push_distinct_buffers",
+      "corner": "incast_and_destination_fifo",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 303.0,
+        "low": 0.0,
+        "metric": "destination_observed_raw_ingress_rate_gbps",
+        "note": "No lower-rate candidate band is frozen for incast.",
+        "unit": "GB/s"
+      },
+      "identification_rule_ids": [
+        "RX_INGRESS_RATE",
+        "RX_EFFECTIVE_BUFFER",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 45,
+      "row_count": 27
+    },
+    {
+      "case_name": "CORNER_NVINC_046_pull_gather",
+      "corner": "incast_and_destination_fifo",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 303.0,
+        "low": 0.0,
+        "metric": "destination_observed_raw_ingress_rate_gbps",
+        "note": "No lower-rate candidate band is frozen for incast.",
+        "unit": "GB/s"
+      },
+      "identification_rule_ids": [
+        "RX_INGRESS_RATE",
+        "RX_EFFECTIVE_BUFFER",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 46,
+      "row_count": 27
+    },
+    {
+      "case_name": "CORNER_NVINC_047_hot_destination",
+      "corner": "incast_and_destination_fifo",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 303.0,
+        "low": 0.0,
+        "metric": "destination_observed_raw_ingress_rate_gbps",
+        "note": "No lower-rate candidate band is frozen for incast.",
+        "unit": "GB/s"
+      },
+      "identification_rule_ids": [
+        "RX_INGRESS_RATE",
+        "RX_EFFECTIVE_BUFFER",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 47,
+      "row_count": 27
+    },
+    {
+      "case_name": "CORNER_NVINC_048_long_soak",
+      "corner": "incast_and_destination_fifo",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 303.0,
+        "low": 0.0,
+        "metric": "destination_observed_raw_ingress_rate_gbps",
+        "note": "No lower-rate candidate band is frozen for incast.",
+        "unit": "GB/s"
+      },
+      "identification_rule_ids": [
+        "RX_INGRESS_RATE",
+        "RX_EFFECTIVE_BUFFER",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 48,
+      "row_count": 27
+    },
+    {
+      "case_name": "CORNER_NVCRD_049_dependent_round_trip",
+      "corner": "credit_depletion_and_return",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.1,
+        "low": 0.9,
+        "metric": "dependent_latency_repeat_ratio",
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_EFFECTIVE_CREDITS",
+        "RX_CREDIT_RETURN_LATENCY",
+        "RX_EFFECTIVE_BUFFER",
+        "TX_REQUEST_RESPONSE_DIRECTION"
+      ],
+      "ordinal": 49,
+      "row_count": 21
+    },
+    {
+      "case_name": "CORNER_NVCRD_050_outstanding_write_16b",
+      "corner": "credit_depletion_and_return",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "knee_repeatability": "first 95-percent knee within one frozen sweep point",
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "recovery_repeatability": "full-rate return within one frozen gap point",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_EFFECTIVE_CREDITS",
+        "RX_CREDIT_RETURN_LATENCY",
+        "RX_EFFECTIVE_BUFFER",
+        "TX_REQUEST_RESPONSE_DIRECTION"
+      ],
+      "ordinal": 50,
+      "row_count": 30
+    },
+    {
+      "case_name": "CORNER_NVCRD_051_outstanding_write_32b",
+      "corner": "credit_depletion_and_return",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "knee_repeatability": "first 95-percent knee within one frozen sweep point",
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "recovery_repeatability": "full-rate return within one frozen gap point",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_EFFECTIVE_CREDITS",
+        "RX_CREDIT_RETURN_LATENCY",
+        "RX_EFFECTIVE_BUFFER",
+        "TX_REQUEST_RESPONSE_DIRECTION"
+      ],
+      "ordinal": 51,
+      "row_count": 30
+    },
+    {
+      "case_name": "CORNER_NVCRD_052_outstanding_write_64b",
+      "corner": "credit_depletion_and_return",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "knee_repeatability": "first 95-percent knee within one frozen sweep point",
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "recovery_repeatability": "full-rate return within one frozen gap point",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_EFFECTIVE_CREDITS",
+        "RX_CREDIT_RETURN_LATENCY",
+        "RX_EFFECTIVE_BUFFER",
+        "TX_REQUEST_RESPONSE_DIRECTION"
+      ],
+      "ordinal": 52,
+      "row_count": 30
+    },
+    {
+      "case_name": "CORNER_NVCRD_053_outstanding_write_128b",
+      "corner": "credit_depletion_and_return",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "knee_repeatability": "first 95-percent knee within one frozen sweep point",
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "recovery_repeatability": "full-rate return within one frozen gap point",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_EFFECTIVE_CREDITS",
+        "RX_CREDIT_RETURN_LATENCY",
+        "RX_EFFECTIVE_BUFFER",
+        "TX_REQUEST_RESPONSE_DIRECTION"
+      ],
+      "ordinal": 53,
+      "row_count": 30
+    },
+    {
+      "case_name": "CORNER_NVCRD_054_outstanding_write_256b",
+      "corner": "credit_depletion_and_return",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "knee_repeatability": "first 95-percent knee within one frozen sweep point",
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "recovery_repeatability": "full-rate return within one frozen gap point",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_EFFECTIVE_CREDITS",
+        "RX_CREDIT_RETURN_LATENCY",
+        "RX_EFFECTIVE_BUFFER",
+        "TX_REQUEST_RESPONSE_DIRECTION"
+      ],
+      "ordinal": 54,
+      "row_count": 30
+    },
+    {
+      "case_name": "CORNER_NVCRD_055_outstanding_read",
+      "corner": "credit_depletion_and_return",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "knee_repeatability": "first 95-percent knee within one frozen sweep point",
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "recovery_repeatability": "full-rate return within one frozen gap point",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_EFFECTIVE_CREDITS",
+        "RX_CREDIT_RETURN_LATENCY",
+        "RX_EFFECTIVE_BUFFER",
+        "TX_REQUEST_RESPONSE_DIRECTION"
+      ],
+      "ordinal": 55,
+      "row_count": 27
+    },
+    {
+      "case_name": "CORNER_NVCRD_056_outstanding_atomic",
+      "corner": "credit_depletion_and_return",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "knee_repeatability": "first 95-percent knee within one frozen sweep point",
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "recovery_repeatability": "full-rate return within one frozen gap point",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_EFFECTIVE_CREDITS",
+        "RX_CREDIT_RETURN_LATENCY",
+        "RX_EFFECTIVE_BUFFER",
+        "TX_REQUEST_RESPONSE_DIRECTION"
+      ],
+      "ordinal": 56,
+      "row_count": 27
+    },
+    {
+      "case_name": "CORNER_NVCRD_057_burst_length",
+      "corner": "credit_depletion_and_return",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "knee_repeatability": "first 95-percent knee within one frozen sweep point",
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "recovery_repeatability": "full-rate return within one frozen gap point",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_EFFECTIVE_CREDITS",
+        "RX_CREDIT_RETURN_LATENCY",
+        "RX_EFFECTIVE_BUFFER",
+        "TX_REQUEST_RESPONSE_DIRECTION"
+      ],
+      "ordinal": 57,
+      "row_count": 48
+    },
+    {
+      "case_name": "CORNER_NVCRD_058_inter_message_gap",
+      "corner": "credit_depletion_and_return",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "knee_repeatability": "first 95-percent knee within one frozen sweep point",
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "recovery_repeatability": "full-rate return within one frozen gap point",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_EFFECTIVE_CREDITS",
+        "RX_CREDIT_RETURN_LATENCY",
+        "RX_EFFECTIVE_BUFFER",
+        "TX_REQUEST_RESPONSE_DIRECTION"
+      ],
+      "ordinal": 58,
+      "row_count": 48
+    },
+    {
+      "case_name": "CORNER_NVCRD_059_inter_burst_gap",
+      "corner": "credit_depletion_and_return",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "knee_repeatability": "first 95-percent knee within one frozen sweep point",
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "recovery_repeatability": "full-rate return within one frozen gap point",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_EFFECTIVE_CREDITS",
+        "RX_CREDIT_RETURN_LATENCY",
+        "RX_EFFECTIVE_BUFFER",
+        "TX_REQUEST_RESPONSE_DIRECTION"
+      ],
+      "ordinal": 59,
+      "row_count": 48
+    },
+    {
+      "case_name": "CORNER_NVCRD_060_duty_cycle",
+      "corner": "credit_depletion_and_return",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "knee_repeatability": "first 95-percent knee within one frozen sweep point",
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "recovery_repeatability": "full-rate return within one frozen gap point",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_EFFECTIVE_CREDITS",
+        "RX_CREDIT_RETURN_LATENCY",
+        "RX_EFFECTIVE_BUFFER",
+        "TX_REQUEST_RESPONSE_DIRECTION"
+      ],
+      "ordinal": 60,
+      "row_count": 42
+    },
+    {
+      "case_name": "CORNER_NVCRD_061_adaptive_knee_zoom",
+      "corner": "credit_depletion_and_return",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "knee_repeatability": "first 95-percent knee within one frozen sweep point",
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "recovery_repeatability": "full-rate return within one frozen gap point",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_EFFECTIVE_CREDITS",
+        "RX_CREDIT_RETURN_LATENCY",
+        "RX_EFFECTIVE_BUFFER",
+        "TX_REQUEST_RESPONSE_DIRECTION"
+      ],
+      "ordinal": 61,
+      "row_count": 3072
+    },
+    {
+      "case_name": "CORNER_NVCRD_062_two_streams_one_pair",
+      "corner": "credit_depletion_and_return",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "knee_repeatability": "first 95-percent knee within one frozen sweep point",
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "recovery_repeatability": "full-rate return within one frozen gap point",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_EFFECTIVE_CREDITS",
+        "RX_CREDIT_RETURN_LATENCY",
+        "RX_EFFECTIVE_BUFFER",
+        "TX_REQUEST_RESPONSE_DIRECTION"
+      ],
+      "ordinal": 62,
+      "row_count": 12
+    },
+    {
+      "case_name": "CORNER_NVCRD_063_one_source_two_peers",
+      "corner": "credit_depletion_and_return",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "knee_repeatability": "first 95-percent knee within one frozen sweep point",
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "recovery_repeatability": "full-rate return within one frozen gap point",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_EFFECTIVE_CREDITS",
+        "RX_CREDIT_RETURN_LATENCY",
+        "RX_EFFECTIVE_BUFFER",
+        "TX_REQUEST_RESPONSE_DIRECTION"
+      ],
+      "ordinal": 63,
+      "row_count": 12
+    },
+    {
+      "case_name": "CORNER_NVCRD_064_opposite_directions",
+      "corner": "credit_depletion_and_return",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.02,
+        "knee_repeatability": "first 95-percent knee within one frozen sweep point",
+        "low": 0.98,
+        "metric": "observed_data_bytes_over_expected_logical_bytes",
+        "recovery_repeatability": "full-rate return within one frozen gap point",
+        "unit": "ratio after one-quantum allowance"
+      },
+      "identification_rule_ids": [
+        "TX_EFFECTIVE_CREDITS",
+        "RX_CREDIT_RETURN_LATENCY",
+        "RX_EFFECTIVE_BUFFER",
+        "TX_REQUEST_RESPONSE_DIRECTION"
+      ],
+      "ordinal": 64,
+      "row_count": 12
+    },
+    {
+      "case_name": "CORNER_NVHOL_065_small_behind_large",
+      "corner": "fifo_partition_and_head_of_line",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 4.0,
+        "low": 0.25,
+        "metric": "latency_flow_completion_over_isolated_control",
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_RX_QUEUE_SCOPE",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 65,
+      "row_count": 24
+    },
+    {
+      "case_name": "CORNER_NVHOL_066_large_behind_small",
+      "corner": "fifo_partition_and_head_of_line",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 4.0,
+        "low": 0.25,
+        "metric": "latency_flow_completion_over_isolated_control",
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_RX_QUEUE_SCOPE",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 66,
+      "row_count": 24
+    },
+    {
+      "case_name": "CORNER_NVHOL_067_separate_streams",
+      "corner": "fifo_partition_and_head_of_line",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 4.0,
+        "low": 0.25,
+        "metric": "latency_flow_completion_over_isolated_control",
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_RX_QUEUE_SCOPE",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 67,
+      "row_count": 24
+    },
+    {
+      "case_name": "CORNER_NVHOL_068_alternating_sizes",
+      "corner": "fifo_partition_and_head_of_line",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 4.0,
+        "low": 0.25,
+        "metric": "latency_flow_completion_over_isolated_control",
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_RX_QUEUE_SCOPE",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 68,
+      "row_count": 24
+    },
+    {
+      "case_name": "CORNER_NVHOL_069_bimodal_mix",
+      "corner": "fifo_partition_and_head_of_line",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 4.0,
+        "low": 0.25,
+        "metric": "latency_flow_completion_over_isolated_control",
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_RX_QUEUE_SCOPE",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 69,
+      "row_count": 24
+    },
+    {
+      "case_name": "CORNER_NVHOL_070_same_pair_bulk",
+      "corner": "fifo_partition_and_head_of_line",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 4.0,
+        "low": 0.25,
+        "metric": "latency_flow_completion_over_isolated_control",
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_RX_QUEUE_SCOPE",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 70,
+      "row_count": 24
+    },
+    {
+      "case_name": "CORNER_NVHOL_071_other_peer_bulk",
+      "corner": "fifo_partition_and_head_of_line",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 4.0,
+        "low": 0.25,
+        "metric": "latency_flow_completion_over_isolated_control",
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_RX_QUEUE_SCOPE",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 71,
+      "row_count": 24
+    },
+    {
+      "case_name": "CORNER_NVHOL_072_remote_incast",
+      "corner": "fifo_partition_and_head_of_line",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 4.0,
+        "low": 0.25,
+        "metric": "latency_flow_completion_over_isolated_control",
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_RX_QUEUE_SCOPE",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 72,
+      "row_count": 24
+    },
+    {
+      "case_name": "CORNER_NVHOL_073_write_write",
+      "corner": "fifo_partition_and_head_of_line",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 4.0,
+        "low": 0.25,
+        "metric": "latency_flow_completion_over_isolated_control",
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_RX_QUEUE_SCOPE",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 73,
+      "row_count": 24
+    },
+    {
+      "case_name": "CORNER_NVHOL_074_read_read",
+      "corner": "fifo_partition_and_head_of_line",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 4.0,
+        "low": 0.25,
+        "metric": "latency_flow_completion_over_isolated_control",
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_RX_QUEUE_SCOPE",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 74,
+      "row_count": 12
+    },
+    {
+      "case_name": "CORNER_NVHOL_075_same_direction_read_write",
+      "corner": "fifo_partition_and_head_of_line",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 4.0,
+        "low": 0.25,
+        "metric": "latency_flow_completion_over_isolated_control",
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_RX_QUEUE_SCOPE",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 75,
+      "row_count": 24
+    },
+    {
+      "case_name": "CORNER_NVHOL_076_opposite_direction_read_write",
+      "corner": "fifo_partition_and_head_of_line",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 4.0,
+        "low": 0.25,
+        "metric": "latency_flow_completion_over_isolated_control",
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_RX_QUEUE_SCOPE",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 76,
+      "row_count": 24
+    },
+    {
+      "case_name": "CORNER_NVHOL_077_distinct_regions",
+      "corner": "fifo_partition_and_head_of_line",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 1.1,
+        "low": 0.9,
+        "metric": "latency_over_dispersed_region_control",
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_RX_QUEUE_SCOPE",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 77,
+      "row_count": 24
+    },
+    {
+      "case_name": "CORNER_NVHOL_078_shared_cache_line",
+      "corner": "fifo_partition_and_head_of_line",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 4.0,
+        "low": 0.25,
+        "metric": "latency_flow_completion_over_isolated_control",
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_RX_QUEUE_SCOPE",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 78,
+      "row_count": 24
+    },
+    {
+      "case_name": "CORNER_NVHOL_079_post_burst_drain",
+      "corner": "fifo_partition_and_head_of_line",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 2.0,
+        "low": 1.0,
+        "metric": "drain_time_over_serialization_floor",
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_RX_QUEUE_SCOPE",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 79,
+      "row_count": 24
+    },
+    {
+      "case_name": "CORNER_NVHOL_080_blind_mixed_soak",
+      "corner": "fifo_partition_and_head_of_line",
+      "coverage": "COMPLETE",
+      "expected_band": {
+        "conservation_ratio_high": 1.02,
+        "conservation_ratio_low": 0.98,
+        "counter_quantum_bytes": 1024,
+        "fatal_guard_precondition": "all applicable row and cell fatal guards pass",
+        "high": 4.0,
+        "low": 0.25,
+        "metric": "latency_flow_completion_over_isolated_control",
+        "unit": "ratio"
+      },
+      "identification_rule_ids": [
+        "TX_RX_QUEUE_SCOPE",
+        "RX_DELIVERY"
+      ],
+      "ordinal": 80,
+      "row_count": 192
+    }
+  ],
+  "coverage": {
+    "completed_cell_count": 86,
+    "completed_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85
+    ],
+    "completed_prefix_count": 86,
+    "completed_prefix_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85
+    ],
+    "pending_array": "",
+    "pending_indices": [],
+    "protocol_validation_row_count": 4,
+    "rejected_attempts": [
+      {
+        "cell_id": "isolated-015",
+        "path": "/data3/yifeng/simllm-dev/wave-runs/traf70/hardware/f0ab026e054873a56614af63ab3a7ae3219dc0b045423808cb41522910fa6da6/cells/isolated-015/attempt-0001",
+        "reason": "plan implementation_sha256 mismatch"
+      },
+      {
+        "cell_id": "isolated-015",
+        "path": "/data3/yifeng/simllm-dev/wave-runs/traf70/hardware/f0ab026e054873a56614af63ab3a7ae3219dc0b045423808cb41522910fa6da6/cells/isolated-015/attempt-0002",
+        "reason": "plan implementation_sha256 mismatch"
+      }
+    ],
+    "result_row_count": 11542
+  },
+  "execution_heads": [
+    "a89b987e81b8c5ac8f04a1f27ae9af0ed09839d1"
+  ],
+  "fatal_guard_verdicts": {
+    "guards": [
+      {
+        "decidable": true,
+        "failure_count": 0,
+        "guard_id": "FG01",
+        "missing_count": 0,
+        "observation_count": 11542,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "failure_count": 0,
+        "guard_id": "FG02",
+        "missing_count": 0,
+        "observation_count": 11628,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "failure_count": 0,
+        "guard_id": "FG03",
+        "missing_count": 0,
+        "observation_count": 11542,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "failure_count": 0,
+        "guard_id": "FG04",
+        "missing_count": 0,
+        "observation_count": 11542,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "failure_count": 0,
+        "guard_id": "FG05",
+        "missing_count": 0,
+        "observation_count": 11542,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "failure_count": 0,
+        "guard_id": "FG06",
+        "missing_count": 0,
+        "observation_count": 11542,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "failure_count": 0,
+        "guard_id": "FG07",
+        "missing_count": 0,
+        "observation_count": 11628,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "failure_count": 0,
+        "guard_id": "FG08",
+        "missing_count": 0,
+        "observation_count": 11542,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "failure_count": 0,
+        "guard_id": "FG09",
+        "missing_count": 0,
+        "observation_count": 11543,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "failure_count": 0,
+        "guard_id": "FG10",
+        "missing_count": 0,
+        "observation_count": 11542,
+        "status": "PASS"
+      }
+    ],
+    "status": "PASS"
+  },
+  "flow_dynamics_gate": {
+    "all_cells_complete": true,
+    "all_fatal_guards_decidable": true,
+    "reason": "all frozen prerequisites have a decidable non-void outcome",
+    "required_rule_statuses": {
+      "RX_EFFECTIVE_BUFFER": [
+        "INCONCLUSIVE"
+      ],
+      "RX_INGRESS_RATE": [
+        "IDENTIFIED"
+      ],
+      "TX_EFFECTIVE_CREDITS": [
+        "INCONCLUSIVE"
+      ],
+      "TX_LINK_COUNT_RATE_AND_BOND": [
+        "INCONCLUSIVE"
+      ],
+      "TX_RX_QUEUE_SCOPE": [
+        "INCONCLUSIVE"
+      ]
+    },
+    "verdict": "OPEN"
+  },
+  "freeze_sha256": "f0ab026e054873a56614af63ab3a7ae3219dc0b045423808cb41522910fa6da6",
+  "measurement_validity": "VALID_FOR_FROZEN_RULES",
+  "module_parameter_identification": [
+    {
+      "candidate_relation": "UNCHANGED",
+      "candidate_value": 256,
+      "evidence_class": "declared_candidate_not_hardware_measurement",
+      "identified_value": null,
+      "module": "tx",
+      "parameter": "max_payload_bytes",
+      "reason": "producer fits are not unique and common, or a training, copy-engine, or blind-holdout residual exceeds its counter-quantum allowance",
+      "rule_id": "TX_PACKET_PAYLOAD_AND_HEADER",
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "candidate_relation": "UNCHANGED",
+      "candidate_value": 16,
+      "evidence_class": "declared_candidate_not_hardware_measurement",
+      "identified_value": null,
+      "module": "tx",
+      "parameter": "header_bytes",
+      "reason": "producer fits are not unique and common, or a training, copy-engine, or blind-holdout residual exceeds its counter-quantum allowance",
+      "rule_id": "TX_PACKET_PAYLOAD_AND_HEADER",
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "candidate_relation": "UNCHANGED",
+      "candidate_value": 4,
+      "evidence_class": "declared_candidate_not_hardware_measurement",
+      "identified_value": null,
+      "module": "tx",
+      "parameter": "links_per_peer",
+      "reason": "ordered-pair coverage, stable count, 0.90 balance, or top-three repeatability failed",
+      "rule_id": "TX_LINK_COUNT_RATE_AND_BOND",
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "candidate_relation": "UNCHANGED",
+      "candidate_value": 25000000000,
+      "evidence_class": "declared_candidate_not_hardware_measurement",
+      "identified_value": null,
+      "module": "tx",
+      "parameter": "per_link_rate_bytes_per_second",
+      "reason": "ordered-pair coverage, stable count, 0.90 balance, or top-three repeatability failed",
+      "rule_id": "TX_LINK_COUNT_RATE_AND_BOND",
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "candidate_relation": "UNCHANGED",
+      "candidate_value": "earliest_available_packet_striping",
+      "evidence_class": "declared_candidate_not_hardware_measurement",
+      "identified_value": null,
+      "module": "tx",
+      "parameter": "bond_policy",
+      "reason": "balanced aggregate counters cannot identify earliest-available scheduling",
+      "rule_id": "TX_LINK_COUNT_RATE_AND_BOND",
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "candidate_relation": "REFUTED_AND_REPLACED",
+      "candidate_value": 300000000000,
+      "evidence_class": "measured_effective_endpoint_counter_plateau",
+      "identified_value": 160795737454,
+      "module": "tx",
+      "parameter": "endpoint_egress_rate_bytes_per_second",
+      "reason": "median of the three highest guarded endpoint plateaus repeats within 10 percent",
+      "rule_id": "TX_ENDPOINT_EGRESS_RATE",
+      "status": "IDENTIFIED"
+    },
+    {
+      "candidate_relation": "CONFIRMED",
+      "candidate_value": "write payload travels as request; read control travels as request and read payload travels as response",
+      "evidence_class": "measured_directional_counter_conformance",
+      "identified_value": "write payload travels as request; read control travels as request and read payload travels as response",
+      "module": "tx",
+      "parameter": "request_response_direction",
+      "reason": "guarded write and read directional counter ledgers",
+      "rule_id": "TX_REQUEST_RESPONSE_DIRECTION",
+      "status": "IDENTIFIED"
+    },
+    {
+      "candidate_relation": "UNCHANGED",
+      "candidate_value": 272,
+      "evidence_class": "declared_candidate_not_hardware_measurement",
+      "identified_value": null,
+      "module": "tx",
+      "parameter": "credit_unit_bytes",
+      "reason": "credit knee lacks a required packet fit, recovery return, or destination-scope cross-check",
+      "rule_id": "TX_EFFECTIVE_CREDITS",
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "candidate_relation": "UNCHANGED",
+      "candidate_value": 256,
+      "evidence_class": "declared_candidate_not_hardware_measurement",
+      "identified_value": null,
+      "module": "tx",
+      "parameter": "credits_per_destination",
+      "reason": "credit knee lacks a required packet fit, recovery return, or destination-scope cross-check",
+      "rule_id": "TX_EFFECTIVE_CREDITS",
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "candidate_relation": "RETAINED_STRUCTURAL",
+      "candidate_value": "pass_through",
+      "evidence_class": "structural_direct_mesh_invariant_not_measurement",
+      "identified_value": "pass_through",
+      "module": "switch",
+      "parameter": "mode",
+      "reason": "direct NV4 mesh invariant, not hardware measurement",
+      "rule_id": "SWITCH_DIRECT_MESH_IDENTITY",
+      "status": "STRUCTURAL"
+    },
+    {
+      "candidate_relation": "REFUTED_AND_REPLACED",
+      "candidate_value": 300000000000,
+      "evidence_class": "measured_effective_ingress_counter_plateau",
+      "identified_value": 207101921876,
+      "module": "rx",
+      "parameter": "ingress_rate_bytes_per_second",
+      "reason": "median of three highest guarded ingress plateaus repeats within 10 percent",
+      "rule_id": "RX_INGRESS_RATE",
+      "status": "IDENTIFIED"
+    },
+    {
+      "candidate_relation": "UNCHANGED",
+      "candidate_value": 1048576,
+      "evidence_class": "declared_candidate_not_hardware_measurement",
+      "identified_value": null,
+      "module": "rx",
+      "parameter": "buffer_capacity_bytes",
+      "reason": "no common localized incast and outstanding loss-free capacity knee predicts drain",
+      "rule_id": "RX_EFFECTIVE_BUFFER",
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "candidate_relation": "UNCHANGED",
+      "candidate_value": 200000,
+      "evidence_class": "declared_candidate_not_hardware_measurement",
+      "identified_value": null,
+      "module": "rx",
+      "parameter": "credit_return_latency_ps",
+      "reason": "no repeated recovery threshold rises from a depleted zero-gap baseline",
+      "rule_id": "RX_CREDIT_RETURN_LATENCY",
+      "status": "INCONCLUSIVE"
+    },
+    {
+      "candidate_relation": "CONFIRMED",
+      "candidate_value": "extent_sequence",
+      "evidence_class": "measured_behavioral_delivery_conformance",
+      "identified_value": "extent_sequence",
+      "module": "rx",
+      "parameter": "reassembly_policy",
+      "reason": "all applicable isolated and ordered-frame destination ledgers match",
+      "rule_id": "RX_DELIVERY",
+      "status": "IDENTIFIED"
+    },
+    {
+      "candidate_relation": "CONFIRMED",
+      "candidate_value": "per_extent",
+      "evidence_class": "measured_behavioral_delivery_conformance",
+      "identified_value": "per_extent",
+      "module": "rx",
+      "parameter": "delivery_order",
+      "reason": "all applicable isolated and ordered-frame destination ledgers match",
+      "rule_id": "RX_DELIVERY",
+      "status": "IDENTIFIED"
+    },
+    {
+      "candidate_relation": "UNCHANGED",
+      "candidate_value": null,
+      "evidence_class": "declared_candidate_not_hardware_measurement",
+      "identified_value": null,
+      "module": "tx_rx",
+      "parameter": "queue_scope",
+      "reason": "scope controls are observable but no unique stable localization is frozen from aggregate completion",
+      "rule_id": "TX_RX_QUEUE_SCOPE",
+      "status": "INCONCLUSIVE"
+    }
+  ],
+  "producer_binary_audit": {
+    "observed_batch_binary_sha256": [
+      "9c39603234969c5a7b01dd80008788a8649367f8ee003942e6462b344fa6c9d8"
+    ],
+    "status": "SINGLE_DIGEST"
+  },
+  "profile_patch": {
+    "changes": [
+      {
+        "candidate_relation": "REFUTED_AND_REPLACED",
+        "evidence_class": "measured_effective_endpoint_counter_plateau",
+        "module": "tx",
+        "parameter": "endpoint_egress_rate_bytes_per_second",
+        "rule_id": "TX_ENDPOINT_EGRESS_RATE",
+        "value": 160795737454
+      },
+      {
+        "candidate_relation": "CONFIRMED",
+        "evidence_class": "measured_directional_counter_conformance",
+        "module": "tx",
+        "parameter": "request_response_direction",
+        "rule_id": "TX_REQUEST_RESPONSE_DIRECTION",
+        "value": "write payload travels as request; read control travels as request and read payload travels as response"
+      },
+      {
+        "candidate_relation": "REFUTED_AND_REPLACED",
+        "evidence_class": "measured_effective_ingress_counter_plateau",
+        "module": "rx",
+        "parameter": "ingress_rate_bytes_per_second",
+        "rule_id": "RX_INGRESS_RATE",
+        "value": 207101921876
+      },
+      {
+        "candidate_relation": "CONFIRMED",
+        "evidence_class": "measured_behavioral_delivery_conformance",
+        "module": "rx",
+        "parameter": "reassembly_policy",
+        "rule_id": "RX_DELIVERY",
+        "value": "extent_sequence"
+      },
+      {
+        "candidate_relation": "CONFIRMED",
+        "evidence_class": "measured_behavioral_delivery_conformance",
+        "module": "rx",
+        "parameter": "delivery_order",
+        "rule_id": "RX_DELIVERY",
+        "value": "per_extent"
+      }
+    ],
+    "status": "APPLY_EXACTLY_LISTED_CHANGES_AFTER_SCORE_PUBLICATION",
+    "unchanged_parameter_count": 11
+  },
+  "protected_candidate_before_sha256": "899712c4734f7a6b410d80231291663a404511528d46aab7497b73831e0e354f",
+  "recorded_at": "2026-08-27T20:41:12.452179+00:00",
+  "scheduler_job": "199957,199960",
+  "schema": "simllm-a100-nvlink-packet-hardware-score-v2",
+  "scoring_audit": {
+    "credits_buffer_recovery_and_ingress": {
+      "buffer_capacity_identified": false,
+      "buffer_reason": "no common localized incast and outstanding loss-free capacity knee predicts drain",
+      "credit_knees": {
+        "50": {
+          "first_95_percent_knee": 256,
+          "median_rate_by_outstanding": [
+            [
+              1,
+              0.05348
+            ],
+            [
+              2,
+              0.106623
+            ],
+            [
+              4,
+              0.212042
+            ],
+            [
+              8,
+              0.418536
+            ],
+            [
+              16,
+              0.805339
+            ],
+            [
+              32,
+              1.47483
+            ],
+            [
+              64,
+              1.758589
+            ],
+            [
+              128,
+              1.732791
+            ],
+            [
+              256,
+              2.03528
+            ],
+            [
+              512,
+              1.961345
+            ]
+          ],
+          "plateau_gbps": 2.03528
+        },
+        "51": {
+          "first_95_percent_knee": 256,
+          "median_rate_by_outstanding": [
+            [
+              1,
+              0.106498
+            ],
+            [
+              2,
+              0.21196
+            ],
+            [
+              4,
+              0.420147
+            ],
+            [
+              8,
+              0.817319
+            ],
+            [
+              16,
+              1.484674
+            ],
+            [
+              32,
+              2.383788
+            ],
+            [
+              64,
+              2.370338
+            ],
+            [
+              128,
+              2.702181
+            ],
+            [
+              256,
+              3.186725
+            ],
+            [
+              512,
+              3.207331
+            ]
+          ],
+          "plateau_gbps": 3.207331
+        },
+        "52": {
+          "first_95_percent_knee": 256,
+          "median_rate_by_outstanding": [
+            [
+              1,
+              0.210951
+            ],
+            [
+              2,
+              0.418218
+            ],
+            [
+              4,
+              0.820401
+            ],
+            [
+              8,
+              1.518241
+            ],
+            [
+              16,
+              2.603321
+            ],
+            [
+              32,
+              2.850421
+            ],
+            [
+              64,
+              3.261907
+            ],
+            [
+              128,
+              3.559949
+            ],
+            [
+              256,
+              3.880568
+            ],
+            [
+              512,
+              3.977483
+            ]
+          ],
+          "plateau_gbps": 3.977483
+        },
+        "53": {
+          "first_95_percent_knee": 64,
+          "median_rate_by_outstanding": [
+            [
+              1,
+              0.415131
+            ],
+            [
+              2,
+              0.813685
+            ],
+            [
+              4,
+              1.514167
+            ],
+            [
+              8,
+              2.62942
+            ],
+            [
+              16,
+              3.172917
+            ],
+            [
+              32,
+              3.852297
+            ],
+            [
+              64,
+              4.394739
+            ],
+            [
+              128,
+              4.55202
+            ],
+            [
+              256,
+              4.044511
+            ],
+            [
+              512,
+              4.110902
+            ]
+          ],
+          "plateau_gbps": 4.55202
+        },
+        "54": {
+          "first_95_percent_knee": 64,
+          "median_rate_by_outstanding": [
+            [
+              1,
+              0.801864
+            ],
+            [
+              2,
+              1.493124
+            ],
+            [
+              4,
+              2.550579
+            ],
+            [
+              8,
+              3.257681
+            ],
+            [
+              16,
+              3.275398
+            ],
+            [
+              32,
+              3.570423
+            ],
+            [
+              64,
+              3.797936
+            ],
+            [
+              128,
+              3.819267
+            ],
+            [
+              256,
+              3.387234
+            ],
+            [
+              512,
+              3.329785
+            ]
+          ],
+          "plateau_gbps": 3.819267
+        }
+      },
+      "cross_payload_knee_repeatable_within_one_point": false,
+      "destination_scope_pass": true,
+      "destination_scope_rate_ratio": 2.0204303558575063,
+      "ingress_repeatable_within_10_percent_and_below_ceiling": true,
+      "ingress_top_three": [
+        207196314097.25217,
+        207101921876.0841,
+        206722733472.4937
+      ],
+      "recovery": {
+        "58": {
+          "first_restored_gap_ns": 20,
+          "median_rate_by_gap_ns": [
+            [
+              0,
+              5.9459005
+            ],
+            [
+              20,
+              6.605274
+            ],
+            [
+              50,
+              6.6121385
+            ],
+            [
+              100,
+              6.5710605
+            ],
+            [
+              200,
+              6.4692975
+            ],
+            [
+              500,
+              6.541057
+            ],
+            [
+              1000,
+              6.204161999999999
+            ],
+            [
+              5000,
+              4.989291
+            ]
+          ],
+          "plateau_gbps": 6.6121385
+        },
+        "59": {
+          "first_restored_gap_ns": null,
+          "median_rate_by_gap_ns": [
+            [
+              0,
+              6.63125
+            ],
+            [
+              20,
+              6.4600764999999996
+            ],
+            [
+              50,
+              6.5115075000000004
+            ],
+            [
+              100,
+              6.482531
+            ],
+            [
+              200,
+              6.553599
+            ],
+            [
+              500,
+              6.472208
+            ],
+            [
+              1000,
+              5.737004
+            ],
+            [
+              5000,
+              4.994415500000001
+            ]
+          ],
+          "plateau_gbps": 6.63125
+        }
+      },
+      "recovery_repeatable_within_one_point": false
+    },
+    "link_and_endpoint_plateaus": {
+      "active_link_counts": {
+        "0->1": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "0->2": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "0->3": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "1->0": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "1->2": [
+          4,
+          4,
+          4
+        ],
+        "1->3": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "2->0": [
+          4,
+          4,
+          4,
+          4
+        ],
+        "2->1": [
+          4,
+          4,
+          4
+        ],
+        "2->3": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "3->0": [
+          4,
+          4
+        ],
+        "3->1": [
+          4,
+          4,
+          4
+        ],
+        "3->2": [
+          4,
+          4,
+          4,
+          4,
+          4
+        ]
+      },
+      "all_link_top_three_repeatable_within_10_percent": false,
+      "endpoint_repeatable_within_10_percent": true,
+      "endpoint_top_three": [
+        161284830487.5031,
+        160795737453.53613,
+        156721084658.90894
+      ],
+      "minimum_plateau_balance": 0.9650900900900902,
+      "ordered_pair_count": 12,
+      "per_link_identified_value": null,
+      "plateau_sample_count": 73,
+      "required_ordered_pair_count": 12
+    },
+    "packet_fit": {
+      "blind_holdout_within_quantum": false,
+      "copy_engine_agrees_without_authority": false,
+      "copy_engine_row_count": 2001,
+      "grid_cardinality": 33024,
+      "header_bytes": {
+        "maximum": 128,
+        "minimum": 0,
+        "step": 1
+      },
+      "max_payload_bytes": {
+        "maximum": 4096,
+        "minimum": 16,
+        "step": 16
+      },
+      "per_training_row_within_quantum": false,
+      "producer_fits": {
+        "dependent_sm_peer_read": {
+          "best_header_bytes": 19,
+          "best_max_payload_bytes": 16,
+          "best_residual_bytes": 1421546662,
+          "holdout_row_count": 96,
+          "runner_up_residual_bytes": 1428961232,
+          "training_row_count": 2079,
+          "unique": true
+        },
+        "persistent_sm_peer_write": {
+          "best_header_bytes": 128,
+          "best_max_payload_bytes": 16,
+          "best_residual_bytes": 45877433600,
+          "holdout_row_count": 96,
+          "runner_up_residual_bytes": 46090300862,
+          "training_row_count": 2079,
+          "unique": true
+        }
+      },
+      "same_producer_fit": false,
+      "status": "INCONCLUSIVE"
+    }
+  },
+  "status": "COMPLETE_VALID_86_OF_86",
+  "study_id": "a100_nvlink_packet_v2",
+  "task_id": "TRAF-70",
+  "task_status": "OPEN"
+}

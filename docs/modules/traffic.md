@@ -978,6 +978,24 @@ required 50x. The valid refutation keeps TRAF-20 open. The fabric-leg view
 that exposes the contention masked by the original step map closes TRAF-68.
 Neither result makes an absolute-accuracy claim against silicon.
 
+The scored NV4 domain now publishes its packet-level flow joins, convergence,
+divergence and flow-completion-time distributions in
+[the TRAF-69 result](../../examples/nvlink_flow_dynamics_v1/RESULTS.md).
+The 1-to-2 open identity lands at 13,886 ps and the 2-to-1 solo-target identity
+at 16,684 ps, both with 0 ps residual. The reverse-target schedule completes
+flow C, flow B, then flow A, and all 219 stable raw-bin rate checks pass. Every
+one of the 21 incast-degree-by-size CDF cells passes its frozen p50 and p95
+bands. Simulated payload reaches 94.009808, 187.880751 and 194.562756 GB/s at
+degrees one through three, respectively, without exceeding the frozen
+94.117647, 188.235294 and 194.919456 GB/s ceilings. The published 281.65 GB/s
+sender fan-out row remains separate and is honestly refuted by a 46.334975
+percent miss. All 13 fatal guards and all 60 preservation locks pass, including
+the byte-identical default flow-inactive path, so TRAF-69 closes. The result
+keeps the measured TX and RX plateaus, ten declared candidate parameters and
+the structural pass-through switch, the score's eleven unchanged internals in
+total, visibly separate; TRAF-65 remains open on its live held-out integration
+bar.
+
 ## Open tasks
 
 ### Precision
@@ -1555,19 +1573,31 @@ Neither result makes an absolute-accuracy claim against silicon.
   the A100 pass-through switch stands as a structural direct-mesh invariant,
   not a hardware measurement. The candidate profile stays `candidate` with no
   parameter value changed, and TRAF-65 stays OPEN.
-- TRAF-70 (Precision; P1; L): replace the void TRAF-65 identification capture
-  with a new expectations-frozen A100 NVLink packet study. Apply every named
-  sweep control in the hardware producer, batch copy-engine work without one
-  enqueue per message, and emit observed per-row raw/data and per-link,
-  per-direction counter deltas, replay, recovery and error deltas, an actual
-  destination-byte checksum and ordering ledger, and an explicit throttle
-  verdict. Preserve the qualified `NV4`, exclusive `a100-hourly`, short `%1`
-  pacing and digest-complete resumption rules. Acceptance: every frozen fatal
-  guard is decidable, candidate-derived packet fields are kept separate from
-  observations, all 80 cases plus ordered frames complete, and only parameters
-  identified by the new frozen decision rules may change evidence class or
-  value. TRAF-65 and the A100 candidate remain unchanged until that score is
-  published.
+
+  TRAF-70 replaced that void identification capture without changing the
+  TRAF-65 expectations. The corrected expectations-only freeze is SHA-256
+  `f0ab026e054873a56614af63ab3a7ae3219dc0b045423808cb41522910fa6da6`.
+  Merlin jobs `199957` and `199960` completed all 86 cells and 11,542 rows on
+  one qualified exclusive `NV4` node; every accepted task exited `0:0`, the
+  pending set is empty, and the producer binary has one verified digest. The
+  [corrected score](../../examples/a100_nvlink_packet_v2/RESULTS.md) is
+  `COMPLETE_VALID_86_OF_86`. All ten fatal guards are decidable passes, every
+  result-row throttle verdict is `CLEAR`, and observations never consume
+  candidate-derived packet fields.
+
+  The frozen rules identify an effective TX endpoint egress rate of
+  `160795737454` bytes per second and an effective RX ingress rate of
+  `207101921876` bytes per second, refuting and replacing the two 300 GB/s
+  candidates. They confirm the existing request and response direction,
+  `extent_sequence` reassembly and `per_extent` delivery with measured
+  rule-specific evidence. The packet size and header, link count and rate,
+  bond policy, effective credits, RX buffer and return latency, and queue scope
+  remain inconclusive declared candidates. The direct-mesh switch remains
+  structural. The pre-score profile is preserved at its original
+  `899712c4...e354f` digest; the live profile moved only after the score was
+  committed and now exposes parameter-specific evidence. The flow-dynamics
+  gate is `OPEN`. TRAF-65 remains open for its separately required live
+  held-out integration result.
 
 ### Completeness
 
