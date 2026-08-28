@@ -1413,8 +1413,10 @@ coverage needed for closure; see
 
 The nonvoid offline model-extraction studies publish the Granite, Qwen3.8-27B
 and comparison-specific Qwen3-32B-FP8 columns for both framework rows. Their
-structural denominators agree across vLLM and SGLang, repeated extractions are
-byte identical and all physical implementation fields remain absent by design.
+structural denominators agree across vLLM and SGLang, each committed inventory
+is canonical at its content-addressed filename, and all physical implementation
+fields remain absent by design. No tracked second Qwen3-32B-FP8 extraction run
+exists, so the column makes no repeat-run claim.
 The latest Qwen3-32B-FP8 column binds exact revision
 `aa55da1ecc13d006e8b8e4f54579b1ea8c3db2df`, covers all 15 declared cases and
 emits exactly 257 logical visits per case. COMP-54 stays open for the Kimi K3
@@ -1781,6 +1783,17 @@ Granite arm's absent repetitions.
 
 ### Precision
 
+- COMP-81 (Precision; P0; M): reconcile the Qwen3-32B-FP8 `attn_score`
+  projection convention before any successor inventory enters deployment
+  pricing. The frozen decode case carries 4,292,870,144 aggregate FLOPs over
+  2,047 realized query-key pairs, or 2,097,152 FLOPs per pair; the frozen
+  prefill projection divided by its current 16,384 token-square convention is
+  262,144 FLOPs per pair, exactly 8x lower. Freeze one phase-independent pair
+  contract from `step_shape`, then publish new content-addressed vLLM and
+  SGLang inventories without changing either frozen object. Acceptance
+  requires both frameworks to agree, the same mathematical pair to carry the
+  same FLOP coefficient in decode and prefill, exact family conservation, and
+  a successor frontier comparison that names the new inventory hashes.
 - COMP-1 (Precision; P1; L): complete production compute calibration.
   This task is the numerical capstone for every selected target: it owns
   target-silicon compute and memory anchors, per-device fit inputs, untouched

@@ -114,17 +114,32 @@ The nonvoid
 [frontier comparison](../../examples/frontier_comparison_v1/RESULTS.md) binds
 the exact Qwen3-32B-FP8 inventory to the declared H200 roofline and scans 5,070
 bounded disaggregated candidates at each of three efficiency arms with zero
-pricing subprocesses. The exact external-best topology is feasible and stable,
-decode and prefill implied efficiencies are 0.586068 and 0.570209, and remain
-report-only. All 10 external rows satisfy the efficiency-1.0 dominance
-direction; 9 of 10 sit inside the matched-configuration 0.6 to 1.0 throughput
-bracket. This is comparison evidence, not silicon calibration: DEPLOY-9,
-DEPLOY-10 and DEPLOY-11 own the residual breadth and precision.
+pricing subprocesses. Its corrected per-rank accounting produces a MIXED
+result: decode e-star 0.586068 remains inside the frozen band, while prefill
+e-star 0.142552 falls outside it and X2 passes 3 of 4 rows. X3b passes 10 of 10
+through a disclosed two-point step-frontier degeneracy, while X3c passes only 3
+of 10 against the frozen minimum of 8. The study validates the decode bracket
+and refutes the prefill matched-point premise; DEPLOY-12 owns a v2 freeze with
+matched external latency semantics, while DEPLOY-9 through DEPLOY-11 retain
+their breadth and silicon-precision scopes.
 
 ## Open tasks
 
 ### Precision
 
+- DEPLOY-12 (Precision; P0; M): freeze and execute a v2 frontier comparison
+  whose external latency columns have the same service-versus-queueing
+  semantics as the SimLLM quantities they are matched against. The v1
+  surrogate compares 28.000527 ms of isolated TP4 prefill service with an
+  external 196.423 ms TTFT operating-point column whose ten rows carry
+  concurrency 27 through 288 and request rate 10.063 through 41.238. Before
+  any v2 run, establish from source-complete tool evidence whether that TTFT
+  includes queueing; then either obtain isolated external prefill service or
+  connect SimLLM through the equivalent arrival, queue and service chain.
+  Preserve the v1 MIXED record, its frozen bands and its validated decode
+  bracket unchanged. Acceptance requires explicit field semantics, matched
+  causal boundaries, a fresh expectations-only commit, and no fitted value or
+  outcome-dependent band change.
 - DEPLOY-4 (Precision; P1; M): Replace the single input-local decode batch
   surface with content-addressed per-width coverage beyond the frozen 8, 16
   and 72 GPU shapes. Identify every width by measured entry keys and accept

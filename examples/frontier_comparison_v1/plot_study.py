@@ -78,22 +78,33 @@ def prepare_plot_data(result: dict[str, Any]) -> dict[str, Any]:
         }
         for row in families["X3"]["external_rows"]
     ]
+    all_x = [point["x"] for arm in arms for point in arm["points"]] + [
+        point["x"] for point in external
+    ]
+    all_y = [point["y"] for arm in arms for point in arm["points"]] + [
+        point["y"] for point in external
+    ]
     return {
         "axes": {
             "x": {
                 "label": "Per-user output speed (tokens/s/user)",
                 "scale": "log",
-                "limits": [45.0, 1300.0],
+                "limits": [min(all_x) * 0.8, max(all_x) * 1.15],
             },
             "y": {
                 "label": "Output throughput (tokens/s/GPU)",
                 "scale": "log",
-                "limits": [50.0, 1500.0],
+                "limits": [min(all_y) * 0.7, max(all_y) * 1.2],
             },
             "optimal_corner": "upper-right",
         },
         "arms": arms,
         "external": external,
+        "x3c": {
+            "passed": families["X3"]["X3c"]["passed"],
+            "denominator": families["X3"]["X3c"]["denominator"],
+            "acceptance_minimum": families["X3"]["X3c"]["acceptance_minimum"],
+        },
         "caption": (
             "All SimLLM curves are ESTIMATE classes. External diamonds are "
             "MEASURED-EXTERNAL display points from aiconfigurator 0.11.0 and "
@@ -164,13 +175,17 @@ def render(
             fontsize=6.7,
             color="#30343b",
         )
-    miss = next(point for point in external if not point["x3c_pass"])
-    axis.annotate(
-        "X3c miss: row 10 below e=0.6",
-        (miss["x"], miss["y"]),
-        xytext=(-112, -25),
-        textcoords="offset points",
-        arrowprops={"arrowstyle": "->", "color": "#a33a2b", "lw": 0.8},
+    x3c = plot["x3c"]
+    axis.text(
+        0.67,
+        0.04,
+        (
+            f"X3c matched topology: {x3c['passed']}/{x3c['denominator']}\n"
+            f"frozen minimum: {x3c['acceptance_minimum']}"
+        ),
+        transform=axis.transAxes,
+        ha="right",
+        va="bottom",
         color="#a33a2b",
         fontsize=7.2,
         zorder=7,

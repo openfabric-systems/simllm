@@ -8,6 +8,7 @@ import csv
 import hashlib
 import json
 import os
+import re
 import subprocess
 import time
 from contextlib import AbstractContextManager
@@ -141,11 +142,13 @@ class WorkDerivation:
     """Inventory-derived logical work at the frozen workload point."""
 
     static_parameter_bytes: int
-    decode_flops_at_reference_tp: int
+    decode_total_flops_per_batch_item: int
     decode_kv_bytes: int
-    prefill_flops_at_reference_tp: int
+    prefill_total_flops_per_request: int
     prefill_kv_bytes: int
-    attention_score_flops_per_token_pair: int
+    decode_attention_score_flops_per_context_token: int
+    decode_attention_score_flops_per_token_pair: int
+    prefill_attention_score_flops_per_token_pair: int
     kv_bytes_per_context_token: int
 
 
@@ -217,14 +220,15 @@ def derive_work(inventory: dict[str, Any]) -> WorkDerivation:
         for item in decode["kernel_projections"]
         if item["family_id"] != "attn_score"
     )
-    score_per_pair = (
-        _projection(decode, "attn_score")["aggregate_flops"] // decode_context
-    )
+    decode_score_flops = _projection(decode, "attn_score")["aggregate_flops"]
+    score_per_context_token = decode_score_flops // decode_context
+    decode_score_per_pair = decode_score_flops // (decode_context - 1)
     kv_bytes_per_token = (
         _projection(decode, "kv_read")["aggregate_hbm_bytes"] // decode_context
     )
     decode_flops = (
-        decode_fixed_flops + score_per_pair * AVERAGE_DECODE_CONTEXT_TOKENS
+        decode_fixed_flops
+        + score_per_context_token * AVERAGE_DECODE_CONTEXT_TOKENS
     )
     decode_kv_bytes = kv_bytes_per_token * AVERAGE_DECODE_CONTEXT_TOKENS
 
@@ -248,11 +252,13 @@ def derive_work(inventory: dict[str, Any]) -> WorkDerivation:
     prefill_kv_bytes = kv_bytes_per_token * UNCACHED_PROMPT_TOKENS
     return WorkDerivation(
         static_parameter_bytes=static_parameter_bytes,
-        decode_flops_at_reference_tp=decode_flops,
+        decode_total_flops_per_batch_item=decode_flops,
         decode_kv_bytes=decode_kv_bytes,
-        prefill_flops_at_reference_tp=prefill_flops,
+        prefill_total_flops_per_request=prefill_flops,
         prefill_kv_bytes=prefill_kv_bytes,
-        attention_score_flops_per_token_pair=score_per_pair,
+        decode_attention_score_flops_per_context_token=score_per_context_token,
+        decode_attention_score_flops_per_token_pair=decode_score_per_pair,
+        prefill_attention_score_flops_per_token_pair=prefill_score_per_pair,
         kv_bytes_per_context_token=kv_bytes_per_token,
     )
 
@@ -264,16 +270,16 @@ def _model_work(
     tensor_parallel: int,
 ) -> ModelWork:
     if phase == "decode":
-        flops = derivation.decode_flops_at_reference_tp
+        flops = derivation.decode_total_flops_per_batch_item
         kv_bytes = derivation.decode_kv_bytes
     elif phase == "prefill":
-        flops = derivation.prefill_flops_at_reference_tp
+        flops = derivation.prefill_total_flops_per_request
         kv_bytes = derivation.prefill_kv_bytes
     else:
         raise ValueError(f"unknown phase {phase!r}")
     return ModelWork(
         kernel_name=f"qwen3-32b-fp8-{phase}-tp{tensor_parallel}",
-        flops_per_batch_item=flops * REFERENCE_TP // tensor_parallel,
+        flops_per_batch_item=flops // tensor_parallel,
         static_logical_hbm_bytes=(
             derivation.static_parameter_bytes // tensor_parallel
         ),
@@ -281,9 +287,9 @@ def _model_work(
         logical_collective_bytes_per_gpu_per_batch_item=0,
         inventory_sha256=INVENTORY_SHA256,
         source=(
-            "Qwen3-32B inventory per-layer work projected from reference TP4; "
-            "FP8 weights use one byte per parameter; KV bytes use the frozen "
-            "workload context"
+            "Qwen3-32B inventory whole-model logical work divided by the "
+            "tensor-parallel width per rank; FP8 weights use one byte per "
+            "parameter; KV bytes use the frozen workload context"
         ),
     )
 
@@ -529,6 +535,8 @@ def _external_rows() -> list[dict[str, Any]]:
                     "database": EXTERNAL_DATABASE,
                     "x_tokens_per_second_per_user": raw["tokens/s/user"],
                     "y_tokens_per_second_per_gpu": raw["tokens/s/gpu"],
+                    "concurrency": int(raw["concurrency"]),
+                    "request_rate": raw["request_rate"],
                     "ttft_ms": raw["ttft"],
                     "tpot_ms": raw["tpot"],
                     "configuration": {
@@ -684,6 +692,7 @@ def _x2(derivation: WorkDerivation) -> dict[str, Any]:
         "rows": rows,
         "decode_e_star": _fraction_json(decode_e_star),
         "prefill_e_star": _fraction_json(prefill_e_star),
+        "e_star_band": {"minimum": 0.4, "maximum": 1.0},
         "e_star_policy": "reported only and never installed",
         "matched_point": point,
     }
@@ -744,6 +753,37 @@ def _configuration_tuple(configuration: dict[str, Any]) -> tuple[int, ...]:
         configuration["decode_workers"],
         configuration["decode_batch"],
     )
+
+
+def _x3b_frontier_answer(
+    frontier: list[dict[str, Any]], external_x: Fraction
+) -> tuple[Fraction, dict[str, Any] | None]:
+    """Return the frozen step-frontier value and the point that supplies it."""
+
+    eligible = [
+        (index, point)
+        for index, point in enumerate(frontier, start=1)
+        if _point_xy(point)[0] >= external_x
+    ]
+    if not eligible:
+        return Fraction(0), None
+    index, point = max(eligible, key=lambda indexed: _point_xy(indexed[1])[1])
+    point_x, point_y = _point_xy(point)
+    first_x, _ = _point_xy(frontier[0])
+    last_x, _ = _point_xy(frontier[-1])
+    if external_x < first_x:
+        mechanism = "left-endpoint-clamp"
+    elif index == len(frontier) and external_x <= last_x:
+        mechanism = "right-endpoint"
+    else:
+        mechanism = "first-frontier-point-at-or-above-external-x"
+    return point_y, {
+        "frontier_index": index,
+        "candidate_id": point["candidate_id"],
+        "x_tokens_per_second_per_user": float(point_x),
+        "y_tokens_per_second_per_gpu": float(point_y),
+        "selection_mechanism": mechanism,
+    }
 
 
 def _x3(
@@ -809,12 +849,9 @@ def _x3(
     for external in external_rows:
         external_x = _fraction(external["x_tokens_per_second_per_user"])
         external_y = _fraction(external["y_tokens_per_second_per_gpu"])
-        eligible_y = [
-            _point_xy(point)[1]
-            for point in full_frontier
-            if _point_xy(point)[0] >= external_x
-        ]
-        frontier_y = max(eligible_y, default=Fraction(0))
+        frontier_y, frontier_answer = _x3b_frontier_answer(
+            full_frontier, external_x
+        )
         x3b_pass = frontier_y >= external_y
 
         configuration = _configuration_tuple(external["configuration"])
@@ -829,6 +866,7 @@ def _x3(
                 "passed": x3b_pass,
                 "external_y": float(external_y),
                 "frontier_y_at_or_above_external_x": float(frontier_y),
+                "frontier_answer": frontier_answer,
             }
         )
         x3c_rows.append(
@@ -893,6 +931,12 @@ def _x3(
     )
 
 
+def _study_verdict(nonvoid: bool, acceptance: dict[str, bool]) -> str:
+    if not nonvoid:
+        return "VOID"
+    return "PASS" if all(acceptance.values()) else "MIXED"
+
+
 def run_study() -> dict[str, Any]:
     """Return the complete frozen study result."""
 
@@ -944,9 +988,25 @@ def run_study() -> dict[str, Any]:
     ]
     findings = [guard["id"] for guard in guards if not guard["held"]]
     nonvoid = not findings
+    acceptance = {
+        "nonvoid": nonvoid,
+        "x1_pass": x1["passed"] == x1["denominator"],
+        "x2_pass": x2["passed"] == x2["denominator"],
+        "x3a_pass": x3["X3a"]["passed"] == x3["X3a"]["denominator"],
+        "x3b_pass": x3["X3b"]["passed"] == x3["X3b"]["denominator"],
+        "x3c_pass": x3c_holds,
+        "wall_time_pass": wall_holds,
+    }
+    verdict = _study_verdict(nonvoid, acceptance)
+    external_concurrency = [row["concurrency"] for row in external_rows]
+    external_request_rates = [
+        _fraction(row["request_rate"]) for row in external_rows
+    ]
+    external_ttft_values = sorted({row["ttft_ms"] for row in external_rows})
 
     return {
         "schema": RESULT_SCHEMA,
+        "verdict": verdict,
         "nonvoid": nonvoid,
         "void_findings": findings,
         "chronology": {
@@ -1008,25 +1068,44 @@ def run_study() -> dict[str, Any]:
         "model_work_derivation": {
             "reference_tensor_parallel": REFERENCE_TP,
             "static_parameter_bytes": derivation.static_parameter_bytes,
-            "decode_flops_per_batch_item_at_tp4": (
-                derivation.decode_flops_at_reference_tp
+            "decode_total_flops_per_batch_item": (
+                derivation.decode_total_flops_per_batch_item
+            ),
+            "decode_flops_per_batch_item_per_rank_tp4": (
+                derivation.decode_total_flops_per_batch_item // REFERENCE_TP
             ),
             "decode_logical_kv_bytes_per_batch_item": derivation.decode_kv_bytes,
-            "prefill_flops_per_request_at_tp4": (
-                derivation.prefill_flops_at_reference_tp
+            "prefill_total_flops_per_request": (
+                derivation.prefill_total_flops_per_request
+            ),
+            "prefill_flops_per_request_per_rank_tp4": (
+                derivation.prefill_total_flops_per_request // REFERENCE_TP
             ),
             "prefill_logical_kv_bytes_per_request": derivation.prefill_kv_bytes,
             "attention_score_flops_per_decode_context_token": (
-                derivation.attention_score_flops_per_token_pair
+                derivation.decode_attention_score_flops_per_context_token
             ),
+            "attention_score_flops_per_prefill_token_pair": (
+                derivation.prefill_attention_score_flops_per_token_pair
+            ),
+            "attention_score_projection_inconsistency": {
+                "decode_flops_per_token_pair": (
+                    derivation.decode_attention_score_flops_per_token_pair
+                ),
+                "prefill_flops_per_token_pair": (
+                    derivation.prefill_attention_score_flops_per_token_pair
+                ),
+                "decode_over_prefill": 8,
+                "residual_task": "COMP-81",
+                "frozen_inventories_changed": False,
+            },
             "kv_bytes_per_context_token": derivation.kv_bytes_per_context_token,
             "statement": (
-                "FLOPs and logical HBM bytes come from the inventory's "
-                "per-layer work. FP8 uses one byte per parameter. KV read "
-                "bytes are evaluated at 4,250 decode context tokens and "
-                "3,500 uncached prefill tokens. TP2 and TP8 FLOPs scale "
-                "relative to the frozen TP4 mapping; logical weight and KV "
-                "bytes shard by tensor-parallel width."
+                "Whole-model FLOPs and logical HBM bytes come from the "
+                "inventory's per-layer work and both divide by the candidate's "
+                "tensor-parallel width for per-rank pricing. FP8 uses one byte "
+                "per parameter. KV read bytes are evaluated at 4,250 decode "
+                "context tokens and 3,500 uncached prefill tokens."
             ),
         },
         "fatal_guards": guards,
@@ -1045,6 +1124,15 @@ def run_study() -> dict[str, Any]:
                 ),
                 "packet_execution_in_this_study": False,
                 "source": "examples/frontier_ladder_v1/RESULTS.md",
+                "zero_collective_bytes_identity": {
+                    "logical_collective_bytes_per_gpu_per_batch_item": 0,
+                    "applies_to_every_candidate": True,
+                    "bound_scope": (
+                        "the 1 to 2 percent contention-free ideal-versus-packet "
+                        "bound applies only to represented legs, not to omitted "
+                        "tensor-parallel collective service"
+                    ),
+                },
             },
             "W": {
                 "passed": int(wall_holds),
@@ -1094,33 +1182,171 @@ def run_study() -> dict[str, Any]:
                 "684.79 at 100.31 with a different topology. Neither is "
                 "preferred or fitted."
             ),
+            "external_ttft_semantics": {
+                "status": "candidate-explanation-without-rescoring",
+                "ttft_ms_values": external_ttft_values,
+                "concurrency_min": min(external_concurrency),
+                "concurrency_max": max(external_concurrency),
+                "request_rate_min": float(min(external_request_rates)),
+                "request_rate_max": float(max(external_request_rates)),
+                "explanation": (
+                    "The external TTFT column is attached to operating points "
+                    "that carry concurrency and request_rate, while the SimLLM "
+                    "prefill value is isolated service. The frozen matched-point "
+                    "premise therefore conflates queueing with service."
+                ),
+                "residual_task": "DEPLOY-12",
+                "rescored": False,
+            },
+            "conduct_deviation": {
+                "status": "recorded-without-history-rewrite",
+                "commits": [
+                    {
+                        "commit": "8a96b3f",
+                        "nonconforming_prefix": "feat:",
+                    },
+                    {
+                        "commit": "11db813",
+                        "nonconforming_prefix": "feat:",
+                    },
+                ],
+            },
         },
-        "acceptance": {
-            "nonvoid": nonvoid,
-            "x1_pass": x1["passed"] == x1["denominator"],
-            "x2_pass": x2["passed"] == x2["denominator"],
-            "x3a_pass": x3["X3a"]["passed"] == x3["X3a"]["denominator"],
-            "x3b_pass": x3["X3b"]["passed"] == x3["X3b"]["denominator"],
-            "x3c_pass": x3c_holds,
-            "wall_time_pass": wall_holds,
-        },
+        "acceptance": acceptance,
     }
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, required=True)
-    args = parser.parse_args()
-    result = run_study()
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(
-        json.dumps(result, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-        newline="\n",
+def _outside_repository(path: Path) -> bool:
+    try:
+        path.resolve().relative_to(REPOSITORY_ROOT.resolve())
+    except ValueError:
+        return True
+    return False
+
+
+def _write_json_exclusive(path: Path, value: object) -> None:
+    with path.open("x", encoding="utf-8", newline="\n") as stream:
+        stream.write(json.dumps(value, indent=2, sort_keys=True) + "\n")
+
+
+def _portable_argv() -> list[str]:
+    return [
+        ".venv/bin/python",
+        "examples/frontier_comparison_v1/run_study.py",
+        "--run-dir",
+        "${SIMLLM_FRONTIER_COMPARISON_RUN_ROOT}",
+    ]
+
+
+def _begin_attempt(run_root: Path) -> tuple[Path, Path | None]:
+    root = run_root.resolve()
+    if not _outside_repository(root):
+        raise SystemExit("--run-dir must be outside the repository")
+    root.mkdir(parents=True, exist_ok=True)
+    attempts: list[tuple[int, Path]] = []
+    for path in root.glob("attempt-*"):
+        match = re.fullmatch(r"attempt-(\d+)", path.name)
+        if match is not None and path.is_dir():
+            attempts.append((int(match.group(1)), path))
+    incomplete = [path for _, path in attempts if not (path / "verdict.json").is_file()]
+    if incomplete:
+        names = ", ".join(path.name for path in sorted(incomplete))
+        raise SystemExit(
+            f"cannot start a later attempt while verdict records are missing: {names}"
+        )
+    number = max((number for number, _ in attempts), default=0) + 1
+    attempt_dir = root / f"attempt-{number}"
+    attempt_dir.mkdir(parents=False, exist_ok=False)
+    previous = None if not attempts else max(attempts)[1]
+    _write_json_exclusive(
+        attempt_dir / "attempt.json",
+        {
+            "schema": "simllm-frontier-comparison-attempt-v1",
+            "attempt_id": attempt_dir.name,
+            "portable_argv": _portable_argv(),
+            "started_unix_time_ns": time.time_ns(),
+        },
     )
+    return attempt_dir, previous
+
+
+def deterministic_projection(result: dict[str, Any]) -> dict[str, Any]:
+    """Return every result quantity that is deterministic across full reruns."""
+
+    projected = json.loads(json.dumps(result))
+    projected.pop("attempt_evidence", None)
+    projected.pop("verdict", None)
+    projected["families"]["X3"].pop("elapsed_seconds", None)
+    projected["families"]["W"].pop("elapsed_seconds", None)
+    projected["families"]["W"].pop("passed", None)
+    projected["score_classes"]["behavioral_relations"].pop("W", None)
+    projected["acceptance"].pop("wall_time_pass", None)
+    return projected
+
+
+def _canonical_sha256(value: object) -> str:
+    payload = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(payload).hexdigest()
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--run-dir", type=Path, required=True)
+    args = parser.parse_args(argv)
+    attempt_dir, previous_attempt = _begin_attempt(args.run_dir)
+    verdict_path = attempt_dir / "verdict.json"
+    try:
+        result = run_study()
+        projection_sha256 = _canonical_sha256(deterministic_projection(result))
+        previous_result_sha256 = None
+        previous_projection_sha256 = None
+        reproduction_matched = None
+        if previous_attempt is not None:
+            previous_verdict = previous_attempt / "verdict.json"
+            previous_result_sha256 = sha256_file(previous_verdict)
+            previous_result = _load_json(previous_verdict)
+            previous_projection_sha256 = _canonical_sha256(
+                deterministic_projection(previous_result)
+            )
+            reproduction_matched = previous_projection_sha256 == projection_sha256
+        result["attempt_evidence"] = {
+            "attempt_id": attempt_dir.name,
+            "policy": (
+                "each full run uses a fresh attempt-N directory and refuses a "
+                "later attempt until every earlier attempt has a verdict"
+            ),
+            "portable_argv": _portable_argv(),
+            "previous_attempt_id": (
+                None if previous_attempt is None else previous_attempt.name
+            ),
+            "previous_result_sha256": previous_result_sha256,
+            "deterministic_projection_sha256": projection_sha256,
+            "previous_deterministic_projection_sha256": (
+                previous_projection_sha256
+            ),
+            "deterministic_reproduction_matched": reproduction_matched,
+            "excluded_from_reproduction": (
+                "wall-clock elapsed values, their W outcome, the overall verdict "
+                "that includes W, and attempt metadata"
+            ),
+        }
+    except BaseException as error:
+        _write_json_exclusive(
+            verdict_path,
+            {
+                "schema": "simllm-frontier-comparison-attempt-v1",
+                "verdict": "ERROR",
+                "error_type": type(error).__name__,
+                "error": str(error),
+            },
+        )
+        raise
+    _write_json_exclusive(verdict_path, result)
     print(
         json.dumps(
             {
+                "attempt": attempt_dir.name,
+                "verdict": result["verdict"],
                 "nonvoid": result["nonvoid"],
                 "X1": [
                     result["families"]["X1"]["passed"],
@@ -1130,15 +1356,27 @@ def main() -> None:
                     result["families"]["X2"]["passed"],
                     result["families"]["X2"]["denominator"],
                 ],
-                "X3a": result["families"]["X3"]["X3a"],
-                "X3b": result["families"]["X3"]["X3b"],
-                "X3c": result["families"]["X3"]["X3c"],
-                "W": result["families"]["W"],
+                "X3a": [
+                    result["families"]["X3"]["X3a"]["passed"],
+                    result["families"]["X3"]["X3a"]["denominator"],
+                ],
+                "X3b": [
+                    result["families"]["X3"]["X3b"]["passed"],
+                    result["families"]["X3"]["X3b"]["denominator"],
+                ],
+                "X3c": [
+                    result["families"]["X3"]["X3c"]["passed"],
+                    result["families"]["X3"]["X3c"]["denominator"],
+                ],
+                "deterministic_reproduction_matched": result[
+                    "attempt_evidence"
+                ]["deterministic_reproduction_matched"],
             },
             sort_keys=True,
         )
     )
+    return 0 if result["nonvoid"] else 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
