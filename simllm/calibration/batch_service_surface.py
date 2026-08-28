@@ -47,8 +47,10 @@ class BatchServicePoint:
             int(self.entry_key_sha256, 16)
         except ValueError as exc:
             raise ValueError("entry_key_sha256 must be hexadecimal") from exc
-        if self.evidence_class != "MEASURED":
-            raise ValueError("batch-service points must be MEASURED")
+        if self.evidence_class not in {"MEASURED", "MEASURED-EXTERNAL"}:
+            raise ValueError(
+                "batch-service points must be MEASURED or MEASURED-EXTERNAL"
+            )
         if self.split != "calibration":
             raise ValueError("batch-service points must be calibration rows")
 
