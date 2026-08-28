@@ -194,6 +194,15 @@ examples/a100_nvlink_packet_v2/*.sbatch text eol=lf
 simllm/backends/htsim_nvlink.py text eol=lf
 tests/test_htsim_nvlink.py text eol=lf
 tests/test_a100_nvlink_packet_study.py text eol=lf
+examples/nvlink_rnic_comparison_v1/*.json text eol=lf
+examples/nvlink_rnic_comparison_v1/*.md text eol=lf
+examples/nvlink_rnic_comparison_v1/*.py text eol=lf
+examples/nvlink_rnic_comparison_v1/*.cpp text eol=lf
+examples/nvlink_rnic_comparison_v1/*.csv text eol=lf
+examples/nvlink_rnic_comparison_v1/CMakeLists.txt text eol=lf
+examples/nvlink_rnic_comparison_v1/figures/*.pdf -text -diff
+examples/nvlink_rnic_comparison_v1/figures/*.png -text -diff
+tests/test_nvlink_rnic_comparison_*.py text eol=lf
 examples/sglang_decode_shape_v1/expectations.json text eol=lf
 examples/sglang_decode_shape_v1/RESULTS.md text eol=lf
 examples/deployment_curve_v1/flagship_config.json text eol=lf

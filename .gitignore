@@ -19,6 +19,7 @@ runs/
 *.bin
 *.npz
 *.csv
+!examples/nvlink_rnic_comparison_v1/dispersion.csv
 !tests/data/*.csv
 !examples/gpu_task_mix/results.csv
 !examples/gpu_task_mix/nccl_convergence.csv
