@@ -597,6 +597,21 @@ def _reverse_nonterminal_lines(source: _SparseSource):
         yield bytes(reversed(value))
 
 
+def _reverse_nonterminal_lines_with_blanks(source: _SparseSource):
+    """Read reverse lines while preserving internal blank lines."""
+
+    value = bytearray()
+    for position in range(source.record_size - 2, -1, -1):
+        current = source.read_at(position)
+        if current == b"\n":
+            yield bytes(reversed(value)) + b"\n"
+            value.clear()
+        else:
+            value.extend(current)
+    if value:
+        yield bytes(reversed(value))
+
+
 def _extract_kernels_sparse(source: _SparseSource) -> list[dict[str, str]]:
     """Select legacy-schema rows without accessing the terminal record byte."""
 
@@ -648,6 +663,18 @@ def _is_task_entry_start(raw: bytes, task_id: str) -> bool:
     return not suffix or suffix in {" ", ":", "|", "*", "`"}
 
 
+def _is_any_core_entry_start(text: str) -> bool:
+    normalized = text.lstrip()
+    punctuation = "#*-|`[]0123456789.() "
+    while normalized and normalized[0] in punctuation:
+        normalized = normalized[1:].lstrip()
+    return (
+        normalized.startswith("CORE-")
+        and len(normalized) >= 7
+        and normalized[5:7].isdigit()
+    )
+
+
 def _extract_last_task_paragraph(source: _SparseSource, task_id: str) -> str:
     """Find the final task mention from the tail and return its paragraph."""
 
@@ -669,6 +696,29 @@ def _extract_last_task_paragraph(source: _SparseSource, task_id: str) -> str:
         if len(following) > 64:
             following.pop()
     raise WholeFileAccessRejected("reverse registry selector found no task entry")
+
+
+def _extract_last_task_block(source: _SparseSource, task_id: str) -> str:
+    """Find the final task entry and retain blank-line continuations."""
+
+    following: list[str] = []
+    for raw in _reverse_nonterminal_lines_with_blanks(source):
+        if _is_task_entry_start(raw, task_id):
+            selected = [raw.decode("utf-8").rstrip("\r\n")]
+            for line in following:
+                stripped = line.strip()
+                if stripped.startswith("#"):
+                    break
+                if stripped and _is_any_core_entry_start(stripped):
+                    break
+                selected.append(line)
+            while selected and not selected[-1].strip():
+                selected.pop()
+            return "\n".join(selected)
+        following.insert(0, raw.decode("utf-8").rstrip("\r\n"))
+        if len(following) > 128:
+            following.pop()
+    raise WholeFileAccessRejected("reverse registry block selector found no task entry")
 
 
 def _extract_markdown_section(source: _PartialSource, heading: str) -> str:
@@ -842,6 +892,63 @@ def read_registry_tail_entries(access_ledger: Path) -> dict[str, str]:
                 status="REJECTED",
                 extra={
                     "access_pattern": "reverse_nonterminal_task_paragraph",
+                    "error": type(exc).__name__,
+                    "unique_bytes_accessed": (
+                        0 if source is None else source.unique_bytes_accessed
+                    ),
+                },
+            )
+            raise
+    return values
+
+
+def read_registry_tail_blocks(access_ledger: Path) -> dict[str, str]:
+    """Read the last CORE-63 and CORE-64 registration blocks only."""
+
+    recorder = AccessRecorder(access_ledger)
+    values = {}
+    for task_id, selector in (
+        ("CORE-63", "/task-entry[last-leading-block task_id=CORE-63]"),
+        ("CORE-64", "/task-entry[last-leading-block task_id=CORE-64]"),
+    ):
+        record_size = CORE_REGISTRY.stat().st_size
+        classification = "literal_registry_entry_tail_block_resolution"
+        access_id = recorder.begin(
+            classification=classification,
+            record=CORE_REGISTRY_LABEL,
+            selector=selector,
+            record_size_bytes=record_size,
+        )
+        source: _SparseSource | None = None
+        try:
+            with CORE_REGISTRY.open("rb", buffering=0) as stream:
+                source = _SparseSource(stream, record_size)
+                value = _extract_last_task_block(source, task_id)
+            recorder.finish(
+                access_id,
+                classification=classification,
+                record=CORE_REGISTRY_LABEL,
+                selector=selector,
+                record_size_bytes=record_size,
+                bytes_accessed=source.bytes_accessed,
+                status="PASS",
+                extra={
+                    "access_pattern": "reverse_nonterminal_task_block",
+                    "unique_bytes_accessed": source.unique_bytes_accessed,
+                },
+            )
+            values[task_id] = value
+        except Exception as exc:
+            recorder.finish(
+                access_id,
+                classification=classification,
+                record=CORE_REGISTRY_LABEL,
+                selector=selector,
+                record_size_bytes=record_size,
+                bytes_accessed=0 if source is None else source.bytes_accessed,
+                status="REJECTED",
+                extra={
+                    "access_pattern": "reverse_nonterminal_task_block",
                     "error": type(exc).__name__,
                     "unique_bytes_accessed": (
                         0 if source is None else source.unique_bytes_accessed

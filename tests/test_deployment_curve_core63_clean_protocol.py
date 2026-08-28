@@ -119,6 +119,27 @@ def test_reverse_registry_selector_returns_last_task_paragraph() -> None:
     assert source.unique_bytes_accessed < len(payload)
 
 
+def test_reverse_registry_block_retains_blank_continuation() -> None:
+    payload = (
+        b"# Core tasks\n\n"
+        b"- CORE-64 follow-on\n"
+        b"  First sentence.\n\n"
+        b"  Acceptance remains conditional.\n"
+        b"## Next section\n"
+        b"Footer\n"
+    )
+    source = reader._SparseSource(io.BytesIO(payload), len(payload))
+
+    value = reader._extract_last_task_block(source, "CORE-64")
+
+    assert value == (
+        "- CORE-64 follow-on\n"
+        "  First sentence.\n\n"
+        "  Acceptance remains conditional."
+    )
+    assert source.unique_bytes_accessed < len(payload)
+
+
 def test_access_begin_is_written_before_extractor_runs(tmp_path: Path) -> None:
     record = tmp_path / "record.json"
     record.write_text('{"selected":1,"later":2}\n', encoding="utf-8", newline="\n")
