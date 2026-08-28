@@ -281,14 +281,14 @@ def render(
 
     plot = prepare_plot_data(record)
     plt = _matplotlib()
-    figure = plt.figure(figsize=(7.5, 7.15))
+    figure = plt.figure(figsize=(8.3, 7.15))
     grid = figure.add_gridspec(
         2,
         2,
-        width_ratios=(1.78, 1.0),
+        width_ratios=(1.70, 1.10),
         height_ratios=(3.0, 1.12),
         left=0.125,
-        right=0.985,
+        right=0.975,
         top=0.82,
         bottom=0.205,
         hspace=0.44,
@@ -358,7 +358,7 @@ def render(
     zoom_axis.minorticks_off()
     zoom_axis.grid(True, color="#d7dce0", linewidth=0.5, alpha=0.72)
     zoom_axis.set_title(
-        f"(b) Network-pricing zoom, external row {mechanism['selected_row']}",
+        f"(b) Network pricing, external row {mechanism['selected_row']}",
         loc="left",
         fontsize=8.0,
         pad=5,
@@ -488,7 +488,7 @@ def render(
     figure.text(
         0.125,
         0.025,
-        textwrap.fill(plot["caption"], width=122),
+        textwrap.fill(plot["caption"], width=136),
         ha="left",
         va="bottom",
         fontsize=6.2,

@@ -1,9 +1,26 @@
 {
-  "attempt": "attempt-0002",
-  "bulk_evidence": "${SIMLLM_P3T_T1_BULK_ROOT}/attempt-0002",
-  "config_sha256": "49e1ce6d6cb4fd4c2368566825e39dba09ac072e8a40a8b78693a528fcf5f648",
-  "elapsed_seconds": 76.28539560735226,
-  "expectations_sha256": "fc5af307fee560fc7050011543e18e1cf77030d0aa6a13e6c5a014cb159a5726",
+  "attempt": "attempt-0001",
+  "bulk_evidence": "${SIMLLM_P3T_T1_BULK_ROOT}/attempt-0001",
+  "config_sha256": "64c8e16de53e194e98f5ca7c9b27d533d4c7f7ca32311841a62e3c6cece21f17",
+  "determinism": {
+    "comparison": "byte-for-byte complete scored evaluation JSON",
+    "equal": true,
+    "evaluation_sha256": [
+      "85a37550456d753efa95d8260d291328626ef8da07b2938cd35e57deb4152f74",
+      "85a37550456d753efa95d8260d291328626ef8da07b2938cd35e57deb4152f74"
+    ],
+    "excluded_by_name": [
+      "elapsed_seconds",
+      "W-1"
+    ],
+    "fresh_processes": 2
+  },
+  "elapsed_seconds": 289.9414435811341,
+  "expectations_sha256": {
+    "corrected_freeze": "fe403500575d674a25c8b7c6c59eb41aec65fce6cc29024609fa995b29585f35",
+    "first_void_freeze": "fc5af307fee560fc7050011543e18e1cf77030d0aa6a13e6c5a014cb159a5726"
+  },
+  "external_adjustments_sha256": "c6778a81cdc6078ce74f06733e4bce9d99a92b4ab3eccba4a83d14e7d063a09e",
   "families": {
     "D": {
       "attribution_ms": {
@@ -85,6 +102,88 @@
         "external-disagg-row-08": 2,
         "external-disagg-row-10": 2
       },
+      "boundary_proximity_rows": [
+        {
+          "exact_local_x": {
+            "decimal": 56.03175650766558,
+            "denominator": 17847022159,
+            "numerator": 1000000000000
+          },
+          "published_rounding_unit": "0.001",
+          "published_x": "56.032",
+          "row": 1,
+          "selected_frontier_answer": "external-disagg-row-02",
+          "signed_difference": {
+            "decimal": -0.0002434923344233407,
+            "denominator": 2230877769875,
+            "numerator": -543201636
+          }
+        },
+        {
+          "exact_local_x": {
+            "decimal": 59.32389257518336,
+            "denominator": 8428307353,
+            "numerator": 500000000000
+          },
+          "published_rounding_unit": "0.001",
+          "published_x": "59.324",
+          "row": 2,
+          "selected_frontier_answer": "external-disagg-row-03",
+          "signed_difference": {
+            "decimal": -0.00010742481664218445,
+            "denominator": 2107076838250,
+            "numerator": -226352343
+          }
+        },
+        {
+          "exact_local_x": {
+            "decimal": 119.63792251288187,
+            "denominator": 8358553701,
+            "numerator": 1000000000000
+          },
+          "published_rounding_unit": "0.001",
+          "published_x": "119.638",
+          "row": 6,
+          "selected_frontier_answer": "external-disagg-row-07",
+          "signed_difference": {
+            "decimal": -7.748711812696888e-05,
+            "denominator": 4179276850500,
+            "numerator": -323840119
+          }
+        },
+        {
+          "exact_local_x": {
+            "decimal": 127.06367436247174,
+            "denominator": 1967517477,
+            "numerator": 250000000000
+          },
+          "published_rounding_unit": "0.001",
+          "published_x": "127.064",
+          "row": 7,
+          "selected_frontier_answer": "external-disagg-row-08",
+          "signed_difference": {
+            "decimal": -0.0003256375282505305,
+            "denominator": 245939684625,
+            "numerator": -80087191
+          }
+        },
+        {
+          "exact_local_x": {
+            "decimal": 168.13079245267483,
+            "denominator": 5947750471,
+            "numerator": 1000000000000
+          },
+          "published_rounding_unit": "0.001",
+          "published_x": "168.131",
+          "row": 9,
+          "selected_frontier_answer": "external-disagg-row-10",
+          "signed_difference": {
+            "decimal": -0.00020754732516417297,
+            "denominator": 5947750471000,
+            "numerator": -1234439701
+          }
+        }
+      ],
       "bracket_rows": [
         {
           "detail": "frontier answer external-disagg-row-02",
@@ -4387,7 +4486,7 @@
       }
     },
     "M": {
-      "maximum_quotient": {
+      "maximum_packet_priced_to_unpriced_network_quotient": {
         "decimal": 1.0427153998047758,
         "denominator": 15589169317,
         "numerator": 16255066917
@@ -4708,9 +4807,800 @@
           },
           "row": 10
         }
-      ]
+      ],
+      "third_loggopsim_priced_arm": {
+        "ran": false,
+        "scope": "not run; no isolated receiver-side serialization claim is made"
+      },
+      "unpriced_network_service_ps": 0
     },
     "R": {
+      "remove_one_sensitivity": [
+        {
+          "adjustment_id": "prefill_latency_correction",
+          "baseline_reachable": false,
+          "maximum_quotient": {
+            "decimal": 1.0000763449740957,
+            "denominator": 174021904351363072,
+            "numerator": 174035190049142875
+          },
+          "method": "complete Family R dependency trace proves this factor unreachable; the baseline decode reevaluation is reused exactly",
+          "minimum_quotient": {
+            "decimal": 0.9999466085336709,
+            "denominator": 44186623541248,
+            "numerator": 44184264352625
+          },
+          "removed_value": "1.0",
+          "rows": [
+            {
+              "quotient": {
+                "decimal": 1.0000012416024167,
+                "denominator": 26163978694557696,
+                "numerator": 26164011179816875
+              },
+              "row": 1
+            },
+            {
+              "quotient": {
+                "decimal": 0.999977143400905,
+                "denominator": 593102960301441024,
+                "numerator": 593089403984855375
+              },
+              "row": 2
+            },
+            {
+              "quotient": {
+                "decimal": 0.9999920801829354,
+                "denominator": 837669530690912256,
+                "numerator": 837662896501468625
+              },
+              "row": 3
+            },
+            {
+              "quotient": {
+                "decimal": 0.999998636836143,
+                "denominator": 322957351403388928,
+                "numerator": 322956911159600125
+              },
+              "row": 4
+            },
+            {
+              "quotient": {
+                "decimal": 1.0000052415834695,
+                "denominator": 628815097971605504,
+                "numerator": 628818393958428375
+              },
+              "row": 5
+            },
+            {
+              "quotient": {
+                "decimal": 0.9999466085336709,
+                "denominator": 44186623541248,
+                "numerator": 44184264352625
+              },
+              "row": 6
+            },
+            {
+              "quotient": {
+                "decimal": 1.0000088828375302,
+                "denominator": 221520806671286272,
+                "numerator": 221522774404621475
+              },
+              "row": 7
+            },
+            {
+              "quotient": {
+                "decimal": 1.000031885078471,
+                "denominator": 963911057745641472,
+                "numerator": 963941792125356875
+              },
+              "row": 8
+            },
+            {
+              "quotient": {
+                "decimal": 0.9999580483212658,
+                "denominator": 209276645184372736,
+                "numerator": 209267865677787375
+              },
+              "row": 9
+            },
+            {
+              "quotient": {
+                "decimal": 1.0000763449740957,
+                "denominator": 174021904351363072,
+                "numerator": 174035190049142875
+              },
+              "row": 10
+            }
+          ]
+        },
+        {
+          "adjustment_id": "decode_latency_correction",
+          "baseline_reachable": true,
+          "maximum_quotient": {
+            "decimal": 0.9259966157167553,
+            "denominator": 696087617405452288,
+            "numerator": 644574777959788375
+          },
+          "method": "full decode-composition reevaluation with only this factor removed",
+          "minimum_quotient": {
+            "decimal": 0.9258764893830284,
+            "denominator": 1176424665162186752,
+            "numerator": 1089223939003970125
+          },
+          "removed_value": "1.0",
+          "rows": [
+            {
+              "quotient": {
+                "decimal": 0.9259270755577933,
+                "denominator": 104655914778230784,
+                "numerator": 96903745110432875
+              },
+              "row": 1
+            },
+            {
+              "quotient": {
+                "decimal": 0.9259047624082453,
+                "denominator": 1186205920602882048,
+                "numerator": 1098313711083065375
+              },
+              "row": 2
+            },
+            {
+              "quotient": {
+                "decimal": 0.9259185927619772,
+                "denominator": 837669530690912256,
+                "numerator": 775613793056915375
+              },
+              "row": 3
+            },
+            {
+              "quotient": {
+                "decimal": 0.9259246637371692,
+                "denominator": 645914702806777856,
+                "numerator": 598068353999259375
+              },
+              "row": 4
+            },
+            {
+              "quotient": {
+                "decimal": 0.9259307792439531,
+                "denominator": 628815097971605504,
+                "numerator": 582239253665211375
+              },
+              "row": 5
+            },
+            {
+              "quotient": {
+                "decimal": 0.9258764893830284,
+                "denominator": 1176424665162186752,
+                "numerator": 1089223939003970125
+              },
+              "row": 6
+            },
+            {
+              "quotient": {
+                "decimal": 0.9259341507754908,
+                "denominator": 221520806671286272,
+                "numerator": 205113680004279125
+              },
+              "row": 7
+            },
+            {
+              "quotient": {
+                "decimal": 0.9259554491467324,
+                "denominator": 963911057745641472,
+                "numerator": 892538696412367375
+              },
+              "row": 8
+            },
+            {
+              "quotient": {
+                "decimal": 0.9258870817789497,
+                "denominator": 418553290368745472,
+                "numerator": 387533084588495125
+              },
+              "row": 9
+            },
+            {
+              "quotient": {
+                "decimal": 0.9259966157167553,
+                "denominator": 696087617405452288,
+                "numerator": 644574777959788375
+              },
+              "row": 10
+            }
+          ]
+        },
+        {
+          "adjustment_id": "prefill_rate_matching_degradation",
+          "baseline_reachable": false,
+          "maximum_quotient": {
+            "decimal": 1.0000763449740957,
+            "denominator": 174021904351363072,
+            "numerator": 174035190049142875
+          },
+          "method": "complete Family R dependency trace proves this factor unreachable; the baseline decode reevaluation is reused exactly",
+          "minimum_quotient": {
+            "decimal": 0.9999466085336709,
+            "denominator": 44186623541248,
+            "numerator": 44184264352625
+          },
+          "removed_value": "1.0",
+          "rows": [
+            {
+              "quotient": {
+                "decimal": 1.0000012416024167,
+                "denominator": 26163978694557696,
+                "numerator": 26164011179816875
+              },
+              "row": 1
+            },
+            {
+              "quotient": {
+                "decimal": 0.999977143400905,
+                "denominator": 593102960301441024,
+                "numerator": 593089403984855375
+              },
+              "row": 2
+            },
+            {
+              "quotient": {
+                "decimal": 0.9999920801829354,
+                "denominator": 837669530690912256,
+                "numerator": 837662896501468625
+              },
+              "row": 3
+            },
+            {
+              "quotient": {
+                "decimal": 0.999998636836143,
+                "denominator": 322957351403388928,
+                "numerator": 322956911159600125
+              },
+              "row": 4
+            },
+            {
+              "quotient": {
+                "decimal": 1.0000052415834695,
+                "denominator": 628815097971605504,
+                "numerator": 628818393958428375
+              },
+              "row": 5
+            },
+            {
+              "quotient": {
+                "decimal": 0.9999466085336709,
+                "denominator": 44186623541248,
+                "numerator": 44184264352625
+              },
+              "row": 6
+            },
+            {
+              "quotient": {
+                "decimal": 1.0000088828375302,
+                "denominator": 221520806671286272,
+                "numerator": 221522774404621475
+              },
+              "row": 7
+            },
+            {
+              "quotient": {
+                "decimal": 1.000031885078471,
+                "denominator": 963911057745641472,
+                "numerator": 963941792125356875
+              },
+              "row": 8
+            },
+            {
+              "quotient": {
+                "decimal": 0.9999580483212658,
+                "denominator": 209276645184372736,
+                "numerator": 209267865677787375
+              },
+              "row": 9
+            },
+            {
+              "quotient": {
+                "decimal": 1.0000763449740957,
+                "denominator": 174021904351363072,
+                "numerator": 174035190049142875
+              },
+              "row": 10
+            }
+          ]
+        },
+        {
+          "adjustment_id": "decode_rate_matching_degradation",
+          "baseline_reachable": false,
+          "maximum_quotient": {
+            "decimal": 1.0000763449740957,
+            "denominator": 174021904351363072,
+            "numerator": 174035190049142875
+          },
+          "method": "complete Family R dependency trace proves this factor unreachable; the baseline decode reevaluation is reused exactly",
+          "minimum_quotient": {
+            "decimal": 0.9999466085336709,
+            "denominator": 44186623541248,
+            "numerator": 44184264352625
+          },
+          "removed_value": "1.0",
+          "rows": [
+            {
+              "quotient": {
+                "decimal": 1.0000012416024167,
+                "denominator": 26163978694557696,
+                "numerator": 26164011179816875
+              },
+              "row": 1
+            },
+            {
+              "quotient": {
+                "decimal": 0.999977143400905,
+                "denominator": 593102960301441024,
+                "numerator": 593089403984855375
+              },
+              "row": 2
+            },
+            {
+              "quotient": {
+                "decimal": 0.9999920801829354,
+                "denominator": 837669530690912256,
+                "numerator": 837662896501468625
+              },
+              "row": 3
+            },
+            {
+              "quotient": {
+                "decimal": 0.999998636836143,
+                "denominator": 322957351403388928,
+                "numerator": 322956911159600125
+              },
+              "row": 4
+            },
+            {
+              "quotient": {
+                "decimal": 1.0000052415834695,
+                "denominator": 628815097971605504,
+                "numerator": 628818393958428375
+              },
+              "row": 5
+            },
+            {
+              "quotient": {
+                "decimal": 0.9999466085336709,
+                "denominator": 44186623541248,
+                "numerator": 44184264352625
+              },
+              "row": 6
+            },
+            {
+              "quotient": {
+                "decimal": 1.0000088828375302,
+                "denominator": 221520806671286272,
+                "numerator": 221522774404621475
+              },
+              "row": 7
+            },
+            {
+              "quotient": {
+                "decimal": 1.000031885078471,
+                "denominator": 963911057745641472,
+                "numerator": 963941792125356875
+              },
+              "row": 8
+            },
+            {
+              "quotient": {
+                "decimal": 0.9999580483212658,
+                "denominator": 209276645184372736,
+                "numerator": 209267865677787375
+              },
+              "row": 9
+            },
+            {
+              "quotient": {
+                "decimal": 1.0000763449740957,
+                "denominator": 174021904351363072,
+                "numerator": 174035190049142875
+              },
+              "row": 10
+            }
+          ]
+        },
+        {
+          "adjustment_id": "autoscale_ttft_correction",
+          "baseline_reachable": false,
+          "maximum_quotient": {
+            "decimal": 1.0000763449740957,
+            "denominator": 174021904351363072,
+            "numerator": 174035190049142875
+          },
+          "method": "complete Family R dependency trace proves this factor unreachable; the baseline decode reevaluation is reused exactly",
+          "minimum_quotient": {
+            "decimal": 0.9999466085336709,
+            "denominator": 44186623541248,
+            "numerator": 44184264352625
+          },
+          "removed_value": "1.0",
+          "rows": [
+            {
+              "quotient": {
+                "decimal": 1.0000012416024167,
+                "denominator": 26163978694557696,
+                "numerator": 26164011179816875
+              },
+              "row": 1
+            },
+            {
+              "quotient": {
+                "decimal": 0.999977143400905,
+                "denominator": 593102960301441024,
+                "numerator": 593089403984855375
+              },
+              "row": 2
+            },
+            {
+              "quotient": {
+                "decimal": 0.9999920801829354,
+                "denominator": 837669530690912256,
+                "numerator": 837662896501468625
+              },
+              "row": 3
+            },
+            {
+              "quotient": {
+                "decimal": 0.999998636836143,
+                "denominator": 322957351403388928,
+                "numerator": 322956911159600125
+              },
+              "row": 4
+            },
+            {
+              "quotient": {
+                "decimal": 1.0000052415834695,
+                "denominator": 628815097971605504,
+                "numerator": 628818393958428375
+              },
+              "row": 5
+            },
+            {
+              "quotient": {
+                "decimal": 0.9999466085336709,
+                "denominator": 44186623541248,
+                "numerator": 44184264352625
+              },
+              "row": 6
+            },
+            {
+              "quotient": {
+                "decimal": 1.0000088828375302,
+                "denominator": 221520806671286272,
+                "numerator": 221522774404621475
+              },
+              "row": 7
+            },
+            {
+              "quotient": {
+                "decimal": 1.000031885078471,
+                "denominator": 963911057745641472,
+                "numerator": 963941792125356875
+              },
+              "row": 8
+            },
+            {
+              "quotient": {
+                "decimal": 0.9999580483212658,
+                "denominator": 209276645184372736,
+                "numerator": 209267865677787375
+              },
+              "row": 9
+            },
+            {
+              "quotient": {
+                "decimal": 1.0000763449740957,
+                "denominator": 174021904351363072,
+                "numerator": 174035190049142875
+              },
+              "row": 10
+            }
+          ]
+        },
+        {
+          "adjustment_id": "memory_bandwidth_empirical_scale",
+          "baseline_reachable": true,
+          "maximum_quotient": {
+            "decimal": 0.9994128852086287,
+            "denominator": 696087617405452288,
+            "numerator": 695678934069183125
+          },
+          "method": "full decode-composition reevaluation with only this factor removed",
+          "minimum_quotient": {
+            "decimal": 0.9958990449307074,
+            "denominator": 313967744334692352,
+            "numerator": 312680176721968625
+          },
+          "removed_value": "1.0",
+          "rows": [
+            {
+              "quotient": {
+                "decimal": 0.9958990449307074,
+                "denominator": 313967744334692352,
+                "numerator": 312680176721968625
+              },
+              "row": 1
+            },
+            {
+              "quotient": {
+                "decimal": 0.9961769170261052,
+                "denominator": 37068935018840064,
+                "numerator": 36927217404509125
+              },
+              "row": 2
+            },
+            {
+              "quotient": {
+                "decimal": 0.9976857576022903,
+                "denominator": 418834765345456128,
+                "numerator": 417865480173858875
+              },
+              "row": 3
+            },
+            {
+              "quotient": {
+                "decimal": 0.9969744956442919,
+                "denominator": 20184834462711808,
+                "numerator": 20123765158125625
+              },
+              "row": 4
+            },
+            {
+              "quotient": {
+                "decimal": 0.9972871610105062,
+                "denominator": 314407548985802752,
+                "numerator": 313554611928322875
+              },
+              "row": 5
+            },
+            {
+              "quotient": {
+                "decimal": 0.9971550171949939,
+                "denominator": 588212332581093376,
+                "numerator": 586538878609207625
+              },
+              "row": 6
+            },
+            {
+              "quotient": {
+                "decimal": 0.9985759822022061,
+                "denominator": 55380201667821568,
+                "numerator": 55301339275001175
+              },
+              "row": 7
+            },
+            {
+              "quotient": {
+                "decimal": 0.9990186498616511,
+                "denominator": 481955528872820736,
+                "numerator": 481482561747883375
+              },
+              "row": 8
+            },
+            {
+              "quotient": {
+                "decimal": 0.9987320631161548,
+                "denominator": 837106580737490944,
+                "numerator": 836045182428064375
+              },
+              "row": 9
+            },
+            {
+              "quotient": {
+                "decimal": 0.9994128852086287,
+                "denominator": 696087617405452288,
+                "numerator": 695678934069183125
+              },
+              "row": 10
+            }
+          ]
+        },
+        {
+          "adjustment_id": "memory_empirical_constant_latency",
+          "baseline_reachable": true,
+          "maximum_quotient": {
+            "decimal": 0.964963420119815,
+            "denominator": 313967744334692352,
+            "numerator": 302967388380508375
+          },
+          "method": "full decode-composition reevaluation with only this factor removed",
+          "minimum_quotient": {
+            "decimal": 0.8736469070444556,
+            "denominator": 348043808702726144,
+            "numerator": 304067396989108875
+          },
+          "removed_value": "0.0",
+          "rows": [
+            {
+              "quotient": {
+                "decimal": 0.964963420119815,
+                "denominator": 313967744334692352,
+                "numerator": 302967388380508375
+              },
+              "row": 1
+            },
+            {
+              "quotient": {
+                "decimal": 0.9628815747943913,
+                "denominator": 65900328922382336,
+                "numerator": 63454212492251875
+              },
+              "row": 2
+            },
+            {
+              "quotient": {
+                "decimal": 0.9474618382474516,
+                "denominator": 139611588448485376,
+                "numerator": 132276652232048625
+              },
+              "row": 3
+            },
+            {
+              "quotient": {
+                "decimal": 0.9318735687459369,
+                "denominator": 322957351403388928,
+                "numerator": 300955419605011625
+              },
+              "row": 4
+            },
+            {
+              "quotient": {
+                "decimal": 0.9300276229621623,
+                "denominator": 157203774492901376,
+                "numerator": 146203852712312875
+              },
+              "row": 5
+            },
+            {
+              "quotient": {
+                "decimal": 0.9251386171471414,
+                "denominator": 588212332581093376,
+                "numerator": 544177943952967125
+              },
+              "row": 6
+            },
+            {
+              "quotient": {
+                "decimal": 0.9205527201945823,
+                "denominator": 110760403335643136,
+                "numerator": 101960790580475375
+              },
+              "row": 7
+            },
+            {
+              "quotient": {
+                "decimal": 0.9087309652361584,
+                "denominator": 963911057745641472,
+                "numerator": 875935825907003125
+              },
+              "row": 8
+            },
+            {
+              "quotient": {
+                "decimal": 0.8948269118047896,
+                "denominator": 418553290368745472,
+                "numerator": 374532748246397875
+              },
+              "row": 9
+            },
+            {
+              "quotient": {
+                "decimal": 0.8736469070444556,
+                "denominator": 348043808702726144,
+                "numerator": 304067396989108875
+              },
+              "row": 10
+            }
+          ]
+        },
+        {
+          "adjustment_id": "context_attention_extra_latency_correction",
+          "baseline_reachable": false,
+          "maximum_quotient": {
+            "decimal": 1.0000763449740957,
+            "denominator": 174021904351363072,
+            "numerator": 174035190049142875
+          },
+          "method": "complete Family R dependency trace proves this factor unreachable; the baseline decode reevaluation is reused exactly",
+          "minimum_quotient": {
+            "decimal": 0.9999466085336709,
+            "denominator": 44186623541248,
+            "numerator": 44184264352625
+          },
+          "removed_value": "1.0",
+          "rows": [
+            {
+              "quotient": {
+                "decimal": 1.0000012416024167,
+                "denominator": 26163978694557696,
+                "numerator": 26164011179816875
+              },
+              "row": 1
+            },
+            {
+              "quotient": {
+                "decimal": 0.999977143400905,
+                "denominator": 593102960301441024,
+                "numerator": 593089403984855375
+              },
+              "row": 2
+            },
+            {
+              "quotient": {
+                "decimal": 0.9999920801829354,
+                "denominator": 837669530690912256,
+                "numerator": 837662896501468625
+              },
+              "row": 3
+            },
+            {
+              "quotient": {
+                "decimal": 0.999998636836143,
+                "denominator": 322957351403388928,
+                "numerator": 322956911159600125
+              },
+              "row": 4
+            },
+            {
+              "quotient": {
+                "decimal": 1.0000052415834695,
+                "denominator": 628815097971605504,
+                "numerator": 628818393958428375
+              },
+              "row": 5
+            },
+            {
+              "quotient": {
+                "decimal": 0.9999466085336709,
+                "denominator": 44186623541248,
+                "numerator": 44184264352625
+              },
+              "row": 6
+            },
+            {
+              "quotient": {
+                "decimal": 1.0000088828375302,
+                "denominator": 221520806671286272,
+                "numerator": 221522774404621475
+              },
+              "row": 7
+            },
+            {
+              "quotient": {
+                "decimal": 1.000031885078471,
+                "denominator": 963911057745641472,
+                "numerator": 963941792125356875
+              },
+              "row": 8
+            },
+            {
+              "quotient": {
+                "decimal": 0.9999580483212658,
+                "denominator": 209276645184372736,
+                "numerator": 209267865677787375
+              },
+              "row": 9
+            },
+            {
+              "quotient": {
+                "decimal": 1.0000763449740957,
+                "denominator": 174021904351363072,
+                "numerator": 174035190049142875
+              },
+              "row": 10
+            }
+          ]
+        }
+      ],
       "rows": [
         {
           "detail": "tp2 batch 128: ours 17.847022158878332 ms / published 17.847 ms",
@@ -6504,8 +7394,408 @@
     },
     "chronology": {
       "binding_before_run": true,
+      "corrected_expectations_before_run": true,
       "expectations_before_service_freeze": true,
       "service_freeze_before_binding": true
+    },
+    "external_adjustments": {
+      "applied_ids": [
+        "autoscale_ttft_correction",
+        "context_attention_extra_latency_correction",
+        "decode_latency_correction",
+        "decode_rate_matching_degradation",
+        "memory_bandwidth_empirical_scale",
+        "memory_empirical_constant_latency",
+        "prefill_latency_correction",
+        "prefill_rate_matching_degradation"
+      ],
+      "source_verification": [
+        {
+          "adjustment_id": "prefill_latency_correction",
+          "locations": {
+            "documentation": {
+              "end_line": 118,
+              "line_range_exists": true,
+              "path": "aiconfigurator/cli/example_v1_deprecated.yaml",
+              "sha256": "865453c28c57c7424c86c86f30bd6852d6f9e9bbd5a98e8380baf45831b0d3dd",
+              "sha256_matches": true,
+              "start_line": 118
+            },
+            "source": {
+              "end_line": 441,
+              "line_range_exists": true,
+              "path": "aiconfigurator/sdk/task_v2.py",
+              "sha256": "d0bd9d712b8a62eff7bc961b2c4a97299ac9679cdcc01fe7b862cda702f1b02e",
+              "sha256_matches": true,
+              "start_line": 441
+            }
+          }
+        },
+        {
+          "adjustment_id": "decode_latency_correction",
+          "locations": {
+            "documentation": {
+              "end_line": 119,
+              "line_range_exists": true,
+              "path": "aiconfigurator/cli/example_v1_deprecated.yaml",
+              "sha256": "865453c28c57c7424c86c86f30bd6852d6f9e9bbd5a98e8380baf45831b0d3dd",
+              "sha256_matches": true,
+              "start_line": 119
+            },
+            "source": {
+              "end_line": 442,
+              "line_range_exists": true,
+              "path": "aiconfigurator/sdk/task_v2.py",
+              "sha256": "d0bd9d712b8a62eff7bc961b2c4a97299ac9679cdcc01fe7b862cda702f1b02e",
+              "sha256_matches": true,
+              "start_line": 442
+            }
+          }
+        },
+        {
+          "adjustment_id": "prefill_rate_matching_degradation",
+          "locations": {
+            "documentation": {
+              "end_line": 239,
+              "line_range_exists": true,
+              "path": "aiconfigurator/sdk/inference_session.py",
+              "sha256": "7c95060d8363080b4139b821c0902a432d60cd16861c08498696e5a28c8ab159",
+              "sha256_matches": true,
+              "start_line": 227
+            },
+            "source": {
+              "end_line": 447,
+              "line_range_exists": true,
+              "path": "aiconfigurator/sdk/task_v2.py",
+              "sha256": "d0bd9d712b8a62eff7bc961b2c4a97299ac9679cdcc01fe7b862cda702f1b02e",
+              "sha256_matches": true,
+              "start_line": 443
+            }
+          }
+        },
+        {
+          "adjustment_id": "decode_rate_matching_degradation",
+          "locations": {
+            "documentation": {
+              "end_line": 239,
+              "line_range_exists": true,
+              "path": "aiconfigurator/sdk/inference_session.py",
+              "sha256": "7c95060d8363080b4139b821c0902a432d60cd16861c08498696e5a28c8ab159",
+              "sha256_matches": true,
+              "start_line": 227
+            },
+            "source": {
+              "end_line": 447,
+              "line_range_exists": true,
+              "path": "aiconfigurator/sdk/task_v2.py",
+              "sha256": "d0bd9d712b8a62eff7bc961b2c4a97299ac9679cdcc01fe7b862cda702f1b02e",
+              "sha256_matches": true,
+              "start_line": 443
+            }
+          }
+        },
+        {
+          "adjustment_id": "autoscale_ttft_correction",
+          "locations": {
+            "documentation": {
+              "end_line": 690,
+              "line_range_exists": true,
+              "path": "aiconfigurator/sdk/inference_session.py",
+              "sha256": "7c95060d8363080b4139b821c0902a432d60cd16861c08498696e5a28c8ab159",
+              "sha256_matches": true,
+              "start_line": 684
+            },
+            "source": {
+              "end_line": 452,
+              "line_range_exists": true,
+              "path": "aiconfigurator/sdk/task_v2.py",
+              "sha256": "d0bd9d712b8a62eff7bc961b2c4a97299ac9679cdcc01fe7b862cda702f1b02e",
+              "sha256_matches": true,
+              "start_line": 448
+            }
+          }
+        },
+        {
+          "adjustment_id": "memory_bandwidth_empirical_scale",
+          "locations": {
+            "documentation": {
+              "end_line": 7,
+              "line_range_exists": true,
+              "path": "aiconfigurator_core/systems/h200_sxm.yaml",
+              "sha256": "142584d6bddd98207fd04e844029b0ba5d6fcd4c6f41016c5e77f0cbe4053614",
+              "sha256_matches": true,
+              "start_line": 7
+            },
+            "source": {
+              "end_line": 7,
+              "line_range_exists": true,
+              "path": "aiconfigurator_core/systems/h200_sxm.yaml",
+              "sha256": "142584d6bddd98207fd04e844029b0ba5d6fcd4c6f41016c5e77f0cbe4053614",
+              "sha256_matches": true,
+              "start_line": 7
+            }
+          }
+        },
+        {
+          "adjustment_id": "memory_empirical_constant_latency",
+          "locations": {
+            "documentation": {
+              "end_line": 8,
+              "line_range_exists": true,
+              "path": "aiconfigurator_core/systems/h200_sxm.yaml",
+              "sha256": "142584d6bddd98207fd04e844029b0ba5d6fcd4c6f41016c5e77f0cbe4053614",
+              "sha256_matches": true,
+              "start_line": 8
+            },
+            "source": {
+              "end_line": 8,
+              "line_range_exists": true,
+              "path": "aiconfigurator_core/systems/h200_sxm.yaml",
+              "sha256": "142584d6bddd98207fd04e844029b0ba5d6fcd4c6f41016c5e77f0cbe4053614",
+              "sha256_matches": true,
+              "start_line": 8
+            }
+          }
+        },
+        {
+          "adjustment_id": "context_attention_extra_latency_correction",
+          "locations": {
+            "documentation": {
+              "end_line": 549,
+              "line_range_exists": true,
+              "path": "aiconfigurator_core/sdk/operations/attention.py",
+              "sha256": "abca1a359a1b33447389298b474afb2e485835f5024dfb05f7273635ff13fe0f",
+              "sha256_matches": true,
+              "start_line": 539
+            },
+            "source": {
+              "end_line": 549,
+              "line_range_exists": true,
+              "path": "aiconfigurator_core/sdk/operations/attention.py",
+              "sha256": "abca1a359a1b33447389298b474afb2e485835f5024dfb05f7273635ff13fe0f",
+              "sha256_matches": true,
+              "start_line": 549
+            }
+          }
+        }
+      ],
+      "table": {
+        "adjustments": [
+          {
+            "applied_to": [
+              "S-prefill",
+              "F",
+              "M",
+              "D"
+            ],
+            "documentation": {
+              "end_line": 118,
+              "meaning": "Multiplies predicted prefill latency when the prediction is too optimistic.",
+              "path": "aiconfigurator/cli/example_v1_deprecated.yaml",
+              "sha256": "865453c28c57c7424c86c86f30bd6852d6f9e9bbd5a98e8380baf45831b0d3dd",
+              "start_line": 118
+            },
+            "family_r_reachable": false,
+            "id": "prefill_latency_correction",
+            "kind": "multiplicative_latency_correction",
+            "removal_value": "1.0",
+            "source": {
+              "end_line": 441,
+              "path": "aiconfigurator/sdk/task_v2.py",
+              "sha256": "d0bd9d712b8a62eff7bc961b2c4a97299ac9679cdcc01fe7b862cda702f1b02e",
+              "start_line": 441
+            },
+            "value": "1.1"
+          },
+          {
+            "applied_to": [
+              "S-decode",
+              "R",
+              "F",
+              "M"
+            ],
+            "documentation": {
+              "end_line": 119,
+              "meaning": "Multiplies predicted decode latency when the prediction is too optimistic.",
+              "path": "aiconfigurator/cli/example_v1_deprecated.yaml",
+              "sha256": "865453c28c57c7424c86c86f30bd6852d6f9e9bbd5a98e8380baf45831b0d3dd",
+              "start_line": 119
+            },
+            "family_r_reachable": true,
+            "id": "decode_latency_correction",
+            "kind": "multiplicative_latency_correction",
+            "removal_value": "1.0",
+            "source": {
+              "end_line": 442,
+              "path": "aiconfigurator/sdk/task_v2.py",
+              "sha256": "d0bd9d712b8a62eff7bc961b2c4a97299ac9679cdcc01fe7b862cda702f1b02e",
+              "start_line": 442
+            },
+            "value": "1.08"
+          },
+          {
+            "applied_to": [
+              "F",
+              "M"
+            ],
+            "documentation": {
+              "end_line": 239,
+              "meaning": "Degrades prefill throughput during rate matching to account for pipeline bubbles.",
+              "path": "aiconfigurator/sdk/inference_session.py",
+              "sha256": "7c95060d8363080b4139b821c0902a432d60cd16861c08498696e5a28c8ab159",
+              "start_line": 227
+            },
+            "family_r_reachable": false,
+            "id": "prefill_rate_matching_degradation",
+            "kind": "multiplicative_throughput_degradation",
+            "removal_value": "1.0",
+            "source": {
+              "end_line": 447,
+              "path": "aiconfigurator/sdk/task_v2.py",
+              "sha256": "d0bd9d712b8a62eff7bc961b2c4a97299ac9679cdcc01fe7b862cda702f1b02e",
+              "start_line": 443
+            },
+            "value": "0.9"
+          },
+          {
+            "applied_to": [
+              "F",
+              "M"
+            ],
+            "documentation": {
+              "end_line": 239,
+              "meaning": "Degrades decode throughput during rate matching to account for batch-slot under-saturation.",
+              "path": "aiconfigurator/sdk/inference_session.py",
+              "sha256": "7c95060d8363080b4139b821c0902a432d60cd16861c08498696e5a28c8ab159",
+              "start_line": 227
+            },
+            "family_r_reachable": false,
+            "id": "decode_rate_matching_degradation",
+            "kind": "multiplicative_throughput_degradation",
+            "removal_value": "1.0",
+            "source": {
+              "end_line": 447,
+              "path": "aiconfigurator/sdk/task_v2.py",
+              "sha256": "d0bd9d712b8a62eff7bc961b2c4a97299ac9679cdcc01fe7b862cda702f1b02e",
+              "start_line": 443
+            },
+            "value": "0.92"
+          },
+          {
+            "applied_to": [
+              "D"
+            ],
+            "documentation": {
+              "end_line": 690,
+              "meaning": "Approximates concurrent prefill queueing before the TTFT filter when local concurrency is not yet known.",
+              "path": "aiconfigurator/sdk/inference_session.py",
+              "sha256": "7c95060d8363080b4139b821c0902a432d60cd16861c08498696e5a28c8ab159",
+              "start_line": 684
+            },
+            "family_r_reachable": false,
+            "id": "autoscale_ttft_correction",
+            "kind": "multiplicative_latency_heuristic",
+            "removal_value": "1.0",
+            "source": {
+              "end_line": 452,
+              "path": "aiconfigurator/sdk/task_v2.py",
+              "sha256": "d0bd9d712b8a62eff7bc961b2c4a97299ac9679cdcc01fe7b862cda702f1b02e",
+              "start_line": 448
+            },
+            "value": "1.8"
+          },
+          {
+            "applied_to": [
+              "S-decode",
+              "S-prefill",
+              "R",
+              "F",
+              "M",
+              "D"
+            ],
+            "documentation": {
+              "end_line": 7,
+              "meaning": "Derates peak memory bandwidth using a nonofficial correction based on observations.",
+              "path": "aiconfigurator_core/systems/h200_sxm.yaml",
+              "sha256": "142584d6bddd98207fd04e844029b0ba5d6fcd4c6f41016c5e77f0cbe4053614",
+              "start_line": 7
+            },
+            "family_r_reachable": true,
+            "id": "memory_bandwidth_empirical_scale",
+            "kind": "multiplicative_bandwidth_derating",
+            "removal_value": "1.0",
+            "source": {
+              "end_line": 7,
+              "path": "aiconfigurator_core/systems/h200_sxm.yaml",
+              "sha256": "142584d6bddd98207fd04e844029b0ba5d6fcd4c6f41016c5e77f0cbe4053614",
+              "start_line": 7
+            },
+            "value": "0.8"
+          },
+          {
+            "applied_to": [
+              "S-decode",
+              "S-prefill",
+              "R",
+              "F",
+              "M",
+              "D"
+            ],
+            "documentation": {
+              "end_line": 8,
+              "meaning": "Adds a 3 microsecond empirical memory-operation latency based on observations.",
+              "path": "aiconfigurator_core/systems/h200_sxm.yaml",
+              "sha256": "142584d6bddd98207fd04e844029b0ba5d6fcd4c6f41016c5e77f0cbe4053614",
+              "start_line": 8
+            },
+            "family_r_reachable": true,
+            "id": "memory_empirical_constant_latency",
+            "kind": "additive_latency_correction",
+            "removal_value": "0.0",
+            "source": {
+              "end_line": 8,
+              "path": "aiconfigurator_core/systems/h200_sxm.yaml",
+              "sha256": "142584d6bddd98207fd04e844029b0ba5d6fcd4c6f41016c5e77f0cbe4053614",
+              "start_line": 8
+            },
+            "units": "seconds",
+            "value": "0.000003"
+          },
+          {
+            "applied_to": [
+              "S-prefill",
+              "F",
+              "M",
+              "D"
+            ],
+            "documentation": {
+              "end_line": 549,
+              "meaning": "Inflates the extra context-attention QK normalization, rotary-position and KV-write latency.",
+              "path": "aiconfigurator_core/sdk/operations/attention.py",
+              "sha256": "abca1a359a1b33447389298b474afb2e485835f5024dfb05f7273635ff13fe0f",
+              "start_line": 539
+            },
+            "family_r_reachable": false,
+            "id": "context_attention_extra_latency_correction",
+            "kind": "multiplicative_latency_correction",
+            "removal_value": "1.0",
+            "source": {
+              "end_line": 549,
+              "path": "aiconfigurator_core/sdk/operations/attention.py",
+              "sha256": "abca1a359a1b33447389298b474afb2e485835f5024dfb05f7273635ff13fe0f",
+              "start_line": 549
+            },
+            "value": "1.1"
+          }
+        ],
+        "external_packages": {
+          "aiconfigurator": "0.11.0",
+          "aiconfigurator-core": "0.11.0"
+        },
+        "phase_assignment_finding": "The pinned source assigns 0.9 to prefill rate matching and 0.92 to decode. The corrected-freeze narrative transposes those phase names; the run adopts the pinned source assignments verbatim.",
+        "schema": "simllm-matched-seam-external-adjustments-v1",
+        "scope": "External empirical multipliers and additive constants reached by the study composition. Structural model constants and interpolation coordinates are not adjustment factors."
+      }
     },
     "external_curves": {
       "agg": [
@@ -7048,6 +8338,1049 @@
         "examples/frontier_comparison_v1/external/disagg_pareto.csv": "8b437860a9ad00bafefa53f956b1f9b958e5709f7fb721c76b3fe3f2820688b4",
         "examples/frontier_comparison_v1/external/provenance.txt": "005c916c368fb3ed94ee5da8fdc815773f4f74bc5709bdb33a1c1073e1f1425d"
       }
+    },
+    "scored_value_trace": {
+      "nodes": [
+        {
+          "dependencies": [],
+          "id": "adjustment:prefill_latency_correction",
+          "kind": "external_adjustment",
+          "origin": "external-aiconfigurator",
+          "value": "1.1"
+        },
+        {
+          "dependencies": [],
+          "id": "adjustment:decode_latency_correction",
+          "kind": "external_adjustment",
+          "origin": "external-aiconfigurator",
+          "value": "1.08"
+        },
+        {
+          "dependencies": [],
+          "id": "adjustment:prefill_rate_matching_degradation",
+          "kind": "external_adjustment",
+          "origin": "external-aiconfigurator",
+          "value": "0.9"
+        },
+        {
+          "dependencies": [],
+          "id": "adjustment:decode_rate_matching_degradation",
+          "kind": "external_adjustment",
+          "origin": "external-aiconfigurator",
+          "value": "0.92"
+        },
+        {
+          "dependencies": [],
+          "id": "adjustment:autoscale_ttft_correction",
+          "kind": "external_adjustment",
+          "origin": "external-aiconfigurator",
+          "value": "1.8"
+        },
+        {
+          "dependencies": [],
+          "id": "adjustment:memory_bandwidth_empirical_scale",
+          "kind": "external_adjustment",
+          "origin": "external-aiconfigurator",
+          "value": "0.8"
+        },
+        {
+          "dependencies": [],
+          "id": "adjustment:memory_empirical_constant_latency",
+          "kind": "external_adjustment",
+          "origin": "external-aiconfigurator",
+          "value": "0.000003"
+        },
+        {
+          "dependencies": [],
+          "id": "adjustment:context_attention_extra_latency_correction",
+          "kind": "external_adjustment",
+          "origin": "external-aiconfigurator",
+          "value": "1.1"
+        },
+        {
+          "dependencies": [
+            "adjustment:decode_latency_correction",
+            "adjustment:memory_bandwidth_empirical_scale",
+            "adjustment:memory_empirical_constant_latency"
+          ],
+          "id": "external-service:decode-tp2-b128",
+          "kind": "external_composed_service",
+          "origin": "external-aiconfigurator",
+          "value": 17847022159
+        },
+        {
+          "dependencies": [
+            "adjustment:decode_latency_correction",
+            "adjustment:memory_bandwidth_empirical_scale",
+            "adjustment:memory_empirical_constant_latency"
+          ],
+          "id": "external-service:decode-tp2-b112",
+          "kind": "external_composed_service",
+          "origin": "external-aiconfigurator",
+          "value": 16856614706
+        },
+        {
+          "dependencies": [
+            "adjustment:decode_latency_correction",
+            "adjustment:memory_bandwidth_empirical_scale",
+            "adjustment:memory_empirical_constant_latency"
+          ],
+          "id": "external-service:decode-tp2-b48",
+          "kind": "external_composed_service",
+          "origin": "external-aiconfigurator",
+          "value": 11903905722
+        },
+        {
+          "dependencies": [
+            "adjustment:decode_latency_correction",
+            "adjustment:memory_bandwidth_empirical_scale",
+            "adjustment:memory_empirical_constant_latency"
+          ],
+          "id": "external-service:decode-tp4-b64",
+          "kind": "external_composed_service",
+          "origin": "external-aiconfigurator",
+          "value": 9178987488
+        },
+        {
+          "dependencies": [
+            "adjustment:decode_latency_correction",
+            "adjustment:memory_bandwidth_empirical_scale",
+            "adjustment:memory_empirical_constant_latency"
+          ],
+          "id": "external-service:decode-tp4-b56",
+          "kind": "external_composed_service",
+          "origin": "external-aiconfigurator",
+          "value": 8936046839
+        },
+        {
+          "dependencies": [
+            "adjustment:decode_latency_correction",
+            "adjustment:memory_bandwidth_empirical_scale",
+            "adjustment:memory_empirical_constant_latency"
+          ],
+          "id": "external-service:decode-tp4-b26",
+          "kind": "external_composed_service",
+          "origin": "external-aiconfigurator",
+          "value": 7870069908
+        },
+        {
+          "dependencies": [
+            "adjustment:decode_latency_correction",
+            "adjustment:memory_bandwidth_empirical_scale",
+            "adjustment:memory_empirical_constant_latency"
+          ],
+          "id": "external-service:decode-tp4-b16",
+          "kind": "external_composed_service",
+          "origin": "external-aiconfigurator",
+          "value": 6849218381
+        },
+        {
+          "dependencies": [
+            "adjustment:decode_latency_correction",
+            "adjustment:memory_bandwidth_empirical_scale",
+            "adjustment:memory_empirical_constant_latency"
+          ],
+          "id": "external-service:decode-tp8-b64",
+          "kind": "external_composed_service",
+          "origin": "external-aiconfigurator",
+          "value": 8358553701
+        },
+        {
+          "dependencies": [
+            "adjustment:decode_latency_correction",
+            "adjustment:memory_bandwidth_empirical_scale",
+            "adjustment:memory_empirical_constant_latency"
+          ],
+          "id": "external-service:decode-tp8-b20",
+          "kind": "external_composed_service",
+          "origin": "external-aiconfigurator",
+          "value": 5947750471
+        },
+        {
+          "dependencies": [
+            "adjustment:decode_latency_correction",
+            "adjustment:memory_bandwidth_empirical_scale",
+            "adjustment:memory_empirical_constant_latency"
+          ],
+          "id": "external-service:decode-tp8-b9",
+          "kind": "external_composed_service",
+          "origin": "external-aiconfigurator",
+          "value": 4946377602
+        },
+        {
+          "dependencies": [
+            "adjustment:prefill_latency_correction",
+            "adjustment:memory_bandwidth_empirical_scale",
+            "adjustment:memory_empirical_constant_latency",
+            "adjustment:context_attention_extra_latency_correction"
+          ],
+          "id": "external-service:prefill-tp2-b1",
+          "kind": "external_composed_service",
+          "origin": "external-aiconfigurator",
+          "value": 170653729875
+        },
+        {
+          "dependencies": [
+            "adjustment:prefill_latency_correction",
+            "adjustment:memory_bandwidth_empirical_scale",
+            "adjustment:memory_empirical_constant_latency",
+            "adjustment:context_attention_extra_latency_correction"
+          ],
+          "id": "external-service:prefill-tp4-b1",
+          "kind": "external_composed_service",
+          "origin": "external-aiconfigurator",
+          "value": 109124185219
+        },
+        {
+          "dependencies": [
+            "adjustment:prefill_latency_correction",
+            "adjustment:memory_bandwidth_empirical_scale",
+            "adjustment:memory_empirical_constant_latency",
+            "adjustment:context_attention_extra_latency_correction"
+          ],
+          "id": "external-service:prefill-tp8-b1",
+          "kind": "external_composed_service",
+          "origin": "external-aiconfigurator",
+          "value": 81450243644
+        },
+        {
+          "dependencies": [
+            "external-service:decode-tp2-b128"
+          ],
+          "id": "projection:decode-step:1",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 17847022159
+        },
+        {
+          "dependencies": [],
+          "id": "projection:unpriced-network:1",
+          "kind": "identity_zero_network_service",
+          "origin": "simllm-projection",
+          "value": 0
+        },
+        {
+          "dependencies": [
+            "external-service:prefill-tp4-b1",
+            "projection:unpriced-network:1"
+          ],
+          "id": "projection:prefill-request:1",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 109124185219
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:1"
+          ],
+          "id": "scored:ideal-x:1",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 56.03175650766558,
+            "denominator": 17847022159,
+            "numerator": 1000000000000
+          }
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:1",
+            "projection:prefill-request:1",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:ideal-y:1",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 773.2016493930181,
+            "denominator": 959866484158979272343552,
+            "numerator": 742170348748800018310546875
+          }
+        },
+        {
+          "dependencies": [],
+          "id": "simulation:packet-network:1",
+          "kind": "packet_simulation",
+          "origin": "simllm-simulation",
+          "value": 4661283200
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:1",
+            "projection:prefill-request:1",
+            "simulation:packet-network:1",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:packet-y:1",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 741.5270260109154,
+            "denominator": 333622521596344883216384,
+            "numerator": 247390116249600006103515625
+          }
+        },
+        {
+          "dependencies": [
+            "external-service:decode-tp2-b112"
+          ],
+          "id": "projection:decode-step:2",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 16856614706
+        },
+        {
+          "dependencies": [],
+          "id": "projection:unpriced-network:2",
+          "kind": "identity_zero_network_service",
+          "origin": "simllm-projection",
+          "value": 0
+        },
+        {
+          "dependencies": [
+            "external-service:prefill-tp4-b1",
+            "projection:unpriced-network:2"
+          ],
+          "id": "projection:prefill-request:2",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 109124185219
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:2"
+          ],
+          "id": "scored:ideal-x:2",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 59.32389257518336,
+            "denominator": 8428307353,
+            "numerator": 500000000000
+          }
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:2",
+            "projection:prefill-request:2",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:ideal-y:2",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 764.0917363683617,
+            "denominator": 18534043874186919673856,
+            "numerator": 14161709765754880615234375
+          }
+        },
+        {
+          "dependencies": [],
+          "id": "simulation:packet-network:2",
+          "kind": "packet_simulation",
+          "origin": "simllm-simulation",
+          "value": 4661283200
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:2",
+            "projection:prefill-request:2",
+            "simulation:packet-network:2",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:packet-y:2",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 741.5270260109154,
+            "denominator": 333622521596344883216384,
+            "numerator": 247390116249600006103515625
+          }
+        },
+        {
+          "dependencies": [
+            "external-service:decode-tp2-b48"
+          ],
+          "id": "projection:decode-step:3",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 11903905722
+        },
+        {
+          "dependencies": [],
+          "id": "projection:unpriced-network:3",
+          "kind": "identity_zero_network_service",
+          "origin": "simllm-projection",
+          "value": 0
+        },
+        {
+          "dependencies": [
+            "external-service:prefill-tp4-b1",
+            "projection:unpriced-network:3"
+          ],
+          "id": "projection:prefill-request:3",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 109124185219
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:3"
+          ],
+          "id": "scored:ideal-x:3",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 84.00604166008027,
+            "denominator": 5951952861,
+            "numerator": 500000000000
+          }
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:3",
+            "projection:prefill-request:3",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:ideal-y:3",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 644.3347078275151,
+            "denominator": 1919732968317958544687104,
+            "numerator": 1236950581248000030517578125
+          }
+        },
+        {
+          "dependencies": [],
+          "id": "simulation:packet-network:3",
+          "kind": "packet_simulation",
+          "origin": "simllm-simulation",
+          "value": 4661283200
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:3",
+            "projection:prefill-request:3",
+            "simulation:packet-network:3",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:packet-y:3",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 617.9391883424295,
+            "denominator": 2001735129578069299298304,
+            "numerator": 1236950581248000030517578125
+          }
+        },
+        {
+          "dependencies": [
+            "external-service:decode-tp4-b64"
+          ],
+          "id": "projection:decode-step:4",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 9178987488
+        },
+        {
+          "dependencies": [],
+          "id": "projection:unpriced-network:4",
+          "kind": "identity_zero_network_service",
+          "origin": "simllm-projection",
+          "value": 0
+        },
+        {
+          "dependencies": [
+            "external-service:prefill-tp4-b1",
+            "projection:unpriced-network:4"
+          ],
+          "id": "projection:prefill-request:4",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 109124185219
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:4"
+          ],
+          "id": "scored:ideal-x:4",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 108.94447795111756,
+            "denominator": 286843359,
+            "numerator": 31250000000
+          }
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:4",
+            "projection:prefill-request:4",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:ideal-y:4",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 601.3735182901689,
+            "denominator": 3364134491422139088896,
+            "numerator": 2023101395107840087890625
+          }
+        },
+        {
+          "dependencies": [],
+          "id": "simulation:packet-network:4",
+          "kind": "packet_simulation",
+          "origin": "simllm-simulation",
+          "value": 2331683200
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:4",
+            "projection:prefill-request:4",
+            "simulation:packet-network:4",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:packet-y:4",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 601.3735182901689,
+            "denominator": 3364134491422139088896,
+            "numerator": 2023101395107840087890625
+          }
+        },
+        {
+          "dependencies": [
+            "external-service:decode-tp4-b56"
+          ],
+          "id": "projection:decode-step:5",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 8936046839
+        },
+        {
+          "dependencies": [],
+          "id": "projection:unpriced-network:5",
+          "kind": "identity_zero_network_service",
+          "origin": "simllm-projection",
+          "value": 0
+        },
+        {
+          "dependencies": [
+            "external-service:prefill-tp4-b1",
+            "projection:unpriced-network:5"
+          ],
+          "id": "projection:prefill-request:5",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 109124185219
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:5"
+          ],
+          "id": "scored:ideal-x:5",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 111.90630689575775,
+            "denominator": 8936046839,
+            "numerator": 1000000000000
+          }
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:5",
+            "projection:prefill-request:5",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:ideal-y:5",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 540.50746230651,
+            "denominator": 78602299246651755200512,
+            "numerator": 42485129297264641845703125
+          }
+        },
+        {
+          "dependencies": [],
+          "id": "simulation:packet-network:5",
+          "kind": "packet_simulation",
+          "origin": "simllm-simulation",
+          "value": 2331683200
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:5",
+            "projection:prefill-request:5",
+            "simulation:packet-network:5",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:packet-y:5",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 540.50746230651,
+            "denominator": 78602299246651755200512,
+            "numerator": 42485129297264641845703125
+          }
+        },
+        {
+          "dependencies": [
+            "external-service:decode-tp8-b64"
+          ],
+          "id": "projection:decode-step:6",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 8358553701
+        },
+        {
+          "dependencies": [],
+          "id": "projection:unpriced-network:6",
+          "kind": "identity_zero_network_service",
+          "origin": "simllm-projection",
+          "value": 0
+        },
+        {
+          "dependencies": [
+            "external-service:prefill-tp4-b1",
+            "projection:unpriced-network:6"
+          ],
+          "id": "projection:prefill-request:6",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 109124185219
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:6"
+          ],
+          "id": "scored:ideal-x:6",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 119.63792251288187,
+            "denominator": 8358553701,
+            "numerator": 1000000000000
+          }
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:6",
+            "projection:prefill-request:6",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:ideal-y:6",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 440.26755484740534,
+            "denominator": 4595163492819809599488,
+            "numerator": 2023101395107840087890625
+          }
+        },
+        {
+          "dependencies": [],
+          "id": "simulation:packet-network:6",
+          "kind": "packet_simulation",
+          "origin": "simllm-simulation",
+          "value": 2331766400
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:6",
+            "projection:prefill-request:6",
+            "simulation:packet-network:6",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:packet-y:6",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 440.26755484740534,
+            "denominator": 4595163492819809599488,
+            "numerator": 2023101395107840087890625
+          }
+        },
+        {
+          "dependencies": [
+            "external-service:decode-tp4-b26"
+          ],
+          "id": "projection:decode-step:7",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 7870069908
+        },
+        {
+          "dependencies": [],
+          "id": "projection:unpriced-network:7",
+          "kind": "identity_zero_network_service",
+          "origin": "simllm-projection",
+          "value": 0
+        },
+        {
+          "dependencies": [
+            "external-service:prefill-tp4-b1",
+            "projection:unpriced-network:7"
+          ],
+          "id": "projection:prefill-request:7",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 109124185219
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:7"
+          ],
+          "id": "scored:ideal-x:7",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 127.06367436247174,
+            "denominator": 1967517477,
+            "numerator": 250000000000
+          }
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:7",
+            "projection:prefill-request:7",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:ideal-y:7",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 386.60082469650905,
+            "denominator": 1919732968317958544687104,
+            "numerator": 742170348748800018310546875
+          }
+        },
+        {
+          "dependencies": [],
+          "id": "simulation:packet-network:7",
+          "kind": "packet_simulation",
+          "origin": "simllm-simulation",
+          "value": 2331683200
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:7",
+            "projection:prefill-request:7",
+            "simulation:packet-network:7",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:packet-y:7",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 378.51304375829756,
+            "denominator": 1960752372968997785698304,
+            "numerator": 742170348748800018310546875
+          }
+        },
+        {
+          "dependencies": [
+            "external-service:decode-tp4-b16"
+          ],
+          "id": "projection:decode-step:8",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 6849218381
+        },
+        {
+          "dependencies": [],
+          "id": "projection:unpriced-network:8",
+          "kind": "identity_zero_network_service",
+          "origin": "simllm-projection",
+          "value": 0
+        },
+        {
+          "dependencies": [
+            "external-service:prefill-tp4-b1",
+            "projection:unpriced-network:8"
+          ],
+          "id": "projection:prefill-request:8",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 109124185219
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:8"
+          ],
+          "id": "scored:ideal-x:8",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 146.00206101969812,
+            "denominator": 6849218381,
+            "numerator": 1000000000000
+          }
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:8",
+            "projection:prefill-request:8",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:ideal-y:8",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 343.64517750800803,
+            "denominator": 719899863119234454257664,
+            "numerator": 247390116249600006103515625
+          }
+        },
+        {
+          "dependencies": [],
+          "id": "simulation:packet-network:8",
+          "kind": "packet_simulation",
+          "origin": "simllm-simulation",
+          "value": 2331683200
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:8",
+            "projection:prefill-request:8",
+            "simulation:packet-network:8",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:packet-y:8",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 336.4560388962645,
+            "denominator": 735282139863374169636864,
+            "numerator": 247390116249600006103515625
+          }
+        },
+        {
+          "dependencies": [
+            "external-service:decode-tp8-b20"
+          ],
+          "id": "projection:decode-step:9",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 5947750471
+        },
+        {
+          "dependencies": [],
+          "id": "projection:unpriced-network:9",
+          "kind": "identity_zero_network_service",
+          "origin": "simllm-projection",
+          "value": 0
+        },
+        {
+          "dependencies": [
+            "external-service:prefill-tp4-b1",
+            "projection:unpriced-network:9"
+          ],
+          "id": "projection:prefill-request:9",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 109124185219
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:9"
+          ],
+          "id": "scored:ideal-x:9",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 168.13079245267483,
+            "denominator": 5947750471,
+            "numerator": 1000000000000
+          }
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:9",
+            "projection:prefill-request:9",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:ideal-y:9",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 257.80054842743476,
+            "denominator": 39237724811848084094976,
+            "numerator": 10115506975539200439453125
+          }
+        },
+        {
+          "dependencies": [],
+          "id": "simulation:packet-network:9",
+          "kind": "packet_simulation",
+          "origin": "simllm-simulation",
+          "value": 2331766400
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:9",
+            "projection:prefill-request:9",
+            "simulation:packet-network:9",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:packet-y:9",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 257.80054842743476,
+            "denominator": 39237724811848084094976,
+            "numerator": 10115506975539200439453125
+          }
+        },
+        {
+          "dependencies": [
+            "external-service:decode-tp8-b9"
+          ],
+          "id": "projection:decode-step:10",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 4946377602
+        },
+        {
+          "dependencies": [],
+          "id": "projection:unpriced-network:10",
+          "kind": "identity_zero_network_service",
+          "origin": "simllm-projection",
+          "value": 0
+        },
+        {
+          "dependencies": [
+            "external-service:prefill-tp4-b1",
+            "projection:unpriced-network:10"
+          ],
+          "id": "projection:prefill-request:10",
+          "kind": "deterministic_projection",
+          "origin": "simllm-projection",
+          "value": 109124185219
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:10"
+          ],
+          "id": "scored:ideal-x:10",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 202.1681481809362,
+            "denominator": 2473188801,
+            "numerator": 500000000000
+          }
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:10",
+            "projection:prefill-request:10",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:ideal-y:10",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 156.93302502545174,
+            "denominator": 116023460027088372760576,
+            "numerator": 18207912555970560791015625
+          }
+        },
+        {
+          "dependencies": [],
+          "id": "simulation:packet-network:10",
+          "kind": "packet_simulation",
+          "origin": "simllm-simulation",
+          "value": 2331766400
+        },
+        {
+          "dependencies": [
+            "projection:decode-step:10",
+            "projection:prefill-request:10",
+            "simulation:packet-network:10",
+            "adjustment:prefill_rate_matching_degradation",
+            "adjustment:decode_rate_matching_degradation"
+          ],
+          "id": "scored:packet-y:10",
+          "kind": "scored_coordinate",
+          "origin": "simllm-projection",
+          "value": {
+            "decimal": 156.93302502545174,
+            "denominator": 116023460027088372760576,
+            "numerator": 18207912555970560791015625
+          }
+        }
+      ],
+      "schema": "simllm-matched-seam-scored-value-trace-v1",
+      "scored_roots": [
+        "external-service:decode-tp2-b112",
+        "external-service:decode-tp2-b128",
+        "external-service:decode-tp2-b48",
+        "external-service:decode-tp4-b16",
+        "external-service:decode-tp4-b26",
+        "external-service:decode-tp4-b56",
+        "external-service:decode-tp4-b64",
+        "external-service:decode-tp8-b20",
+        "external-service:decode-tp8-b64",
+        "external-service:decode-tp8-b9",
+        "external-service:prefill-tp2-b1",
+        "external-service:prefill-tp4-b1",
+        "external-service:prefill-tp8-b1",
+        "scored:ideal-x:1",
+        "scored:ideal-x:10",
+        "scored:ideal-x:2",
+        "scored:ideal-x:3",
+        "scored:ideal-x:4",
+        "scored:ideal-x:5",
+        "scored:ideal-x:6",
+        "scored:ideal-x:7",
+        "scored:ideal-x:8",
+        "scored:ideal-x:9",
+        "scored:ideal-y:1",
+        "scored:ideal-y:10",
+        "scored:ideal-y:2",
+        "scored:ideal-y:3",
+        "scored:ideal-y:4",
+        "scored:ideal-y:5",
+        "scored:ideal-y:6",
+        "scored:ideal-y:7",
+        "scored:ideal-y:8",
+        "scored:ideal-y:9",
+        "scored:packet-y:1",
+        "scored:packet-y:10",
+        "scored:packet-y:2",
+        "scored:packet-y:3",
+        "scored:packet-y:4",
+        "scored:packet-y:5",
+        "scored:packet-y:6",
+        "scored:packet-y:7",
+        "scored:packet-y:8",
+        "scored:packet-y:9"
+      ],
+      "validation_failures": []
     }
   },
   "family_tallies": {
@@ -7073,7 +9406,9 @@
     }
   },
   "fatal_guards": {
-    "FG-1": true,
+    "FG-1a": true,
+    "FG-1b": true,
+    "FG-1c": true,
     "FG-2": true,
     "FG-3": true,
     "FG-4": true,
@@ -7081,13 +9416,21 @@
     "FG-6": true
   },
   "figure": {
-    "caption": "The external aggregate and disaggregated curves and the SimLLM ideal curve share MEASURED-EXTERNAL operation timing. The SimLLM packet curve adds SIM-DERIVED KV redistribution, so surviving separation is composition mechanism.",
+    "caption": "The external aggregate and disaggregated curves and the SimLLM unpriced-network curve share MEASURED-EXTERNAL operation timing. The packet-priced curve adds SIM-DERIVED network service. Its gap prices the complete network against zero network service and does not isolate receiver-side serialization.",
     "pdf": "examples/matched_seam_frontier_v1/figures/matched-seam-frontier.pdf",
     "png": "examples/matched_seam_frontier_v1/figures/matched-seam-frontier.png"
   },
+  "first_published_run": {
+    "attempt": "attempt-0002",
+    "reason": "the first freeze forbade roofline and fitted terms throughout a composition whose external resolver and empirical adjustments require them",
+    "run_commit": "3e752d58c9e874f234110af69851384ea02873cd",
+    "state": "void",
+    "voiding_guard": "FG-1"
+  },
   "freeze_commits": {
     "binding": "9e6782d04a99fd773d08dbf422df6d8ce9c81dbe",
-    "expectations": "4c7ec887ed86abb09d3b15f93e9b04f521252819",
+    "corrected_expectations": "4ed8d1aae540d4cf548eace3c5b4008ba3500d9b",
+    "first_expectations": "4c7ec887ed86abb09d3b15f93e9b04f521252819",
     "service_oracles": "5760301efb430aee99573ac4f89f1d572c040614"
   },
   "machine": {
@@ -7103,18 +9446,40 @@
       "sha256": "cfb5014a663791f7619fe33309114a74e82878de860c14fc8a723713501f027d"
     },
     "txt2bin": {
-      "filename": "txt2bin",
+      "filename": "txt2bin.prebuilt",
       "sha256": "f3745f34ad86febe9c9eebef10aee5fae00b8865cb29943344fb75b0f142495b"
     }
   },
   "reporting_rule": "fatal guards, S, R, F, M, D and W are separate evidence classes and are never summed",
   "rows": [
     {
-      "detail": "all positive ideal-arm stamp durations are MEASURED-EXTERNAL; packet additives are isolated to Family M",
+      "detail": "the deploy RooflineProvider interception fired zero times and the complete scored-value dependency graph contains no reachable SimLLM roofline, efficiency, fitted constant or fitted curve",
       "evidence_class": "GUARD",
       "expected": "true",
       "family": "FG",
-      "id": "FG-1",
+      "id": "FG-1a",
+      "kind": "fatal",
+      "observed": "true",
+      "passed": true,
+      "units": ""
+    },
+    {
+      "detail": "applied external adjustments equal the tracked table exactly and every pinned source and documentation line verifies",
+      "evidence_class": "GUARD",
+      "expected": "true",
+      "family": "FG",
+      "id": "FG-1b",
+      "kind": "fatal",
+      "observed": "true",
+      "passed": true,
+      "units": ""
+    },
+    {
+      "detail": "every declared applied adjustment has a ten-row remove-one Family R sensitivity disclosure",
+      "evidence_class": "GUARD",
+      "expected": "true",
+      "family": "FG",
+      "id": "FG-1c",
       "kind": "fatal",
       "observed": "true",
       "passed": true,
@@ -7143,7 +9508,7 @@
       "units": ""
     },
     {
-      "detail": "{\"binding_before_run\": true, \"expectations_before_service_freeze\": true, \"service_freeze_before_binding\": true}",
+      "detail": "{\"binding_before_run\": true, \"corrected_expectations_before_run\": true, \"expectations_before_service_freeze\": true, \"service_freeze_before_binding\": true}",
       "evidence_class": "GUARD",
       "expected": "true",
       "family": "FG",
@@ -7159,17 +9524,6 @@
       "expected": "true",
       "family": "FG",
       "id": "FG-5",
-      "kind": "fatal",
-      "observed": "true",
-      "passed": true,
-      "units": ""
-    },
-    {
-      "detail": "local scored quantities and live SDK service oracles are bit-equal in second fresh processes",
-      "evidence_class": "GUARD",
-      "expected": "true",
-      "family": "FG",
-      "id": "FG-6",
       "kind": "fatal",
       "observed": "true",
       "passed": true,
@@ -7429,6 +9783,94 @@
       "units": "quotient"
     },
     {
+      "detail": "remove prefill_latency_correction by replacing it with 1.0; complete Family R dependency trace proves this factor unreachable; the baseline decode reevaluation is reused exactly",
+      "evidence_class": "DISCLOSURE",
+      "expected": "",
+      "family": "R",
+      "id": "R-SENS-prefill_latency_correction",
+      "kind": "unscored",
+      "observed": "[0.999946608534, 1.000076344974]",
+      "passed": null,
+      "units": "Family R quotient range"
+    },
+    {
+      "detail": "remove decode_latency_correction by replacing it with 1.0; full decode-composition reevaluation with only this factor removed",
+      "evidence_class": "DISCLOSURE",
+      "expected": "",
+      "family": "R",
+      "id": "R-SENS-decode_latency_correction",
+      "kind": "unscored",
+      "observed": "[0.925876489383, 0.925996615717]",
+      "passed": null,
+      "units": "Family R quotient range"
+    },
+    {
+      "detail": "remove prefill_rate_matching_degradation by replacing it with 1.0; complete Family R dependency trace proves this factor unreachable; the baseline decode reevaluation is reused exactly",
+      "evidence_class": "DISCLOSURE",
+      "expected": "",
+      "family": "R",
+      "id": "R-SENS-prefill_rate_matching_degradation",
+      "kind": "unscored",
+      "observed": "[0.999946608534, 1.000076344974]",
+      "passed": null,
+      "units": "Family R quotient range"
+    },
+    {
+      "detail": "remove decode_rate_matching_degradation by replacing it with 1.0; complete Family R dependency trace proves this factor unreachable; the baseline decode reevaluation is reused exactly",
+      "evidence_class": "DISCLOSURE",
+      "expected": "",
+      "family": "R",
+      "id": "R-SENS-decode_rate_matching_degradation",
+      "kind": "unscored",
+      "observed": "[0.999946608534, 1.000076344974]",
+      "passed": null,
+      "units": "Family R quotient range"
+    },
+    {
+      "detail": "remove autoscale_ttft_correction by replacing it with 1.0; complete Family R dependency trace proves this factor unreachable; the baseline decode reevaluation is reused exactly",
+      "evidence_class": "DISCLOSURE",
+      "expected": "",
+      "family": "R",
+      "id": "R-SENS-autoscale_ttft_correction",
+      "kind": "unscored",
+      "observed": "[0.999946608534, 1.000076344974]",
+      "passed": null,
+      "units": "Family R quotient range"
+    },
+    {
+      "detail": "remove memory_bandwidth_empirical_scale by replacing it with 1.0; full decode-composition reevaluation with only this factor removed",
+      "evidence_class": "DISCLOSURE",
+      "expected": "",
+      "family": "R",
+      "id": "R-SENS-memory_bandwidth_empirical_scale",
+      "kind": "unscored",
+      "observed": "[0.995899044931, 0.999412885209]",
+      "passed": null,
+      "units": "Family R quotient range"
+    },
+    {
+      "detail": "remove memory_empirical_constant_latency by replacing it with 0.0; full decode-composition reevaluation with only this factor removed",
+      "evidence_class": "DISCLOSURE",
+      "expected": "",
+      "family": "R",
+      "id": "R-SENS-memory_empirical_constant_latency",
+      "kind": "unscored",
+      "observed": "[0.873646907044, 0.964963420120]",
+      "passed": null,
+      "units": "Family R quotient range"
+    },
+    {
+      "detail": "remove context_attention_extra_latency_correction by replacing it with 1.0; complete Family R dependency trace proves this factor unreachable; the baseline decode reevaluation is reused exactly",
+      "evidence_class": "DISCLOSURE",
+      "expected": "",
+      "family": "R",
+      "id": "R-SENS-context_attention_extra_latency_correction",
+      "kind": "unscored",
+      "observed": "[0.999946608534, 1.000076344974]",
+      "passed": null,
+      "units": "Family R quotient range"
+    },
+    {
       "detail": "",
       "evidence_class": "MEASURED-EXTERNAL",
       "expected": "x=1e12/decode_step_ps; y=request_capacity*500/used_gpus",
@@ -7550,6 +9992,61 @@
       "units": "frontier/external quotient"
     },
     {
+      "detail": "exact local x=56.031756507665577; published x=56.032; selected=external-disagg-row-02",
+      "evidence_class": "DISCLOSURE",
+      "expected": "",
+      "family": "F",
+      "id": "F-BOUNDARY-01",
+      "kind": "unscored",
+      "observed": "-0.000243492334423",
+      "passed": null,
+      "units": "tokens/s/user"
+    },
+    {
+      "detail": "exact local x=59.323892575183358; published x=59.324; selected=external-disagg-row-03",
+      "evidence_class": "DISCLOSURE",
+      "expected": "",
+      "family": "F",
+      "id": "F-BOUNDARY-02",
+      "kind": "unscored",
+      "observed": "-0.000107424816642",
+      "passed": null,
+      "units": "tokens/s/user"
+    },
+    {
+      "detail": "exact local x=119.637922512881872; published x=119.638; selected=external-disagg-row-07",
+      "evidence_class": "DISCLOSURE",
+      "expected": "",
+      "family": "F",
+      "id": "F-BOUNDARY-06",
+      "kind": "unscored",
+      "observed": "-0.000077487118127",
+      "passed": null,
+      "units": "tokens/s/user"
+    },
+    {
+      "detail": "exact local x=127.063674362471744; published x=127.064; selected=external-disagg-row-08",
+      "evidence_class": "DISCLOSURE",
+      "expected": "",
+      "family": "F",
+      "id": "F-BOUNDARY-07",
+      "kind": "unscored",
+      "observed": "-0.000325637528251",
+      "passed": null,
+      "units": "tokens/s/user"
+    },
+    {
+      "detail": "exact local x=168.130792452674825; published x=168.131; selected=external-disagg-row-10",
+      "evidence_class": "DISCLOSURE",
+      "expected": "",
+      "family": "F",
+      "id": "F-BOUNDARY-09",
+      "kind": "unscored",
+      "observed": "-0.000207547325164",
+      "passed": null,
+      "units": "tokens/s/user"
+    },
+    {
       "detail": "",
       "evidence_class": "MEASURED-EXTERNAL",
       "expected": "monotone with at least 8 points",
@@ -7572,7 +10069,7 @@
       "units": "external rows per frontier point"
     },
     {
-      "detail": "",
+      "detail": "the unpriced-network arm charges exactly zero network service",
       "evidence_class": "MEASURED-EXTERNAL + SIM-DERIVED",
       "expected": ">= 1.000000 for every candidate",
       "family": "M",
@@ -7580,10 +10077,10 @@
       "kind": "scored",
       "observed": "minimum=1.000000000000",
       "passed": true,
-      "units": "packet/ideal capacity-step quotient"
+      "units": "packet-priced/unpriced-network capacity-step quotient"
     },
     {
-      "detail": "",
+      "detail": "the unpriced-network arm charges exactly zero network service",
       "evidence_class": "MEASURED-EXTERNAL + SIM-DERIVED",
       "expected": ">= 1.02 for at least one candidate",
       "family": "M",
@@ -7591,7 +10088,7 @@
       "kind": "scored",
       "observed": "maximum=1.042715399805",
       "passed": true,
-      "units": "packet/ideal capacity-step quotient"
+      "units": "packet-priced/unpriced-network capacity-step quotient"
     },
     {
       "detail": "imported TP4 batch-1 prefill pass",
@@ -7649,20 +10146,31 @@
       "units": "ms"
     },
     {
-      "detail": "two local packet runs, two live SDK runs, all scoring and the figure",
+      "detail": "complete scored evaluation JSON is byte-identical across two fresh processes; elapsed_seconds and W-1 are excluded by name",
+      "evidence_class": "GUARD",
+      "expected": "true",
+      "family": "FG",
+      "id": "FG-6",
+      "kind": "fatal",
+      "observed": "true",
+      "passed": true,
+      "units": ""
+    },
+    {
+      "detail": "two complete fresh-process scored evaluations and the figure",
       "evidence_class": "WALL",
       "expected": "<= 600",
       "family": "W",
       "id": "W-1",
       "kind": "scored",
-      "observed": "76.285396",
+      "observed": "289.941444",
       "passed": true,
       "units": "seconds"
     }
   ],
-  "run_commit": "3e752d58c9e874f234110af69851384ea02873cd",
+  "run_commit": "998a6900c0991c79e533c22164c5ef4a6bb56d3b",
   "run_state": "nonvoid",
-  "schema": "simllm-matched-seam-frontier-record-v1",
+  "schema": "simllm-matched-seam-frontier-record-v2",
   "source": {
     "aiconfigurator_core_version": "0.11.0",
     "aiconfigurator_version": "0.11.0",

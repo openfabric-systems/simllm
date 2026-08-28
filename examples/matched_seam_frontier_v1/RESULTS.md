@@ -5,13 +5,216 @@ roofline term, declared efficiency or fitted constant appear anywhere in the
 scored arm. That requirement cannot hold for this study for two independent
 reasons. First, the external resolver is speed-of-light normalized by
 construction: it evaluates analytical rooflines inside scored cells, including
-240 roofline evaluations across 15 GEMM shapes in the TP4 batch-64 cell.
-Second, the external composition applies its own empirical factors, including
-the five serving factors then copied into the study configuration. The guard
+240 roofline evaluations across 15 general matrix multiplication (GEMM) shapes
+in the TP4 batch-64 cell. Second, the external composition applies five serving
+factors of its own: the 1.1 prefill-latency, 1.08 decode-latency, 0.9 prefill
+rate-matching, 0.92 decode rate-matching and 1.8 autoscale factors. The guard
 was not widened after seeing the result. The first run and every number it
 published remain below as void evidence. The corrected freeze at `4ed8d1a`
-defines a new run, and DEPLOY-12 is reopened because its prior closure rested on
-the void run.
+defines the new run, and DEPLOY-12 is reopened because its prior closure rested
+on the void run.
+
+## Corrected contract and run
+
+What ran: append-only `attempt-0001` evaluated the corrected freeze from
+`4ed8d1a` through two complete scored evaluations in fresh processes, a live
+source audit of the pinned aiconfigurator 0.11.0 installation, all three packet
+cells, the original family bands and the record-only figure projection. The
+implementation and tracked adjustment table landed in `998a690` before this
+attempt ran. The first freeze, figure addendum and corrected freeze remained
+byte-identical.
+
+The corrected FG-1 is split into three guards. FG-1a permits the external
+resolver's own speed-of-light normalization and empirical terms, but forbids
+any SimLLM-authored roofline, declared efficiency, fitted constant or fitted
+curve from reaching a scored root. Each scored number carries a dependency
+graph, the graph validator walks every reachable value, and the evaluation
+process replaces SimLLM's `RooflineProvider` with an aborting sentinel. Thus a
+label alone cannot satisfy the guard. FG-1b requires the tracked adjustment
+table to match the pinned source by content hash and to contain exactly the
+adjustments reached by the composition. FG-1c requires a remove-one Family R
+range for every table row.
+
+FG-6 compares the complete canonical scored-evaluation JSON byte for byte
+across two fresh processes. Only `elapsed_seconds` and `W-1` are excluded, by
+name. Both records hash to
+`85a37550456d753efa95d8260d291328626ef8da07b2938cd35e57deb4152f74`.
+
+### Declared external adjustments
+
+The tracked [external adjustment table](external_adjustments.json) has SHA-256
+`c6778a81cdc6078ce74f06733e4bce9d99a92b4ab3eccba4a83d14e7d063a09e`.
+The live audit found all eight declared rows and no undeclared applied factor.
+
+| Adjustment | Value | Exact pinned source | External description |
+|---|---:|---|---|
+| Prefill latency correction | 1.1 | `aiconfigurator/sdk/task_v2.py:441` | `aiconfigurator/cli/example_v1_deprecated.yaml:118` says it corrects predictions that are too optimistic. |
+| Decode latency correction | 1.08 | `aiconfigurator/sdk/task_v2.py:442` | `aiconfigurator/cli/example_v1_deprecated.yaml:119` says it corrects predictions that are too optimistic. |
+| Prefill rate-matching degradation | 0.9 | `aiconfigurator/sdk/task_v2.py:443-447` | `aiconfigurator/sdk/inference_session.py:227-239` attributes it to rate-matching pipeline bubbles. |
+| Decode rate-matching degradation | 0.92 | `aiconfigurator/sdk/task_v2.py:443-447` | `aiconfigurator/sdk/inference_session.py:227-239` attributes it to batch-slot under-saturation. |
+| Autoscale time-to-first-token heuristic | 1.8 | `aiconfigurator/sdk/task_v2.py:448-452` | `aiconfigurator/sdk/inference_session.py:684-690` approximates concurrent prefill queueing before the time-to-first-token filter. |
+| H200 memory-bandwidth empirical scale | 0.8 | `aiconfigurator_core/systems/h200_sxm.yaml:7` | The same source line calls it a nonofficial observation-based bandwidth correction. |
+| Memory-operation empirical constant | 0.000003 seconds | `aiconfigurator_core/systems/h200_sxm.yaml:8` | The same source line adds a 3 microsecond observation-based memory-operation latency. |
+| Context-attention extra-latency correction | 1.1 | `aiconfigurator_core/sdk/operations/attention.py:549` | Lines 539-549 inflate QK normalization, rotary-position and key/value-write latency. |
+
+The pinned source assigns 0.9 to prefill rate matching and 0.92 to decode rate
+matching. The corrected-freeze prose transposes those phase names. The tracked
+configuration already carried the source assignments before the corrected
+freeze, and the new run follows the pinned source rather than silently
+rewriting it.
+
+## New scored outcomes
+
+What came out: the corrected run is nonvoid and MIXED. All eight fatal guards
+hold. Family S passes 13 of 13, Family R passes 10 of 10, Family F passes 12 of
+13, Family M passes 2 of 2 under its corrected packet-priced versus
+unpriced-network meaning, and Family W passes 1 of 1. The deciding scored miss
+is still F-2-09 at 0.607495219355 against the unchanged 0.75 lower bound.
+
+| Register | Frozen acceptance | Observed | Outcome |
+|---|---|---:|---|
+| FG-1a | No SimLLM-authored roofline, efficiency or fit reaches a scored value | Dependency trace clean; aborting `RooflineProvider` never constructed | PASS |
+| FG-1b | Applied external adjustments equal the tracked table | Eight of eight declared; no missing or extra applied factor | PASS |
+| FG-1c | Remove-one Family R range for every adjustment | Eight of eight published below | PASS |
+| FG-2 | Frozen service identity and evidence stamps | Exact | PASS |
+| FG-3 | Protected inputs and prior publications unchanged | Byte-identical | PASS |
+| FG-4 | Corrected freeze precedes implementation and run | `4ed8d1a` precedes `998a690` and `attempt-0001` | PASS |
+| FG-5 | External TTFT stays outside isolated service scoring | No misuse found | PASS |
+| FG-6 | Two full fresh-process scored records byte-identical, named wall exclusions only | Equal hashes; two exclusions | PASS |
+
+No fatal guard voids the corrected run.
+
+### Every frozen family band
+
+- Family S requires exact service identity. All ten decode and three prefill
+  cells are bit-equal, so S passes 13 of 13.
+
+- Family R requires every local/published decode-step quotient in
+  `[0.98, 1.02]`. The ten quotients span 0.999946608534 to 1.000076344974, so R
+  passes 10 of 10.
+
+- Family F1 requires the exact coordinate formulas
+  `x = 1e12 / decode_step_ps` and request capacity times 500 output tokens over
+  used GPUs. It passes. F2 requires each step-frontier quotient in
+  `[0.75, 1.35]`; it passes 9 of 10, with F-2-09 at 0.607495219355. F3 requires
+  a strictly monotone ideal frontier with at least eight points; all ten points
+  pass. F4 permits one local point to answer at most three external rows; the
+  observed maximum is two. Family F therefore passes 12 of 13.
+
+- Family M1 requires every packet-priced/unpriced-network capacity quotient to
+  be at least 1.000000. All ten pass. M2 requires the maximum to be at least
+  1.02; the maximum is 1.042715399805. The two scored M relations pass, but the
+  mechanism scope is limited as stated below.
+
+- Family W requires the complete corrected run to finish within 600 seconds.
+  It took 289.941444 seconds, so W passes 1 of 1.
+
+Family D remains an unscored decomposition. It retains the 99.203805 ms raw
+prefill pass, 9.920380 ms prefill correction, 87.299348 ms autoscale correction,
+-0.000533 ms table-precision reconciliation and 196.423000 ms published
+time-to-first-token value. Evidence classes and denominators remain separate.
+
+What it changes for the project: the first run no longer closes DEPLOY-12. The
+corrected run supplies its FG-1a, FG-1b, FG-1c and FG-6 evidence, but DEPLOY-12
+stays open for the LogGOPSim-priced third arm required before any isolated
+network-mechanism claim. DEPLOY-13 stays open on the rounded-axis boundary, and
+COMP-88 stays open on promotion of the study-local adjustment table into the
+installed content-addressed composition surface. The corrected run exposes no
+additional residual requiring a new stable task ID.
+
+What it does not change: this result does not validate either planner against
+hardware, does not close a calibration task, does not repair F-2-09, does not
+price the external planner's omitted network service, and does not establish
+receiver-side fan-in serialization as the cause of the Family M gap.
+
+## Family R remove-one sensitivity
+
+Each range is recomputed with exactly one applied factor removed. Factors that
+cannot reach Family R retain the baseline range after the complete dependency
+trace proves them unreachable. The decode latency factor is decisive, and the
+3 microsecond memory constant has the largest range change.
+
+| Removed external factor | Family R quotient range | Family R reachable |
+|---|---:|---|
+| Prefill latency correction 1.1 | 0.999946608534 to 1.000076344974 | No |
+| Decode latency correction 1.08 | 0.925876489383 to 0.925996615717 | Yes |
+| Prefill rate matching 0.9 | 0.999946608534 to 1.000076344974 | No |
+| Decode rate matching 0.92 | 0.999946608534 to 1.000076344974 | No |
+| Autoscale heuristic 1.8 | 0.999946608534 to 1.000076344974 | No |
+| Memory-bandwidth scale 0.8 | 0.995899044931 to 0.999412885209 | Yes |
+| Memory constant 3 microseconds | 0.873646907044 to 0.964963420120 | Yes |
+| Context-attention correction 1.1 | 0.999946608534 to 1.000076344974 | No |
+
+Rate matching changes Family F and M capacity composition but not the Family R
+service quotient, which is why the decode rate factor is unreachable here even
+though it is applied elsewhere in the scored composition.
+
+## Family F rounding-boundary disclosure
+
+One published rounding unit on the x axis is 0.001 tokens/s/user. The complete
+set of local coordinates on the negative side of a published boundary and
+within that unit is rows 1, 2, 6, 7 and 9.
+
+| External row | Exact local x | Published x | Local minus published | Selected step-frontier row |
+|---:|---:|---:|---:|---:|
+| 1 | 56.031756507665577 | 56.032 | -0.000243492334423 | 2 |
+| 2 | 59.323892575183358 | 59.324 | -0.000107424816642 | 3 |
+| 6 | 119.637922512881872 | 119.638 | -0.000077487118127 | 7 |
+| 7 | 127.063674362471744 | 127.064 | -0.000325637528251 | 8 |
+| 9 | 168.130792452674825 | 168.131 | -0.000207547325164 | 10 |
+
+Only row 9 fails the unchanged quotient band, but all five boundary crossings
+are published rather than selecting the failed row after the fact.
+
+## Corrected Family M scope
+
+The Family M quantity is the capacity-step quotient between a packet-priced
+network and an unpriced network. The unpriced arm charges exactly zero network
+service. It is therefore not a physical ideal-network reference, and the
+1.042715399805 maximum prices the complete packet-network term against a
+planner class that prices no network term at all. The maximum occurs on rows 1
+and 3; the figure selects row 3 for the arrow.
+
+The optional third arm that would charge the LogGOPSim latency, overhead, gap
+and per-byte gap terms did not run. No isolated receiver-side serialization
+claim is made. The separate 7.678 to 8.110 eight-into-one fan-in envelope from
+`frontier_ladder_v1` and `loggopsim_acceptance_v1` remains a different schedule
+regime and is not plotted on these curves.
+
+Physical bounds still constrain the packet observations. The 458,752,000-byte
+key/value payload has a 2.293760 ms sender floor at TP4, a 4.587520 ms receive
+floor at TP2 and a 9.175040 ms one-link serialization reference. The packet
+services are 4.661283 ms at TP2, 2.331683 ms at TP4 and 2.331766 ms at TP8.
+Those values sit about 1.6 percent above their endpoint floors and below the
+one-link reference. The unpriced arm's zero service lies below every physical
+serialization floor by construction, which is why its quotient cannot isolate
+one packet mechanism.
+
+## Corrected figure and records
+
+The figure arrow label is exactly:
+
+```text
+Their planner class prices no network cost.
+Our unpriced-network arm charges zero network service.
+This workload: packet-priced / unpriced-network
+= 1.042715399805.
+Unpriced: MEASURED-EXTERNAL.
+Packet-priced: MEASURED-EXTERNAL + SIM-DERIVED.
+```
+
+Panel (c)'s two-line quotient label is fully inside the left margin. The PNG
+and a 240 dpi rasterization of the PDF were inspected at full resolution after
+the final render; the panel titles, annotation, legend, axes and caption are
+unclipped.
+
+- [Matched-seam frontier PDF](figures/matched-seam-frontier.pdf), the primary
+  vector figure.
+- [Matched-seam frontier PNG](figures/matched-seam-frontier.png), the
+  full-resolution raster rendering.
+- [record.json](record.json), the portable corrected record and complete
+  scored-value trace.
+- [results.csv](results.csv), the LF-only fatal-guard and family ledger.
 
 ## First published run, retained void evidence
 

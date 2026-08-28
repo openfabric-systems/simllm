@@ -25,10 +25,10 @@ RESULTS_CSV = STUDY / "results.csv"
 PDF = STUDY / "figures/matched-seam-frontier.pdf"
 PNG = STUDY / "figures/matched-seam-frontier.png"
 EXTERNAL_VENV_ENV = "SIMLLM_EXTERNAL_AIC_VENV"
-RECORD_SHA256 = "c08157f5b96f027dd522474f40b4d3159e057e47896a8f0603668c1915feb82d"
-RESULTS_CSV_SHA256 = "fb577860e83f6b7b8dc5f21e44644a48d05730f5ddd450cde2381ab80ae98e8a"
-PDF_SHA256 = "040ba924f343c763239bfabb93c6cb84c5a14a77a26508be01ad2a16577cc88b"
-PNG_SHA256 = "831368ca0dcf1c5f9be9a5a83553c0a365be3ea80906fdc2d7b3cede020c9724"
+RECORD_SHA256 = "bddd7cb040a3c0f0ec8afd7ea836d873fa22cad2131f98ff36e38da5441b2d50"
+RESULTS_CSV_SHA256 = "4113ab2413084b7da957de60002abc4a4f8530bbb89837a5a5f73b9852f4448d"
+PDF_SHA256 = "4ecc3bf2822f916bfd53107b55d1344406efea01fd0b1ad7a417019391712dbb"
+PNG_SHA256 = "852378a01d3c9e0aeab74423259afe86b456dca0b193e27c23e48256322069c4"
 
 
 def _sha256(path: Path) -> str:
@@ -60,12 +60,22 @@ def test_published_record_and_figures_are_locked() -> None:
     assert b"\r" not in RESULTS_CSV.read_bytes()
 
     record = json.loads(RECORD.read_text(encoding="utf-8"))
-    assert record["schema"] == "simllm-matched-seam-frontier-record-v1"
+    assert record["schema"] == "simllm-matched-seam-frontier-record-v2"
     assert record["run_state"] == "nonvoid"
     assert record["voiding_guards"] == []
-    assert record["attempt"] == "attempt-0002"
-    assert record["run_commit"] == "3e752d58c9e874f234110af69851384ea02873cd"
+    assert record["attempt"] == "attempt-0001"
+    assert record["run_commit"] == "998a6900c0991c79e533c22164c5ef4a6bb56d3b"
     assert all(record["fatal_guards"].values())
+    assert record["first_published_run"] == {
+        "attempt": "attempt-0002",
+        "reason": (
+            "the first freeze forbade roofline and fitted terms throughout a "
+            "composition whose external resolver and empirical adjustments require them"
+        ),
+        "run_commit": "3e752d58c9e874f234110af69851384ea02873cd",
+        "state": "void",
+        "voiding_guard": "FG-1",
+    }
     assert record["family_tallies"] == {
         "S": {"passed": 13, "denominator": 13},
         "R": {"passed": 10, "denominator": 10},
@@ -81,9 +91,14 @@ def test_published_record_and_figures_are_locked() -> None:
     assert [(row["id"], row["observed"]) for row in misses] == [
         ("F-2-09", "0.607495219355")
     ]
-    assert record["families"]["M"]["maximum_quotient"]["decimal"] == pytest.approx(
-        1.0427153998047758
-    )
+    assert record["families"]["M"][
+        "maximum_packet_priced_to_unpriced_network_quotient"
+    ]["decimal"] == pytest.approx(1.0427153998047758)
+    assert record["families"]["M"]["unpriced_network_service_ps"] == 0
+    assert record["families"]["M"]["third_loggopsim_priced_arm"] == {
+        "ran": False,
+        "scope": "not run; no isolated receiver-side serialization claim is made",
+    }
     assert record["families"]["D"]["raw_prefill_pass_ms"] == pytest.approx(
         99.20380474486889
     )
@@ -94,6 +109,75 @@ def test_published_record_and_figures_are_locked() -> None:
     assert len(record["families"]["candidate_grid"]["disagg"]) == 10
     assert len(record["families"]["F"]["ideal_frontier"]) == 10
     assert len(record["families"]["F"]["packet_frontier"]) == 9
+    boundary_rows = record["families"]["F"]["boundary_proximity_rows"]
+    assert [row["row"] for row in boundary_rows] == [1, 2, 6, 7, 9]
+    assert [row["selected_frontier_answer"] for row in boundary_rows] == [
+        "external-disagg-row-02",
+        "external-disagg-row-03",
+        "external-disagg-row-07",
+        "external-disagg-row-08",
+        "external-disagg-row-10",
+    ]
+    assert record["determinism"] == {
+        "comparison": "byte-for-byte complete scored evaluation JSON",
+        "equal": True,
+        "evaluation_sha256": [
+            "85a37550456d753efa95d8260d291328626ef8da07b2938cd35e57deb4152f74",
+            "85a37550456d753efa95d8260d291328626ef8da07b2938cd35e57deb4152f74",
+        ],
+        "excluded_by_name": ["elapsed_seconds", "W-1"],
+        "fresh_processes": 2,
+    }
+    sensitivity = {
+        row["adjustment_id"]: (
+            row["minimum_quotient"]["decimal"],
+            row["maximum_quotient"]["decimal"],
+            row["baseline_reachable"],
+        )
+        for row in record["families"]["R"]["remove_one_sensitivity"]
+    }
+    assert sensitivity == {
+        "prefill_latency_correction": (
+            pytest.approx(0.9999466085336709),
+            pytest.approx(1.0000763449740957),
+            False,
+        ),
+        "decode_latency_correction": (
+            pytest.approx(0.9258764893830284),
+            pytest.approx(0.9259966157167553),
+            True,
+        ),
+        "prefill_rate_matching_degradation": (
+            pytest.approx(0.9999466085336709),
+            pytest.approx(1.0000763449740957),
+            False,
+        ),
+        "decode_rate_matching_degradation": (
+            pytest.approx(0.9999466085336709),
+            pytest.approx(1.0000763449740957),
+            False,
+        ),
+        "autoscale_ttft_correction": (
+            pytest.approx(0.9999466085336709),
+            pytest.approx(1.0000763449740957),
+            False,
+        ),
+        "memory_bandwidth_empirical_scale": (
+            pytest.approx(0.9958990449307074),
+            pytest.approx(0.9994128852086287),
+            True,
+        ),
+        "memory_empirical_constant_latency": (
+            pytest.approx(0.8736469070444556),
+            pytest.approx(0.964963420119815),
+            True,
+        ),
+        "context_attention_extra_latency_correction": (
+            pytest.approx(0.9999466085336709),
+            pytest.approx(1.0000763449740957),
+            False,
+        ),
+    }
     serialized = RECORD.read_text(encoding="utf-8")
     assert "/data3/" not in serialized
     assert "/home/" not in serialized

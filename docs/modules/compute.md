@@ -1822,12 +1822,16 @@ The
 [matched-seam frontier](../../examples/matched_seam_frontier_v1/RESULTS.md)
 first publication is void against its own impossible FG-1, which forbade
 roofline and fitted terms inside an external resolver that is
-speed-of-light-normalized and applies empirical adjustments. The corrected
-freeze preserves the original bands and narrows the claim to proving that
-SimLLM adds no timing model of its own. **Every external adjustment carried by
-the composition is declared, source-attributed and joined to the imported
-operation slice through a content-addressed composition surface.** COMP-88
-owns promotion from the study-local declaration to that installed surface.
+speed-of-light-normalized and applies empirical adjustments. The guard was not
+widened. The corrected run proves that SimLLM's own `RooflineProvider` and
+fitted values cannot reach any scored root, declares all eight external
+adjustments with pinned source hashes, and publishes a remove-one Family R
+range for each. The source audit also corrects the prose-level phase
+transposition: the pinned installation assigns 0.9 to prefill rate matching and
+0.92 to decode. **Every external adjustment carried by the composition is
+declared, source-attributed and joined to the imported operation slice through
+a content-addressed composition surface.** COMP-88 owns promotion from the
+study-local declaration to that installed surface.
 
 ## Open tasks
 
