@@ -1,0 +1,98 @@
+{
+  "base_commit": "4158055a52a19b225210fdd03d0ce230eaaee37d",
+  "calibration_context": {
+    "anchor_tokens_per_second_per_node": "22282",
+    "inherited_prediction_tokens_per_second_per_node": "9544.657796",
+    "inherited_signed_residual_percent": "-57.164268",
+    "inherited_step_ps_round_half_up": 26821286365
+  },
+  "candidates": {
+    "expert_population": {
+      "assignment_compute_scale": "1/9",
+      "assignment_compute_signed_direction": "no_further_change_unless_tracking_variable_refuted",
+      "capture_resident_logical_experts_per_moe_layer": 256,
+      "ep72_physical_slots_per_rank": 4,
+      "expert_count_or_resident_weight_byte_scale": "1/64",
+      "expert_count_or_resident_weight_byte_signed_direction": "decrease",
+      "unique_active_expert_read_scale": "requires_routing_identity"
+    },
+    "layer_type_composition": {
+      "all_dense_hypothesis_signed_direction": "decrease",
+      "all_moe_missing_terms_signed_direction": "increase",
+      "capture_hypothesis": "first_four_layers_are_three_dense_plus_one_moe",
+      "common_per_layer_scale": "61/4",
+      "common_signed_direction": "no_change",
+      "dense_only_scale": "3/3",
+      "dense_only_signed_direction": "decrease",
+      "moe_only_scale": "58/1",
+      "moe_only_signed_direction": "increase",
+      "net_signed_direction": "indeterminate_before_opposing_component_services"
+    },
+    "other_kernel_counterparts": {
+      "capture_only_signed_direction": "decrease",
+      "counterpart_signed_direction": "no_change_without_another_explicit_scale",
+      "ep72_required_absent_signed_direction": "increase"
+    },
+    "weight_read_volume": {
+      "captured_equal_ep72_signed_direction": "no_change",
+      "captured_greater_than_ep72_signed_direction": "decrease",
+      "captured_less_than_ep72_signed_direction": "increase",
+      "resident_bytes_equal_per_step_reads": false,
+      "routing_identity_required_for_unique_expert_reads": true
+    }
+  },
+  "frozen_sources": [
+    {
+      "bytes": 27555,
+      "path": "<wave-runs>/core63/reproduction/basis-success.json",
+      "role": "retained_total_kernel_rows_and_component_basis"
+    },
+    {
+      "bytes": 32044,
+      "git_blob": "5733fef54f9983d9ef23e149783478bedfdb7ed7",
+      "path": "examples/deployment_curve_v1/core64_shape_result.json",
+      "role": "inherited_standard_decode_gap_and_physical_decomposition"
+    },
+    {
+      "bytes": 22621,
+      "git_blob": "81ac2757bf8166fdbad2a84f97f6b646ecb7499d",
+      "path": "examples/model_extraction_deepseek_v3_v1/expectations.json",
+      "role": "model_layer_schedule_and_static_byte_contract"
+    },
+    {
+      "optional": true,
+      "path": "<kernelprobe-root>/gh200lane/capture-198891-deepseek-v3-tp1-graph-decode/profile.json",
+      "role": "original_capture_configuration_and_cell"
+    }
+  ],
+  "preservation": {
+    "additional_core64_git_blob_count": 20,
+    "additional_core64_git_blob_manifest_path": "examples/deployment_curve_v1/core65_prior_git_blobs.txt",
+    "inherited_core64_checked_count": 134,
+    "minimum_checked_count": 154,
+    "prior_artifacts_mutated": false
+  },
+  "protocol_state": {
+    "forbidden_access_ledger_empty": false,
+    "held_out_mtp_numeric_value_used_or_compared": false,
+    "known_pre_reader_incident_count": 2,
+    "literal_protocol_closure_possible_in_this_worker": false,
+    "whole_file_reader_streams_permitted": false
+  },
+  "registry_intent": {
+    "close_core65_only_if_literal": true,
+    "register_exact_hardware_remainder_otherwise": true,
+    "reserved_id_to_verify_free_on_main": "CORE-66"
+  },
+  "schema": "simllm-deployment-curve-core65-expectations-v1",
+  "scope_locks": {
+    "download_model_weights": false,
+    "fetch_web_pages": false,
+    "fit_parameters": false,
+    "modify_parallel_owned_lanes": false,
+    "perform_fifth_scored_run": false,
+    "read_or_compare_held_out_mtp_value": false
+  },
+  "status": "EXPECTATIONS_ONLY_PROTOCOL_VOID",
+  "task": "CORE-65"
+}

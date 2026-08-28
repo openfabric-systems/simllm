@@ -1,0 +1,48 @@
+{
+  "incidents": [
+    {
+      "classification": "literal_pre_reader_result_path_listing",
+      "event_order": 1,
+      "held_out_mtp_numeric_value_exposed_in_command_output": false,
+      "reader_commit_existed": false,
+      "reader_log_present": false,
+      "summary": "A case-sensitive repository file listing excluded lowercase result paths but printed uppercase RESULTS.md paths and a scored measurement path before the reader commit.",
+      "used_in_core66_arithmetic": false
+    },
+    {
+      "classification": "literal_pre_reader_result_content_search",
+      "event_order": 2,
+      "held_out_mtp_numeric_value_exposed_in_command_output": false,
+      "reader_commit_existed": false,
+      "reader_log_present": false,
+      "summary": "A repository content search printed a line from examples/token_ownership_v1/RESULTS.md and inspected a scored measurement artifact because the exclusions did not cover every result spelling.",
+      "used_in_core66_arithmetic": false
+    },
+    {
+      "classification": "unlogged_pre_reader_full_pytest_access",
+      "event_order": 3,
+      "held_out_mtp_numeric_value_exposed_in_command_output": false,
+      "held_out_mtp_numeric_value_read_by_test_processes": "cannot be certified false",
+      "reader_commit_existed": false,
+      "reader_log_present": false,
+      "summary": "The full 3,598-test pytest collection was run before the reader commit; result and record accesses performed by that collection were not routed through the CORE-66 reader.",
+      "used_in_core66_arithmetic": false
+    },
+    {
+      "classification": "unlogged_pre_reader_full_pytest_access",
+      "event_order": 4,
+      "held_out_mtp_numeric_value_exposed_in_command_output": false,
+      "held_out_mtp_numeric_value_read_by_test_processes": "cannot be certified false",
+      "reader_commit_existed": false,
+      "reader_log_present": false,
+      "summary": "The same full pytest collection was repeated after the EOL-pin change but still before the reader commit; its record accesses were not contemporaneously logged.",
+      "used_in_core66_arithmetic": false
+    }
+  ],
+  "incident_count": 4,
+  "literal_empty_ledger_requirement_met": false,
+  "reader_commit": "f1b5caaf4c881b015e053e9e397e5ec73dcff47d",
+  "recoverable_in_this_worktree": false,
+  "schema": "simllm-deployment-curve-core66-forbidden-access-v1",
+  "task": "CORE-66"
+}
