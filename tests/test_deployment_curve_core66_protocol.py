@@ -26,6 +26,9 @@ EP4_ENV_RETRY_EXPECTATIONS_PATH = (
 EP4_ENV_RETRY_RESULT_PATH = (
     ROOT / "examples/deployment_curve_v1/core66_ep4_env_retry_result.json"
 )
+EP4_FALLBACK_EXPECTATIONS_PATH = (
+    ROOT / "examples/deployment_curve_v1/core66_ep4_fallback_expectations.json"
+)
 
 
 def _load_reader() -> ModuleType:
@@ -268,6 +271,49 @@ def test_ep4_expectations_are_a_new_single_gpu_general_cell() -> None:
     }
     assert expectations["chronology"]["prior_refusal_records_may_be_amended"] is False
     assert expectations["comparison_gate"]["never_publish_downward_correction_alone"]
+    assert expectations["service_multiplier_freeze"] == {
+        "common": "61/4",
+        "dense": 1,
+        "moe": 58,
+        "output": 1,
+        "step": 1,
+    }
+
+
+def test_ep4_fallback_freeze_is_distinct_and_forces_null_movement() -> None:
+    expectations = json.loads(
+        EP4_FALLBACK_EXPECTATIONS_PATH.read_text(encoding="utf-8")
+    )
+    capture = expectations["capture_freeze"]
+
+    assert capture["hardware"] == {
+        "gpu_model": "NVIDIA GH200",
+        "gpus_per_node": 4,
+        "node_count": 1,
+        "rank_count": 4,
+    }
+    assert capture["model"] == {
+        "expert_parallel_width": 4,
+        "logical_experts_per_rank": 4,
+        "physical_expert_slots_per_rank": 4,
+        "routed_expert_total": 16,
+        "weights": "dummy-only",
+    }
+    backend = capture["backend"]
+    assert backend["deep_ep_enabled"] is False
+    assert backend["moe_a2a_backend_argument"] == "none"
+    assert backend["moe_dispatcher"].endswith(".StandardDispatcher")
+    assert backend["source_builds_forbidden"] == ["DeepEP", "NVSHMEM"]
+    assert expectations["chronology"]["this_is_a_new_cell"] is True
+    assert expectations["chronology"]["prior_records_may_be_amended"] is False
+    gate = expectations["comparison_gate"]
+    assert gate["deep_ep_status_for_this_cell"] == "UNPRICED_BY_CONSTRUCTION"
+    assert gate["signed_movement_tokens_per_second_per_node"] is None
+    assert gate["never_publish_downward_correction_alone"] is True
+    differences = {
+        row["difference"] for row in expectations["declared_extrapolation_ledger"]
+    }
+    assert "MoE communication backend" in differences
     assert expectations["service_multiplier_freeze"] == {
         "common": "61/4",
         "dense": 1,

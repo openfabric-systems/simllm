@@ -1,0 +1,223 @@
+{
+  "capture_freeze": {
+    "backend": {
+      "attention_parallelism": "data-parallel",
+      "deep_ep_enabled": false,
+      "lm_head_parallelism": "data-parallel",
+      "moe_a2a_backend_argument": "none",
+      "moe_dispatcher": "sglang.srt.layers.moe.token_dispatcher.standard.StandardDispatcher",
+      "resolved_mechanism_expected": "global-to-local expert-ID mapping followed by the standard post-expert tensor-parallel collective path",
+      "source_builds_forbidden": [
+        "DeepEP",
+        "NVSHMEM"
+      ]
+    },
+    "decode": {
+      "kv_length_per_rank": 2000,
+      "measured_iterations": 1,
+      "mtp_enabled": false,
+      "requests_per_rank": 32
+    },
+    "depth": {
+      "captured_layer_count": 4,
+      "captured_layer_indices": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "dense_layer_indices": [
+        0,
+        1,
+        2
+      ],
+      "moe_layer_indices": [
+        3
+      ]
+    },
+    "environment": {
+      "cuda_module": "cuda/12.9.1",
+      "gcc_module": "gcc/12.3.0",
+      "interpreter": "${SIMLLM_CORE66F_GH200_VENV}/bin/python",
+      "interpreter_binary_sha256": "71eb688df288d106c65112c2d8a69bb22c0e4737951f8c0946476fd0f43dde7b",
+      "interpreter_machine": "aarch64",
+      "ncu_version": "2025.2.1.0",
+      "nsys_version": "2025.1.3.140-251335620677v0",
+      "python_version": "3.11.11",
+      "torch_cuda_version": "12.9",
+      "torch_version": "2.13.0+cu129"
+    },
+    "execution": {
+      "cuda_graph_enabled": false,
+      "fail_fast_before_profiler": [
+        "exact CUDA and compiler modules",
+        "nvcc CUDA 12.9",
+        "nsys on PATH with the recovered CORE-61 version",
+        "ncu on PATH",
+        "exact recovered interpreter path and SHA-256",
+        "pinned SGLang source commit",
+        "fallback capture and SGLang one-batch imports without DeepEP"
+      ],
+      "reason": "eager execution preserves per-layer routing identities and semantic launch ranges; kernel service remains deterministic across launch modes"
+    },
+    "hardware": {
+      "gpu_model": "NVIDIA GH200",
+      "gpus_per_node": 4,
+      "node_count": 1,
+      "rank_count": 4
+    },
+    "model": {
+      "expert_parallel_width": 4,
+      "logical_experts_per_rank": 4,
+      "physical_expert_slots_per_rank": 4,
+      "routed_expert_total": 16,
+      "weights": "dummy-only"
+    },
+    "scheduler": {
+      "account": "merlin",
+      "cluster": "gmerlin7",
+      "partition": "gh-hourly",
+      "qos": "gpu_general",
+      "submission_limit": 1,
+      "time_limit": "00:55:00"
+    },
+    "source": {
+      "network_fetches_permitted": false,
+      "sglang_commit": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3"
+    }
+  },
+  "chronology": {
+    "comparison_permitted_after_expectations_commit": true,
+    "held_out_values_may_enter_arithmetic_or_predictions": false,
+    "parameters_may_be_fit": false,
+    "prior_records_may_be_amended": false,
+    "result_publication_permitted_after_capture": true,
+    "this_is_a_new_cell": true
+  },
+  "comparison_gate": {
+    "both_correction_directions_required": [
+      "DeepEP dispatch and combine service with a zero-parameter registered-cell projection",
+      "rank-preserving HBM read and write bytes"
+    ],
+    "deep_ep_status_for_this_cell": "UNPRICED_BY_CONSTRUCTION",
+    "expected_publication": "bindings, bytes and routing evidence with null calibration movement",
+    "never_publish_downward_correction_alone": true,
+    "signed_movement_tokens_per_second_per_node": null
+  },
+  "declared_extrapolation_ledger": [
+    {
+      "difference": "expert-parallel peer count",
+      "feasible": 4,
+      "registered": 72,
+      "signed_effect_expected_before_comparison": "fewer participants reduce collective work and omit the registered peer topology; no DeepEP service is inferred"
+    },
+    {
+      "difference": "routed expert total",
+      "feasible": 16,
+      "registered": 256,
+      "signed_effect_expected_before_comparison": "the smaller unique expert population changes routing frequencies and can increase repeated expert selection; grouped-kernel occupancy remains indeterminate"
+    },
+    {
+      "difference": "physical expert-slot population and redundancy",
+      "feasible": "16 unique experts in 16 slots",
+      "registered": "256 unique experts in 288 slots",
+      "signed_effect_expected_before_comparison": "the fallback cell omits the redundant-slot cohort, leaving duplicate-residency and routing-locality effects indeterminate"
+    },
+    {
+      "difference": "captured transformer depth",
+      "feasible": 4,
+      "registered": 61,
+      "signed_effect_expected_before_comparison": "four layers reduce raw step service; only separately identified per-layer services could use the frozen multipliers"
+    },
+    {
+      "difference": "node count",
+      "feasible": 1,
+      "registered": 9,
+      "signed_effect_expected_before_comparison": "one node omits fabric serialization, switch traversal and cross-node contention, biasing communication work downward"
+    },
+    {
+      "difference": "GPUs per node",
+      "feasible": 4,
+      "registered": 8,
+      "signed_effect_expected_before_comparison": "four GPUs reduce the number of intra-node participants"
+    },
+    {
+      "difference": "expert residency per rank",
+      "feasible": 4,
+      "registered": 4,
+      "signed_effect_expected_before_comparison": "matched; no routed-weight residency-count bias is expected"
+    },
+    {
+      "difference": "CUDA graph launch mode",
+      "feasible": "disabled for semantic instrumentation",
+      "registered": "standard graph decode",
+      "signed_effect_expected_before_comparison": "eager launch raises host overhead but leaves deterministic kernel service identifiable; raw eager step time cannot become registered graph-mode service"
+    },
+    {
+      "difference": "MoE communication backend",
+      "feasible": "SGLang standard none backend and StandardDispatcher",
+      "registered": "DeepEP",
+      "signed_effect_expected_before_comparison": "the physical launches and durations are backend-specific, DeepEP dispatch and combine remain unpriced, and calibration movement is forced null"
+    },
+    {
+      "difference": "weight materialization",
+      "feasible": "dummy weights",
+      "registered": "pre-staged local DeepSeek-V3 model",
+      "signed_effect_expected_before_comparison": "tensor shapes and byte demand remain measurable, but dummy-activation routing IDs are not production routing statistics"
+    }
+  ],
+  "disclosure_guard": {
+    "fatal_not_survivable": {
+      "condition": "a held-out value enters arithmetic, a prediction comparison, fitting or reproduction in a published artifact",
+      "disposition": "the run is void and CORE-66 remains open"
+    },
+    "incidental_exposure": {
+      "condition": "a held-out value is incidentally exposed without entering arithmetic, comparison, fitting or a published reproduction",
+      "disposition": "survivable with a disclosure-ledger row",
+      "reason": "the derivation contains zero free or fitted parameters and its arithmetic is independently checkable from the published record",
+      "still_interpretable": "physical identity bindings, HBM counters and routing records; calibration movement is already forced null by the missing DeepEP service"
+    }
+  },
+  "expected_candidate_decisions": {
+    "expert_population": "routing records can check the 1/64 resident-count and 1/9 assignment interpretations, subject to the declared dummy-routing limitation",
+    "layer_type_composition": "semantic ranges and physical kernels can check the three-dense then one-MoE composition",
+    "other_kernel_counterparts": "non-DeepEP attention, MLA, dense feed-forward, router, shared-expert and data-parallel LM-head counterparts can bind; four DeepEP families remain absent",
+    "weight_read_volume": "rank-preserving HBM counters decide actual fallback-cell per-step reads if permitted; counter denial leaves the candidate undecidable"
+  },
+  "identity_and_physics_outputs": [
+    "physical SGLang kernel identities bound to as many as possible of the 37 physically unbound semantic rows",
+    "resolved attention, MLA and MoE runner backends",
+    "data-parallel LM-head path",
+    "rank-preserving per-kernel and per-step HBM read and write bytes when permitted",
+    "per-layer routed expert IDs, assignment counts, owner ranks and local physical slot IDs"
+  ],
+  "physical_sanity_freeze": {
+    "constituent_service_ceiling": "the measured decode-step wall time containing the constituent launch",
+    "hbm_floor": "measured HBM read plus write bytes divided by the GH200 peak HBM bandwidth",
+    "independent_angles": [
+      "kernel duration against measured HBM bytes and the HBM floor",
+      "fallback collective launches against the one-node participant topology",
+      "end-to-end decode shape against the frozen three-dense then one-MoE composition"
+    ]
+  },
+  "registered_capture_disposition": {
+    "reason": "72 ranks over nine nodes are unavailable on the three-node, twelve-GPU GH200 partition",
+    "registered_expert_slots": 288,
+    "registered_unique_routed_experts": 256,
+    "status": "BLOCKED_IMPOSSIBLE_ON_PROJECT_CLUSTER"
+  },
+  "scale_checks": {
+    "assignment_compute_candidate": "1/9",
+    "count_and_resident_weight_candidate": "1/64",
+    "routing_evidence_required": "per layer, rank, routed expert ID, assignment count, owner rank and local physical slot ID"
+  },
+  "schema": "simllm-deployment-curve-core66-ep4-fallback-expectations-v1",
+  "service_multiplier_freeze": {
+    "common": "61/4",
+    "dense": 1,
+    "moe": 58,
+    "output": 1,
+    "step": 1
+  },
+  "task": "CORE-66"
+}

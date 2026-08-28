@@ -148,6 +148,26 @@ def test_ep8_reader_and_disclosure_ledgers_are_clean() -> None:
     }
 
 
+def test_ep4_fallback_access_and_incidental_exposure_are_frozen() -> None:
+    access = _load("core66f_reader_access_manifest.json")
+    disclosure = _load("core66f_disclosure_ledger.json")
+
+    assert access["all_reader_forbidden_ledgers_empty"] is True
+    assert access["reader_access_event_count"] == 12
+    assert len(access["access_tranches"]) == 6
+    assert all(row["forbidden_ledger_bytes"] == 0 for row in access["access_tranches"])
+    assert disclosure["fatal_held_out_use_occurred"] is False
+    assert disclosure["incidental_exposure_count"] == 2
+    assert len(disclosure["incidental_exposures"]) == 2
+    assert all(not row["arithmetic_use"] for row in disclosure["incidental_exposures"])
+    assert all(not row["comparison_use"] for row in disclosure["incidental_exposures"])
+    assert all(not row["fitting_use"] for row in disclosure["incidental_exposures"])
+    assert all(
+        not row["published_numeric_reproduction"]
+        for row in disclosure["incidental_exposures"]
+    )
+
+
 def test_ep8_scheduler_definition_does_not_override_user_association() -> None:
     refusal = _load("core66c_scheduler_refusal.json")
 

@@ -1,0 +1,26 @@
+{
+  "fatal_held_out_use_occurred": false,
+  "incidental_exposure_count": 2,
+  "incidental_exposures": [
+    {
+      "arithmetic_use": false,
+      "comparison_use": false,
+      "fitting_use": false,
+      "published_numeric_reproduction": false,
+      "source": "tests/test_deployment_curve_core65_result.py",
+      "what_was_seen": "retained calibration-output numeric fields during narrow candidate-key discovery"
+    },
+    {
+      "arithmetic_use": false,
+      "comparison_use": false,
+      "fitting_use": false,
+      "published_numeric_reproduction": false,
+      "source": "guarded markdown-task:CORE-66 access",
+      "what_was_seen": "the registered standard-decode anchor embedded in the task text"
+    }
+  ],
+  "result_interpretable": true,
+  "still_interpretable": "physical kernel identities, HBM bytes and routing records; calibration movement is forced null without DeepEP pricing",
+  "schema": "simllm-deployment-curve-core66f-disclosure-v1",
+  "task": "CORE-66"
+}
