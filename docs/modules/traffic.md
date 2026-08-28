@@ -1080,7 +1080,17 @@ route to those higher degrees.
   16 remain declared simulation-only mesh extrapolations with no hardware
   counterpart on this node class; agreement at degrees 1 to 3 supports but does
   not prove them. Preserve every merged TRAF-69, TRAF-70 and TRAF-72 artifact
-  byte for byte and publish this study under its own records.
+  byte for byte and publish this study under its own records. The
+  [first frozen capture](../../examples/nvlink_incast_validation_v1/RESULTS.md),
+  Merlin job `200456`, completed all 42 rows with every inherited
+  TRAF-70 guard, the full matrix guard and the preservation guard passing. Its
+  degree-3 256 KiB samples reached a maximum sequential launch-skew fraction of
+  10.501 percent against the frozen 10.000 percent ceiling, so FG11 voided the
+  whole run before behavioral scoring. Retain that refutation as the study's
+  first result. Before a future capture, land a new expectations-only freeze
+  whose larger long-flow rungs leave physical margin below the launch-skew
+  ceiling; then run one new short paced cell. TRAF-73 stays open until a
+  non-void comparison publishes all six per-cell verdicts.
 - TRAF-20 (Precision; P2; M): qualify the delivered `loggopsim-ideal`
   fast level for schedule-shape studies that do not need per-flow transport
   behavior. The

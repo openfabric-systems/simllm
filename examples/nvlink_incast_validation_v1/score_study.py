@@ -167,6 +167,13 @@ def audit_hardware(
             "pass_cells": pass_count,
             "miss_cells": miss_count,
             "void_cells": sum(row["verdict"] == "VOID" for row in comparisons),
+            "maximum_launch_skew_fraction": max(
+                row["launch_skew_fraction"]
+                for row in guard_result["launch_skew_rows"]
+            ),
+            "launch_skew_fraction_high": frozen["hardware_arm"]["launch_skew"][
+                "negligible_fraction_high"
+            ],
             "worst_absolute_signed_relative_error": max(
                 (
                     max(
@@ -544,34 +551,69 @@ def render_markdown(score: dict[str, Any]) -> str:
             f"{hardware_completion} | {simulation_completion} | {row['verdict']} | "
             f"`{row['responsible_parameter']}` |"
         )
-    worst = score["summary"]["worst_absolute_signed_relative_error"]
+    summary = score["summary"]
     lines += [
         "",
         "Signed relative error is `(simulation - hardware) / hardware`; the frozen",
         "acceptance band is [-15%, +15%]. Per-flow goodput and all seven repetitions",
         "remain in the compact JSON record, while the table leads with the receiver",
         "aggregate and per-source completion values that decide each cell.",
+        "For a void run, those signed differences are arithmetic diagnostics only and",
+        "receive no behavioral acceptance interpretation.",
         "",
         "## What ran",
         "",
         "One short exclusive `a100-hourly` cell ran the unchanged corrected TRAF-70",
         "persistent peer-write producer on one qualified four-A100 `NV4` node. It",
         "covered 256 KiB and 512 KiB flows at incast degrees 1, 2 and 3 with seven",
-        "repetitions per cell. The comparison uses the six predictions frozen at",
-        f"commit `{score['expectations_commit'][:7]}` before the hardware run.",
+        "repetitions per cell. The comparison uses the six predictions frozen at commit",
+        f"`{score['expectations_commit'][:7]}` before Merlin job `{score['scheduler_job']}` ran.",
         "",
         "## What came out",
         "",
-        f"The run status is **{score['status']}**. The deciding worst absolute signed",
-        f"relative error is {100 * worst:.3f} percent.",
-        f"{score['summary']['pass_cells']} of 6 cells pass.",
-        f"{score['summary']['miss_cells']} miss; fatal guards are reported separately.",
-        "and are never added to that behavioral count.",
+    ]
+    if score["measurement_validity"] == "VOID_FATAL_GUARD":
+        lines += [
+            f"The run status is **{score['status']}**. The deciding maximum",
+            (
+                "launch-skew fraction was "
+                f"{100 * summary['maximum_launch_skew_fraction']:.3f} percent against "
+                "the frozen"
+            ),
+            (
+                f"{100 * summary['launch_skew_fraction_high']:.3f} percent ceiling. "
+                "Fatal guard FG11 therefore failed and"
+            ),
+            "the whole run is void. None of the six hardware cells",
+            "receives a pass or miss verdict.",
+        ]
+    else:
+        lines += [
+            f"The run status is **{score['status']}**. The deciding worst absolute signed",
+            "relative error is",
+            f"{100 * summary['worst_absolute_signed_relative_error']:.3f} percent.",
+            f"{summary['pass_cells']} of 6 cells pass and {summary['miss_cells']} miss.",
+            "Fatal guards are separate and never enter that behavioral count.",
+        ]
+    if score["measurement_validity"] == "VOID_FATAL_GUARD":
+        effect_detail = [
+            "domain at the only incast degrees this node can realize, but the void result",
+            "validates no behavioral prediction. It refutes the frozen claim that the",
+            "256 KiB degree-3 launch skew is negligible in every repetition. A future",
+            "capture needs a new expectations-only freeze with larger long-flow rungs.",
+        ]
+    else:
+        effect_detail = [
+            "at the only incast degrees this node can realize and supplies the frozen",
+            "per-cell behavioral verdicts.",
+        ]
+    lines += [
         "",
         "## What it changes for the project",
         "",
-        f"{score['registry_effect']}. The result directly tests the scored NVLink",
-        "domain at the only incast degrees this node can realize.",
+        f"{score['registry_effect']}.",
+        "The observations exercise the scored NVLink",
+        *effect_detail,
         "",
         "## What it does not change",
         "",
@@ -582,10 +624,13 @@ def render_markdown(score: dict[str, Any]) -> str:
         "",
         "## Fatal guards and preservation",
         "",
-        f"Fatal-guard verdict: **{score['fatal_guards']['verdict']}**.",
-        f"All {score['preservation']['artifact_count']} merged study and scored source",
-        "artifacts remain byte-identical. The raw capture stays outside Git; this",
-        "study publishes its own compact score, comparison table and figure.",
+        (
+            f"Fatal-guard verdict: **{score['fatal_guards']['verdict']}**. All "
+            f"{score['preservation']['artifact_count']} merged"
+        ),
+        "study and scored source artifacts remain byte-identical. The raw capture stays",
+        "outside Git; this study publishes its own compact score, comparison table and",
+        "figure.",
     ]
     return "\n".join(lines) + "\n"
 

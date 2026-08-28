@@ -117,7 +117,7 @@ def render(result: dict[str, Any], output_dir: Path) -> tuple[Path, Path]:
         axis.spines["top"].set_visible(False)
         axis.spines["right"].set_visible(False)
         for row in rows:
-            if row["verdict"] != "PASS":
+            if row["verdict"] == "MISS":
                 axis.annotate(
                     row["responsible_parameter"].replace("_", " "),
                     (row["degree"], row["hardware_aggregate_gbps"]),
@@ -135,16 +135,26 @@ def render(result: dict[str, Any], output_dir: Path) -> tuple[Path, Path]:
         handles[::-1],
         labels[::-1],
         loc="upper center",
-        bbox_to_anchor=(0.5, 0.88),
+        bbox_to_anchor=(0.5, 0.84),
         ncol=3,
         frameon=False,
         fontsize=8.4,
     )
     fig.suptitle(
         "NV4 long-flow incast: measured hardware against scored simulation",
-        fontsize=11.2,
+        fontsize=10.5,
         y=0.98,
     )
+    if result["measurement_validity"] == "VOID_FATAL_GUARD":
+        fig.text(
+            0.5,
+            0.91,
+            "Diagnostic only: run void because frozen launch-skew guard FG11 failed",
+            ha="center",
+            va="center",
+            fontsize=8.2,
+            color=SIMULATION,
+        )
     fig.text(
         0.5,
         0.015,
@@ -157,7 +167,7 @@ def render(result: dict[str, Any], output_dir: Path) -> tuple[Path, Path]:
         fontsize=7.6,
         color=MUTED,
     )
-    fig.subplots_adjust(left=0.10, right=0.985, bottom=0.20, top=0.72, wspace=0.14)
+    fig.subplots_adjust(left=0.10, right=0.985, bottom=0.20, top=0.68, wspace=0.14)
     pdf = output_dir / f"{FIGURE_STEM}.pdf"
     png = output_dir / f"{FIGURE_STEM}.png"
     fig.savefig(
