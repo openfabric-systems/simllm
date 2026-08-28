@@ -1,0 +1,172 @@
+{
+  "schema": "simllm-external-db-parity-queries-v1",
+  "frozen_before_first_comparison": true,
+  "source": {
+    "aiconfigurator": "0.11.0",
+    "aiconfigurator_core": "0.11.0",
+    "system": "h200_sxm",
+    "backend": "trtllm",
+    "database_version": "1.3.0rc10",
+    "database_mode": "SILICON",
+    "shared_layer": false,
+    "surface": "python"
+  },
+  "queries": [
+    {
+      "id": "I2-01",
+      "rule": "exact nested GEMM hit returned verbatim after load-time SOL correction",
+      "operation": "gemm",
+      "args": {"m": 4353, "n": 65536, "k": 51200, "quant_mode": "bfloat16"}
+    },
+    {
+      "id": "I2-02",
+      "rule": "GEMM raw-m linear interpolation inside one exact n-k site",
+      "operation": "gemm",
+      "args": {"m": 5000, "n": 65536, "k": 51200, "quant_mode": "bfloat16"}
+    },
+    {
+      "id": "I2-03",
+      "rule": "GEMM cross-site inverse-square utilization blend in joint log2 n-k space",
+      "operation": "gemm",
+      "args": {"m": 257, "n": 7000, "k": 5000, "quant_mode": "bfloat16"}
+    },
+    {
+      "id": "I2-04",
+      "rule": "GEMM upper boundary holds the median utilization of the final three m anchors",
+      "operation": "gemm",
+      "args": {"m": 65536, "n": 8192, "k": 5120, "quant_mode": "bfloat16"}
+    },
+    {
+      "id": "I2-05",
+      "rule": "context attention exact nested grid hit",
+      "operation": "context_attention",
+      "args": {"b": 8, "s": 16384, "prefix": 0, "n": 96, "n_kv": 1, "kv_quant_mode": "bfloat16", "fmha_quant_mode": "bfloat16", "window_size": 128, "head_size": 64}
+    },
+    {
+      "id": "I2-06",
+      "rule": "context attention interpolates in sqrt latency only on the sequence axis",
+      "operation": "context_attention",
+      "args": {"b": 8, "s": 14336, "prefix": 0, "n": 96, "n_kv": 1, "kv_quant_mode": "bfloat16", "fmha_quant_mode": "bfloat16", "window_size": 128, "head_size": 64}
+    },
+    {
+      "id": "I2-07",
+      "rule": "context prefix resolves at full sequence then applies the frozen quadratic prefix fraction",
+      "operation": "context_attention",
+      "args": {"b": 8, "s": 12288, "prefix": 4096, "n": 96, "n_kv": 1, "kv_quant_mode": "bfloat16", "fmha_quant_mode": "bfloat16", "window_size": 128, "head_size": 64}
+    },
+    {
+      "id": "I2-08",
+      "rule": "context attention beyond the ragged batch boundary holds boundary utilization",
+      "operation": "context_attention",
+      "args": {"b": 16, "s": 16384, "prefix": 0, "n": 96, "n_kv": 1, "kv_quant_mode": "bfloat16", "fmha_quant_mode": "bfloat16", "window_size": 128, "head_size": 64}
+    },
+    {
+      "id": "I2-09",
+      "rule": "generation attention averages five integer sequence samples from 0.9s through 1.1s",
+      "operation": "generation_attention",
+      "args": {"b": 64, "s": 4000, "n": 96, "n_kv": 8, "kv_quant_mode": "fp8", "window_size": 0, "head_size": 64}
+    },
+    {
+      "id": "I2-10",
+      "rule": "generation attention smoothing preserves repeated integer samples near the sequence floor",
+      "operation": "generation_attention",
+      "args": {"b": 64, "s": 3, "n": 96, "n_kv": 8, "kv_quant_mode": "fp8", "window_size": 0, "head_size": 64}
+    },
+    {
+      "id": "I2-11",
+      "rule": "generation attention raw-latency grid interpolation applies on batch and sequence",
+      "operation": "generation_attention",
+      "args": {"b": 48, "s": 6000, "n": 96, "n_kv": 8, "kv_quant_mode": "fp8", "window_size": 0, "head_size": 64}
+    },
+    {
+      "id": "I2-12",
+      "rule": "standard MoE exact token-curve hit",
+      "operation": "moe",
+      "args": {"num_tokens": 256, "hidden_size": 4096, "inter_size": 1536, "topk": 8, "num_experts": 128, "moe_tp_size": 4, "moe_ep_size": 4, "quant_mode": "bfloat16", "workload_distribution": "balanced"}
+    },
+    {
+      "id": "I2-13",
+      "rule": "standard MoE raw linear interpolation on the token curve",
+      "operation": "moe",
+      "args": {"num_tokens": 224, "hidden_size": 4096, "inter_size": 1536, "topk": 8, "num_experts": 128, "moe_tp_size": 4, "moe_ep_size": 4, "quant_mode": "bfloat16", "workload_distribution": "balanced"}
+    },
+    {
+      "id": "I2-14",
+      "rule": "standard MoE upper token boundary holds utilization",
+      "operation": "moe",
+      "args": {"num_tokens": 20000, "hidden_size": 4096, "inter_size": 1536, "topk": 8, "num_experts": 128, "moe_tp_size": 4, "moe_ep_size": 4, "quant_mode": "bfloat16", "workload_distribution": "balanced"}
+    },
+    {
+      "id": "I2-15",
+      "rule": "custom all-reduce exact hit uses the bfloat16-to-half lookup rekey",
+      "operation": "custom_allreduce",
+      "args": {"quant_mode": "half", "tp_size": 8, "size": 536870912}
+    },
+    {
+      "id": "I2-16",
+      "rule": "custom all-reduce raw linear interpolation on message bytes",
+      "operation": "custom_allreduce",
+      "args": {"quant_mode": "half", "tp_size": 8, "size": 786432}
+    },
+    {
+      "id": "I2-17",
+      "rule": "custom all-reduce lower message boundary holds utilization",
+      "operation": "custom_allreduce",
+      "args": {"quant_mode": "half", "tp_size": 8, "size": 64}
+    },
+    {
+      "id": "I2-18",
+      "rule": "custom all-reduce upper message boundary holds utilization",
+      "operation": "custom_allreduce",
+      "args": {"quant_mode": "half", "tp_size": 8, "size": 1073741824}
+    },
+    {
+      "id": "I2-19",
+      "rule": "GDN generation exact hit uses the canonical recurrence-kernel rekey",
+      "operation": "gdn",
+      "args": {"phase": "generation", "kernel_source": "fused_sigmoid_gating_delta_rule_update", "batch_size": 512, "seq_len": null, "d_model": 2048, "num_k_heads": 16, "head_k_dim": 128, "num_v_heads": 16, "head_v_dim": 128, "d_conv": 4}
+    },
+    {
+      "id": "I2-20",
+      "rule": "GDN generation raw linear interpolation on batch",
+      "operation": "gdn",
+      "args": {"phase": "generation", "kernel_source": "fused_sigmoid_gating_delta_rule_update", "batch_size": 768, "seq_len": null, "d_model": 2048, "num_k_heads": 16, "head_k_dim": 128, "num_v_heads": 16, "head_v_dim": 128, "d_conv": 4}
+    },
+    {
+      "id": "I2-21",
+      "rule": "GDN generation upper batch boundary holds utilization",
+      "operation": "gdn",
+      "args": {"phase": "generation", "kernel_source": "fused_sigmoid_gating_delta_rule_update", "batch_size": 2048, "seq_len": null, "d_model": 2048, "num_k_heads": 16, "head_k_dim": 128, "num_v_heads": 16, "head_v_dim": 128, "d_conv": 4}
+    },
+    {
+      "id": "I2-22",
+      "rule": "compute-scale exact two-dimensional grid hit",
+      "operation": "compute_scale",
+      "args": {"m": 32768, "k": 51200, "quant_mode": "fp8"}
+    },
+    {
+      "id": "I2-23",
+      "rule": "compute-scale raw two-dimensional grid interpolation",
+      "operation": "compute_scale",
+      "args": {"m": 5000, "k": 6000, "quant_mode": "fp8"}
+    },
+    {
+      "id": "I2-24",
+      "rule": "compute-scale holds the clamped global boundary value flat",
+      "operation": "compute_scale",
+      "args": {"m": 0, "k": 1, "quant_mode": "fp8"}
+    },
+    {
+      "id": "I2-25",
+      "rule": "scale-matrix raw two-dimensional grid interpolation",
+      "operation": "scale_matrix",
+      "args": {"m": 5000, "k": 6000, "quant_mode": "fp8"}
+    },
+    {
+      "id": "I2-26",
+      "rule": "scale-matrix clamps coordinates then restores query SOL by boundary-utilization scaling",
+      "operation": "scale_matrix",
+      "args": {"m": 65536, "k": 131072, "quant_mode": "fp8"}
+    }
+  ]
+}
