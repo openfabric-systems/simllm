@@ -1207,9 +1207,16 @@ correction direction can be priced. CORE-66 remains open.
   module and the `nsys` executable. The timing pass exited 127 before SGLang,
   the counter pass did not run and zero physical rows were bound. The void
   capture and its EP4-to-EP72 deviation ledger are registered in
-  `core66_ep4_capture_result.json`. CORE-66 remains open on an independently
-  validated GH200 profiler environment and hardware capable of the registered
-  EP72 cell; no further feasible-cell submission is authorized by this result.
+  `core66_ep4_capture_result.json`. The environment-only retry in
+  `core66_ep4_env_retry_expectations.json` then reused the exact successful
+  CORE-61 CUDA 12.9 modules, profiler tools and ARM Python 3.11 interpreter.
+  Job `200891` verified that environment but stopped before profiling because
+  the staged `sgl-deep-ep` wheel requires CUDA 13 and is tagged for CPython
+  3.12 x86-64, while the recovered environment is cu129, CPython 3.11 and ARM
+  aarch64. The fail-fast result is registered in
+  `core66_ep4_env_retry_result.json`. CORE-66 remains open on a compatible
+  cu129, CPython 3.11, ARM aarch64 DeepEP build and hardware capable of the
+  registered EP72 cell; no further submission is authorized by this result.
 
 - CORE-53 (Precision; P1; M): replace the first disaggregated session slice's
   roofline bootstrap with the accepted COMP-64 kernel-cycle lookup record.

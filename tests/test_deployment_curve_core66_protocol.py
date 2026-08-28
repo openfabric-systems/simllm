@@ -23,6 +23,9 @@ EP4_RESULT_PATH = (
 EP4_ENV_RETRY_EXPECTATIONS_PATH = (
     ROOT / "examples/deployment_curve_v1/core66_ep4_env_retry_expectations.json"
 )
+EP4_ENV_RETRY_RESULT_PATH = (
+    ROOT / "examples/deployment_curve_v1/core66_ep4_env_retry_result.json"
+)
 
 
 def _load_reader() -> ModuleType:
@@ -358,3 +361,41 @@ def test_ep4_environment_retry_reuses_core61_and_keeps_cell_unchanged() -> None:
     assert expectations["comparison_gate"][
         "never_publish_downward_correction_alone"
     ]
+
+
+def test_ep4_environment_retry_fails_closed_on_deepep_cuda_major() -> None:
+    result = json.loads(EP4_ENV_RETRY_RESULT_PATH.read_text(encoding="utf-8"))
+
+    assert result["status"] == "VOID_PREFLIGHT_DEEP_EP_CUDA_MAJOR_MISMATCH"
+    assert result["achieved_capture_configuration"] is None
+    assert result["hardware"]["allocated_job_id"] == 200891
+    assert result["hardware"]["allocated_gpu_count"] == 4
+    assert result["hardware"]["elapsed_seconds"] == 75
+    assert result["hardware"]["exit_code"] == "4:0"
+    assert result["hardware"]["gpu_hours_consumed"] == 300 / 3600
+    preflight = result["environment_preflight"]
+    assert preflight["status"] == "FAILED_CLOSED_BEFORE_PROFILER"
+    assert preflight["profiler_call_count"] == 0
+    assert preflight["passed_by_direct_record"]["loaded_modules"] == [
+        "gcc/12.3.0",
+        "cuda/12.9.1",
+    ]
+    assert preflight["passed_by_direct_record"]["nvcc_version"] == "12.9.86"
+    assert preflight["passed_by_direct_record"]["nsys_version"].startswith(
+        "2025.1.3.140"
+    )
+    deep_ep = preflight["deep_ep"]
+    assert deep_ep["build_expected_cuda_major"] == 13
+    assert deep_ep["build_cuda_tag"] == "cu130"
+    assert deep_ep["selected_interpreter_machine"] == "aarch64"
+    assert deep_ep["static_wheel_tags_compatible"] is False
+    identities = result["identity_and_physics"]
+    assert identities["physical_identity_binding_count"] == 0
+    assert identities["deep_ep_dispatch_launch_count"] == 0
+    assert identities["deep_ep_combine_launch_count"] == 0
+    assert identities["hbm_counter_permission"] == "NOT_REACHED"
+    movement = result["calibration_only"]
+    assert movement["signed_movement_tokens_per_second_per_node"] is None
+    assert movement["service_multipliers_applied"] is False
+    assert movement["downward_correction_published_alone"] is False
+    assert result["protocol"]["fatal_held_out_use_occurred"] is False
