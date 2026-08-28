@@ -383,6 +383,15 @@ examples/nvlink_flow_dynamics_v1/*.csv text eol=lf
 examples/nvlink_flow_dynamics_v1/figures/*.pdf -text -diff
 examples/nvlink_flow_dynamics_v1/figures/*.png -text -diff
 tests/test_nvlink_flow_dynamics_*.py text eol=lf
+examples/nvlink_rnic_comparison_v2/*.cpp text eol=lf
+examples/nvlink_rnic_comparison_v2/*.csv text eol=lf
+examples/nvlink_rnic_comparison_v2/*.json text eol=lf
+examples/nvlink_rnic_comparison_v2/*.md text eol=lf
+examples/nvlink_rnic_comparison_v2/*.py text eol=lf
+examples/nvlink_rnic_comparison_v2/*.txt text eol=lf
+examples/nvlink_rnic_comparison_v2/figures/*.pdf -text -diff
+examples/nvlink_rnic_comparison_v2/figures/*.png -text -diff
+tests/test_nvlink_rnic_comparison_v2_*.py text eol=lf
 examples/frontier_comparison_v1/*.json text eol=lf
 examples/frontier_comparison_v1/*.md text eol=lf
 examples/frontier_comparison_v1/*.py text eol=lf
