@@ -1823,10 +1823,15 @@ interpolation and declared above-rank-8 extrapolation while retaining NCCL as
 the operation source. The
 [MiniMax expert-parallel study](../../examples/minimax_ep_scaling_v1/RESULTS.md)
 is nonvoid: E passes 4 of 4 bit-equal dispatch cells and C passes 4 of 4
-decode quotients at exactly 1.0. Its packet comparison refutes both frozen
-growth bands because the donor's half-precision `tokens * hidden * E` buffer
-and the routed FP8 expert payload are different traffic abstractions. COMP-82
-through COMP-86 retain their listed identity, surface and live-chain gaps.
+decode quotients at exactly 1.0. The first packet comparison is retained only
+as void strategy evidence because the donor's half-precision
+`tokens * hidden * E` buffer and the routed FP8 expert payload are different
+traffic abstractions. Corrected Family D compares an opaque NCCL-table cost
+model with a direct packet Clos cost model on the same requested logical
+element count. It refutes all three measured cells; EP 256 is an unscored
+post-specified diagnostic, and the comparison does not isolate contention.
+COMP-82 through COMP-86 retain their listed identity, surface and live-chain
+gaps.
 COMP-87 specifically owns the imported but undispatched WideEP MoE, MLA BMM,
 Mamba2, MLA and generation-MLA operation families; it does not own the generic
 composer or MiniMax MoEDispatch, which are literal here. COMP-88 owns the

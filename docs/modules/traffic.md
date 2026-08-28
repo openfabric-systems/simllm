@@ -1054,27 +1054,36 @@ The MiniMax expert-parallel packet arm routes a study-only balanced population
 as whole token-expert assignments, emits messages only to realized
 destinations, and declares FP8 dispatch separately from BF16 combine. The
 [MiniMax scaling result](../../examples/minimax_ep_scaling_v1/RESULTS.md)
-publishes the original run as void, then compares identical dense BF16
-all-gather plus reduce-scatter traffic through the external NCCL table and the
-packet simulator. The corrected packet-to-external ratios are 0.025905,
-0.353015, 0.802618 and 1.187022 at expert-parallel widths 8, 32, 128 and 256;
-the first three retain their frozen refutations, while EP 256 uses the frozen
-extrapolation from a measured full EP 128 population. EP 8 has exactly zero
-expected and realized cross-node senders per receiver, so its ratio measures
-the packet arm's missing intra-node transport coverage and fixed collective
-overheads rather than contention. The ratio rise is those omissions at narrow
-widths meeting contention omitted by the external extrapolation at wide
-widths; neither stack is uniformly better, and the crossover near EP 200 is
-where the latter effect outgrows the former. The unscored sparse arm
-simulates every realized message at every width. At EP 256 it realizes 29.78125
-cross-node senders per receiver against an analytical 29.576912 and carries
-97,920 dispatch plus 195,840 combine bytes per rank. The isolated-engine
-default is unchanged. The landed NVLink domain from `nvlink_flow_dynamics_v1`
-and `nvlink_rnic_comparison_v1` supplies the intra-node transport authority;
+publishes the original run as void, then compares two cost models on the same
+requested generic half-precision all-gather plus reduce-scatter element count.
+The external arm is an opaque eight-rank NCCL table measurement scaled by a
+rank factor, with no source, destination, path or message ledger. The packet
+arm is a direct all-pairs realization on a concrete Clos placement. Their
+ratio is not contention isolation. The measured ratios 0.025905, 0.353015 and
+0.802618 at expert-parallel widths 8, 32 and 128 refute all three scored Family
+D cells. The EP 256 ratio 1.187022 is an unscored diagnostic because its
+`31 / 15` rule was specified after the corrected expectations freeze. EP 8 has
+zero cross-node senders per receiver and is not a contention cell.
+
+The external table identifies its dtype only as `half`, not BF16, and names
+its interpolation axis `message_bytes` while the caller passes an element
+count. At EP 128 its 55.445 us eight-rank donor latency contains a 43.211613 us
+fixed and algorithmic residual after ideal two-phase ring serialization. The
+rank extrapolator inflates that residual to 28.664347 ms over 65 layers, more
+than the observed 7.259566 ms external-minus-packet gap. Differing fixed-cost
+treatment fully explains the gap, so the study makes no crossover or
+contention-attribution claim.
+
+The unscored sparse arm simulates every realized message at every width. At EP
+256 it reconstructs 29.78125 cross-node senders per receiver from simulator
+completion rows, against an analytical 29.576912, and carries 97,920 dispatch
+plus 195,840 combine bytes per rank. The isolated-engine default is unchanged.
+The landed NVLink domain from `nvlink_flow_dynamics_v1` and
+`nvlink_rnic_comparison_v1` supplies the intra-node transport authority;
 TRAF-76 owns its packet-arm binding and the fixed collective overheads.
-TRAF-74 owns observed routing geometry, TRAF-75 owns
-supported-path directional precision, TRAF-73 owns hardware transport
-calibration, and TRAF-26 owns complete production peer workloads.
+TRAF-74 owns observed routing geometry, TRAF-75 owns supported-path directional
+precision, TRAF-73 owns hardware transport calibration, and TRAF-26 owns
+complete production peer workloads.
 
 NVLink hardware incast identification is long-flow only. Sender launches on
 the real node serialize through sequential PCIe writes, so nanosecond-scale

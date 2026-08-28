@@ -1,8 +1,12 @@
 {
-  "caption": "Family D compares identical dense half all-gather plus reduce-scatter bytes, with BF16 half-precision elements. Family S compares that dense fallback with sparse routed FP8 dispatch plus BF16 combine. Every point samples one layer of 65; D at EP 256 extrapolates from the measured full EP 128 population.",
+  "caption": "Family D compares two cost models, not contention isolation: an opaque eight-rank NCCL-table measurement scaled by rank versus direct all-pairs packet transfers on a Clos. Both request the dense fallback's generic half-precision all-gather plus reduce-scatter element count. EP 8 has no cross-node contention; EP 256 is a post-specified unscored diagnostic. Family S compares the dense fallback with sparse routed FP8 dispatch plus BF16 combine.",
+  "point_annotations": {
+    "ep256": "unscored post-specified diagnostic",
+    "ep8": "not a contention comparison: no cross-node traffic"
+  },
   "series": [
     {
-      "label": "Dense SM90 fallback\nBF16 all-gather + reduce-scatter",
+      "label": "External NCCL cost model\nDense fallback: half all-gather + reduce-scatter",
       "panel": "family-s-strategy-steps",
       "strategy": "dense SM90 general fallback",
       "traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements"
@@ -14,21 +18,21 @@
       "traffic_definition": "top-k token assignments routed only to realized expert-owner ranks, with FP8 dispatch and BF16 combine"
     },
     {
-      "label": "Dense SM90 fallback\nBF16 all-gather + reduce-scatter",
-      "panel": "family-d-identical-traffic",
+      "label": "External NCCL cost model\nDense fallback: half all-gather + reduce-scatter",
+      "panel": "family-d-cost-model-times",
       "strategy": "dense SM90 general fallback",
       "traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements"
     },
     {
-      "label": "Dense packet model\nsame BF16 all-gather + reduce-scatter",
-      "panel": "family-d-identical-traffic",
+      "label": "Packet Clos cost model\nDirect all-pairs half all-gather + reduce-scatter",
+      "panel": "family-d-cost-model-times",
       "strategy": "dense SM90 general fallback",
       "traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements"
     },
     {
-      "label": "Dense packet / external, identical half traffic\nBF16 all-gather + reduce-scatter",
-      "panel": "family-d-contention-ratio",
-      "strategy": "same dense strategy in numerator and denominator",
+      "label": "Packet Clos / external NCCL cost model\nsame requested half-element count",
+      "panel": "family-d-cost-model-ratio",
+      "strategy": "same requested dense logical element count, different physical realizations and cost models",
       "traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements"
     }
   ]

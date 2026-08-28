@@ -16,11 +16,11 @@ ROOT = Path(__file__).resolve().parents[1]
 STUDY = ROOT / "examples/minimax_ep_scaling_v1"
 RECORD = STUDY / "record.json"
 RESULTS_CSV = STUDY / "results.csv"
-RECORD_SHA256 = "d99b615cbcf36c60b12e806266f5d4281db3964b39a7134b8a94a12ca9f59cc9"
-RESULTS_CSV_SHA256 = "dd2b0c9be299338636a91b0a958f172687a2a3ef6ccc77788ed0776933905ab8"
-PNG_SHA256 = "deedf3b85aa8077566a40ed38b16d1ca42c85957839223b9a945fa9d6ebd91da"
-PDF_SHA256 = "238ffa5132890dd5304005e667a29f3aa4339578052ab078fb937f59a356e7cf"
-METADATA_SHA256 = "024b2789720a9afd87451bbfad2361a226d8f6a6c093b8e24b3e7909a56ed372"
+RECORD_SHA256 = "ed14ca4f65bd504a185f6214f0310ba63bcf10cc9aec65a77bc20a87b426791d"
+RESULTS_CSV_SHA256 = "c59b185eaac7895fd5eb7eef8224a1362d62ba25454166b6e4db726faadacfbb"
+PNG_SHA256 = "13c080a3a2608da2b283f9d14b6bbf10716ac667c48d7ac3adcd7fb9e303669d"
+PDF_SHA256 = "9f8d529e4230967cf83c33066db222788b8cc32aa956b1925023d800587fea4d"
+METADATA_SHA256 = "2abe27ce621898c6a35438f5c41faec50fa496e8d6e126eefec62b7ebe925dcd"
 WIDTHS = (8, 32, 128, 256)
 FIRST_FREEZE_SHA256 = "9b355278c779c7834d18eaf3b19d16929f7b1800926e0ba1ba271f14a5d613ed"
 CORRECTED_FREEZE_SHA256 = "b237945a945e1b1500ab299cf81faf20e704541f6c3e591b1cf90c418b5bb116"
@@ -180,30 +180,31 @@ def test_tracked_minimax_record_is_locked_and_nonvoid() -> None:
     record = _record()
     assert record["schema"] == "simllm-minimax-ep-scaling-record-v2"
     assert record["run_state"] == "nonvoid"
-    assert record["attempt"] == "attempt-0002"
-    assert record["run_commit"] == "7eff88a4efa68c4d2ad8233201d18e43b97d8d77"
+    assert record["attempt"] == "attempt-0001"
+    assert record["run_commit"] == "66687d57275c336c11cbab048c678a1fb92e34ae"
     assert record["freeze_commits"] == ["61b66c4", "5a29bb0", "4d1e41c"]
     assert all(record["fatal_guards"].values())
     assert record["fresh_evaluations"] == {
         "bit_equal": True,
         "count": 2,
-        "first_sha256": "ed5c4be84e3c243255ec45be1b224a8a08e5479d98ee1f7848e1c9831de95882",
-        "second_sha256": "ed5c4be84e3c243255ec45be1b224a8a08e5479d98ee1f7848e1c9831de95882",
+        "first_sha256": "e2da060655f9efa73f87cf126728e1ec731628ebe43c21dd3a0765b28fd45f33",
+        "second_sha256": "e2da060655f9efa73f87cf126728e1ec731628ebe43c21dd3a0765b28fd45f33",
     }
 
     families = record["family_tallies"]
     assert {
         name: (families[name]["passed"], families[name]["denominator"])
         for name in ("E", "C", "D", "W")
-    } == {"E": (4, 4), "C": (4, 4), "D": (1, 4), "W": (1, 1)}
+    } == {"E": (4, 4), "C": (4, 4), "D": (0, 3), "W": (1, 1)}
     assert families["S"]["scored"] is False
-    assert families["W"]["elapsed_seconds"] == 907.220454105176
+    assert families["W"]["elapsed_seconds"] == 1039.514329513535
     assert record["artifact_disclosure_inspection"] == {
         "csv_rows_inspected": 4,
         "figure_caption_inspected": True,
         "figure_series_inspected": 5,
         "pdf_text_inspected": True,
         "record_rows_inspected": 4,
+        "results_table_rows_inspected": 12,
     }
 
     report = (STUDY / "RESULTS.md").read_text(encoding="utf-8")
@@ -270,9 +271,21 @@ def test_corrected_dense_refutations_and_sparse_geometry_are_locked() -> None:
     ]
     assert [row["family_d_contention_comparison"] for row in rows] == [
         False,
-        True,
-        True,
-        True,
+        False,
+        False,
+        False,
+    ]
+    assert [row["family_d_score_status"] for row in rows] == [
+        "scored measured cell",
+        "scored measured cell",
+        "scored measured cell",
+        "unscored post-specified diagnostic",
+    ]
+    assert [row["family_d_outcome"] for row in rows] == [
+        "REFUTED",
+        "REFUTED",
+        "REFUTED",
+        "UNSCORED DIAGNOSTIC",
     ]
     assert [row["family_d_packet_ms"] for row in rows] == [
         0.04979,
@@ -296,11 +309,13 @@ def test_corrected_dense_refutations_and_sparse_geometry_are_locked() -> None:
         False,
         False,
         False,
-        True,
+        None,
     ]
     assert rows[-1]["family_d_extrapolation"]["cross_node_bytes_per_rank_factor"] == (
         31 / 15
     )
+    assert rows[-1]["family_d_extrapolation"]["frozen_before_implementation"] is False
+    assert rows[-1]["family_d_extrapolation"]["scored"] is False
 
     assert [row["family_s_simulated_messages_per_layer"] for row in rows] == [
         112,
@@ -326,6 +341,10 @@ def test_corrected_dense_refutations_and_sparse_geometry_are_locked() -> None:
         "maximum_cross_node_senders_per_receiver": 32,
         "realized_cross_node_senders_per_receiver": 29.78125,
         "realized_distinct_destinations_per_source": 30.546875,
+        "realized_geometry_source": (
+            "simulator completion rows for cross-node flows plus analytically "
+            "completed same-node segments"
+        ),
     }
     assert [row["void_first_run_ratio"] for row in rows] == [
         0.8643398194341548,
@@ -351,9 +370,35 @@ def test_physical_ledger_and_portable_paths_are_locked() -> None:
         "sparse_serialization_floor_microseconds_per_layer": 5.73048,
         "widest_expert_parallel": 256,
     }
-    assert record["bulk_evidence"] == (
-        "${SIMLLM_MINIMAX_FIX_BULK_ROOT}/attempt-0002"
-    )
+    assert record["external_table_identification"] == {
+        "caller_argument_interpretation": (
+            "the caller passes tokens times hidden times expert-parallel width as "
+            "an element count, so the table axis unit is unresolved between its "
+            "byte name and the caller's element semantics"
+        ),
+        "dtype_identifier": "half",
+        "dtype_interpretation": (
+            "generic half precision; the table does not identify BF16"
+        ),
+        "message_axis_name": "message_bytes",
+    }
+    assert record["family_d_fixed_overhead_analysis"] == {
+        "caller_argument_semantics": "half-precision element count",
+        "donor_latency_microseconds_per_layer": 55.445,
+        "dtype_identifier": "half",
+        "dtype_interpretation": (
+            "generic half precision; the source table does not identify BF16"
+        ),
+        "expert_parallel": 128,
+        "external_minus_packet_gap_ms": 7.259565741071427,
+        "fixed_and_algorithmic_residual_microseconds_per_layer": 43.21161333333334,
+        "ideal_ring_serialization_microseconds_per_layer": 12.233386666666666,
+        "inflated_residual_exceeds_gap": True,
+        "inflated_residual_ms_over_65_layers": 28.664346541071428,
+        "message_axis_name": "message_bytes",
+        "rank_factor": 10.205357142857142,
+    }
+    assert record["bulk_evidence"] == "${SIMLLM_MINIMAX_FIX_BULK_ROOT}/attempt-0001"
     text = RECORD.read_text(encoding="utf-8")
     slash = chr(47)
     for forbidden in (
@@ -375,12 +420,29 @@ def test_physical_ledger_and_portable_paths_are_locked() -> None:
     assert all(row["family_d_external_strategy"] for row in rows)
     assert [row["family_d_contention_comparison"] for row in rows] == [
         "False",
-        "True",
-        "True",
-        "True",
+        "False",
+        "False",
+        "False",
+    ]
+    assert [row["family_d_outcome"] for row in rows] == [
+        "REFUTED",
+        "REFUTED",
+        "REFUTED",
+        "UNSCORED DIAGNOSTIC",
     ]
     assert all(row["family_s_sparse_strategy"] for row in rows)
     assert all(row["void_first_run_status"] == "VOID against FG-4" for row in rows)
+
+    metadata = json.loads(
+        (STUDY / "figures/minimax_ep_scaling.metadata.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert metadata["point_annotations"] == {
+        "ep8": "not a contention comparison: no cross-node traffic",
+        "ep256": "unscored post-specified diagnostic",
+    }
+    assert metadata["series"][-1]["panel"] == "family-d-cost-model-ratio"
 
 
 def test_runner_validates_tracked_record_without_pythonpath(tmp_path: Path) -> None:

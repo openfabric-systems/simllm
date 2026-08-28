@@ -35,7 +35,7 @@ unscored diagnostic because that rule first appeared in implementation commit
 `a6ba97f`, after corrected expectations commit `4d1e41c`. Family S ran full
 realized sparse populations at every width with FP8 dispatch and BF16 combine.
 Bulk evidence is retained at
-`${SIMLLM_MINIMAX_FIX_BULK_ROOT}/attempt-0002`; the portable rows are in
+`${SIMLLM_MINIMAX_FIX_BULK_ROOT}/attempt-0001`; the portable rows are in
 [record.json](record.json) and [results.csv](results.csv).
 
 ## What came out
@@ -44,8 +44,7 @@ Family D scores 0 of 3 measured widths. EP 8, 32 and 128 are all REFUTED
 against the unchanged lower bound of 1.0, at ratios
 `0.02590463307406155`, `0.3530150565741419` and
 `0.8026183885459625`. EP 256's ratio `1.187022158460092` is an UNSCORED
-DIAGNOSTIC. It is not a pass anywhere in this report or its generated
-artifacts.
+DIAGNOSTIC and never enters the Family D numerator or denominator.
 
 The apparent rise does not establish a contention crossover. At EP 128, the
 external extrapolator starts from an eight-rank donor latency of
@@ -88,7 +87,7 @@ landed model into the packet arm and pricing the fixed collective overheads.
 Family E remains 4 of 4 bit-equal. Family C remains 4 of 4 at quotient 1.0,
 but it is an end-to-end parity check that reuses the dispatch code Family E
 validates, not independent confirmation of E. Family W passes in
-907.220454105176 seconds. Family S is published and unscored. All fatal guards
+1039.514329513535 seconds. Family S is published and unscored. All fatal guards
 FG-1 through FG-10 hold, so the corrected run is nonvoid.
 
 ## What it changes for the project
@@ -241,9 +240,9 @@ Family E reproduces all four frozen external dispatch cells bit-for-bit:
 | 256 | 51.39544921875 | `0x1.9b29e147ae148p+5` | `0x1.9b29e147ae148p+5` |
 
 Both fresh evaluation payloads have SHA-256
-`ed5c4be84e3c243255ec45be1b224a8a08e5479d98ee1f7848e1c9831de95882`.
+`e2da060655f9efa73f87cf126728e1ec731628ebe43c21dd3a0765b28fd45f33`.
 The corrected run commit is
-`7eff88a4efa68c4d2ad8233201d18e43b97d8d77`. The first freeze
+`66687d57275c336c11cbab048c678a1fb92e34ae`. The first freeze
 `61b66c4`, exact-oracle commit `5a29bb0`, and corrected freeze `4d1e41c`
 all precede implementation and execution. The two expectation files retain
 SHA-256 values
@@ -251,25 +250,34 @@ SHA-256 values
 and
 `b237945a945e1b1500ab299cf81faf20e704541f6c3e591b1cf90c418b5bb116`.
 
-FG-4 inspected four record rows, four CSV rows, five figure series, the figure
-caption and extracted PDF text. FG-8 validated realized routing geometry,
+FG-4 inspected four record rows, four CSV rows, 12 Markdown comparison rows,
+five figure series, the figure caption and extracted PDF text. Its committed
+mutation test removes one external traffic definition from a Family D table
+cell and confirms that the inspector rejects the artifact. FG-8 validated
+realized routing geometry reconstructed from simulator completion rows,
 FG-9 validated directional precision, and FG-10 validated every scored
-population or anchor. FG-1 through FG-3 and FG-5 through FG-7 also pass. The
-failed rendering-only `attempt-0001` remains append-only evidence and was not
-scored; `attempt-0002` is the nonvoid corrected run.
+population. FG-1 through FG-3 and FG-5 through FG-7 also pass. Earlier attempts
+remain append-only evidence in their original bulk root. This repair's
+`attempt-0001` is the nonvoid regenerated run.
+
+The disclosure is generator-reproducible. The fresh attempt's `record.json`,
+`results.csv`, PNG, PDF and metadata compare byte-for-byte with the tracked
+copies. The generator now emits `family_d_contention_comparison = false` in
+all four record and CSV rows; a fresh run no longer erases that disclosure.
 
 The tracked artifact hashes are:
 
 | Artifact | SHA-256 |
 |---|---|
-| `record.json` | `d99b615cbcf36c60b12e806266f5d4281db3964b39a7134b8a94a12ca9f59cc9` |
-| `results.csv` | `dd2b0c9be299338636a91b0a958f172687a2a3ef6ccc77788ed0776933905ab8` |
-| `figures/minimax_ep_scaling.png` | `deedf3b85aa8077566a40ed38b16d1ca42c85957839223b9a945fa9d6ebd91da` |
-| `figures/minimax_ep_scaling.pdf` | `238ffa5132890dd5304005e667a29f3aa4339578052ab078fb937f59a356e7cf` |
-| `figures/minimax_ep_scaling.metadata.json` | `024b2789720a9afd87451bbfad2361a226d8f6a6c093b8e24b3e7909a56ed372` |
+| `record.json` | `ed14ca4f65bd504a185f6214f0310ba63bcf10cc9aec65a77bc20a87b426791d` |
+| `results.csv` | `c59b185eaac7895fd5eb7eef8224a1362d62ba25454166b6e4db726faadacfbb` |
+| `figures/minimax_ep_scaling.png` | `13c080a3a2608da2b283f9d14b6bbf10716ac667c48d7ac3adcd7fb9e303669d` |
+| `figures/minimax_ep_scaling.pdf` | `9f8d529e4230967cf83c33066db222788b8cc32aa956b1925023d800587fea4d` |
+| `figures/minimax_ep_scaling.metadata.json` | `2abe27ce621898c6a35438f5c41faec50fa496e8d6e126eefec62b7ebe925dcd` |
 
-The corrected comparison and contention-ratio panel are available as
+The corrected comparison and cost-model-ratio panel are available as
 [PNG](figures/minimax_ep_scaling.png) and
 [PDF](figures/minimax_ep_scaling.pdf). Visual inspection confirmed that every
-series, point, extrapolation marker, bound, label and footer is legible without
-clipping or overlap.
+series, point, diagnostic marker, bound, label and footer is legible without
+clipping or overlap. EP 8 is marked as having no cross-node contention, and
+EP 256 is marked as an unscored diagnostic.
