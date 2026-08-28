@@ -129,7 +129,7 @@ def renders_expert_combine(
 
     False for dense dims, for an expert-parallel group below two ranks, for a
     zero-new-token drain record, and for the one degenerate case of the uniform
-    approximation: when ``total_new_tokens * top_k * hidden_size *
+approximation: when ``total_new_tokens * top_k * hidden_size *
     dtype_bytes`` floors to zero bytes per ordered pair, that approximation
     renders no all-to-all at all, so nothing returns the layer output and the
     reduction stays on the tensor-parallel allreduce. A captured
@@ -1204,6 +1204,7 @@ def step_moe_alltoalls(
     ep_ranks: Sequence[int],
     *,
     routed_supply: RoutedMoeSupply | None = None,
+    uniform_tokens_per_rank: int | None = None,
 ) -> list[MoeAllToAll]:
     """The step's MoE all-to-alls, empty when the step produces none.
 
@@ -1220,8 +1221,8 @@ def step_moe_alltoalls(
     on the same destination into one hidden vector, and combine is the exact
     reverse table after owner-side pre-reduction.
 
-    Without a routed supply, the uniform approximation uses ``ep_ranks[0]``
-    as the one engine rank. It spreads that engine's
+    Without a routed supply, the default uniform approximation uses
+    ``ep_ranks[0]`` as the one engine rank. It spreads that engine's
     ``total_new_tokens * top_k`` (token, expert) assignments evenly over the W
     expert-owner ranks, so the engine sends
 
@@ -1233,10 +1234,27 @@ def step_moe_alltoalls(
     never touches the fabric. The floor division remains part of this explicit
     approximation.
 
+    ``uniform_tokens_per_rank`` selects the full-population variant. Every EP
+    rank contributes that many tokens and sends the same uniform share to
+    every other rank. The record's token count must equal the declared
+    per-rank count, so the option cannot silently change the operating point.
+    It is mutually exclusive with captured routing.
+
     Empty means: dense dims (``num_experts == 0``), an EP world smaller
     than 2, or a zero-new-token drain record. The uniform path also returns
     empty when its per-pair share rounds to zero bytes.
     """
+    if routed_supply is not None and uniform_tokens_per_rank is not None:
+        raise ValueError(
+            "uniform_tokens_per_rank is mutually exclusive with routed_supply"
+        )
+    if uniform_tokens_per_rank is not None:
+        if type(uniform_tokens_per_rank) is not int or uniform_tokens_per_rank <= 0:
+            raise ValueError("uniform_tokens_per_rank must be a positive integer")
+        if record.total_new_tokens != uniform_tokens_per_rank:
+            raise ValueError(
+                "uniform_tokens_per_rank must equal record.total_new_tokens"
+            )
     ranks = tuple(ep_ranks)
     if not renders_expert_combine(record, dims, ranks, routed_supply=routed_supply):
         return []
@@ -1245,17 +1263,29 @@ def step_moe_alltoalls(
     per_pair = (record.total_new_tokens * dims.top_k * dims.hidden_size * dims.dtype_bytes) // len(
         ranks
     )
-    source = ranks[0]
-    dispatch = tuple(
-        (source, destination, per_pair)
-        for destination in ranks
-        if destination != source
-    )
-    combine = tuple(
-        (destination, source, per_pair)
-        for destination in ranks
-        if destination != source
-    )
+    if uniform_tokens_per_rank is None:
+        source = ranks[0]
+        dispatch = tuple(
+            (source, destination, per_pair)
+            for destination in ranks
+            if destination != source
+        )
+        combine = tuple(
+            (destination, source, per_pair)
+            for destination in ranks
+            if destination != source
+        )
+    else:
+        dispatch = tuple(
+            (source, destination, per_pair)
+            for source in ranks
+            for destination in ranks
+            if destination != source
+        )
+        combine = tuple(
+            (destination, source, payload_bytes)
+            for source, destination, payload_bytes in dispatch
+        )
     return [
         MoeAllToAll(
             layer=layer,
@@ -1475,6 +1505,7 @@ def render_step_goal(
     *,
     ep_ranks: Sequence[int] | None = None,
     routed_supply: RoutedMoeSupply | None = None,
+    uniform_tokens_per_rank: int | None = None,
     num_goal_ranks: int | None = None,
     base_tag: int = 1000,
 ) -> GoalTrace:
@@ -1517,6 +1548,7 @@ def render_step_goal(
         dims,
         ep_ranks if ep_ranks is not None else [],
         routed_supply=routed_supply,
+        uniform_tokens_per_rank=uniform_tokens_per_rank,
     )
     if not tp_ops and not moe_ops:
         raise ValueError(
@@ -1874,6 +1906,7 @@ def step_communication_phases(
     *,
     ep_ranks: Sequence[int] | None = None,
     routed_supply: RoutedMoeSupply | None = None,
+    uniform_tokens_per_rank: int | None = None,
     base_tag: int = 1000,
 ) -> tuple[CollectiveCommunicationPhase, ...]:
     """Expand a step into serial phases of positive directed transfers."""
@@ -1886,6 +1919,7 @@ def step_communication_phases(
         dims,
         ep_ranks if ep_ranks is not None else (),
         routed_supply=routed_supply,
+        uniform_tokens_per_rank=uniform_tokens_per_rank,
     )
     tp_by_key = {
         (operation.layer, operation.site): (index, operation)
@@ -2117,6 +2151,7 @@ def plan_step_locality(
     *,
     ep_ranks: Sequence[int] | None = None,
     routed_supply: RoutedMoeSupply | None = None,
+    uniform_tokens_per_rank: int | None = None,
     rank_mapper: RankMapper | None = None,
     nvlink_bandwidth_bytes_per_second: int = (
         DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND
@@ -2131,6 +2166,7 @@ def plan_step_locality(
         tp_ranks,
         ep_ranks=ep_ranks,
         routed_supply=routed_supply,
+        uniform_tokens_per_rank=uniform_tokens_per_rank,
         base_tag=base_tag,
     )
     return classify_step_locality(

@@ -2236,6 +2236,12 @@ class ExternalQwen32BPassModel:
             raise ExternalDatabaseIdentityError(
                 f"Qwen3-32B-FP8 model configuration differs from the frozen composition: {mismatches!r}"
             )
+        from simllm.calibration.external_pass import (
+            ExternalPassModel,
+            qwen3_32b_fp8_config,
+        )
+
+        self._generic = ExternalPassModel(database, qwen3_32b_fp8_config())
 
     def _result(self, latency: float, operation: str, rule: str) -> ExternalLatency:
         return self.database._result(latency, operation, rule)
@@ -2530,6 +2536,9 @@ class ExternalQwen32BPassModel:
     def run_context(self, *, batch_size: int, isl: int, prefix: int = 0) -> ExternalPassResult:
         """Evaluate one frozen static-context pass."""
 
+        return self._generic.run_context(batch_size=batch_size, isl=isl, prefix=prefix)
+
+        # Retained reference composition below documents the exact source ordering.
         effective_isl = isl - prefix
         if batch_size <= 0:
             raise ValueError("batch_size must be positive")
@@ -2558,6 +2567,15 @@ class ExternalQwen32BPassModel:
     ) -> ExternalPassResult:
         """Evaluate the frozen sampled static-generation pass."""
 
+        return self._generic.run_generation(
+            batch_size=batch_size,
+            isl=isl,
+            osl=osl,
+            stride=stride,
+            beam_width=beam_width,
+        )
+
+        # Retained reference composition below documents the exact source ordering.
         if batch_size <= 0 or isl <= 0:
             raise ValueError("batch_size and isl must be positive")
         if osl <= 1:

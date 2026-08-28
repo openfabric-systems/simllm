@@ -23,7 +23,10 @@ __all__ = [
     "ExternalDatabaseGapError",
     "ExternalDatabaseIdentityError",
     "ExternalLatency",
+    "ExternalModelConfig",
+    "ExternalNcclDatabase",
     "ExternalOperationDatabase",
+    "ExternalPassModel",
     "ExternalPassResult",
     "ExternalQwen32BPassModel",
     "ExternalSourceIdentity",
@@ -81,9 +84,21 @@ _EXPORTS = {
         "ExternalDatabaseIdentityError",
     ),
     "ExternalLatency": ("simllm.calibration.external_db", "ExternalLatency"),
+    "ExternalModelConfig": (
+        "simllm.calibration.external_pass",
+        "ExternalModelConfig",
+    ),
+    "ExternalNcclDatabase": (
+        "simllm.calibration.external_nccl",
+        "ExternalNcclDatabase",
+    ),
     "ExternalOperationDatabase": (
         "simllm.calibration.external_db",
         "ExternalOperationDatabase",
+    ),
+    "ExternalPassModel": (
+        "simllm.calibration.external_pass",
+        "ExternalPassModel",
     ),
     "ExternalPassResult": (
         "simllm.calibration.external_db",

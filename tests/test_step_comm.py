@@ -231,6 +231,63 @@ def test_expert_parallel_moe_renders_one_allreduce_and_two_a2avs_per_layer():
     assert min(moe_tags) == 1000 + 24 * 2 * (len(tp_ranks) - 1)
 
 
+def test_uniform_full_population_emits_every_directed_ep_pair():
+    dims = replace(
+        TINY_MOE_DIMS,
+        num_layers=1,
+        hidden_size=3072,
+        dtype_bytes=1,
+        num_experts=256,
+        top_k=8,
+        local_num_experts=1,
+    )
+    record = decode_record(num_new_tokens=4)
+    ep_ranks = tuple(range(256))
+
+    single_engine = step_moe_alltoalls(record, dims, ep_ranks)
+    full_population = step_moe_alltoalls(
+        record,
+        dims,
+        ep_ranks,
+        uniform_tokens_per_rank=4,
+    )
+    assert sum(len(operation.pair_payload_bytes) for operation in single_engine) == 510
+    assert sum(len(operation.pair_payload_bytes) for operation in full_population) == 130560
+    assert {
+        payload_bytes
+        for operation in full_population
+        for _, _, payload_bytes in operation.pair_payload_bytes
+    } == {384}
+    assert sum(
+        payload_bytes
+        for operation in full_population
+        for _, _, payload_bytes in operation.pair_payload_bytes
+    ) == 50135040
+    assert 130560 * 65 == 8486400
+    assert 50135040 * 65 == 3258777600
+
+    phases = step_communication_phases(
+        record,
+        dims,
+        [0],
+        ep_ranks=ep_ranks,
+        uniform_tokens_per_rank=4,
+    )
+    assert len(phases) == 2
+    assert all(len(phase.segments) == 65280 for phase in phases)
+
+
+@pytest.mark.parametrize("tokens", (0, 3, 5))
+def test_uniform_full_population_rejects_invalid_per_rank_count(tokens):
+    with pytest.raises(ValueError, match="uniform_tokens_per_rank"):
+        step_moe_alltoalls(
+            decode_record(num_new_tokens=4),
+            TINY_MOE_DIMS,
+            [0, 1],
+            uniform_tokens_per_rank=tokens,
+        )
+
+
 def test_dense_and_expert_sharded_goal_text_is_unchanged():
     """Neither arm's rendered GOAL moved a byte across TRAF-33.
 
