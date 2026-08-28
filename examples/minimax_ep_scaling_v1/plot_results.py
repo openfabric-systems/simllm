@@ -39,7 +39,7 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path]:
             "axes.linewidth": 0.8,
         }
     )
-    figure, (left, right) = plt.subplots(1, 2, figsize=(7.25, 3.35))
+    figure, (left, right) = plt.subplots(1, 2, figsize=(7.5, 3.35))
     blue = "#2F6B9A"
     orange = "#D56A2C"
 
@@ -79,20 +79,21 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path]:
         s=31,
         zorder=3,
     )
-    for width, step, share in zip(
-        widths, external_steps, dispatch_shares, strict=True
+    for index, (width, step, share) in enumerate(
+        zip(widths, external_steps, dispatch_shares, strict=True)
     ):
+        offset = 10 if index == 0 else -13
         left.annotate(
             f"{share:.1f}% dispatch",
             (width, step),
-            xytext=(0, -13),
+            xytext=(0, offset),
             textcoords="offset points",
             ha="center",
-            va="top",
+            va="bottom" if index == 0 else "top",
             color=blue,
             fontsize=7,
         )
-    left.set_title("Decode step on the external timing base")
+    left.set_title("Decode step on external timing base")
     left.set_xlabel("Expert-parallel width")
     left.set_ylabel("Step time (ms)")
     left.set_xscale("log", base=2)
@@ -133,7 +134,7 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path]:
         color="#555555",
         linestyle=(0, (4, 3)),
         linewidth=1.1,
-        label=f"Qwen3-32B reference {QWEN_REFERENCE_RATIO:.4f}",
+        label=f"Qwen3-32B reference\n{QWEN_REFERENCE_RATIO}",
     )
     right.set_title("Packet-priced step ratio")
     right.set_xlabel("Expert-parallel width")
@@ -142,7 +143,13 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path]:
     right.set_xticks(widths)
     right.xaxis.set_major_formatter(ScalarFormatter())
     right.grid(axis="y", color="#D8D8D8", linewidth=0.6)
-    right.legend(frameon=False, loc="upper left")
+    right.legend(
+        frameon=True,
+        facecolor="white",
+        edgecolor="none",
+        framealpha=0.92,
+        loc="upper left",
+    )
 
     figure.text(
         0.5,
