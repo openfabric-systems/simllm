@@ -31,6 +31,8 @@ The repository layout keeps those layers visible:
 ```text
 third_party/accel-sim-framework/   untouched optional upstream submodule
 offline/calibration/               GPU and simulator scripts, workloads and configs
+offline/calibration/kernel/        kernel requests and compact candidate results
+offline/calibration/network/       transport and fabric calibration configuration
 simllm/calibration/                strict records, compiler, validators and CLI
 devices/<vendor>/<device>/<ver>/   reviewed compact device releases
 ```
@@ -52,6 +54,48 @@ repository checkout, then the digest-checked packaged archive. It rejects
 conflicting roots or a packaged digest mismatch. This makes an installed
 contributor command usable without making package resources a second registry
 authority.
+
+## Local-shard collection
+
+`simllm.calibration.local_shard` provides one framework-neutral request and
+result boundary for rank-local kernel capture. A request carries the existing
+dispatch signature, exact model revision, logical tensor, pipeline, data and
+expert parallel sizes, the physical rank coordinates and device ordinal,
+phase and shape, launch mode and a deterministic synthetic-token recipe. The
+logical parallel sizes never imply that one GPU executed the whole distributed
+configuration.
+
+The framework target is an external command and remains the authority for the
+model class, sharding implementation, compilation and kernel launches it
+actually executed. The common launcher uses no shell. It writes canonical
+request bytes, requires an empty caller-supplied output root, and accepts only
+a canonical candidate result whose model, dispatch, shard, input hash and
+device ISA match the request exactly. Each kernel observation carries a
+relative sample-blob name, byte count and SHA-256; the launcher reads and
+verifies every blob before completing the run.
+
+An A100 target therefore emits SM80 evidence only. A target that cannot
+materialize the declared rank-local shard rejects the request instead of using
+another architecture or silently executing a different parallel
+configuration. Distributed collectives and network service are explicit
+exclusions. Their dependencies may be visible at the framework boundary, but
+their time is calibrated by the communication and network authorities.
+
+The command surface is:
+
+```bash
+simllm-calibrate run \
+  --request request.json \
+  --target framework-target \
+  --output-root "$SIMLLM_KERNEL_CALIBRATION_RUN_ROOT/cell"
+```
+
+The tracked `offline/calibration/kernel/` and
+`offline/calibration/network/` namespaces keep reviewed kernel and network
+configuration separate. Raw traces and sample blobs remain outside Git. The
+local-shard result is candidate evidence and compiles through the established
+kernel-cycle and device-model authorities only after their existing validation
+gates.
 
 ## Identity and binding
 

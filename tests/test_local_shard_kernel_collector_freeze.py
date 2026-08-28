@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 STUDY = ROOT / "examples" / "local_shard_kernel_collector_v1"
 
