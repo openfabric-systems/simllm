@@ -407,3 +407,7 @@ tests/test_deployment_curve_core61_retry_result.py text eol=lf
 offline/calibration/kernel_cycle_framework_target.py text eol=lf
 tests/test_kernel_cycle_framework_target.py text eol=lf
 tests/test_hopper_comp78_successor.py text eol=lf
+notes/2026-08-28-core65-worker-sizing.md text eol=lf
+examples/deployment_curve_v1/core65* text eol=lf
+examples/deployment_curve_v1/core66* text eol=lf
+tests/test_deployment_curve_core65* text eol=lf

@@ -46,7 +46,7 @@ will be fitted.
 - Repository root: `<repo>`
 - CORE registry: `<repo>/docs/modules/core.md`
 - Deployment study area: `<repo>/examples/deployment_curve_v1/`
-- CORE-65 protocol and field reader: `<repo>/tools/`
+- CORE-65 protocol and field reader: `<repo>/examples/deployment_curve_v1/`
 - Bulk scratch and generated intermediates: `<wave-runs>/core65/`
 
 No generated bulk data will be placed in the repository. Local absolute paths
@@ -61,11 +61,12 @@ No model weights or web pages will be downloaded.
 ## Access and verification budget
 
 The field-addressed reader, source allowlist, frozen expectations, and protocol
-will be committed before any retained capture or calibration record is
-accessed. Every permitted field access will be logged contemporaneously with
-byte accounting. Whole-file selectors will be rejected by construction, the
-forbidden-access ledger must remain empty, and the held-out MTP value will
-remain unread and uncompared.
+were committed before the protected reader accessed retained capture or
+calibration records. Every permitted reader access is logged contemporaneously
+with byte accounting, and whole-file selectors are rejected by construction.
+Two earlier broad searches made the forbidden-access ledger nonempty, including
+one unused and uncompared held-out numeric exposure. The study is consequently
+protocol-void and cannot claim literal CORE-65 closure.
 
 Each commit will be checked with Ruff and the full pytest suite in the
 worktree Python 3.10 virtual environment. Pytest's own exit status will be
