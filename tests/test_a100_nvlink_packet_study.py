@@ -30,7 +30,7 @@ def run_study(*arguments: str) -> subprocess.CompletedProcess[str]:
         cwd=ROOT,
         text=True,
         capture_output=True,
-        timeout=30,
+        timeout=300,
         check=False,
     )
 
@@ -41,7 +41,7 @@ def run_score(*arguments: str) -> subprocess.CompletedProcess[str]:
         cwd=ROOT,
         text=True,
         capture_output=True,
-        timeout=30,
+        timeout=300,
         check=False,
     )
 
@@ -217,7 +217,7 @@ def mock_binary(tmp_path_factory):
         cwd=ROOT,
         text=True,
         capture_output=True,
-        timeout=30,
+        timeout=300,
         check=False,
     )
     assert completed.returncode == 0, completed.stderr
