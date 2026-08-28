@@ -38,10 +38,11 @@
 - Preserved: all scored freezes and results, both historical lookup records,
   every existing failed or completed campaign attempt, integrator-owned README
   prose, and files owned by the deployment and p2loggopsim lanes.
-- Bulk evidence: remote output remains below `~/simllm-data/campaign` on Merlin
-  and task-local output remains below
-  `/data3/yifeng/simllm-dev/wave-runs/comp78`; only lean digest-bearing evidence
-  is pulled into the worktree-facing compilation root.
+- Bulk evidence: remote output remains below the `simllm-data/campaign`
+  area under the Merlin home directory, and task-local output remains below
+  the `wave-runs/comp78` area on the local data volume; only lean
+  digest-bearing evidence is pulled into the worktree-facing compilation
+  root.
 
 ### Expected handwritten line ranges
 
