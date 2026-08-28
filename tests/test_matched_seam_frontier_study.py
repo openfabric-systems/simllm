@@ -13,6 +13,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 STUDY = ROOT / "examples/matched_seam_frontier_v1"
 RUNNER = STUDY / "run_study.py"
+PLOTTER = STUDY / "plot_study.py"
 CONFIG = STUDY / "study_config.json"
 RECORD = STUDY / "record.json"
 RESULTS_CSV = STUDY / "results.csv"
@@ -21,8 +22,8 @@ PNG = STUDY / "figures/matched-seam-frontier.png"
 EXTERNAL_VENV_ENV = "SIMLLM_EXTERNAL_AIC_VENV"
 RECORD_SHA256 = "c08157f5b96f027dd522474f40b4d3159e057e47896a8f0603668c1915feb82d"
 RESULTS_CSV_SHA256 = "fb577860e83f6b7b8dc5f21e44644a48d05730f5ddd450cde2381ab80ae98e8a"
-PDF_SHA256 = "c77fbfd76e96fedd66b09c3a3b74060e83ae569ac1ef276781e8e564f883bcc0"
-PNG_SHA256 = "fa4258f5501b697d26ec8eed3377d279d7837fd41a264109d03be503f05924f1"
+PDF_SHA256 = "040ba924f343c763239bfabb93c6cb84c5a14a77a26508be01ad2a16577cc88b"
+PNG_SHA256 = "831368ca0dcf1c5f9be9a5a83553c0a365be3ea80906fdc2d7b3cede020c9724"
 
 
 def _sha256(path: Path) -> str:
@@ -31,6 +32,14 @@ def _sha256(path: Path) -> str:
 
 def _load_runner():
     spec = importlib.util.spec_from_file_location("matched_seam_frontier_run", RUNNER)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_plotter():
+    spec = importlib.util.spec_from_file_location("matched_seam_frontier_plot", PLOTTER)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -148,6 +157,51 @@ def test_results_csv_writer_is_lf_only() -> None:
 
     assert b"\r" not in payload
     assert len(list(csv.DictReader(payload.decode().splitlines()))) == 1
+
+
+def test_directed_figure_is_a_record_only_projection() -> None:
+    plotter = _load_plotter()
+    record = json.loads(RECORD.read_text(encoding="utf-8"))
+    plot = plotter.prepare_plot_data(record)
+
+    assert [series["id"] for series in plot["series"]] == [
+        "external-agg",
+        "external-disagg",
+        "simllm-ideal",
+        "simllm-packet",
+    ]
+    assert plot["agreement"] == {
+        "rows": [
+            {
+                "row": row["row"],
+                "quotient": pytest.approx(row["quotient"]["decimal"]),
+            }
+            for row in record["families"]["R"]["rows"]
+        ],
+        "frozen_band": [0.98, 1.02],
+        "minimum": "0.999946608534",
+        "maximum": "1.000076344974",
+    }
+    assert plot["mechanism"] == {
+        "arrow_enabled": True,
+        "candidate_rows": [1, 3],
+        "selected_row": 3,
+        "x": pytest.approx(84.00604166008027),
+        "ideal_y": pytest.approx(644.3347078275151),
+        "packet_y": pytest.approx(617.9391883424295),
+        "quotient": "1.042715399805",
+        "label": (
+            "Unpriced receiver-side serialization\n"
+            "under fan-in: several senders deliver\n"
+            "into one receiver at full rate at once,\n"
+            "exceeding the receiver's ingress bandwidth.\n"
+            "This workload: packet / ideal = 1.042715399805.\n"
+            "Ideal: MEASURED-EXTERNAL.\n"
+            "Packet: MEASURED-EXTERNAL + SIM-DERIVED."
+        ),
+    }
+    assert plot["f209"] == {"quotient": "0.607495219355", "passed": False}
+    assert "different schedule regime and is not plotted" in plot["caption"]
 
 
 def test_live_sdk_reproduces_frozen_service_oracles() -> None:

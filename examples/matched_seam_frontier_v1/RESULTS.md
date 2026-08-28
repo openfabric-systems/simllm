@@ -209,7 +209,17 @@ No denominator is summed across families.
   traceability record.
 - [results.csv](results.csv), the LF-only guard and family ledger.
 
-The caption names every evidence class. The external aggregate and
-disaggregated curves and the SimLLM ideal curve share the same
-`MEASURED-EXTERNAL` timing base. The packet curve adds only `SIM-DERIVED`
-key/value redistribution, so its visual separation is composition mechanism.
+The revised figure makes the matched seam and its residual mechanism visible
+in three linked treatments. Panel (a) overlays the external aggregate and
+disaggregated curves with the SimLLM contention-off and contention-on curves;
+the legend names every evidence class. Panel (b) zooms external row 3, where
+the external disaggregated and SimLLM contention-off points coincide, and the
+arrow points from contention off to contention on. It identifies the unpriced
+term as receiver-side serialization under fan-in, where several senders can
+otherwise deliver into one receiver at full rate at once and exceed its ingress
+bandwidth. Its 1.042715399805 quotient is this workload's measured separation.
+It is not the 7.678 to 8.110 eight-into-one incast envelope from the separate
+`frontier_ladder_v1` and `loggopsim_acceptance_v1` schedule regime, which is not
+drawn on these curves. Panel (c) shows the Family R row quotients from
+0.999946608534 to 1.000076344974 against the frozen [0.98, 1.02] band. The
+caption retains the F-2-09 rounded-axis refutation at 0.607495219355.
