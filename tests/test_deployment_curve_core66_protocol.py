@@ -206,6 +206,13 @@ def test_ep8_expectations_freeze_cell_scheduler_and_survivable_exposure() -> Non
         "qos": "gpu_hourly",
         "submission_limit": 1,
     }
+    assert capture["execution"] == {
+        "cuda_graph_enabled": False,
+        "reason": (
+            "eager execution preserves per-layer routing identities and semantic launch "
+            "ranges; kernel service remains deterministic across launch modes"
+        ),
+    }
     assert expectations["comparison_gate"]["never_publish_downward_correction_alone"]
     assert expectations["disclosure_guard"]["fatal_not_survivable"]["disposition"] == (
         "the run is void and CORE-66 remains open"

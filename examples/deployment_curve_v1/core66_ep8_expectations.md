@@ -12,6 +12,12 @@ The source is pinned at
 `bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3`. Network fetches, model-weight
 downloads and backend fallback are forbidden.
 
+CUDA graph replay is disabled because graph replay does not re-enter the
+per-layer Python wrappers that record routing identities and semantic launch
+ranges. Eager launch raises host overhead. Kernel and DeepEP service remain
+deterministic across launch modes, so those services are identifiable, but the
+raw eager step duration is not a registered graph-mode step measurement.
+
 The scheduler request is frozen to cluster `gmerlin7`, partition `gh-hourly`,
 QoS `gpu_hourly`, account `merlin`, two nodes and eight GPUs total. The cell is
 submitted once. A scheduler refusal ends the attempt and is published exactly.
@@ -39,6 +45,9 @@ an EP72 service measurement.
   aggregate communication service.
 - Four routed expert slots per rank match the registered residency, so no
   per-rank routed-weight residency bias is expected.
+- Disabling CUDA graph replay raises host launch overhead. It does not change
+  deterministic kernel or DeepEP service, but it prevents promotion of the raw
+  eager step time to registered graph-mode service.
 - Any fallback from DeepEP invalidates communication pricing and forces null
   signed movement.
 - Dummy weights preserve tensor shapes and expected byte demand, but their

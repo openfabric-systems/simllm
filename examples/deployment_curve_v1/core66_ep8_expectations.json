@@ -30,6 +30,10 @@
       ],
       "purpose": "capture dense and MoE physical launches separately"
     },
+    "execution": {
+      "cuda_graph_enabled": false,
+      "reason": "eager execution preserves per-layer routing identities and semantic launch ranges; kernel service remains deterministic across launch modes"
+    },
     "hardware": {
       "gpu_model": "NVIDIA GH200",
       "gpus_per_node": 4,
@@ -112,6 +116,12 @@
       "feasible": 4,
       "registered": 4,
       "signed_effect_expected_before_comparison": "matched; no routed-weight residency bias is expected"
+    },
+    {
+      "difference": "CUDA graph launch mode",
+      "feasible": "disabled for semantic instrumentation",
+      "registered": "standard graph decode",
+      "signed_effect_expected_before_comparison": "host launch overhead is higher in the feasible capture; deterministic kernel and DeepEP service remain physically identifiable, but raw eager step time cannot be promoted to registered graph-mode step service"
     },
     {
       "difference": "backend fallback",
