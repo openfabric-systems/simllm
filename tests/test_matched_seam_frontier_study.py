@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import importlib.util
 import json
 import os
@@ -13,7 +14,19 @@ ROOT = Path(__file__).resolve().parents[1]
 STUDY = ROOT / "examples/matched_seam_frontier_v1"
 RUNNER = STUDY / "run_study.py"
 CONFIG = STUDY / "study_config.json"
+RECORD = STUDY / "record.json"
+RESULTS_CSV = STUDY / "results.csv"
+PDF = STUDY / "figures/matched-seam-frontier.pdf"
+PNG = STUDY / "figures/matched-seam-frontier.png"
 EXTERNAL_VENV_ENV = "SIMLLM_EXTERNAL_AIC_VENV"
+RECORD_SHA256 = "c08157f5b96f027dd522474f40b4d3159e057e47896a8f0603668c1915feb82d"
+RESULTS_CSV_SHA256 = "fb577860e83f6b7b8dc5f21e44644a48d05730f5ddd450cde2381ab80ae98e8a"
+PDF_SHA256 = "c77fbfd76e96fedd66b09c3a3b74060e83ae569ac1ef276781e8e564f883bcc0"
+PNG_SHA256 = "fa4258f5501b697d26ec8eed3377d279d7837fd41a264109d03be503f05924f1"
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _load_runner():
@@ -22,6 +35,58 @@ def _load_runner():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def test_published_record_and_figures_are_locked() -> None:
+    assert _sha256(RECORD) == RECORD_SHA256
+    assert _sha256(RESULTS_CSV) == RESULTS_CSV_SHA256
+    assert _sha256(PDF) == PDF_SHA256
+    assert _sha256(PNG) == PNG_SHA256
+    assert b"\r" not in RECORD.read_bytes()
+    assert b"\r" not in RESULTS_CSV.read_bytes()
+
+    record = json.loads(RECORD.read_text(encoding="utf-8"))
+    assert record["schema"] == "simllm-matched-seam-frontier-record-v1"
+    assert record["run_state"] == "nonvoid"
+    assert record["voiding_guards"] == []
+    assert record["attempt"] == "attempt-0002"
+    assert record["run_commit"] == "3e752d58c9e874f234110af69851384ea02873cd"
+    assert all(record["fatal_guards"].values())
+    assert record["family_tallies"] == {
+        "S": {"passed": 13, "denominator": 13},
+        "R": {"passed": 10, "denominator": 10},
+        "F": {"passed": 12, "denominator": 13},
+        "M": {"passed": 2, "denominator": 2},
+        "W": {"passed": 1, "denominator": 1},
+    }
+    misses = [
+        row
+        for row in record["rows"]
+        if row["kind"] == "scored" and not row["passed"]
+    ]
+    assert [(row["id"], row["observed"]) for row in misses] == [
+        ("F-2-09", "0.607495219355")
+    ]
+    assert record["families"]["M"]["maximum_quotient"]["decimal"] == pytest.approx(
+        1.0427153998047758
+    )
+    assert record["families"]["D"]["raw_prefill_pass_ms"] == pytest.approx(
+        99.20380474486889
+    )
+    assert record["families"]["D"]["residual_from_raw_pass_ms"] == pytest.approx(
+        97.21919525513111
+    )
+    assert len(record["families"]["candidate_grid"]["agg"]) == 25
+    assert len(record["families"]["candidate_grid"]["disagg"]) == 10
+    assert len(record["families"]["F"]["ideal_frontier"]) == 10
+    assert len(record["families"]["F"]["packet_frontier"]) == 9
+    serialized = RECORD.read_text(encoding="utf-8")
+    assert "/data3/" not in serialized
+    assert "/home/" not in serialized
+
+    with RESULTS_CSV.open(encoding="utf-8", newline="") as stream:
+        csv_rows = list(csv.DictReader(stream))
+    assert len(csv_rows) == len(record["rows"])
 
 
 def test_tracked_external_grid_constructs_all_declared_candidates() -> None:

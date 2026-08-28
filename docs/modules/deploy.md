@@ -34,8 +34,11 @@ backend, allocating a GPU or importing a serving framework.
   device-only scan retain its declared tensor-parallel structure without
   inventing network bytes; nonzero work and every wider width keep the
   existing sourced-partition requirements and fail-closed behavior.
-  Optional `BatchServicePoint` rows remain a separate measured scheduler
-  service term and are interpolated only through the calibration module's
+  Optional `MEASURED` `BatchServicePoint` rows remain a separate scheduler
+  service term. A `MEASURED-EXTERNAL` surface instead owns the decode
+  `kernel_floor` directly, retains the imported slice and entry-key identity,
+  and admits no positive roofline or declared fitted term into that scored
+  stamp. Both forms interpolate only through the calibration module's
   installed surface function.
 - `estimate_prefill_request` requires an explicit source-carrying prefill
   service and declared handoff. Its `step_ps` is the prefill service, while
@@ -66,6 +69,8 @@ backend, allocating a GPU or importing a serving framework.
   paired or y-only anchors; a y-only production anchor is never converted
   into an invented point. `pareto_front` maximizes both exact axes, keeps
   coordinate ties, and returns a canonical order independent of input order.
+  `weak_dominance_pareto` applies the same coordinate-deduplicated rule to
+  pool-composed throughput curves whose y axis is not `batch * decode_speed`.
 - `prepare_plot_v3` emits
   `simllm-deployment-frontier-plot-contract-v3` data. It preserves the version
   2 analytical lines, simulated dots, measured white diamonds and dashed
@@ -119,27 +124,36 @@ result: decode e-star 0.586068 remains inside the frozen band, while prefill
 e-star 0.142552 falls outside it and X2 passes 3 of 4 rows. X3b passes 10 of 10
 through a disclosed two-point step-frontier degeneracy, while X3c passes only 3
 of 10 against the frozen minimum of 8. The study validates the decode bracket
-and refutes the prefill matched-point premise; DEPLOY-12 owns a v2 freeze with
-matched external latency semantics, while DEPLOY-9 through DEPLOY-11 retain
-their breadth and silicon-precision scopes.
+and refutes the prefill matched-point premise.
+
+The nonvoid
+[matched-seam frontier](../../examples/matched_seam_frontier_v1/RESULTS.md)
+replaces that premise with the imported database's own serving composition.
+All 13 exact service identities and all 10 published decode-step bands pass.
+The 196.423 ms external TTFT decomposes into a 99.203805 ms raw prefill pass,
+9.920380 ms of prefill correction, 87.299348 ms of autoscale correction and a
+-0.000533 ms three-decimal reconciliation, so DEPLOY-12 closes. The ideal and
+packet curves share the measured-external service base; the packet seam raises
+the capacity-controlling step by as much as 1.042715 and passes both mechanism
+checks. The frontier register is MIXED at 12 of 13: F-2-09 produces 0.607495
+against the frozen 0.75 floor because its exact matching point lies just left
+of the table's rounded x coordinate. DEPLOY-13 owns that presentation-precision
+residual. DEPLOY-9 through DEPLOY-11 retain their breadth and silicon-precision
+scopes.
 
 ## Open tasks
 
 ### Precision
 
-- DEPLOY-12 (Precision; P0; M): freeze and execute a v2 frontier comparison
-  whose external latency columns have the same service-versus-queueing
-  semantics as the SimLLM quantities they are matched against. The v1
-  surrogate compares 28.000527 ms of isolated TP4 prefill service with an
-  external 196.423 ms TTFT operating-point column whose ten rows carry
-  concurrency 27 through 288 and request rate 10.063 through 41.238. Before
-  any v2 run, establish from source-complete tool evidence whether that TTFT
-  includes queueing; then either obtain isolated external prefill service or
-  connect SimLLM through the equivalent arrival, queue and service chain.
-  Preserve the v1 MIXED record, its frozen bands and its validated decode
-  bracket unchanged. Acceptance requires explicit field semantics, matched
-  causal boundaries, a fresh expectations-only commit, and no fitted value or
-  outcome-dependent band change.
+- DEPLOY-13 (Precision; P1; M): replace the rounded external x coordinate as
+  an exact step-frontier threshold with source-carried unrounded coordinates
+  or explicit publication intervals. The matched-seam study's F-2-09 surrogate
+  compares external 168.131 tokens/s/user with the exact matching point at
+  168.130792, excludes that point, selects row 10 and reports 0.607495 against
+  the frozen 0.75 floor. Freeze the representation and lookup rule before the
+  successor run, retain the current refutation unchanged, and require every
+  matched configuration to remain selected throughout its declared rounding
+  interval without weakening any quotient band.
 - DEPLOY-4 (Precision; P1; M): Replace the single input-local decode batch
   surface with content-addressed per-width coverage beyond the frozen 8, 16
   and 72 GPU shapes. Identify every width by measured entry keys and accept

@@ -1818,6 +1818,18 @@ beyond this exact identity and offline composition surface. COMP-87
 specifically owns the imported but undispatched WideEP MoE, MLA BMM, Mamba2,
 MLA and generation-MLA operation families.
 
+The
+[matched-seam frontier](../../examples/matched_seam_frontier_v1/RESULTS.md)
+projects that artifact through `ExternalQwen32BPassModel` at TP2, TP4 and TP8
+with FP8 key/value cache and attention modes. Its deployment binding retains
+`MEASURED-EXTERNAL` through all 13 service cells and admits no positive
+roofline or declared fitted duration into the ideal scored arm. All 13 cells
+are bit-equal to the separately frozen live-SDK oracles, and all 10 composed
+decode steps lie within the frozen [0.98, 1.02] published band. **The serving
+correction constants form a content-addressed composition surface joined to
+the imported operation slice rather than an implicit property of its rows.**
+COMP-88 owns that surface.
+
 ## Open tasks
 
 ### Precision
@@ -1833,6 +1845,16 @@ MLA and generation-MLA operation families.
   requires both frameworks to agree, the same mathematical pair to carry the
   same FLOP coefficient in decode and prefill, exact family conservation, and
   a successor frontier comparison that names the new inventory hashes.
+- COMP-88 (Precision; P1; M): move the external serving-composition constants
+  into a content-addressed artifact joined to the imported operation slice.
+  The matched-seam study currently freezes the 1.1 prefill correction, 1.08
+  decode correction, 1.8 TTFT autoscale and 0.9 and 0.92 rate-degradation
+  factors in its study-local configuration. Identify each value from the
+  pinned SDK source and configuration that selects it, emit an immutable
+  composition record with its own digest, and require that record to reproduce
+  all 13 Family S hexadecimal services, all 10 Family R quotients and the full
+  Family D decomposition exactly. Omitting the record must preserve the
+  current explicit configuration path and every accepted artifact byte.
 - COMP-1 (Precision; P1; L): complete production compute calibration.
   This task is the numerical capstone for every selected target: it owns
   target-silicon compute and memory anchors, per-device fit inputs, untouched
