@@ -12,6 +12,7 @@ import json
 import os
 import platform
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -39,6 +40,7 @@ SCHEMA = "simllm-minimax-ep-scaling-record-v2"
 LEGACY_SCHEMA = "simllm-minimax-ep-scaling-record-v1"
 WALL_BOUND_SECONDS = 3600.0
 EXPECTED_FREEZE_COMMITS = ("61b66c4", "5a29bb0", "4d1e41c")
+PDF_TEXT_TOOL = "pdftotext"
 
 
 def _json_bytes(value: Any) -> bytes:
@@ -1552,36 +1554,57 @@ def _inspect_artifact_disclosures(
     ):
         raise RuntimeError("FG-4 figure caption omits dense or sparse traffic")
 
-    pdf_path = figures_dir / "minimax_ep_scaling.pdf"
-    completed = subprocess.run(
-        ["pdftotext", os.fspath(pdf_path), "-"],
-        check=False,
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
-    if completed.returncode != 0:
-        raise RuntimeError("FG-4 could not inspect generated PDF text")
-    pdf_text = completed.stdout.lower()
-    for term in (
-        "dense fallback",
-        "half all-gather",
-        "reduce-scatter",
-        "sparse routed",
-        "fp8 dispatch",
-        "bf16 combine",
-    ):
-        if term not in pdf_text:
-            raise RuntimeError(f"FG-4 generated PDF omits {term!r}")
     results_rows_inspected = _inspect_results_table_disclosures(results_path)
+    pdf_path = figures_dir / "minimax_ep_scaling.pdf"
+    if not pdf_path.is_file():
+        raise RuntimeError("FG-4 generated PDF is missing")
+    pdf_text_tool = shutil.which(PDF_TEXT_TOOL)
+    pdf_text_inspection = {
+        "performed": False,
+        "skip_reason": f"{PDF_TEXT_TOOL} is not available on PATH",
+        "tool": PDF_TEXT_TOOL,
+    }
+    if pdf_text_tool is not None:
+        completed = subprocess.run(
+            [pdf_text_tool, os.fspath(pdf_path), "-"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if completed.returncode != 0:
+            raise RuntimeError("FG-4 could not inspect generated PDF text")
+        pdf_text = completed.stdout.lower()
+        for term in (
+            "dense fallback",
+            "half all-gather",
+            "reduce-scatter",
+            "sparse routed",
+            "fp8 dispatch",
+            "bf16 combine",
+        ):
+            if term not in pdf_text:
+                raise RuntimeError(f"FG-4 generated PDF omits {term!r}")
+        pdf_text_inspection = {
+            "performed": True,
+            "skip_reason": None,
+            "tool": PDF_TEXT_TOOL,
+        }
     return {
         "record_rows_inspected": len(record["rows"]),
         "csv_rows_inspected": len(csv_rows),
         "figure_series_inspected": len(series),
         "figure_caption_inspected": True,
-        "pdf_text_inspected": True,
+        "pdf_text_inspection": pdf_text_inspection,
         "results_table_rows_inspected": results_rows_inspected,
     }
+
+
+def _format_pdf_text_inspection(inspection: dict[str, Any]) -> str:
+    pdf_text = inspection["pdf_text_inspection"]
+    if pdf_text["performed"]:
+        return f"fg4_pdf_text=passed tool={pdf_text['tool']}"
+    return f"fg4_pdf_text=skipped missing_tool={pdf_text['tool']}"
 
 
 def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
@@ -1789,10 +1812,10 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
     return record
 
 
-def _validate_record(path: Path) -> dict[str, Any]:
+def _validate_record(path: Path) -> tuple[dict[str, Any], dict[str, Any] | None]:
     record = json.loads(path.read_text(encoding="utf-8"))
     if record.get("schema") == LEGACY_SCHEMA:
-        return record
+        return record, None
     if record.get("schema") != SCHEMA:
         raise SystemExit("record has an unsupported schema")
     if len(record.get("rows", ())) != 4:
@@ -1805,8 +1828,9 @@ def _validate_record(path: Path) -> dict[str, Any]:
         raise SystemExit("record fatal-guard inventory is incomplete")
     if not all(record["fatal_guards"].values()):
         raise SystemExit("tracked corrected run has a violated fatal guard")
+    disclosure_inspection = None
     if path.resolve() == TRACKED_RECORD.resolve():
-        _inspect_artifact_disclosures(
+        disclosure_inspection = _inspect_artifact_disclosures(
             record_path=path,
             csv_path=TRACKED_CSV,
             figures_dir=TRACKED_FIGURES,
@@ -1826,7 +1850,7 @@ def _validate_record(path: Path) -> dict[str, Any]:
         ):
             if required not in opening:
                 raise SystemExit(f"RESULTS.md opening omits {required!r}")
-    return record
+    return record, disclosure_inspection
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -1858,8 +1882,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
     if args.validate_tracked:
-        record = _validate_record(TRACKED_RECORD)
+        record, disclosure_inspection = _validate_record(TRACKED_RECORD)
         print(f"run_state={record['run_state']}")
+        if disclosure_inspection is not None:
+            print(_format_pdf_text_inspection(disclosure_inspection))
         return 0
     raw_bulk = args.bulk_root or os.environ.get(BULK_ROOT_ENV)
     if raw_bulk is None:
@@ -1874,6 +1900,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{family}={tally['passed']}/{tally['denominator']}")
     print("S=unscored")
     print(f"fatal_guards={record['fatal_guards']}")
+    print(_format_pdf_text_inspection(record["artifact_disclosure_inspection"]))
     return 0 if record["run_state"] == "nonvoid" else 1
 
 

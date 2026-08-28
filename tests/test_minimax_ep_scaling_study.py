@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 STUDY = ROOT / "examples/minimax_ep_scaling_v1"
 RECORD = STUDY / "record.json"
 RESULTS_CSV = STUDY / "results.csv"
-RECORD_SHA256 = "ed14ca4f65bd504a185f6214f0310ba63bcf10cc9aec65a77bc20a87b426791d"
+RECORD_SHA256 = "e83424281b85990a9dbd17b454ba801c4aa5941b8b0cfa5089e2c3899ba6be65"
 RESULTS_CSV_SHA256 = "c59b185eaac7895fd5eb7eef8224a1362d62ba25454166b6e4db726faadacfbb"
 PNG_SHA256 = "13c080a3a2608da2b283f9d14b6bbf10716ac667c48d7ac3adcd7fb9e303669d"
 PDF_SHA256 = "9f8d529e4230967cf83c33066db222788b8cc32aa956b1925023d800587fea4d"
@@ -119,8 +119,12 @@ def test_family_d_generator_classifies_cost_models_and_diagnostic() -> None:
     }
 
 
-def test_fg4_inspector_rejects_mutated_results_table(tmp_path: Path) -> None:
+def test_fg4_inspector_rejects_mutated_results_table_without_pdf_tool(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     runner = _runner()
+    monkeypatch.setattr(runner.shutil, "which", lambda _tool: None)
     report = (STUDY / "RESULTS.md").read_text(encoding="utf-8")
     required = (
         "external NCCL-table cost model: dense SM90 fallback, generic "
@@ -140,6 +144,79 @@ def test_fg4_inspector_rejects_mutated_results_table(tmp_path: Path) -> None:
             csv_path=RESULTS_CSV,
             figures_dir=STUDY / "figures",
             results_path=mutated,
+        )
+
+
+def test_fg4_records_skipped_pdf_check_when_tool_is_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runner = _runner()
+    monkeypatch.setattr(runner.shutil, "which", lambda _tool: None)
+
+    inspection = runner._inspect_artifact_disclosures(
+        record_path=RECORD,
+        csv_path=RESULTS_CSV,
+        figures_dir=STUDY / "figures",
+        results_path=STUDY / "RESULTS.md",
+    )
+
+    assert inspection["pdf_text_inspection"] == {
+        "performed": False,
+        "skip_reason": "pdftotext is not available on PATH",
+        "tool": "pdftotext",
+    }
+
+
+def test_fg4_still_requires_pdf_artifact_when_tool_is_unavailable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runner = _runner()
+    monkeypatch.setattr(runner.shutil, "which", lambda _tool: None)
+    figures = tmp_path / "figures"
+    figures.mkdir()
+    metadata_name = "minimax_ep_scaling.metadata.json"
+    figures.joinpath(metadata_name).write_bytes(
+        STUDY.joinpath("figures", metadata_name).read_bytes()
+    )
+
+    with pytest.raises(RuntimeError, match="generated PDF is missing"):
+        runner._inspect_artifact_disclosures(
+            record_path=RECORD,
+            csv_path=RESULTS_CSV,
+            figures_dir=figures,
+            results_path=STUDY / "RESULTS.md",
+        )
+
+
+def test_fg4_pdf_check_fails_closed_when_tool_is_available(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runner = _runner()
+    monkeypatch.setattr(
+        runner.shutil,
+        "which",
+        lambda _tool: os.fspath(Path("available-tools") / "pdftotext"),
+    )
+    extracted = (
+        "dense fallback half all-gather reduce-scatter sparse routed fp8 dispatch"
+    )
+    monkeypatch.setattr(
+        runner.subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            returncode=0,
+            stderr="",
+            stdout=extracted,
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="generated PDF omits 'bf16 combine'"):
+        runner._inspect_artifact_disclosures(
+            record_path=RECORD,
+            csv_path=RESULTS_CSV,
+            figures_dir=STUDY / "figures",
+            results_path=STUDY / "RESULTS.md",
         )
 
 
@@ -202,7 +279,11 @@ def test_tracked_minimax_record_is_locked_and_nonvoid() -> None:
         "csv_rows_inspected": 4,
         "figure_caption_inspected": True,
         "figure_series_inspected": 5,
-        "pdf_text_inspected": True,
+        "pdf_text_inspection": {
+            "performed": True,
+            "skip_reason": None,
+            "tool": "pdftotext",
+        },
         "record_rows_inspected": 4,
         "results_table_rows_inspected": 12,
     }
@@ -448,6 +529,7 @@ def test_physical_ledger_and_portable_paths_are_locked() -> None:
 def test_runner_validates_tracked_record_without_pythonpath(tmp_path: Path) -> None:
     environment = dict(os.environ)
     environment.pop("PYTHONPATH", None)
+    environment["PATH"] = os.fspath(tmp_path / "empty-path")
     completed = subprocess.run(
         [
             sys.executable,
@@ -460,7 +542,10 @@ def test_runner_validates_tracked_record_without_pythonpath(tmp_path: Path) -> N
         capture_output=True,
         text=True,
     )
-    assert completed.stdout.strip() == "run_state=nonvoid"
+    assert completed.stdout.splitlines() == [
+        "run_state=nonvoid",
+        "fg4_pdf_text=skipped missing_tool=pdftotext",
+    ]
 
 
 def test_live_sdk_family_matches_when_environment_is_available(

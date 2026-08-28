@@ -3,7 +3,11 @@
     "csv_rows_inspected": 4,
     "figure_caption_inspected": true,
     "figure_series_inspected": 5,
-    "pdf_text_inspected": true,
+    "pdf_text_inspection": {
+      "performed": true,
+      "skip_reason": null,
+      "tool": "pdftotext"
+    },
     "record_rows_inspected": 4,
     "results_table_rows_inspected": 12
   },
