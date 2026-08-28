@@ -1105,6 +1105,18 @@ opt-in release-aware packet policy and leaves every core default unchanged.
   verdict. The frozen five-percent comparison is unscored, TRAF-66's
   finite-overlap term remains separate, and CORE-61 stays open on a
   digest-complete registered decode output.
+  Before any depth-8 cell scored, the
+  [retry supplement](../../examples/deployment_curve_v1/core61_depth_retry_expectations.md)
+  froze a startup-harness amendment. The pinned logs refine the merged failure
+  summary: job `200123` ended on a 896 MiB BF16 hidden-state output, while warm
+  retry `200128` ended on a 3 GiB BF16 FlashInfer DeepGEMM output. Both belong
+  to vLLM's 65,536-token dummy startup run, inherited because the command set
+  `MAX_NUM_BATCHED_TOKENS=65536`; reduced depth did not alter that token cap.
+  The retry uses a 4,096-token startup cap plus a scheduler-proven exact
+  full-batch KV alignment. The measured contract remains eight layers, batch
+  32 and 2,000 cached KV tokens per request. The 3,751,359,511 ps prediction,
+  signed residual rule and five-percent acceptance stay unchanged, and no
+  measured number existed when this amendment was frozen.
 
 - CORE-48 (Precision; P1; M): give the cross-node coarse RNIC path a
   destination-ingress serializer. Semantic sends serialize per source RNIC and

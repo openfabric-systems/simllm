@@ -2718,8 +2718,13 @@ Granite arm's absent repetitions.
   CORE-61 adds a companion held-out eight-layer capture under the same freeze,
   forbidden before `2026-08-28T06:30` in `Europe/Zurich`. Its exact base
   submission is `ssh merlin sbatch -M gmerlin7 --partition=gh-hourly --time=00:25:00 --job-name=gh-core61-d8-base --export=ALL,MODEL=deepseek-ai/DeepSeek-V3,MODEL_KEY=deepseek-v3,SHAPE_SET=deepseek,REVISION=e815299b0bcbac849fa540c768ef21845365c9eb,REDUCED_LAYERS=8,GPU_MEMORY_UTILIZATION=0.88,MODE=graph,DEEPSEEK_SUITE=base,MAX_MODEL_LEN=8192,MAX_NUM_BATCHED_TOKENS=16384,RUN_WALL=0 $SIMLLM_MERLIN_STAGE_ROOT/gh200lane/run_vllm_capture.sbatch`.
-  Its exact batch-32, remote-KV-2000 decode submission is
-  `ssh merlin sbatch -M gmerlin7 --partition=gh-hourly --time=00:20:00 --job-name=gh-core61-d8-decode --export=ALL,MODEL=deepseek-ai/DeepSeek-V3,MODEL_KEY=deepseek-v3,SHAPE_SET=deepseek,REVISION=e815299b0bcbac849fa540c768ef21845365c9eb,REDUCED_LAYERS=8,GPU_MEMORY_UTILIZATION=0.88,MODE=graph,DEEPSEEK_SUITE=decode,MAX_MODEL_LEN=8192,MAX_NUM_BATCHED_TOKENS=65536,MAX_NUM_SEQS=64,RUN_WALL=0 $SIMLLM_MERLIN_STAGE_ROOT/gh200lane/run_vllm_capture.sbatch`.
+  Its original batch-32, remote-KV-2000 decode submission is superseded only
+  for CORE-61 by the pre-scoring
+  [retry supplement](../../examples/deployment_curve_v1/core61_depth_retry_expectations.md).
+  The amended command uses a 4,096-token startup cap and a task-owned exact-KV
+  alignment harness; the eight-layer, batch-32, remote-KV-2000 measurement,
+  3,751,359,511 ps prediction, signed residual and five-percent rule are
+  unchanged. No depth-8 cell had scored when the supplement was committed.
   Submit base then decode, retain every digest-complete output below the
   CORE-61 external run root, and stop cleanly on SSH loss. The preregistered
   eight-layer prediction is 3,751,359,511 ps; its measurement and signed
@@ -2791,9 +2796,12 @@ Granite arm's absent repetitions.
   The [COMP-78 execution record](../../examples/hopper_kernel_cycle_candidate_v1/COMP78_RESULTS.md)
   retains exact CORE-61 base job `200120` and decode attempts `200123` and
   `200128` without overwriting an attempt or changing a registered command.
-  Both decode attempts failed before the scored boundary on the same 896 MiB
-  startup allocation, so the measured service, signed residual and linearity
-  verdict remain absent. Pinned real vLLM and SGLang target executables are
+  Both decode attempts failed before the scored boundary in the same
+  65,536-token startup profile. The pinned logs refine their final allocations:
+  job `200123` requested 896 MiB for a BF16 hidden-state output, while warm
+  retry `200128` requested 3 GiB for a BF16 FlashInfer DeepGEMM output. The
+  measured service, signed residual and linearity verdict remain absent. Pinned
+  real vLLM and SGLang target executables are
   staged, but the landed cell driver cannot prove fragmented KV placement or
   emit the required routing, two-clean-harvest and digest-completion outputs.
   The Granite prefix therefore remains 0 of 1,212, byte-identical to the empty
