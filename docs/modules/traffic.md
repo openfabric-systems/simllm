@@ -1046,6 +1046,17 @@ degree 16. All 126 capacity and byte-ledger cells, 12 fatal guards and 16
 TRAF-71 preservation locks pass, so TRAF-72 closes while its three behavioral
 refutations remain part of the result.
 
+TRAF-73 separates credit ownership from downstream arbitration. Public NVLink
+architecture descriptions make the receive allocation per physical link and
+per link-layer virtual channel, so one sender cannot consume another sender's
+credits. The model carries one implicit virtual channel and keeps the existing
+256-credit, 272-byte and 200,000 ps values as declared candidates on each
+physical link. Incast contention sits at destination ingress and memory
+acceptance on NV4, plus a crossbar output on an NVSwitch path. Release-aware
+round robin is therefore the documented declared default candidate, with
+static interleave and greedy capture selectable as alternatives. None of these
+policy labels is a hardware measurement.
+
 NVLink hardware incast identification is long-flow only. Sender launches on
 the real node serialize through sequential PCIe writes, so nanosecond-scale
 true synchronous small-flow co-arrival cannot be constructed. Simulated
@@ -1656,6 +1667,45 @@ route to those higher degrees.
   committed and now exposes parameter-specific evidence. The flow-dynamics
   gate is `OPEN`. TRAF-65 remains open for its separately required live
   held-out integration result.
+
+- TRAF-73 (Precision; P1; M): identify the effective NVLink credit window,
+  credit-pool scope and downstream incast arbitration on the qualified NV4
+  node. The surrogate being replaced is the pair-keyed credit ledger plus an
+  undocumented scheduling choice. Public architecture background says receive
+  buffers are hard allocated per physical link and per link-layer virtual
+  channel, so the structural model keys the unchanged 256-credit, 272-byte
+  candidate per link for one implicit modeled virtual channel. It does not
+  claim a physical virtual-channel count. Release-aware round robin is the
+  documented default candidate because independent link credits feed a shared
+  destination-ingress or NVSwitch-output service; static interleave and greedy
+  capture are explicit alternatives.
+
+  The expectations-only specification is
+  [nvlink_credit_arbitration_v1](../../examples/nvlink_credit_arbitration_v1/expectations.md).
+  H1 sweeps 31 payload sizes from 4 KiB through 8 MiB on every directed NV4
+  pair and zooms around the 262,144-byte payload counterpart of the four-link
+  candidate window. A repeated persistent latency break identifies an
+  effective window and return delay; no break is inconclusive because the
+  declared return is shorter than one link's window serialization. H2 repeats
+  the zoom with one, two and three senders into receiver 3. Stable per-sender
+  knees with aggregate outstanding bytes proportional to sender count support
+  per-link pools; knees divided by sender count with constant aggregate bytes
+  support a shared pool. H3 uses 500 ms steady streams at raw offers 100, 60
+  and 60 GB/s and rotates the greedy source. Small senders at their offered
+  rates with the greedy sender receiving the remainder support fair
+  arbitration; a greedy sender at least 95 GB/s with a small sender below
+  57 GB/s supports greedy capture; equal 57 to 63 GB/s shares with unused
+  receiver service support static non-borrowing interleave.
+
+  Before hardware runs, publish all three simulation arms at degrees 2, 3, 4,
+  8 and 16, labeling 4, 8 and 16 as simulated mesh extrapolations with no NV4
+  counterpart. Acceptance for the implementation slice is full-suite green,
+  exact logical and wire conservation, the expected directional separation,
+  the scored candidate profile unchanged, and all 89 files in the merged
+  packet, flow and comparison studies byte-identical. Acceptance for closure
+  is a nonvoid hardware classification under the frozen rules, including an
+  honest inconclusive result with no promotion. Until then all credit numbers
+  and arbitration policies remain declared candidates and TRAF-73 stays open.
 
 ### Completeness
 

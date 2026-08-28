@@ -4,8 +4,10 @@ The candidate NVLink domain is a queue-level decomposition of one directed
 peer transfer into three independently parameterized services: TX, switch and
 RX. This note records the merged model, its exact analytic bypass, the frozen
 A100 case-to-parameter identification map and the evidence class of every
-current claim. It documents the implementation; it does not promote the
-candidate or execute a study.
+current claim. It also records the physical credit ownership and the declared
+arbitration alternatives that TRAF-73 measures. Public architecture background
+does not promote a candidate or substitute for a run on this repository's
+NV4 node.
 
 ## Model and evidence at a glance
 
@@ -34,9 +36,10 @@ Two merged files are authoritative for this study:
   candidate values and preserves the frozen expectations digest
   `212a7a26f54e444c9b18f1e528bd0d00b5a28e4f9e005b0dc137f477ad642571`.
 
-The profile schema is `simllm-htsim-nvlink-candidate-profile-v1`; its evidence
-class is `declared_candidate_not_hardware_measurement`. Loading code rejects a
-different class or a status other than `candidate`.
+The profile schema is `simllm-htsim-nvlink-candidate-profile-v1`. The scored
+profile carries parameter-specific TRAF-70 evidence: the two endpoint rates
+and three ordering or direction fields are measured, the direct-mesh switch is
+structural, and the credit and buffer fields remain declared candidates.
 
 This module is an additive htsim-style handoff. It is not the default
 intra-node timing authority. The active traffic path still uses the analytic
@@ -113,18 +116,53 @@ Request and response payload and wire bytes remain separate fields in the
 domain result. The direction rule is declared candidate policy, not an
 observation from the void hardware capture.
 
-### Destination credits
+### Link and virtual-channel credits
 
-Each directed source-destination pair has 256 credit slots. One slot covers a
-272-byte maximum wire packet. Packet sequence modulo 256 selects the slot, so
-the next packet mapped to that slot cannot start until its recorded return
-time.
+The physical ownership is per link and per link-layer virtual channel. A
+receiver hard allocates buffers to each such domain, and the transmitter on
+that link tracks only those credits. One sender cannot drain another sender's
+credits. The model carries one implicit virtual channel and applies the
+unchanged candidate of 256 credit slots, each covering one 272-byte maximum
+wire packet, separately to every physical link in a bonded ordered pair.
+Packet visits on one link select slots modulo 256, so reuse on a different
+link does not consume that link's pool.
 
 The v1 abstraction makes a slot reusable at `tx_finished_at_ps + 200,000 ps`.
 It does not create a credit packet, wait on the modeled RX finish or expose a
 separate reverse-link serialization. The blue return path in Figure 1 names
 the causal ownership without claiming a more detailed protocol than the code
 implements.
+
+These values and the one-modeled-virtual-channel scope are not hardware
+measurements. With four links, the declared aggregate window is 278,528 wire
+bytes or 262,144 payload bytes. One link takes 2,785,280 ps to serialize its
+256 packets, which is longer than the declared 200,000 ps return. The candidate
+therefore predicts no nominal credit stall. A hardware sweep that sees no knee
+leaves the unit, window and return unidentifiable rather than confirming them.
+
+## Physical contention and arbitration
+
+Credits protect independent receive buffers on each incoming link. They are
+not the cross-sender sharing mechanism at incast. The contended service is the
+destination ingress and memory-acceptance path; when an NVSwitch is present,
+the crossbar output port is an additional contended service.
+
+The declared default candidate is release-aware round robin because independent
+per-link credits feed a shared downstream service and round-robin or dual
+round-robin scheduling is a physically plausible crossbar mechanism. Static
+interleave remains the deterministic fixed-cycle alternative. Greedy capture
+is the unfair work-conserving alternative in which the first full-rate input
+wins whenever it is ready. All three policies are selectable. Their evidence
+classes are declared candidates, not measurements.
+
+The background sources are NVIDIA's vendor
+[NVLink overview](https://www.nvidia.com/en-us/data-center/nvlink/), NVIDIA's
+[NVSwitch technical overview](https://images.nvidia.com/content/pdf/nvswitch-technical-overview.pdf),
+and WikiChip's encyclopedic
+[NVLink description](https://en.wikichip.org/wiki/nvidia/nvlink). They motivate
+the structure only. No value from those descriptions is recorded as a captured
+value, and TRAF-73's registered NV4 cells decide the effective window, pool
+scope and arbitration policy on the actual node.
 
 ### Four-link bonding
 
@@ -161,7 +199,8 @@ hardware measurement.
 The same `NvlinkSwitch` box also supports `queued`. The input-placement form
 shown in Figure 1 has one cursor per source port feeding a contention point.
 The implementation may instead key the cursor by output destination or use one
-shared cursor. FIFO arbitration is the only v1 arbitration policy. Enabling or
+shared cursor. Release-aware round robin is the declared default candidate;
+static interleave and greedy capture are explicit alternatives. Enabling or
 disabling head-of-line blocking controls whether an extent receives a separate
 cursor under the selected placement.
 
@@ -251,14 +290,15 @@ capture is `COMPLETE_VOID_86_OF_86` and identifies no TX or RX parameter.
 |---|---|---|---|
 | TX packet geometry and direction | 256-byte maximum payload; 16-byte header; write data in request; read control in request and read data in response | **DECLARED CANDIDATE**, `declared_candidate_not_hardware_measurement` | No packet-format or direction parameter is calibrated |
 | TX bond and rates | Four links per peer; 25 GB/s per link; 300 GB/s endpoint egress; earliest-available packet striping | **DECLARED CANDIDATE**, `declared_candidate_not_hardware_measurement` | The published rates constrain an envelope but do not identify bonding |
-| TX credits | 256 per destination; 272 bytes per credit | **DECLARED CANDIDATE**, `declared_candidate_not_hardware_measurement` | Effective unit and window remain unmeasured |
+| TX credits | 256 per physical link per implicit modeled virtual channel; 272 bytes per credit | **PUBLIC ARCHITECTURE STRUCTURE plus DECLARED NUMERIC CANDIDATES**, not our measurement | Effective unit, window, return and physical virtual-channel count remain unmeasured |
+| Incast arbitration | Release-aware round robin default; static interleave and greedy capture alternatives | **DECLARED POLICY CANDIDATES**, not our measurement | TRAF-73 registers a sustained unequal-offer discriminator |
 | A100 switch | Exact pass-through with zero byte and time effect | **STRUCTURAL DIRECT-MESH INVARIANT, NOT MEASURED** | It stands because the selected topology has no switch, not because TRAF-65 measured it |
 | NVSwitch-class switch | Queued interface with input, output or shared placement, FIFO arbitration and optional head-of-line partitioning | **PARAMETERIZED INTERFACE, NO SHIPPED PROFILE VALUES** | H100 and GH200 need architecture-specific queue and service evidence |
 | RX ingress and delivery | 300 GB/s ingress; 1 MiB capacity; 200,000 ps credit return; extent-sequence reassembly; per-extent delivery | **DECLARED CANDIDATE**, `declared_candidate_not_hardware_measurement` | No RX rate, capacity, return or ordering parameter is calibrated |
 | Ordered-pair envelope | 94.056 GB/s composed candidate against 94.00 to 94.07 GB/s measured | **PUBLISHED-MEASUREMENT CHECK, NOT IDENTIFICATION** | Passes the registered envelope check; cannot distinguish packet overhead from copy-engine coalescing |
 | Three-way fan-out envelope | 281.699 GB/s composed candidate against 281.65 GB/s measured | **PUBLISHED-MEASUREMENT CHECK, NOT IDENTIFICATION** | Passes the registered envelope check; does not identify endpoint or ingress queue service |
 | TRAF-65 hardware capture | `COMPLETE_VOID_86_OF_86` | **VOID CAPTURE, NO MEASUREMENT EVIDENCE** | Candidate values and classes remain unchanged; TRAF-65 remains open |
-| TRAF-70 corrected capture | Corrected identification capture in progress | **PENDING IDENTIFICATION EVIDENCE** | It is the gate before any candidate parameter or evidence class can move |
+| TRAF-70 corrected capture | `COMPLETE_VALID_86_OF_86` | **PARAMETER-SPECIFIC MEASURED, DECLARED AND STRUCTURAL EVIDENCE** | It identifies two rates and three direction or ordering fields; credit, buffer and arbitration stay declared |
 
 The two envelope checks use 524,288 payload bytes per destination. The
 composed candidate reaches 94.05638991723997 GB/s for one ordered pair and
@@ -273,9 +313,9 @@ This documentation study performs no simulation, scored comparison or
 registry transition. It does not change TRAF-65, TRAF-70 or the candidate
 profile. It also does not treat the H100 or GH200 switch path as populated.
 
-TRAF-70 owns the corrected capture procedure. Until its frozen guards are
-decidable and its required observed ledgers are complete, every numeric TX and
-RX value in Figure 1 remains a declared candidate. Later integration must
-also preserve the analytic identity bypass and connect packet-domain
-timestamps to the repository's shared queue-visit and live-metric contracts
-before the mechanism can support a TTFT or TPOT precision claim.
+TRAF-73 owns the remaining credit-window, pool-scope and arbitration
+identification. Its simulation arms are predictions only, while its three
+hardware families are the promotion gate. Later integration must also preserve
+the analytic identity bypass and connect packet-domain timestamps to the
+repository's shared queue-visit and live-metric contracts before the mechanism
+can support a TTFT or TPOT precision claim.
