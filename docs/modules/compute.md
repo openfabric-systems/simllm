@@ -2727,8 +2727,11 @@ Granite arm's absent repetitions.
   unchanged. No depth-8 cell had scored when the supplement was committed.
   Submit base then decode, retain every digest-complete output below the
   CORE-61 external run root, and stop cleanly on SSH loss. The preregistered
-  eight-layer prediction is 3,751,359,511 ps; its measurement and signed
-  residual remain absent while Merlin is unavailable.
+  eight-layer prediction is 3,751,359,511 ps. The later
+  [CORE-61 retry](../../examples/deployment_curve_v1/core61_depth_retry_result.md)
+  measures 3,629,568,000 ps and retains a signed `measured - predicted`
+  residual of -121,791,511 ps, or -3.355537 percent over measured service.
+  This passes the unchanged five-percent rule and completes the depth arm.
   Acceptance requires all registered Granite cells plus the exact DeepSeek
   physical cells, retained source and output digests, and a resumable campaign
   record whose completed-cell prefix survives interruption byte for byte.
@@ -2749,7 +2752,9 @@ Granite arm's absent repetitions.
   `d868a4f35d633032daa238168d00f42c2ab47fc569db649b19b907008072e107`;
   the `ff46f6d8...` predecessor remains immutable. This does not meet the
   literal acceptance above, so COMP-72 stays open and COMP-78 owns the exact
-  remainder.
+  remainder. The later CORE-61 retry satisfies that depth sub-arm with base
+  job `200137` and exact decode job `200138`; COMP-72 now stays open on the
+  still-empty Granite prefix and final successor work, not on depth linearity.
 - COMP-73 (Completeness; P1; L): produce the key-compatible target record that
   makes the CORE-53 frozen disaggregated session grid total. The accepted
   retained fixture is A100, vLLM 0.26, tensor parallel one and partial decode
@@ -2808,9 +2813,16 @@ Granite arm's absent repetitions.
   prefix, at the same first incomplete cell. Candidate successor
   `58d169865109a5eaca3e69978a48080c25a6bb48ee6607d32e82ed8487d17fdd`
   retains that partial evidence while `ff46f6d8...` and `d868a4f3...` remain
-  immutable. Literal acceptance is unmet, so COMP-72, COMP-78 and CORE-61 stay
-  open. COMP-79 is already allocated below and was not reassigned; the exact
-  remainder remains in COMP-78 pending an available integrator-assigned ID.
+  immutable. That execution did not meet literal acceptance at the time.
+  COMP-79 is already allocated below and was not reassigned. The later
+  pre-scoring-amended
+  [CORE-61 retry](../../examples/deployment_curve_v1/core61_depth_retry_result.md)
+  retains base job `200137` and exact decode job `200138`. The measured decode
+  service is 3,629,568,000 ps and the signed residual is -121,791,511 ps, or
+  -3.355537 percent, so the five-percent depth rule passes and CORE-61 closes.
+  Both task-owned attempt trees are digest complete. COMP-72 and COMP-78 remain
+  open on the 0-of-1,212 Granite prefix and final successor only. CORE-63 is
+  not registered, and COMP-79 remains unchanged.
 - COMP-79 (Completeness; P1; M): extend key-local repeat-derived distribution
   propagation to DeepSeek candidate keys that still have only one independent
   seed, beginning with the separately measured EP72 simulated-MTP mode. Freeze

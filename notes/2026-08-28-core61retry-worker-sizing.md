@@ -79,3 +79,37 @@
 - Confidence: medium-high. The same alignment and scheduler fields already ran
   in the staged repeat-distribution probe; uncertainty is limited to the
   DeepSeek legacy-runner import point and exact Nsys range resolution.
+
+### Completion update
+
+- Outcome: base job `200137` completed and was retained before decode job
+  `200138` started. The exact decode alignment, Nsys profile and analyzer all
+  returned zero. The measured service is 3,629,568,000 ps, giving a signed
+  `measured - predicted` residual of -121,791,511 ps, or -3.355537 percent over
+  measured service. This is inside the frozen five-percent band, so CORE-61
+  closes, CORE-63 is not registered, and COMP-72 plus COMP-78 remain open on
+  their separate Granite remainder.
+- Retention: the base retained-tree manifest is `cd745264...`; the decode
+  finalize and post-accounting retained-tree manifests are `a7be6cd2...` and
+  `4a236851...`. Complete attempts remain below
+  `${SIMLLM_CORE61_RETRY_RUN_ROOT}` on Merlin. The 184 KiB lean pull remains
+  below `wave-runs/core61r/decode-200138` and is not tracked.
+- Created tracked files: this sizing note; the expectations JSON and prose;
+  capture, observer, analyzer, scorer and Slurm harness files; the scored JSON,
+  prose and SHA-256 manifest; and focused harness plus published-result tests.
+  Modified tracked files are `.gitattributes`, the focused original CORE-61
+  test, the core and compute registry documents, the closed-task ledger, and
+  only the generated progress block plus core open-count cell in
+  `docs/README_PRO.md`.
+- Actual task-owned harness code is 1,010 handwritten lines, inside the revised
+  950 to 1,100 range. Freeze, result, registry and handoff prose remains inside
+  the 180 to 420 range after excluding mechanically emitted JSON. Focused tests
+  total about 390 added lines, about 130 above the original range, because the
+  pre-scoring freeze, fail-closed capture path and immutable published result
+  each require an independent gate. No production module or neighboring study
+  entered scope as a result.
+- Preserved: the 3,751,359,511 ps prediction, signed comparison, tolerance,
+  original COMP-78 result, original CORE-61 freeze, all earlier attempt trees,
+  all scored artifacts, COMP-76, TRAF-66 overlap accounting, model caches,
+  README prose and neighboring worktrees. No model weights or web pages were
+  downloaded.

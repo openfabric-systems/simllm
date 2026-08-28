@@ -308,19 +308,19 @@ def test_published_access_and_candidate_key_preserve_the_freeze():
     assert key["routing"]["availability"] == "not-captured"
 
 
-def test_registry_records_local_movement_and_exact_merlin_remainder():
+def test_registry_records_closed_depth_arm_and_open_compute_remainder():
     core = (REPOSITORY_ROOT / "docs/modules/core.md").read_text(encoding="utf-8")
     compute = (REPOSITORY_ROOT / "docs/modules/compute.md").read_text(encoding="utf-8")
 
-    assert "- CORE-61 (Precision; P1; M):" in core
-    assert "CORE-61 local derivation" in core
-    assert "CORE-61 stays" in core
-    assert "CORE-63 remains reserved" in core
+    assert "- CORE-61 (Precision; P1; M):" not in core
+    assert "so CORE-61 is\ncomplete" in core
+    assert "CORE-63 is not registered" in core
     assert "REDUCED_LAYERS=8" in compute
     assert "--job-name=gh-core61-d8-base" in compute
     assert "core61_depth_retry_expectations.md" in compute
     assert "4,096-token startup cap" in compute
     assert "2026-08-28T06:30" in compute
+    assert "0-of-1,212 Granite prefix" in compute
 
 
 def test_retry_freeze_is_pre_scoring_and_preserves_every_scored_input():

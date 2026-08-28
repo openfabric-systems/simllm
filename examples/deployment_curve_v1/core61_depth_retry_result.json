@@ -1,0 +1,210 @@
+{
+  "interpretation": "Validate linear depth scaling for the frozen decode family. The remaining decode-family gap then belongs to expert-parallel residency shape or decode-side overlap.",
+  "measurement": {
+    "boundary": {
+      "basis": "exact-nvtx-runtime-correlation",
+      "kernel_record_count": 236,
+      "label": "execute_context_0(0)_generation_32(32)",
+      "runtime_correlation_count": 36
+    },
+    "collective_service_ps": 0,
+    "evidence_class": "MEASURED",
+    "job_id": "200138",
+    "measured_service_ps": 3629568000,
+    "scheduler_guard": {
+      "cached_num_computed_tokens_by_request": {
+        "decode_b32_c2000-00-bd9fdfd2": 2000,
+        "decode_b32_c2000-01-b35d16cc": 2000,
+        "decode_b32_c2000-02-b78c399d": 2000,
+        "decode_b32_c2000-03-af8a462d": 2000,
+        "decode_b32_c2000-04-bcda15f8": 2000,
+        "decode_b32_c2000-05-a96f6f8e": 2000,
+        "decode_b32_c2000-06-9a65c5a1": 2000,
+        "decode_b32_c2000-07-926400e0": 2000,
+        "decode_b32_c2000-08-9f0eaf60": 2000,
+        "decode_b32_c2000-09-ac0b4069": 2000,
+        "decode_b32_c2000-10-a01cd858": 2000,
+        "decode_b32_c2000-11-996e86cb": 2000,
+        "decode_b32_c2000-12-86e1be32": 2000,
+        "decode_b32_c2000-13-9b2871a3": 2000,
+        "decode_b32_c2000-14-998ba389": 2000,
+        "decode_b32_c2000-15-9fddc98a": 2000,
+        "decode_b32_c2000-16-90edba98": 2000,
+        "decode_b32_c2000-17-a2cac492": 2000,
+        "decode_b32_c2000-18-85901aa2": 2000,
+        "decode_b32_c2000-19-8563e56a": 2000,
+        "decode_b32_c2000-20-bf715727": 2000,
+        "decode_b32_c2000-21-b9bc9529": 2000,
+        "decode_b32_c2000-22-b10e4709": 2000,
+        "decode_b32_c2000-23-b86f8200": 2000,
+        "decode_b32_c2000-24-88a10c3c": 2000,
+        "decode_b32_c2000-25-bc2c7d2c": 2000,
+        "decode_b32_c2000-26-8967ae61": 2000,
+        "decode_b32_c2000-27-a3d53663": 2000,
+        "decode_b32_c2000-28-bf638805": 2000,
+        "decode_b32_c2000-29-b5124074": 2000,
+        "decode_b32_c2000-30-b71df53d": 2000,
+        "decode_b32_c2000-31-b796a443": 2000
+      },
+      "cached_output_tokens_by_request": {
+        "decode_b32_c2000-00-bd9fdfd2": 16,
+        "decode_b32_c2000-01-b35d16cc": 16,
+        "decode_b32_c2000-02-b78c399d": 15,
+        "decode_b32_c2000-03-af8a462d": 15,
+        "decode_b32_c2000-04-bcda15f8": 14,
+        "decode_b32_c2000-05-a96f6f8e": 14,
+        "decode_b32_c2000-06-9a65c5a1": 13,
+        "decode_b32_c2000-07-926400e0": 13,
+        "decode_b32_c2000-08-9f0eaf60": 12,
+        "decode_b32_c2000-09-ac0b4069": 12,
+        "decode_b32_c2000-10-a01cd858": 11,
+        "decode_b32_c2000-11-996e86cb": 11,
+        "decode_b32_c2000-12-86e1be32": 10,
+        "decode_b32_c2000-13-9b2871a3": 10,
+        "decode_b32_c2000-14-998ba389": 9,
+        "decode_b32_c2000-15-9fddc98a": 9,
+        "decode_b32_c2000-16-90edba98": 8,
+        "decode_b32_c2000-17-a2cac492": 8,
+        "decode_b32_c2000-18-85901aa2": 7,
+        "decode_b32_c2000-19-8563e56a": 7,
+        "decode_b32_c2000-20-bf715727": 6,
+        "decode_b32_c2000-21-b9bc9529": 6,
+        "decode_b32_c2000-22-b10e4709": 5,
+        "decode_b32_c2000-23-b86f8200": 5,
+        "decode_b32_c2000-24-88a10c3c": 4,
+        "decode_b32_c2000-25-bc2c7d2c": 4,
+        "decode_b32_c2000-26-8967ae61": 3,
+        "decode_b32_c2000-27-a3d53663": 3,
+        "decode_b32_c2000-28-bf638805": 2,
+        "decode_b32_c2000-29-b5124074": 2,
+        "decode_b32_c2000-30-b71df53d": 1,
+        "decode_b32_c2000-31-b796a443": 1
+      },
+      "is_decode": true,
+      "new_request_count": 0,
+      "num_requests": 32,
+      "request_ids": [
+        "decode_b32_c2000-00-bd9fdfd2",
+        "decode_b32_c2000-01-b35d16cc",
+        "decode_b32_c2000-02-b78c399d",
+        "decode_b32_c2000-03-af8a462d",
+        "decode_b32_c2000-04-bcda15f8",
+        "decode_b32_c2000-05-a96f6f8e",
+        "decode_b32_c2000-06-9a65c5a1",
+        "decode_b32_c2000-07-926400e0",
+        "decode_b32_c2000-08-9f0eaf60",
+        "decode_b32_c2000-09-ac0b4069",
+        "decode_b32_c2000-10-a01cd858",
+        "decode_b32_c2000-11-996e86cb",
+        "decode_b32_c2000-12-86e1be32",
+        "decode_b32_c2000-13-9b2871a3",
+        "decode_b32_c2000-14-998ba389",
+        "decode_b32_c2000-15-9fddc98a",
+        "decode_b32_c2000-16-90edba98",
+        "decode_b32_c2000-17-a2cac492",
+        "decode_b32_c2000-18-85901aa2",
+        "decode_b32_c2000-19-8563e56a",
+        "decode_b32_c2000-20-bf715727",
+        "decode_b32_c2000-21-b9bc9529",
+        "decode_b32_c2000-22-b10e4709",
+        "decode_b32_c2000-23-b86f8200",
+        "decode_b32_c2000-24-88a10c3c",
+        "decode_b32_c2000-25-bc2c7d2c",
+        "decode_b32_c2000-26-8967ae61",
+        "decode_b32_c2000-27-a3d53663",
+        "decode_b32_c2000-28-bf638805",
+        "decode_b32_c2000-29-b5124074",
+        "decode_b32_c2000-30-b71df53d",
+        "decode_b32_c2000-31-b796a443"
+      ],
+      "total_num_scheduled_tokens": 32
+    },
+    "schema": "simllm-core61-depth8-retry-measurement-v1",
+    "shape": {
+      "batch_size": 32,
+      "depth_layers": 8,
+      "remote_kv_tokens_per_request": 2000
+    },
+    "sources": [
+      {
+        "bytes": 9462,
+        "name": "profile.json",
+        "sha256": "b5da16c3e18ecf4a1bab3cd3f95964327a939899f5e7810ef948b4897347826f"
+      },
+      {
+        "bytes": 7405568,
+        "name": "profile.sqlite",
+        "sha256": "0a0215ece1a061443418e5dd5d1f369f13b32ef5d4298c4ccfa6f4aa34f8b81d"
+      },
+      {
+        "bytes": 3071861,
+        "name": "profile.nsys-rep",
+        "sha256": "e117c1611191ceed9e31cdb78d54f95890554b18b7149937995f8f54fef79a45"
+      },
+      {
+        "bytes": 2435,
+        "name": "alignment.json",
+        "sha256": "e35fc674d314f486692a4eff777a29e2e8069973728cccf6693b8005dad823a2"
+      },
+      {
+        "bytes": 536,
+        "name": "harness_sha256.txt",
+        "sha256": "b6927a402c764c178be671f2de4bcdc376b8cc18d500b637b0966f61004a0657"
+      },
+      {
+        "bytes": 0,
+        "name": "weight_files.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "bytes": 45277,
+        "name": "job.log",
+        "sha256": "6edead3571b0e4cde15eadfd1151a977f93d99c60cda958f9c97e86df186ad8e"
+      }
+    ],
+    "status": "DIGEST_READY_MEASUREMENT"
+  },
+  "preservation": {
+    "comp76_touched": false,
+    "finite_overlap_recomputed": false,
+    "model_weights_downloaded": false,
+    "original_comp78_result_touched": false,
+    "original_expectations_touched": false,
+    "prediction_changed": false,
+    "scored_artifacts_touched": false,
+    "tolerance_changed": false,
+    "web_pages_fetched": false
+  },
+  "registry": {
+    "comp76": "UNCHANGED",
+    "core61": "CLOSE_LINEARITY_VALIDATED",
+    "core63": "NOT_REGISTERED"
+  },
+  "schema": "simllm-deployment-curve-core61-depth-retry-result-v1",
+  "score": {
+    "absolute_residual_percent": "3.355537",
+    "held_out_tolerance_percent": "5",
+    "linearity_verdict": "VALIDATED_LINEAR_DEPTH_SCALING",
+    "measured_service_ps": 3629568000,
+    "prediction_within_tolerance": true,
+    "preregistered_prediction_ps": 3751359511,
+    "signed_residual_percent": "-3.355537",
+    "signed_residual_ps": -121791511
+  },
+  "signed_residual_ledger": [
+    {
+      "owner": "CORE-61",
+      "signed_percent": "-3.355537",
+      "signed_ps": -121791511,
+      "term": "held-out depth scaling"
+    },
+    {
+      "owner": "TRAF-66",
+      "signed_ps": null,
+      "state": "UNCHANGED_NOT_RECOMPUTED",
+      "term": "finite compute and communication overlap"
+    }
+  ],
+  "status": "SCORED",
+  "task": "CORE-61"
+}
