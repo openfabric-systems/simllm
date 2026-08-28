@@ -1,0 +1,30 @@
+{
+  "arithmetic_or_direction_amended": false,
+  "component_classification_amended": false,
+  "expected_forbidden_access_ledger": [],
+  "prior_structural_rejection": {
+    "access_count": 3,
+    "end_statuses": [
+      "PASS",
+      "PASS",
+      "PASS"
+    ],
+    "event_count": 6,
+    "held_out_mtp_numeric_value_accessed": false,
+    "ledger_path": "examples/deployment_curve_v1/core64_access_ledger.jsonl",
+    "ledger_sha256": "b0b045d32b28284ca5e23c45a9bedf41f187c5f0fb045fce4822abaf78857255",
+    "movement_computed": false,
+    "rejection": "AttentionParallelismLiteralMismatch",
+    "result_emitted": false,
+    "whole_file_streamed": false
+  },
+  "retry_access": {
+    "expected_access_count": 3,
+    "expected_event_count": 6,
+    "selectors_amended": false,
+    "whole_file_streams_permitted": false
+  },
+  "schema": "simllm-deployment-curve-core64-structural-retry-expectations-v1",
+  "status": "EXPECTATIONS_ONLY_STRUCTURAL_RETRY",
+  "task": "CORE-64"
+}

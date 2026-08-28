@@ -1,0 +1,68 @@
+{
+  "access_contract": {
+    "begin_before_source_open": true,
+    "field_reader": "examples/deployment_curve_v1/core65_field_reader.py",
+    "forbidden_access_ledger_empty": false,
+    "held_out_mtp_numeric_access_permitted": false,
+    "reader_stdout_permitted": false,
+    "whole_file_byte_streams_permitted": false
+  },
+  "allowlist": [
+    {
+      "record": "<wave-runs>/core63/reproduction/basis-success.json",
+      "selectors": ["/component_basis", "/kernel_rows"]
+    },
+    {
+      "record": "examples/deployment_curve_v1/core64_shape_result.json",
+      "selector": "/{calibration_only,component_classification/retained_physical_decomposition,preservation_lock,registry_disposition,scope}"
+    },
+    {
+      "record": "examples/model_extraction_deepseek_v3_v1/expectations.json",
+      "selectors": [
+        "/geometry_symbols",
+        "/inventory_contract",
+        "/deployment_projection_contract",
+        "/physical_sanity"
+      ]
+    },
+    {
+      "record": "docs/modules/core.md",
+      "selector": "/task-entry[last-leading-block task_id=CORE-65]"
+    },
+    {
+      "optional": true,
+      "record": "<kernelprobe-root>/gh200lane/capture-198891-deepseek-v3-tp1-graph-decode/profile.json",
+      "selectors": [
+        "/model",
+        "/tensor_parallel_size",
+        "/mode",
+        "/deepseek_suite",
+        "/reduced_layers",
+        "/model_config",
+        "/cases[cell=decode_b32_c2000]"
+      ]
+    }
+  ],
+  "base_commit": "4158055a52a19b225210fdd03d0ce230eaaee37d",
+  "forbidden_sources": [
+    {
+      "reason": "the fifth scored run owns all MTP scoring",
+      "record": "offline/calibration/deployment-projections/ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2.json",
+      "selector": "/units[1]/case_projections[1]"
+    },
+    {
+      "reason": "held-out MTP values are outside CORE-65",
+      "record": "examples/deployment_curve_v1/expectations.json",
+      "selector": "all MTP numeric fields"
+    },
+    {
+      "reason": "the fifth scored run belongs to another integrator",
+      "record": "examples/deployment_curve_v1/flagship_run4_result.json",
+      "selector": "all fields"
+    }
+  ],
+  "known_pre_reader_incident_count": 2,
+  "schema": "simllm-deployment-curve-core65-protocol-v1",
+  "status": "EXPECTATIONS_ONLY_PROTOCOL_VOID",
+  "task": "CORE-65"
+}

@@ -1096,6 +1096,54 @@ scale one. CORE-64 therefore stays open on that exact component-backed gap,
 with decode-side overlap still out of scope until a real decode communication
 service term exists.
 
+The [CORE-64 per-rank shape result](../../examples/deployment_curve_v1/core64_shape_result.md)
+finds no deployment-shape mismatch in the retained standard-decode families.
+Nine eight-GPU decode nodes at attention DP72 turn the disclosed 256 requests
+per node into `9 * 256 / 72 = 32` requests per rank. KV 2,000 therefore gives
+64,000 aggregate KV-token references per rank, exactly matching the TP1
+batch-32, KV-2,000 capture. MLA, attention, compressed-KV read, dense early
+MLP, router, shared expert and LM head all stay at scale one; the inherited
+routed `1/9` scale and 489 ps fixed term are unchanged. The resulting movement
+is exactly 0.000000 tokens/s/node: the prediction remains 9,544.657796 against
+22,282, with a signed -12,737.342204 tokens/s/node difference and -57.164268
+percent residual. The first three-selector tranche was retained after a
+nonnumeric attention-label spelling rejection, and the frozen retry passed
+the identical selectors. All twelve access events are contemporaneous, every
+selector stops before whole-file coverage and before the MTP case, the
+forbidden ledger is empty, and all 134 preservation locks pass.
+
+This honest null result does not satisfy CORE-64's literal gap-resolution
+clause, so CORE-64 remains open and CORE-65 receives the exact physical
+attribution remainder. The logical projection is total, but the retained TP1
+kernel stream has no total binding to SGLang's EP72 physical MLA,
+shared-expert, dense and output launches. No semantic mapping or calibration
+constant is invented.
+
+The [CORE-65 physical-binding result](../../examples/deployment_curve_v1/core65_physical_binding_result.md)
+enumerates all 46 retained kernel rows, assigning every name, family,
+captured count and service share with no unmapped row. The four-layer vLLM
+TP1/DP1/EP1/PP1 capture is exactly three dense layers followed by one MoE
+layer. Its routed MoE path is resident over 256 logical experts, whereas an
+EP72 rank has four physical slots. That establishes `1/64` for a per-layer
+expert-count or resident-weight term and `58 * 4 / 256 = 29/32` across the
+full 58-layer routed inventory, but neither scale can replace the inherited
+`1/9` assignment-tracked compute scale. The retained stream has no routing
+identities or HBM counters, and its vLLM alignment, sort, expert-compute,
+activation and sum rows have no one-to-one identity in SGLang's DeepEP path.
+Real EP72 additionally requires DeepEP dispatch and combine launches absent
+from the retained noncollective stream.
+
+Those missing physical services make every component-specific movement
+inadmissible. A frequency-only regrouping is retained as a rejected diagnostic,
+not a calibration result. The published movement is therefore exactly
+0.000000 tokens/s/node: the prediction stays 9,544.657796 against 22,282 and
+the signed gap stays -12,737.342204 tokens/s/node, or -57.164268 percent.
+Additionally, two pre-reader incidents make the CORE-65 forbidden-access
+ledger nonempty, so its literal protocol clause cannot pass in this worker.
+CORE-65 remains open and CORE-66 receives the exact EP72 hardware-capture
+remainder. All 154 preservation locks pass; no parameter was fitted, no MTP
+value was used or compared, and no fifth scored run occurred.
+
 ## Open tasks
 
 ### Precision
@@ -1108,6 +1156,30 @@ service term exists.
   locality explicitly, and publish the signed movement from 9,544.657796
   tokens/s/node against the 22,282 calibration anchor. Decode-side overlap
   remains out of scope until a real decode communication service term exists.
+
+- CORE-65 (Precision; P0; L): resolve the exact remaining -12,737.342204
+  tokens/s/node, or -57.164268 percent, standard-decode physical attribution
+  gap after CORE-64 proves that every disclosed EP72 per-rank request, KV,
+  MLA, shared-expert, dense, router and output shape matches the TP1 capture.
+  Bind the retained kernel stream totally to SGLang's EP72 physical operation
+  identities or obtain a matching EP72 per-rank capture, then derive any
+  component-specific service movement without fitting a calibration constant.
+  Preserve the inherited routed `1/9` scale, the 489 ps fixed term, every
+  prior artifact and the explicit family-locality ledger. The held-out MTP
+  value and fifth scored run remain out of scope, and decode-side overlap
+  remains deferred until a real decode communication service term exists.
+
+- CORE-66 (Precision; P0; L): obtain the exact SGLang EP72 physical capture
+  that CORE-65 proves is missing. Run the pinned DeepSeek-V3 standard-decode
+  cell on nine eight-GPU nodes at DP72/EP72, batch 32 and KV 2,000 per rank,
+  MTP disabled, with DeepEP and the data-parallel LM head enabled. Capture all
+  72 ranks, including both the four-logical-expert and three-plus-one-redundant
+  residency classes; bind every CUDA launch to its attention, router, shared
+  expert, local routed expert, DeepEP dispatch/combine, residual or output
+  phase; record routing identities, physical slots, payloads and per-kernel HBM
+  read/write bytes. Then derive any standard-decode service movement against
+  the 22,282 tokens/s/node anchor without fitting a calibration constant. The
+  exact cell and command are registered in `core66_hardware_remainder.json`.
 
 - CORE-53 (Precision; P1; M): replace the first disaggregated session slice's
   roofline bootstrap with the accepted COMP-64 kernel-cycle lookup record.
