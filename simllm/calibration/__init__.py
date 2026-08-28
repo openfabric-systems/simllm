@@ -18,6 +18,15 @@ __all__ = [
     "CalibrationCompiler",
     "CalibrationValidationError",
     "DeviceServiceCompilation",
+    "ExternalCompositionLedger",
+    "ExternalDatabaseError",
+    "ExternalDatabaseGapError",
+    "ExternalDatabaseIdentityError",
+    "ExternalLatency",
+    "ExternalOperationDatabase",
+    "ExternalPassResult",
+    "ExternalQwen32BPassModel",
+    "ExternalSourceIdentity",
     "HardwareCollector",
     "KernelCycleLookupBinding",
     "ModelKernelInventory",
@@ -32,6 +41,8 @@ __all__ = [
     "compile_pool_local_batch_service_provider",
     "compile_profile_table",
     "compile_session_profile_provider",
+    "external_artifact_licensing_findings",
+    "import_external_database",
     "interpolate_batch_service_ps",
     "resolve_registry_root",
     "resolve_suite_root",
@@ -53,6 +64,43 @@ _EXPORTS = {
         "DeviceServiceCompilation",
     ),
     "HardwareCollector": ("simllm.calibration.protocols", "HardwareCollector"),
+    "ExternalCompositionLedger": (
+        "simllm.calibration.external_db",
+        "ExternalCompositionLedger",
+    ),
+    "ExternalDatabaseError": (
+        "simllm.calibration.external_db",
+        "ExternalDatabaseError",
+    ),
+    "ExternalDatabaseGapError": (
+        "simllm.calibration.external_db",
+        "ExternalDatabaseGapError",
+    ),
+    "ExternalDatabaseIdentityError": (
+        "simllm.calibration.external_db",
+        "ExternalDatabaseIdentityError",
+    ),
+    "ExternalLatency": ("simllm.calibration.external_db", "ExternalLatency"),
+    "ExternalOperationDatabase": (
+        "simllm.calibration.external_db",
+        "ExternalOperationDatabase",
+    ),
+    "ExternalPassResult": (
+        "simllm.calibration.external_db",
+        "ExternalPassResult",
+    ),
+    "ExternalQwen32BPassModel": (
+        "simllm.calibration.external_db",
+        "ExternalQwen32BPassModel",
+    ),
+    "ExternalSourceIdentity": (
+        "simllm.calibration.external_db",
+        "ExternalSourceIdentity",
+    ),
+    "external_artifact_licensing_findings": (
+        "simllm.calibration.external_db",
+        "external_artifact_licensing_findings",
+    ),
     "KERNEL_CYCLE_INPUT_SCHEMA": (
         "simllm.calibration.kernel_cycle_lut",
         "KERNEL_CYCLE_INPUT_SCHEMA",
@@ -115,6 +163,10 @@ _EXPORTS = {
     "interpolate_batch_service_ps": (
         "simllm.calibration.batch_service_surface",
         "interpolate_batch_service_ps",
+    ),
+    "import_external_database": (
+        "simllm.calibration.external_db",
+        "import_external_database",
     ),
     "resolve_registry_root": (
         "simllm.calibration.registry",
