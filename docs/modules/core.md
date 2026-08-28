@@ -1051,11 +1051,28 @@ unchanged 3,751,359,511 ps prediction. This passes the frozen five-percent
 bar and validates linear depth scaling for this decode family, so CORE-61 is
 complete. The larger decode-family gap therefore lives in expert-parallel
 residency shape or decode-side overlap. TRAF-66's finite-overlap term remains
-separate and unchanged, COMP-76 is untouched, and CORE-63 is not registered.
+separate and unchanged, COMP-76 is untouched, and CORE-63 is registered below.
 
 ## Open tasks
 
 ### Precision
+
+- CORE-63 (Precision; P0; M): test the decode expert-residency mechanism at
+  the calibration-only standard-decode boundary. Freeze the expected signed
+  direction before retained component access, read only the TP1 batch-32
+  four-layer decode decomposition through a committed field-addressed reader,
+  and derive the EP72 per-rank routed assignment scale from the disclosed
+  256-token node batch, top-8 routing, 288 physical slots and four resident
+  slots per rank under an explicit uniform-routing assumption. Apply that
+  architecture-only scale to routed-expert GEMM service while retaining
+  attention, MLA, routing overhead, the shared expert and the CORE-61 per-step
+  fixed term. Publish the corrected 61-layer step, the signed movement against
+  the 22,282 tokens/s/node calibration anchor, an empty MTP access ledger and
+  the full preservation-lock verdict with zero fitted constants. State that
+  decode overlap is deferred because current decode pricing has no
+  communication term. Close only if those clauses hold literally; publish any
+  overcorrection or undercorrection and use reserved CORE-64 only for the exact
+  remaining residual.
 
 - CORE-53 (Precision; P1; M): replace the first disaggregated session slice's
   roofline bootstrap with the accepted COMP-64 kernel-cycle lookup record.
