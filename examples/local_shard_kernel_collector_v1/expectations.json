@@ -1,0 +1,62 @@
+{
+  "schema": "simllm-local-shard-kernel-collector-expectations-v1",
+  "study": "local_shard_kernel_collector_v1",
+  "owner_task": "COMP-50",
+  "chronology": "expectations-only-before-implementation-and-run",
+  "surrogate_replaced": "simllm-calibrate run is unavailable and framework capture targets have no shared local-shard request and result boundary",
+  "scope": {
+    "measurement_class": "offline-kernel-only",
+    "supported_framework_target_mode": "external-command",
+    "raw_capture_location": "caller-supplied-untracked-output-root",
+    "tracked_namespaces": [
+      "offline/calibration/kernel",
+      "offline/calibration/network"
+    ],
+    "excluded": [
+      "network-service-calibration",
+      "distributed-collective-timing-from-an-isolated-shard",
+      "cross-architecture-kernel-emulation",
+      "validated-device-model-promotion"
+    ]
+  },
+  "identity_contract": {
+    "logical_parallelism_is_separate_from_physical_shard": true,
+    "framework_model_revision_device_isa_and_numeric_format_are_required": true,
+    "synthetic_input_is_explicit": true,
+    "request_and_result_are_content_addressed": true,
+    "result_must_echo_request_sha256": true
+  },
+  "fatal_guards": [
+    "target-device-isa-differs-from-request",
+    "target-framework-or-model-identity-differs-from-request",
+    "target-claims-a-different-physical-shard",
+    "result-omits-kernel-observations",
+    "output-root-is-nonempty",
+    "target-command-is-unavailable"
+  ],
+  "bypass": {
+    "doctor_and_help_import_no-framework-or-gpu-runtime": true,
+    "missing-target-writes-no-output": true,
+    "network-namespace-is-never-written-by-kernel-run": true
+  },
+  "conformance_grid": {
+    "tensor_parallel": [1, 4],
+    "batch_size": [1, 8],
+    "fixed": {
+      "framework": "fixture-framework",
+      "model": "fixture/model",
+      "device_isa": "sm80",
+      "phase": "decode",
+      "physical_shard": 0
+    },
+    "expected_relations": [
+      "all-four-cells-validate-and-preserve-their-exact-request-identity",
+      "synthetic-input-row-count-equals-batch-size",
+      "local-gemm-output-width-scales-inversely-with-tensor-parallel",
+      "kernel-result-order-is-stable-across-identical-replays",
+      "changing-batch-or-tensor-parallel-changes-the-content-addressed-result"
+    ]
+  },
+  "project_effect_if_passed": "The local run slice of COMP-50 becomes literal; COMP-50 stays open on the remaining doctor, compiler, packaging and submission surfaces, and COMP-1 stays open on target-silicon evidence.",
+  "project_non_effect": "No GPU constant, network constant, calibration status, TTFT, TPOT or supported-framework coverage claim changes."
+}
