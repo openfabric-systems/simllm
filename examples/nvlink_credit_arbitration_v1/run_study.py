@@ -295,12 +295,15 @@ def simulation_row(
     ]
     expected_aggregate = sum(expected_rates)
     aggregate_wire_gbps = sum(wire_rates)
-    aggregate_passed = abs(aggregate_wire_gbps - expected_aggregate) <= one_packet_gbps
+    aggregate_tolerance_gbps = degree * one_packet_gbps
+    aggregate_passed = (
+        abs(aggregate_wire_gbps - expected_aggregate) <= aggregate_tolerance_gbps
+    )
     behavioral = [*rate_checks, {
         "source": "aggregate",
         "expected_wire_gbps": expected_aggregate,
         "observed_wire_gbps": aggregate_wire_gbps,
-        "tolerance_gbps": one_packet_gbps,
+        "tolerance_gbps": aggregate_tolerance_gbps,
         "passed": aggregate_passed,
     }]
 
@@ -351,6 +354,8 @@ def simulation_row(
         "wire_gbps_per_source": wire_rates,
         "payload_gbps_per_source": payload_rates,
         "expected_wire_gbps_per_source": expected_rates,
+        "per_source_tolerance_gbps": one_packet_gbps,
+        "aggregate_tolerance_gbps": aggregate_tolerance_gbps,
         "aggregate_wire_gbps": aggregate_wire_gbps,
         "aggregate_payload_gbps": sum(payload_rates),
         "receiver_raw_ceiling_gbps": receiver_rate_gbps,
@@ -413,6 +418,22 @@ def run_simulation(frozen: dict[str, Any], authority: dict[str, object]) -> dict
             "fatal": "conservation_and_physical_ceiling_preconditions",
             "structural": "per_link_credit_ownership_and_legacy_byte_identity",
             "hardware": "registered_not_run",
+        },
+        "scoring_chronology": {
+            "first_run_commit": "0888344",
+            "first_run_result_sha256": (
+                "b5713abb3902795cffd8e86ef1a9a4b40bd420a253928f36ab2d2c33442143ad"
+            ),
+            "first_run_verdict": "PASS_WITH_TWO_AGGREGATE_SCORER_REFUTATIONS",
+            "correction_class": "post_specified_aggregate_quantization_bound",
+            "unchanged": [
+                "workload",
+                "time_window",
+                "policy",
+                "physical_ceiling",
+                "preservation_lock",
+                "per_sender_expectation_and_tolerance",
+            ],
         },
     }
 

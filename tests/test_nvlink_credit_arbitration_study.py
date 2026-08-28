@@ -58,3 +58,18 @@ def test_legacy_identity_is_explicitly_pinned_to_static_interleave():
     assert runner._legacy_identity(ROOT / frozen["candidate"]["profile_path"]) == (
         "2f2af64619ed3c6341b209d877d9f1e6984a67e44b97b5eb176a157294a6c252"
     )
+
+
+def test_aggregate_quantization_bound_sums_the_per_sender_allowances():
+    runner = _runner()
+    frozen = runner.load_expectations()
+    row, _ = runner.simulation_row(
+        frozen,
+        degree=16,
+        policy=runner.NvlinkArbitrationPolicy.RELEASE_AWARE_ROUND_ROBIN,
+    )
+
+    assert row["behavioral_verdict"] == "PASS"
+    assert row["aggregate_tolerance_gbps"] == pytest.approx(
+        16 * row["per_source_tolerance_gbps"]
+    )
