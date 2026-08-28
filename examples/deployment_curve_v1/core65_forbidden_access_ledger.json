@@ -1,0 +1,23 @@
+[
+  {
+    "access_path": "broad repository text search before the CORE-65 reader existed",
+    "classification": "forbidden_held_out_mtp_numeric_exposure",
+    "compared_in_core65": false,
+    "held_out_numeric_value_exposed": true,
+    "logged_contemporaneously": false,
+    "numeric_value_redacted_from_core65_publication": true,
+    "protocol_violation": true,
+    "record": "examples/deployment_curve_v1/RESULTS_RUN4.md",
+    "used_in_core65_arithmetic": false
+  },
+  {
+    "access_path": "broad registry search before the CORE-65 reader existed",
+    "classification": "unlogged_whole_file_registry_inspection",
+    "held_out_numeric_value_exposed": false,
+    "logged_contemporaneously": false,
+    "protocol_violation": true,
+    "record": "docs/modules/core.md",
+    "used_in_core65_arithmetic": false,
+    "whole_file_streamed_by_search": true
+  }
+]
