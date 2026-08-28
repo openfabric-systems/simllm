@@ -192,6 +192,20 @@ def test_csv_reader_decodes_only_selected_payloads_and_filters_collectives() -> 
     assert rows[0]["total_duration_per_step_ns"] == "100.5"
 
 
+def test_csv_reader_accepts_unselected_schema_columns() -> None:
+    header = _csv_header().decode().rstrip("\n") + ",diagnostic\r\n"
+    selected = _csv_row(
+        pool="decode",
+        shape=32,
+        name="fused_moe_kernel",
+    ).decode().rstrip("\n")
+    payload = (header + selected + ",ignored\r\n").encode()
+
+    rows, _ = _reader().extract_standard_decode_kernels(io.BytesIO(payload))
+
+    assert [row["name"] for row in rows] == ["fused_moe_kernel"]
+
+
 def test_public_reader_refuses_other_candidate_and_logs_attempt(tmp_path: Path) -> None:
     access_log = tmp_path / "access.jsonl"
 

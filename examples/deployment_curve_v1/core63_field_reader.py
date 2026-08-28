@@ -90,10 +90,7 @@ def _csv_values(raw: bytes) -> list[str]:
         line = raw.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise ValueError("kernel summary is not UTF-8") from exc
-    values = next(csv.reader([line]))
-    if len(values) != len(EXPECTED_HEADER):
-        raise ValueError("kernel summary row width differs")
-    return values
+    return next(csv.reader([line]))
 
 
 def extract_standard_decode_kernels(
@@ -105,7 +102,7 @@ def extract_standard_decode_kernels(
     header_raw = stream.readline()
     consumed += len(header_raw)
     header = tuple(_csv_values(header_raw))
-    if header != EXPECTED_HEADER:
+    if header[:3] != EXPECTED_HEADER[:3] or not set(EXPECTED_HEADER) <= set(header):
         raise ValueError("kernel summary header differs from the frozen schema")
     selected: list[dict[str, str]] = []
     saw_selected_shape = False
@@ -119,7 +116,9 @@ def extract_standard_decode_kernels(
             continue
         saw_selected_shape = True
         values = _csv_values(raw)
-        row = dict(zip(EXPECTED_HEADER, values, strict=True))
+        if len(values) != len(header):
+            raise ValueError("kernel summary row width differs")
+        row = dict(zip(header, values, strict=True))
         if row["is_collective"] not in {"True", "False"}:
             raise ValueError("kernel summary collective flag differs")
         if row["is_collective"] == "True":
