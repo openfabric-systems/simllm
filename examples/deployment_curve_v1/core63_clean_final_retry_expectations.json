@@ -1,0 +1,45 @@
+{
+  "arithmetic_expectations_commit": "9aac882518db0558245279e06031d6b9c0522474",
+  "arithmetic_or_direction_amended": false,
+  "expected_forbidden_access_ledger": [],
+  "final_access": {
+    "access_pattern": "frozen_legacy_schema_plus_reverse_nonterminal_bytes",
+    "expected_access_count": 6,
+    "expected_csv_bytes_accessed": 13984,
+    "expected_csv_record_size_bytes": 13985,
+    "expected_event_count": 12,
+    "frozen_schema": "legacy_single_device",
+    "terminal_byte_accessed": false,
+    "whole_file_streams_permitted": false
+  },
+  "forbidden_access_ledger_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+  "prior_safe_rejections": [
+    {
+      "end_statuses": [
+        "PASS",
+        "PASS",
+        "REJECTED"
+      ],
+      "held_out_mtp_numeric_value_accessed": false,
+      "ledger_path": "examples/deployment_curve_v1/core63_clean_access_ledger.jsonl",
+      "ledger_sha256": "8ed7f22dd05bd3158ad2cb76aa7267e29564fb2b3bdc997b189638619618203e",
+      "rejection": "WholeFileAccessRejected",
+      "whole_file_streamed": false
+    },
+    {
+      "end_statuses": [
+        "PASS",
+        "PASS",
+        "REJECTED"
+      ],
+      "held_out_mtp_numeric_value_accessed": false,
+      "ledger_path": "examples/deployment_curve_v1/core63_clean_access_ledger_retry.jsonl",
+      "ledger_sha256": "8fc067cd148b3b06eb02dcfd1d0ecc5713333e4cf80a7fb1d2562bccbcab651e",
+      "rejection": "WholeFileAccessRejected",
+      "whole_file_streamed": false
+    }
+  ],
+  "schema": "simllm-deployment-curve-core63-clean-final-retry-v1",
+  "status": "EXPECTATIONS_ONLY_FINAL_ACCESS_RETRY",
+  "task": "CORE-63"
+}

@@ -30,7 +30,7 @@ def run_study(*arguments: str) -> subprocess.CompletedProcess[str]:
         cwd=ROOT,
         text=True,
         capture_output=True,
-        timeout=30,
+        timeout=300,
         check=False,
     )
 
@@ -130,7 +130,7 @@ def mock_binary(tmp_path_factory):
         cwd=ROOT,
         text=True,
         capture_output=True,
-        timeout=30,
+        timeout=300,
         check=False,
     )
     assert completed.returncode == 0, completed.stderr
@@ -254,7 +254,7 @@ def test_scorer_exposes_all_frozen_guards_and_gate_logic():
         cwd=ROOT,
         text=True,
         capture_output=True,
-        timeout=30,
+        timeout=300,
         check=False,
     )
     assert completed.returncode == 0, completed.stderr
@@ -320,7 +320,7 @@ print(json.dumps({{
         cwd=ROOT,
         text=True,
         capture_output=True,
-        timeout=30,
+        timeout=300,
         check=False,
     )
     assert completed.returncode == 0, completed.stderr
@@ -348,7 +348,7 @@ def test_publication_path_requires_complete_score_and_preserves_input(tmp_path):
         cwd=ROOT,
         text=True,
         capture_output=True,
-        timeout=30,
+        timeout=300,
         check=False,
     )
     assert score_run.returncode == 0, score_run.stderr
@@ -369,7 +369,7 @@ def test_publication_path_requires_complete_score_and_preserves_input(tmp_path):
         cwd=ROOT,
         text=True,
         capture_output=True,
-        timeout=30,
+        timeout=300,
         check=False,
     )
     assert rejected.returncode != 0

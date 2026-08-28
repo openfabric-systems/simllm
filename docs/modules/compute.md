@@ -107,6 +107,17 @@ remain offline; none runs once per serving step.
   simulator. It consumes content-addressed captured inputs and emits typed
   simulator observations. It is optional, capability queried and never a
   source of silicon truth.
+- `ExternalOperationDatabase`: a standard-library-only reader for the
+  content-addressed NVIDIA AIConfigurator slice. It verifies package, system,
+  backend, version, source-file, model and payload identity before exposing a
+  value. Every value carries `MEASURED-EXTERNAL` plus the complete frozen
+  source identity. Its family map distinguishes exact operations, declared
+  composites and gaps, and its composition ledger rejects fused plus
+  constituent double charging.
+- `ExternalQwen32BPassModel`: the audited TensorRT-LLM Python context and
+  generation composition over that database. It preserves effective-token
+  accounting, generation stride and repeat rules, and the H200 analytical
+  embedding and elementwise memory terms.
 - `CalibrationCompiler`: the deterministic offline compiler from validated
   evidence and an immutable split to a compact device model. It applies
   source precedence, fits only the training partition, scores validation and
@@ -1779,6 +1790,34 @@ publication artifacts remain unchanged. COMP-74 closes literally; COMP-79
 owns single-seed DeepSeek keys including simulated MTP, and COMP-80 owns the
 Granite arm's absent repetitions.
 
+The [external database parity study](../../examples/external_db_parity_v1/RESULTS.md)
+installs the H200 SXM, TensorRT-LLM 1.3.0rc10, SILICON, Python-surface slice as
+a 284,717-row content-addressed artifact. The importer preserves every raw
+binary64 value, applies the source tool's three GEMM and 367 generation-
+attention speed-of-light corrections, records every ignored or rewritten key
+dimension, and requires the primary database version with shared-layer
+inheritance disabled. The resolver implements the source interpolation rules
+and serves only `MEASURED-EXTERNAL` values under the frozen identity. Before
+use, the reader verifies the compressed payload plus `system.json`,
+`model-config.json` and `family-mapping.json` against their manifest hashes and
+verifies the converted files' source-specific change notices.
+
+The reconciled comparison is nonvoid: all eight fatal guards hold, all 25
+importer-identity rows pass from an independent payload recount, all 26
+pre-specified I2 resolver points are bit-equal, and all 13 post-specified I2S
+rows pass in their own register. The two query denominators are never summed.
+All four Qwen3-32B-FP8 pass totals and their terms are bit-equal, and the
+complete repeated conversion and evaluation takes 83.376052 seconds. The I2,
+I2S and P1 ULP finding ledgers are empty. The I2S register attributes the 11
+review-addendum rows to `25dc6b5` and the concurrent two-point supplement to
+`a679b0e`; the latter includes one bit-equal value and one structured miss on
+both sides. The artifact carries the exact Apache 2.0 bytes, both preserved
+NVIDIA copyright lines and file-local conversion notices backed by an
+exhaustive `MODIFIED` ledger. COMP-82 through COMP-87 own every extension
+beyond this exact identity and offline composition surface. COMP-87
+specifically owns the imported but undispatched WideEP MoE, MLA BMM, Mamba2,
+MLA and generation-MLA operation families.
+
 ## Open tasks
 
 ### Precision
@@ -2312,6 +2351,54 @@ Granite arm's absent repetitions.
   byte-identical candidate selection when the enriched path is disabled.
 
 ### Completeness
+
+- COMP-82 (Completeness; P2; L): import additional external system, backend or
+  database-version identities through separately frozen slices and mapping
+  tables. The shipped reader accepts exactly H200 SXM, TensorRT-LLM 1.3.0rc10
+  and rejects every other identity before lookup. Each added identity must
+  freeze its package and closure hashes, convert without donor rows, pass at
+  least twenty live resolver points plus phase oracles, and retain this
+  identity's artifact bytes and rejection behavior exactly when unselected.
+- COMP-83 (Completeness; P2; M): add explicit external HYBRID database mode
+  with shared-layer inheritance and per-row donor provenance. The shipped mode
+  fixes `shared_layer=false` and rejects any donor version. Freeze the source
+  tool's precedence and collision rules before implementation, require every
+  inherited value to name its donor identity, and prove that disabling HYBRID
+  reproduces the current payload, query values, row-version scan and failures
+  byte for byte.
+- COMP-84 (Completeness; P2; M): add the external compiled estimator as a
+  separately named surface. The shipped contract is the Python estimator and
+  treats the audited one-ULP compiled difference as out of scope. Freeze
+  compiled query and pass literals before implementation, publish every ULP
+  difference instead of widening tolerance, and preserve all Python-surface
+  results and source labels exactly when the compiled surface is unselected.
+- COMP-85 (Completeness; P2; L): import and propagate external power and energy
+  fields only from a source slice that actually records them. The shipped
+  slice declares those fields absent and makes no power claim. A future path
+  must freeze units, sampling boundaries and conservation checks, bind every
+  field to its measured source row, and leave latency, evidence identity and
+  explicit field absence unchanged when power import is disabled.
+- COMP-86 (Completeness; P1; L): connect the external operation database to a
+  supported end-to-end metric path through input or `ExecutionGraph`, the one
+  runtime timing authority, `CompletionEvent`, `StepResult`, then TTFT and
+  TPOT. The shipped surface resolves operations and composes frozen passes
+  offline without becoming a second mutable device authority. Freeze at least
+  two bandwidths and two parallel widths before integration, require the
+  enabled selection to move the expected end-to-end term exactly, and require
+  the disabled selection to preserve every accepted provider timestamp,
+  completion order, metric and run-record byte.
+
+- COMP-87 (Completeness; P2; L): add dispatched resolver operations for the
+  imported WideEP MoE, MLA BMM, Mamba2, MLA and generation-MLA families. Their
+  rows are preserved and hash-verified, but `query_operation` rejects them and
+  no pass composition can select them; that refusal is the explicit off path.
+  Freeze the source rule list, exact and interpolation points, ignored or
+  rewritten dimensions, and live SDK parity before implementation. Acceptance
+  requires bit-equal local-versus-live values on every enabled family and a
+  supported composition that consumes each selected operation. The disabled
+  path must preserve the current rejection behavior, 26 pre-specified I2
+  results, 13 separately reported post-specified I2S results, pass totals,
+  artifact payload and source-identity ledger exactly.
 
 - COMP-4 (Completeness; P2; M): add generic multi-axis interpolation as an
   explicit optional path without weakening the device-model v1 boundary.

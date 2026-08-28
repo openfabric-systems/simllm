@@ -1,0 +1,68 @@
+{
+  "access_contract": {
+    "access_event_order": [
+      "BEGIN before source open",
+      "END immediately after selector completion"
+    ],
+    "expected_access_count": 6,
+    "expected_access_event_count": 12,
+    "field_reader": "examples/deployment_curve_v1/core63_clean_field_reader.py",
+    "forbidden_access_ledger": [],
+    "held_out_mtp_numeric_access_permitted": false,
+    "reader_stdout_permitted": false,
+    "whole_file_byte_streams_permitted": false
+  },
+  "allowlist": [
+    {
+      "classification": "frozen_pre_run_standard_decode_context",
+      "record": "examples/deployment_curve_v1/core63_expectations.json",
+      "selector": "/calibration_context"
+    },
+    {
+      "classification": "retained_measured_component_decomposition",
+      "record": "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json",
+      "selector": "/entries[7]"
+    },
+    {
+      "classification": "retained_standard_decode_kernel_decomposition",
+      "record": "<kernelprobe-root>/gh200lane/capture-198891-deepseek-v3-tp1-graph-decode/analysis/kernel-summary.csv",
+      "selector": "/rows[pool=decode,shape=decode_b32_c2000,device=0,is_collective=False]"
+    },
+    {
+      "classification": "literal_registry_entry",
+      "record": "docs/modules/core.md",
+      "selector": "/task-entry[task_id=CORE-63]"
+    },
+    {
+      "classification": "conditional_registry_entry",
+      "record": "docs/modules/core.md",
+      "selector": "/task-entry[task_id=CORE-64]"
+    },
+    {
+      "classification": "merged_void_protocol_findings_only",
+      "record": "examples/deployment_curve_v1/core63_calibration_result.md",
+      "selector": "/section[heading=Protocol, access and preservation]"
+    }
+  ],
+  "base_commit": "f21fa3fa6cb4722d206349da4fab34a6d16821bb",
+  "forbidden_sources": [
+    {
+      "reason": "the fifth scored run owns all scoring",
+      "record": "examples/deployment_curve_v1/expectations.json",
+      "selector": "all MTP anchor numeric fields"
+    },
+    {
+      "reason": "void post-derivation numbers are not clean inputs",
+      "record": "examples/deployment_curve_v1/core63_calibration_result.json",
+      "selector": "all fields"
+    },
+    {
+      "reason": "void post-derivation numbers are not clean inputs",
+      "record": "examples/deployment_curve_v1/core63_calibration_result.md",
+      "selector": "all sections except the allowlisted protocol section"
+    }
+  ],
+  "schema": "simllm-deployment-curve-core63-clean-protocol-v1",
+  "status": "EXPECTATIONS_ONLY",
+  "task": "CORE-63"
+}

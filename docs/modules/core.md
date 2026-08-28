@@ -1073,30 +1073,37 @@ held-out number. The field-addressed CSV selector also streamed all 13,985
 cataloged bytes, which fails the literal no-whole-file-read clause even though
 it materialized no whole record and decoded no unselected payload. None of the
 held-out values entered the arithmetic and no MTP score or comparison was
-performed, but literal clean exposure is impossible in this worktree. All 93
-preservation locks pass. CORE-63 remains open for a clean repetition, and
-CORE-64 is registered for the exact standard-decode residual conditional on
-that clean promotion.
+performed, but literal clean exposure is impossible in that void worktree. All
+93 preservation locks pass, and the void study remains published as the
+historical comparison.
+
+The [clean CORE-63 repetition](../../examples/deployment_curve_v1/core63_clean_calibration_result.md)
+independently reproduces the 26,821,286,365 ps corrected step and -57.164268
+percent standard-decode residual before comparing them with the void finding.
+Its forbidden-access ledger is empty. Every source access has a contemporaneous
+begin/end pair, every selector remains short of complete byte coverage, the
+component reconstruction is exact, all 93 preservation locks remain
+byte-identical and no fitted constant is introduced. The complete append-only
+ledger set retains three structurally rejected preflights as well as the
+successful tranche and the bounded literal-registry resolution. No ambient or
+unlogged record inspection occurred. These facts meet every literal CORE-63
+acceptance clause, so CORE-63 is complete.
+
+The reproduced undercorrection promotes CORE-64 unconditionally. Only routed
+`fused_moe_kernel` work received the frozen 1/9 scale; attention, MLA,
+shared-expert and every other nonmatching noncollective family remained at
+scale one. CORE-64 therefore stays open on that exact component-backed gap,
+with decode-side overlap still out of scope until a real decode communication
+service term exists.
 
 ## Open tasks
 
 ### Precision
 
-- CORE-63 (Precision; P0; M): repeat the decode expert-residency derivation in
-  a genuinely exposure-free worker. Commit the exact field-addressed reader
-  and 256/9-versus-256 assignment arithmetic before any target record access,
-  permit only the standard-decode calibration anchor after the corrected step
-  exists, and keep the held-out MTP value unread. Acceptance requires the full
-  append-only access ledger, zero unlogged record inspection, exact component
-  reconstruction, all 93 preservation locks, zero fitted constants and an
-  honest comparison to the existing protocol-void finding. The current
-  worktree's 26,821,286,365 ps step and -57.164268 percent residual are a
-  finding only and cannot close this task.
-
 - CORE-64 (Precision; P0; M): resolve the exact -57.164268 percent
   standard-decode undercorrection that remains after the architecture-only
-  expert-residency scale, conditional on a clean CORE-63 repetition promoting
-  that residual. Identify component-backed EP72 residency-shape physics without
+  expert-residency scale, now unconditionally promoted by the clean CORE-63
+  repetition. Identify component-backed EP72 residency-shape physics without
   fitting a calibration constant, preserve attention, MLA and shared-expert
   locality explicitly, and publish the signed movement from 9,544.657796
   tokens/s/node against the 22,282 calibration anchor. Decode-side overlap

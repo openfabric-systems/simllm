@@ -389,14 +389,18 @@ def test_preservation_manifest_covers_and_matches_all_93_artifacts() -> None:
         assert hashlib.sha256(path.read_bytes()).hexdigest() == expected
 
 
-def test_core63_and_exact_core64_residual_are_registered_open() -> None:
+def test_clean_repetition_closes_core63_and_promotes_core64() -> None:
     core = (REPOSITORY_ROOT / "docs/modules/core.md").read_text(encoding="utf-8")
-    ledger = (REPOSITORY_ROOT / "docs/task-ledger.json").read_text(encoding="utf-8")
+    ledger = json.loads(
+        (REPOSITORY_ROOT / "docs/task-ledger.json").read_text(encoding="utf-8")
+    )
 
-    assert core.count("- CORE-63 (") == 1
-    assert "CORE-63" not in ledger
+    assert core.count("- CORE-63 (") == 0
+    assert "CORE-63" in ledger["closed"]
+    assert "so CORE-63 is complete" in core
     assert core.count("- CORE-64 (") == 1
-    assert "CORE-64" not in ledger
+    assert "now unconditionally promoted by the clean CORE-63" in core
+    assert "CORE-64" not in ledger["closed"]
 
 
 def test_published_result_is_honest_calibration_only_undercorrection() -> None:
