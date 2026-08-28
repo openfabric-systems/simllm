@@ -19,59 +19,71 @@ selects. Every first-run number remains visible below as void evidence.
 
 ## What ran
 
+Before any Family D value is read, its ratio compares two cost models. It does
+not execute the same physical realization twice, and it is NOT evidence that
+contention is the only difference. The external arm is an opaque eight-rank
+NCCL table measurement scaled by a rank factor. It has no source, destination,
+path or message ledger. The packet arm expands the requested logical element
+count into direct all-pairs transfers on a concrete Clos placement.
+
 The corrected `minimax_ep_scaling_v1` study ran two fresh evaluations at
-expert-parallel widths 8, 32, 128 and 256. Family D priced the identical dense
-BF16 all-gather plus reduce-scatter through the external NCCL table and the
-packet simulator with the same bytes, ranks and placement. EP 8, 32 and 128
-used measured full populations; EP 256 used the frozen FG-10 extrapolation
-from the full EP 128 anchor. Family S ran full realized sparse populations at
-every width with FP8 dispatch and BF16 combine. Bulk evidence is retained at
+expert-parallel widths 8, 32, 128 and 256. Family D requested the same generic
+half-precision all-gather plus reduce-scatter element count from both cost
+models. EP 8, 32 and 128 used measured full packet populations. EP 256 used a
+post-specified `31 / 15` extrapolation from the full EP 128 anchor and is an
+unscored diagnostic because that rule first appeared in implementation commit
+`a6ba97f`, after corrected expectations commit `4d1e41c`. Family S ran full
+realized sparse populations at every width with FP8 dispatch and BF16 combine.
+Bulk evidence is retained at
 `${SIMLLM_MINIMAX_FIX_BULK_ROOT}/attempt-0002`; the portable rows are in
 [record.json](record.json) and [results.csv](results.csv).
 
 ## What came out
 
-Family D passes only 1 of 4 frozen comparisons. The packet-to-external ratios
-on identical dense traffic are `0.02590463307406155`, `0.3530150565741419`,
-`0.8026183885459625` and `1.187022158460092`. The frozen lower bound is
-1.0 at every width. EP 8, 32 and 128 retain their frozen REFUTED outcomes,
-while the EP 256 extrapolated point retains its PASS outcome. No band was
-widened.
+Family D scores 0 of 3 measured widths. EP 8, 32 and 128 are all REFUTED
+against the unchanged lower bound of 1.0, at ratios
+`0.02590463307406155`, `0.3530150565741419` and
+`0.8026183885459625`. EP 256's ratio `1.187022158460092` is an UNSCORED
+DIAGNOSTIC. It is not a pass anywhere in this report or its generated
+artifacts.
 
-### Family D interpretation limit
+The apparent rise does not establish a contention crossover. At EP 128, the
+external extrapolator starts from an eight-rank donor latency of
+`55.445 microseconds` per layer. Treating the caller's request as generic
+two-byte half elements, ideal two-phase ring serialization accounts for only
+`12.233386666666666 microseconds`; the remaining fixed and algorithmic
+residual is `43.21161333333334 microseconds`. The rank multiplier is
+`10.205357142857142`. Multiplying that residual and then repeating it for 65
+layers produces `28.664346541071428 ms`, which exceeds the observed EP 128
+external-minus-packet gap of `7.259565741071427 ms` by a factor of
+`3.948493279549929`. The remaining gap is therefore fully explainable by the
+two models' different treatment of fixed and algorithmic overhead. The study
+cannot attribute it to contention.
 
-At eight GPUs per node, every EP 8 rank is intra-node. The study's routing
-geometry records both expected and realized cross-node senders per receiver
-as exactly `0.000000` at that width. The packet arm therefore prices
-essentially no cross-fabric traffic, while the external arm reports a measured
-NCCL collective that contains the intra-node NVLink transfer and fixed
-collective overheads such as kernel launch, synchronization and algorithm
-selection. The EP 8 ratio `0.02590463307406155`, from external `1.92205 ms`
-against packet `0.04979 ms`, measures transport coverage and fixed-overhead
-modelling missing from our arm. It is not a contention comparison and is not
-evidence of an external omission. The same limit applies to any width whose
-realized cross-node fan-in is zero. The derived
-`family_d_contention_comparison` marking below is true only when that fan-in
-is nonzero.
+The external table identifies its dtype only as `half`; it does not identify
+BF16. Its interpolation axis is named `message_bytes`, while the caller passes
+`tokens * hidden * EP` as a count of elements. That unit question remains
+unresolved and is disclosed rather than silently choosing the axis name or the
+caller's semantics as authoritative.
 
-The full Family D rise, `0.0259`, `0.3530`, `0.8026` and `1.1870` across EP 8,
-32, 128 and 256, is two effects meeting. At narrow widths our arm omits fixed
-collective overheads present in the external measurement. At wide widths the
-external extrapolation omits contention that our arm prices. The crossover
-near EP 200 is where the second effect outgrows the first. Neither stack is
-uniformly better across this sweep.
+### Family D cost-model comparison
+
+At eight GPUs per node, every EP 8 rank is intra-node. Its cross-node sender
+count is exactly zero, so it is not a contention cell. At every width the
+broader Family D comparison also remains a cost-model comparison rather than
+contention isolation.
 
 The repository already carries NVLink domain modelling merged from
 `nvlink_flow_dynamics_v1` and `nvlink_rnic_comparison_v1`. This study's packet
 arm did not use that domain for its intra-node legs. TRAF-76 owns binding that
 landed model into the packet arm and pricing the fixed collective overheads.
 
-| EP | Contention comparison? | D-external strategy and traffic | D-packet strategy and traffic | External ms | Packet ms | Packet / external | Population | Outcome |
+| EP | Interpretation | D-external strategy, traffic and realization | D-packet strategy, traffic and realization | External ms | Packet ms | Packet / external | Population | Outcome |
 |---:|---|---|---|---:|---:|---:|---|---|
-| 8 | NO: realized cross-node fan-in is `0.000000` | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | dense SM90 fallback, identical BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | 1.92205 | 0.04979 | 0.02590463307406155 | measured full rank and message population, 112 messages per layer | REFUTED |
-| 32 | YES | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | dense SM90 fallback, identical BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | 19.82220267857143 | 6.997536 | 0.3530150565741419 | measured full rank and message population, 1,984 messages per layer | REFUTED |
-| 128 | YES | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | dense SM90 fallback, identical BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | 36.77934174107143 | 29.519776 | 0.8026183885459625 | measured full rank and message population, 32,512 messages per layer | REFUTED |
-| 256 | YES | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | dense SM90 fallback, identical BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | 51.39544921875 | 61.00753706666667 | 1.187022158460092 | FG-10 extrapolation from measured full EP 128 population by `31 / 15` cross-node bytes per rank | PASS |
+| 8 | two cost models; not a contention cell because cross-node fan-in is `0.000000` | external NCCL-table cost model: dense SM90 fallback, generic half-precision all-gather plus reduce-scatter over `tokens * hidden * EP`; opaque eight-rank measurement with no flow ledger | packet Clos cost model: dense SM90 fallback, generic half-precision all-gather plus reduce-scatter over `tokens * hidden * EP`; direct all-pairs transfers | 1.92205 | 0.04979 | 0.02590463307406155 | measured full rank and message population, 112 messages per layer | REFUTED |
+| 32 | two cost models, not contention isolation | external NCCL-table cost model: dense SM90 fallback, generic half-precision all-gather plus reduce-scatter over `tokens * hidden * EP`; opaque eight-rank measurement with no flow ledger | packet Clos cost model: dense SM90 fallback, generic half-precision all-gather plus reduce-scatter over `tokens * hidden * EP`; direct all-pairs transfers | 19.82220267857143 | 6.997536 | 0.3530150565741419 | measured full rank and message population, 1,984 messages per layer | REFUTED |
+| 128 | two cost models, not contention isolation | external NCCL-table cost model: dense SM90 fallback, generic half-precision all-gather plus reduce-scatter over `tokens * hidden * EP`; opaque eight-rank measurement with no flow ledger | packet Clos cost model: dense SM90 fallback, generic half-precision all-gather plus reduce-scatter over `tokens * hidden * EP`; direct all-pairs transfers | 36.77934174107143 | 29.519776 | 0.8026183885459625 | measured full rank and message population, 32,512 messages per layer | REFUTED |
+| 256 | two cost models, not contention isolation | external NCCL-table cost model: dense SM90 fallback, generic half-precision all-gather plus reduce-scatter over `tokens * hidden * EP`; opaque eight-rank measurement with no flow ledger | packet Clos cost model: dense SM90 fallback, generic half-precision all-gather plus reduce-scatter over `tokens * hidden * EP`; direct all-pairs transfers | 51.39544921875 | 61.00753706666667 | 1.187022158460092 | post-specified `31 / 15` extrapolation from measured full EP 128 population | UNSCORED DIAGNOSTIC |
 
 Family E remains 4 of 4 bit-equal. Family C remains 4 of 4 at quotient 1.0,
 but it is an end-to-end parity check that reuses the dispatch code Family E
@@ -81,12 +93,11 @@ FG-1 through FG-10 hold, so the corrected run is nonvoid.
 
 ## What it changes for the project
 
-The original MiniMax result is now published as void, and its omission-cost
-interpretation is withdrawn. The corrected equal-traffic comparison retains
-its published outcomes, but EP 8 no longer carries a contention
-interpretation. The rising ratios instead expose missing transport coverage
-and fixed collective overheads in our arm at narrow widths meeting omitted
-contention in the external extrapolation at wide widths.
+The original MiniMax result remains published as void, and its omission-cost
+interpretation stays withdrawn. Family D now records 0 of 3 measured cells,
+with EP 256 reclassified as an unscored diagnostic. The contention-isolation
+and crossover claims are withdrawn. Family D is now a disclosed comparison of
+an opaque external NCCL-table cost model and a direct packet Clos cost model.
 
 No existing task changes status and no milestone advances. TRAF-76 is
 registered to own intra-node collective transport and fixed collective
@@ -102,9 +113,9 @@ external NCCL extrapolation.
 
 ## What it does not change
 
-The run does not determine which communication strategy a MiniMax deployment
-uses, does not validate either timing model against H200 hardware, and does not
-turn Family S into a precision claim. It does not make Family C independent
+The run does not isolate contention, determine which communication strategy a
+MiniMax deployment uses, validate either timing model against H200 hardware,
+or turn Family S into a precision claim. It does not make Family C independent
 evidence for Family E. It does not close TRAF-26, TRAF-73, TRAF-74, TRAF-75,
 TRAF-76 or COMP-88, and it does not change accepted default traffic timestamps,
 the imported operation artifact or the prior Qwen parity result.
@@ -115,7 +126,7 @@ At EP 256, one dense half buffer is
 `4 tokens * 3072 hidden * 256 ranks * 2 bytes = 6,291,456 bytes`. The two
 direct collective phases put 12,189,696 bytes per rank on the fabric. At
 50 GB/s, no packet realization can beat 243.79392 microseconds per layer, or
-15.8466048 ms across 65 layers. The measured-anchor extrapolation is
+15.8466048 ms across 65 layers. The post-specified diagnostic extrapolation is
 61.00753706666667 ms, 3.8499 times that floor. The external estimate is
 51.39544921875 ms, 3.2433 times the same floor. Both are physically possible;
 the floor alone does not identify which overhead model is right.
@@ -151,10 +162,10 @@ destinations without a full-population anchor.
 
 | EP | External strategy and traffic | Packet strategy and traffic | External step ms | Packet communication ms | Packet step ms | Packet / external | Population |
 |---:|---|---|---:|---:|---:|---:|---|
-| 8 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse all-pairs fluidized FP8 dispatch and FP8 combine over `tokens * topk * hidden` | 13.984132942232176 | 0.02496 | 12.087042942232175 | 0.8643398194341548 | full all-pairs fluidized population, 112 messages per layer |
-| 32 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse all-pairs fluidized FP8 dispatch and FP8 combine over `tokens * topk * hidden` | 27.51711787974335 | 4.0350336 | 11.72994880117192 | 0.4262782480503487 | full all-pairs fluidized population, 1,984 messages per layer |
-| 128 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse all-pairs fluidized FP8 dispatch and FP8 combine over `tokens * topk * hidden` | 44.86945704576469 | 5.5890432 | 13.679158504693262 | 0.3048657016451342 | full all-pairs fluidized population, 32,512 messages per layer |
-| 256 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse all-pairs fluidized FP8 dispatch and FP8 combine over `tokens * topk * hidden` | 61.028924458726934 | 7.1043648 | 16.73784003997693 | 0.2742607736975033 | 16,320 of 130,560 messages per layer, one eighth and unanchored |
+| 8 | external NCCL-table cost model: dense SM90 fallback, generic half-precision all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse all-pairs fluidized FP8 dispatch and FP8 combine over `tokens * topk * hidden` | 13.984132942232176 | 0.02496 | 12.087042942232175 | 0.8643398194341548 | full all-pairs fluidized population, 112 messages per layer |
+| 32 | external NCCL-table cost model: dense SM90 fallback, generic half-precision all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse all-pairs fluidized FP8 dispatch and FP8 combine over `tokens * topk * hidden` | 27.51711787974335 | 4.0350336 | 11.72994880117192 | 0.4262782480503487 | full all-pairs fluidized population, 1,984 messages per layer |
+| 128 | external NCCL-table cost model: dense SM90 fallback, generic half-precision all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse all-pairs fluidized FP8 dispatch and FP8 combine over `tokens * topk * hidden` | 44.86945704576469 | 5.5890432 | 13.679158504693262 | 0.3048657016451342 | full all-pairs fluidized population, 32,512 messages per layer |
+| 256 | external NCCL-table cost model: dense SM90 fallback, generic half-precision all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse all-pairs fluidized FP8 dispatch and FP8 combine over `tokens * topk * hidden` | 61.028924458726934 | 7.1043648 | 16.73784003997693 | 0.2742607736975033 | 16,320 of 130,560 messages per layer, one eighth and unanchored |
 
 The old 248-sender EP 256 fan-in was `248 / 29.57691192626953 = 8.3849`
 times the realizable analytical expectation. Its published headline ratio is
@@ -175,10 +186,10 @@ selects.
 
 | EP | S-dense strategy and traffic | S-sparse strategy and traffic | Dense step ms | Sparse packet communication ms | Sparse step ms | Sparse / dense | Population |
 |---:|---|---|---:|---:|---:|---:|---|
-| 8 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse realized top-k routing, FP8 dispatch plus BF16 combine over `tokens * topk * hidden` | 13.984132942232176 | 0.037375 | 12.099457942232176 | 0.8652276113373988 | full rank and realized-message population, 112 messages per layer |
-| 32 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse realized top-k routing, FP8 dispatch plus BF16 combine over `tokens * topk * hidden` | 27.51711787974335 | 4.4170048 | 12.11192000117192 | 0.4401594692476161 | full rank and realized-message population, 1,340 messages per layer |
-| 128 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse realized top-k routing, FP8 dispatch plus BF16 combine over `tokens * topk * hidden` | 44.86945704576469 | 5.6296448 | 13.719760104693265 | 0.30577058444678235 | full rank and realized-message population, 7,444 messages per layer |
-| 256 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse realized top-k routing, FP8 dispatch plus BF16 combine over `tokens * topk * hidden` | 61.028924458726934 | 7.4813024 | 17.114777639976932 | 0.28043714995422264 | full rank and realized-message population, 15,640 messages per layer |
+| 8 | external NCCL-table cost model: dense SM90 fallback, generic half-precision all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse realized top-k routing, FP8 dispatch plus BF16 combine over `tokens * topk * hidden` | 13.984132942232176 | 0.037375 | 12.099457942232176 | 0.8652276113373988 | full rank and realized-message population, 112 messages per layer |
+| 32 | external NCCL-table cost model: dense SM90 fallback, generic half-precision all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse realized top-k routing, FP8 dispatch plus BF16 combine over `tokens * topk * hidden` | 27.51711787974335 | 4.4170048 | 12.11192000117192 | 0.4401594692476161 | full rank and realized-message population, 1,340 messages per layer |
+| 128 | external NCCL-table cost model: dense SM90 fallback, generic half-precision all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse realized top-k routing, FP8 dispatch plus BF16 combine over `tokens * topk * hidden` | 44.86945704576469 | 5.6296448 | 13.719760104693265 | 0.30577058444678235 | full rank and realized-message population, 7,444 messages per layer |
+| 256 | external NCCL-table cost model: dense SM90 fallback, generic half-precision all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse realized top-k routing, FP8 dispatch plus BF16 combine over `tokens * topk * hidden` | 61.028924458726934 | 7.4813024 | 17.114777639976932 | 0.28043714995422264 | full rank and realized-message population, 15,640 messages per layer |
 
 The sparse-to-dense ratios remain a strategy comparison only. They do not
 identify an omitted mechanism or establish which path runs in production.
@@ -187,8 +198,10 @@ identify an omitted mechanism or establish which path runs in production.
 
 The balanced surrogate routes whole token-expert assignments only to
 destinations they reach. It never manufactures fractional bytes to every peer.
-The analytical expectation uses independent assignment landing; realized
-counts come from the deterministic full population.
+The analytical expectation uses independent assignment landing. The realized
+cross-node values are reconstructed from simulator completion rows, and the
+total destination values add the analytically completed same-node segments.
+They are not read back from the planned fabric segment structure.
 
 | EP | Expected distinct destinations per source | Realized distinct destinations per source | Expected cross-node senders per receiver | Realized cross-node senders per receiver | Maximum realized |
 |---:|---:|---:|---:|---:|---:|

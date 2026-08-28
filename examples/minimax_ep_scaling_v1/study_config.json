@@ -3,6 +3,8 @@
   "chronology": {
     "expectations_commit": "61b66c4",
     "corrected_expectations_commit": "4d1e41c",
+    "diagnostic_extrapolation_rule_commit": "a6ba97f",
+    "diagnostic_extrapolation_rule_frozen": false,
     "frozen_before_implementation": true,
     "oracle_collection": "live pinned SDK in a fresh process"
   },
@@ -242,8 +244,12 @@
     "dense_sm90_general_fallback": {
       "name": "dense SM90 general fallback",
       "logical_traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements",
-      "external_pricing_definition": "NCCL table with effective ranks min(E, 8) and fixed 450 GB/s intra-node and 50 GB/s inter-node extrapolation tiers",
-      "packet_pricing_definition": "the identical dense half-precision collective and bytes expanded as synchronized direct all-pairs transfers over the declared placement"
+      "external_pricing_definition": "opaque eight-rank NCCL table measurement scaled by the donor rank factor, with no source, destination, path or message ledger",
+      "packet_pricing_definition": "dense half-precision element count expanded as synchronized direct all-pairs packet transfers over the declared Clos placement",
+      "external_dtype_identifier": "half",
+      "external_dtype_interpretation": "generic half precision; the table does not identify BF16",
+      "external_message_axis_name": "message_bytes",
+      "external_message_argument_interpretation": "the caller passes tokens times hidden times expert-parallel width as an element count, so the table axis unit is unresolved between its byte name and the caller's element semantics"
     },
     "sparse_routed_payload": {
       "name": "sparse routed expert payload",
@@ -263,7 +269,8 @@
     "label_full": "sampled layer only: full rank and message population, one layer of 65",
     "dense_direct_full_population_max_width": 128,
     "dense_widest_anchor_width": 128,
-    "dense_widest_extrapolation_rule": "multiply the EP 128 measured per-layer makespan by the ratio of EP 256 to EP 128 cross-node bytes per rank, (256 - 8) / (128 - 8) = 31 / 15; message size, link rate, placement rule and represented layer count stay fixed"
+    "dense_widest_extrapolation_rule": "post-specified diagnostic introduced in implementation commit a6ba97f after corrected expectations commit 4d1e41c: multiply the EP 128 measured per-layer makespan by the ratio of EP 256 to EP 128 cross-node bytes per rank, (256 - 8) / (128 - 8) = 31 / 15; message size, link rate, placement rule and represented layer count stay fixed",
+    "dense_widest_extrapolation_scored": false
   },
   "void_first_run": {
     "status": "VOID against FG-4",

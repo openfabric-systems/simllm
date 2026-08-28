@@ -20,33 +20,43 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
     sparse_steps = [row["family_s_packet_step_ms"] for row in rows]
     dense_external = [row["family_d_external_ms"] for row in rows]
     dense_packet = [row["family_d_packet_ms"] for row in rows]
-    contention_ratios = [row["family_d_ratio"] for row in rows]
-    dense_measured_indices = [
+    cost_model_ratios = [row["family_d_ratio"] for row in rows]
+    dense_scored_indices = [
         index
         for index, row in enumerate(rows)
-        if row["family_d_simulated_messages_per_layer"] > 0
+        if row["family_d_score_status"] == "scored measured cell"
     ]
-    dense_extrapolated_indices = [
+    dense_diagnostic_indices = [
         index
         for index, row in enumerate(rows)
-        if row["family_d_simulated_messages_per_layer"] == 0
+        if row["family_d_score_status"] == "unscored post-specified diagnostic"
+    ]
+    ep8_index = widths.index(8)
+    scored_cross_node_indices = [
+        index
+        for index in dense_scored_indices
+        if rows[index]["family_d_cross_node_contention_present"]
     ]
 
-    dense_label = "Dense SM90 fallback\nBF16 all-gather + reduce-scatter"
+    dense_label = (
+        "External NCCL cost model\nDense fallback: half all-gather + reduce-scatter"
+    )
     sparse_label = "Sparse routed payload\nFP8 dispatch + BF16 combine"
     packet_dense_label = (
-        "Dense packet model\nsame BF16 all-gather + reduce-scatter"
+        "Packet Clos cost model\nDirect all-pairs half all-gather + reduce-scatter"
     )
     ratio_label = (
-        "Dense packet / external, identical half traffic\n"
-        "BF16 all-gather + reduce-scatter"
+        "Packet Clos / external NCCL cost model\n"
+        "same requested half-element count"
     )
     caption = (
-        "Family D compares identical dense half all-gather plus reduce-scatter "
-        "bytes, with BF16 half-precision elements. Family S compares that dense "
-        "fallback with sparse routed FP8 dispatch plus BF16 combine. Every point "
-        "samples one layer of 65; D at EP 256 extrapolates from the measured full "
-        "EP 128 population."
+        "Family D compares two cost models, not contention isolation: an opaque "
+        "eight-rank NCCL-table measurement scaled by rank versus direct all-pairs "
+        "packet transfers on a Clos. Both request the dense fallback's generic "
+        "half-precision all-gather plus reduce-scatter element count. EP 8 has no "
+        "cross-node contention; EP 256 is a post-specified unscored diagnostic. "
+        "Family S compares the dense fallback with sparse routed FP8 dispatch plus "
+        "BF16 combine."
     )
 
     plt.rcParams.update(
@@ -117,16 +127,16 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
         label=packet_dense_label,
     )
     middle.scatter(
-        [widths[index] for index in dense_measured_indices],
-        [dense_packet[index] for index in dense_measured_indices],
+        [widths[index] for index in dense_scored_indices],
+        [dense_packet[index] for index in dense_scored_indices],
         color=green,
         marker="o",
         s=23,
         zorder=3,
     )
     middle.scatter(
-        [widths[index] for index in dense_extrapolated_indices],
-        [dense_packet[index] for index in dense_extrapolated_indices],
+        [widths[index] for index in dense_diagnostic_indices],
+        [dense_packet[index] for index in dense_diagnostic_indices],
         color=green,
         marker="s",
         facecolors="white",
@@ -134,7 +144,7 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
         s=28,
         zorder=3,
     )
-    middle.set_title("Family D identical traffic")
+    middle.set_title("Family D cost models, same logical count")
     middle.set_xlabel("Expert-parallel width")
     middle.set_ylabel("Collective time (ms)")
     middle.set_xscale("log", base=2)
@@ -152,38 +162,58 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
     )
 
     right.plot(
-        widths,
-        contention_ratios,
+        [widths[index] for index in dense_scored_indices],
+        [cost_model_ratios[index] for index in dense_scored_indices],
         color=green,
         linewidth=1.8,
         label=ratio_label,
     )
+    right.plot(
+        [widths[dense_scored_indices[-1]], widths[dense_diagnostic_indices[0]]],
+        [
+            cost_model_ratios[dense_scored_indices[-1]],
+            cost_model_ratios[dense_diagnostic_indices[0]],
+        ],
+        color=green,
+        linewidth=1.2,
+        linestyle=(0, (2, 2)),
+    )
     right.scatter(
-        [widths[index] for index in dense_measured_indices],
-        [contention_ratios[index] for index in dense_measured_indices],
+        [widths[index] for index in scored_cross_node_indices],
+        [cost_model_ratios[index] for index in scored_cross_node_indices],
         color=green,
         marker="o",
         s=23,
         zorder=3,
     )
     right.scatter(
-        [widths[index] for index in dense_extrapolated_indices],
-        [contention_ratios[index] for index in dense_extrapolated_indices],
+        [widths[ep8_index]],
+        [cost_model_ratios[ep8_index]],
+        color="#9B3A32",
+        marker="X",
+        s=32,
+        zorder=4,
+        label="EP 8: no cross-node contention",
+    )
+    right.scatter(
+        [widths[index] for index in dense_diagnostic_indices],
+        [cost_model_ratios[index] for index in dense_diagnostic_indices],
         color=green,
         marker="s",
         facecolors="white",
         linewidths=1.4,
         s=28,
         zorder=3,
+        label="EP 256: unscored diagnostic",
     )
     right.axhline(
         1.0,
         color="#555555",
         linestyle=(0, (4, 3)),
         linewidth=1.1,
-        label="Frozen lower bound 1.0",
+        label="Frozen scored lower bound 1.0",
     )
-    for width, ratio in zip(widths, contention_ratios, strict=True):
+    for width, ratio in zip(widths, cost_model_ratios, strict=True):
         right.annotate(
             f"{ratio:.3f}",
             (width, ratio),
@@ -193,9 +223,9 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
             fontsize=6.2,
             color=green,
         )
-    right.set_title("Family D contention ratio")
+    right.set_title("Family D cost-model ratio")
     right.set_xlabel("Expert-parallel width")
-    right.set_ylabel("Packet dense / external dense")
+    right.set_ylabel("Packet Clos / external NCCL")
     right.set_xscale("log", base=2)
     right.set_xticks(widths)
     right.xaxis.set_major_formatter(ScalarFormatter())
@@ -249,7 +279,7 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
                         ],
                     },
                     {
-                        "panel": "family-d-identical-traffic",
+                        "panel": "family-d-cost-model-times",
                         "label": dense_label,
                         "strategy": rows[0]["family_d_external_strategy"],
                         "traffic_definition": rows[0][
@@ -257,7 +287,7 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
                         ],
                     },
                     {
-                        "panel": "family-d-identical-traffic",
+                        "panel": "family-d-cost-model-times",
                         "label": packet_dense_label,
                         "strategy": rows[0]["family_d_packet_strategy"],
                         "traffic_definition": rows[0][
@@ -265,14 +295,21 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
                         ],
                     },
                     {
-                        "panel": "family-d-contention-ratio",
+                        "panel": "family-d-cost-model-ratio",
                         "label": ratio_label,
-                        "strategy": "same dense strategy in numerator and denominator",
+                        "strategy": (
+                            "same requested dense logical element count, different "
+                            "physical realizations and cost models"
+                        ),
                         "traffic_definition": rows[0][
                             "family_d_packet_traffic_definition"
                         ],
                     },
                 ],
+                "point_annotations": {
+                    "ep8": "not a contention comparison: no cross-node traffic",
+                    "ep256": "unscored post-specified diagnostic",
+                },
             },
             sort_keys=True,
             indent=2,

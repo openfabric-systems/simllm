@@ -129,7 +129,14 @@ def _load_config() -> dict[str, Any]:
     if "(256 - 8) / (128 - 8) = 31 / 15" not in sampling.get(
         "dense_widest_extrapolation_rule", ""
     ):
-        raise SystemExit("the corrected dense extrapolation rule is missing")
+        raise SystemExit("the post-specified dense diagnostic rule is missing")
+    chronology = config["chronology"]
+    if chronology.get("diagnostic_extrapolation_rule_commit") != "a6ba97f":
+        raise SystemExit("the diagnostic extrapolation chronology is missing")
+    if chronology.get("diagnostic_extrapolation_rule_frozen") is not False:
+        raise SystemExit("the diagnostic extrapolation must remain explicitly unfrozen")
+    if sampling.get("dense_widest_extrapolation_scored") is not False:
+        raise SystemExit("the post-specified EP 256 extrapolation cannot be scored")
     return config
 
 
@@ -301,6 +308,41 @@ def _max_receiver_fanin(flows: list[Any]) -> dict[str, int]:
     return best
 
 
+def _completion_geometry(
+    flows: list[Any],
+    *,
+    local_segments: tuple[Any, ...],
+    width: int,
+) -> dict[str, Any]:
+    """Reconstruct completed routing geometry from backend and local completions."""
+
+    destinations_by_source: dict[int, set[int]] = defaultdict(set)
+    fabric_senders_by_receiver: dict[int, set[int]] = defaultdict(set)
+    for flow in flows:
+        destinations_by_source[flow.source].add(flow.destination)
+        fabric_senders_by_receiver[flow.destination].add(flow.source)
+    for segment in local_segments:
+        destinations_by_source[segment.source_rank].add(segment.destination_rank)
+    return {
+        "completed_distinct_destinations_per_source": sum(
+            len(destinations_by_source[source]) for source in range(width)
+        )
+        / width,
+        "completed_cross_node_senders_per_receiver": sum(
+            len(fabric_senders_by_receiver[destination])
+            for destination in range(width)
+        )
+        / width,
+        "maximum_completed_cross_node_senders_per_receiver": max(
+            map(len, fabric_senders_by_receiver.values()), default=0
+        ),
+        "source": (
+            "simulator completion rows for cross-node flows plus analytically "
+            "completed same-node segments"
+        ),
+    }
+
+
 def _write_width_clos(path: Path, *, width: int, gpus_per_node: int) -> Path:
     leaf_count = width // gpus_per_node
     text = f"""Nodes {width}
@@ -407,6 +449,11 @@ def _simulate_packet_phases(
                 "flow_count": len(flow_rows),
                 "flow_payload_bytes": sum(flow.payload_bytes for flow in flow_rows),
                 "fanin": _max_receiver_fanin(flow_rows),
+                "completion_geometry": _completion_geometry(
+                    flow_rows,
+                    local_segments=classified.nvlink_segments,
+                    width=width,
+                ),
                 "goal_sha256": goal_sha256,
                 "goal_binary_sha256": goal_binary_sha256,
                 "completion_csv_sha256": completion_sha256,
@@ -505,13 +552,6 @@ def _sparse_packet_width(
     )
     dispatch = plan.phases[0]
     combine = plan.phases[1]
-    dispatch_pairs = dispatch.phase.segments
-    cross_node_senders: dict[int, set[int]] = defaultdict(set)
-    destinations_by_source: dict[int, set[int]] = defaultdict(set)
-    for segment in dispatch_pairs:
-        destinations_by_source[segment.source_rank].add(segment.destination_rank)
-    for segment in dispatch.fabric_segments:
-        cross_node_senders[segment.destination_rank].add(segment.source_rank)
     expected_destination_count = (width - 1) * (
         1 - ((width - model["num_experts_per_tok"]) / width) ** tokens_per_rank
     )
@@ -519,12 +559,7 @@ def _sparse_packet_width(
     expected_cross_node_senders = cross_node_candidates * (
         1 - ((width - model["num_experts_per_tok"]) / width) ** tokens_per_rank
     )
-    realized_destination_count = sum(
-        len(destinations_by_source[source]) for source in range(width)
-    ) / width
-    realized_cross_node_senders = sum(
-        len(cross_node_senders[destination]) for destination in range(width)
-    ) / width
+    completed_geometry = simulated["phases"][0]["completion_geometry"]
     represented = int(sampling["represented_layer_executions"])
     dispatch_bytes = dispatch.fabric_bytes + dispatch.nvlink_bytes
     combine_bytes = combine.fabric_bytes + combine.nvlink_bytes
@@ -560,12 +595,17 @@ def _sparse_packet_width(
         "packet_dispatch_combine_ms": simulated["layer_packet_ms"] * represented,
         "routing_geometry": {
             "expected_distinct_destinations_per_source": expected_destination_count,
-            "realized_distinct_destinations_per_source": realized_destination_count,
+            "realized_distinct_destinations_per_source": completed_geometry[
+                "completed_distinct_destinations_per_source"
+            ],
             "expected_cross_node_senders_per_receiver": expected_cross_node_senders,
-            "realized_cross_node_senders_per_receiver": realized_cross_node_senders,
-            "maximum_cross_node_senders_per_receiver": max(
-                map(len, cross_node_senders.values()), default=0
-            ),
+            "realized_cross_node_senders_per_receiver": completed_geometry[
+                "completed_cross_node_senders_per_receiver"
+            ],
+            "maximum_cross_node_senders_per_receiver": completed_geometry[
+                "maximum_completed_cross_node_senders_per_receiver"
+            ],
+            "realized_geometry_source": completed_geometry["source"],
         },
     }
 
@@ -684,8 +724,11 @@ def _extrapolate_dense_packet_width(
         "sampled": True,
         "sample_label": sampling["label_full"],
         "sampling_rule": sampling["rule"],
-        "population_status": "FG-10 extrapolation from measured full EP 128 population",
-        "population_scored": True,
+        "population_status": (
+            "unscored post-specified diagnostic extrapolation from measured full "
+            "EP 128 population"
+        ),
+        "population_scored": False,
         "simulated_messages_per_layer": 0,
         "simulated_bytes_per_layer": 0,
         "represented_layer_executions": represented,
@@ -701,13 +744,23 @@ def _extrapolate_dense_packet_width(
             "anchor_population_status": anchor["population_status"],
             "cross_node_bytes_per_rank_factor": factor,
             "rule": sampling["dense_widest_extrapolation_rule"],
+            "rule_commit": config["chronology"][
+                "diagnostic_extrapolation_rule_commit"
+            ],
+            "frozen_before_implementation": config["chronology"][
+                "diagnostic_extrapolation_rule_frozen"
+            ],
+            "scored": sampling["dense_widest_extrapolation_scored"],
         },
     }
 
 
 def _run_evaluation(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
     from simllm.calibration.external_db import ExternalOperationDatabase
-    from simllm.calibration.external_nccl import ExternalNcclDatabase
+    from simllm.calibration.external_nccl import (
+        NCCL_INTRA_NODE_BANDWIDTH_BYTES_PER_SECOND,
+        ExternalNcclDatabase,
+    )
     from simllm.calibration.external_pass import ExternalModelConfig, ExternalPassModel
 
     htsim = _configured_path(HTSIM_ENV)
@@ -782,6 +835,57 @@ def _run_evaluation(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
             - dispatch
             + sparse_packet["packet_dispatch_combine_ms"]
         )
+        fixed_overhead_analysis = None
+        if width == 128:
+            tokens_per_rank = config["operating_point"][
+                "local_batch_per_attention_dp_rank"
+            ] * (config["model"]["nextn"] + 1)
+            message_elements = tokens_per_rank * config["model"]["hidden_size"] * width
+            donor_latency_ms = sum(
+                nccl_database.query(
+                    dtype="half",
+                    operation=operation,
+                    ranks=8,
+                    message_size=message_elements,
+                ).latency_ms
+                for operation in ("all_gather", "reduce_scatter")
+            )
+            ideal_serialization_ms = (
+                2
+                * (7 / 8)
+                * (message_elements * 2)
+                / NCCL_INTRA_NODE_BANDWIDTH_BYTES_PER_SECOND
+                * 1_000
+            )
+            residual_ms = donor_latency_ms - ideal_serialization_ms
+            rank_factor = ((width - 1) / width) * (8 / 7) * (450 / 50)
+            inflated_residual_ms = (
+                residual_ms
+                * rank_factor
+                * int(config["packet_sampling"]["represented_layer_executions"])
+            )
+            observed_gap_ms = dispatch - dense_packet["packet_dispatch_combine_ms"]
+            fixed_overhead_analysis = {
+                "expert_parallel": width,
+                "message_axis_name": "message_bytes",
+                "caller_argument_semantics": "half-precision element count",
+                "dtype_identifier": "half",
+                "dtype_interpretation": (
+                    "generic half precision; the source table does not identify BF16"
+                ),
+                "donor_latency_microseconds_per_layer": donor_latency_ms * 1_000,
+                "ideal_ring_serialization_microseconds_per_layer": (
+                    ideal_serialization_ms * 1_000
+                ),
+                "fixed_and_algorithmic_residual_microseconds_per_layer": (
+                    residual_ms * 1_000
+                ),
+                "rank_factor": rank_factor,
+                "inflated_residual_ms_over_65_layers": inflated_residual_ms,
+                "external_minus_packet_gap_ms": observed_gap_ms,
+                "inflated_residual_exceeds_gap": inflated_residual_ms
+                > observed_gap_ms,
+            }
         widths.append(
             {
                 "expert_parallel": width,
@@ -796,6 +900,7 @@ def _run_evaluation(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
                 "family_d_packet_to_external_ratio": (
                     dense_packet["packet_dispatch_combine_ms"] / dispatch
                 ),
+                "family_d_fixed_overhead_analysis": fixed_overhead_analysis,
                 "family_s_packet_priced_step_ms": sparse_step,
                 "family_s_packet_to_external_step_ratio": (
                     sparse_step / float(frozen["live_decode_step_ms"])
@@ -868,6 +973,31 @@ def _deterministic_payload(evaluation: dict[str, Any]) -> bytes:
     ).encode("ascii")
 
 
+def _family_d_assessment(
+    *,
+    width: int,
+    gpus_per_node: int,
+    ratio: float,
+    population_scored: bool,
+) -> dict[str, Any]:
+    scored = bool(population_scored)
+    passed = ratio >= 1.0 if scored else None
+    return {
+        "contention_comparison": False,
+        "cross_node_contention_present": width > gpus_per_node,
+        "score_status": (
+            "scored measured cell" if scored else "unscored post-specified diagnostic"
+        ),
+        "outcome": (
+            "PASS" if passed else "REFUTED"
+        )
+        if scored
+        else "UNSCORED DIAGNOSTIC",
+        "passed": passed,
+        "scored": scored,
+    }
+
+
 def _score(
     config: dict[str, Any],
     evaluation: dict[str, Any],
@@ -901,7 +1031,12 @@ def _score(
         quotient = composed["composer_decode_step_ms"] / live["decode_step_ms"]
         composition_passed = 0.98 <= quotient <= 1.02
         d_ratio = composed["family_d_packet_to_external_ratio"]
-        d_passed = d_ratio >= 1.0
+        d_assessment = _family_d_assessment(
+            width=width,
+            gpus_per_node=int(config["operating_point"]["gpus_per_node"]),
+            ratio=d_ratio,
+            population_scored=bool(composed["dense_packet"]["population_scored"]),
+        )
         e_cells.append(
             {
                 "expert_parallel": width,
@@ -924,7 +1059,9 @@ def _score(
                 "expert_parallel": width,
                 "ratio": d_ratio,
                 "lower": 1.0,
-                "passed": d_passed,
+                "passed": d_assessment["passed"],
+                "scored": d_assessment["scored"],
+                "outcome": d_assessment["outcome"],
                 "population_status": composed["dense_packet"][
                     "population_status"
                 ],
@@ -949,6 +1086,18 @@ def _score(
                 "family_d_external_pricing_definition": dense[
                     "external_pricing_definition"
                 ],
+                "family_d_external_dtype_identifier": dense[
+                    "external_dtype_identifier"
+                ],
+                "family_d_external_dtype_interpretation": dense[
+                    "external_dtype_interpretation"
+                ],
+                "family_d_external_message_axis_name": dense[
+                    "external_message_axis_name"
+                ],
+                "family_d_external_message_argument_interpretation": dense[
+                    "external_message_argument_interpretation"
+                ],
                 "family_d_packet_arm": "D-packet",
                 "family_d_packet_strategy": dense["name"],
                 "family_d_packet_traffic_definition": dense[
@@ -962,7 +1111,19 @@ def _score(
                     "packet_dispatch_combine_ms"
                 ],
                 "family_d_ratio": d_ratio,
-                "family_d_outcome": "PASS" if d_passed else "REFUTED",
+                "family_d_same_logical_element_count": True,
+                "family_d_contention_comparison": d_assessment[
+                    "contention_comparison"
+                ],
+                "family_d_cross_node_contention_present": d_assessment[
+                    "cross_node_contention_present"
+                ],
+                "family_d_comparison_interpretation": (
+                    "ratio of an opaque external NCCL-table cost model to a "
+                    "direct all-pairs packet cost model; not contention isolation"
+                ),
+                "family_d_score_status": d_assessment["score_status"],
+                "family_d_outcome": d_assessment["outcome"],
                 "family_d_population_status": composed["dense_packet"][
                     "population_status"
                 ],
@@ -1060,10 +1221,14 @@ def _score(
             "interpretation": "end-to-end parity reusing the dispatch code validated by E",
         },
         "D": {
-            "passed": sum(cell["passed"] for cell in d_cells),
-            "denominator": 4,
+            "passed": sum(cell["passed"] is True for cell in d_cells),
+            "denominator": sum(cell["scored"] for cell in d_cells),
             "cells": d_cells,
             "rule": "D-packet divided by D-external is at least 1.0",
+            "interpretation": (
+                "comparison of two cost models on the same requested logical "
+                "element count; not evidence that contention is the only difference"
+            ),
         },
         "S": {
             "scored": False,
@@ -1110,21 +1275,8 @@ def _score(
         for row in evaluation["widths"]
     )
     population_guard = all(
-        row["dense_packet"]["population_scored"]
-        and (
-            "measured full" in row["dense_packet"]["population_status"]
-            or (
-                row["dense_packet"]["extrapolation"] is not None
-                and row["dense_packet"]["extrapolation"][
-                    "anchor_expert_parallel"
-                ]
-                == 128
-                and "measured full"
-                in row["dense_packet"]["extrapolation"][
-                    "anchor_population_status"
-                ]
-            )
-        )
+        not row["dense_packet"]["population_scored"]
+        or "measured full" in row["dense_packet"]["population_status"]
         for row in evaluation["widths"]
     )
     fatal_guards = {
@@ -1227,11 +1379,108 @@ def _has_sparse_definition(value: str) -> bool:
     return all(term in lowered for term in ("sparse", "routed", "fp8", "bf16"))
 
 
+def _markdown_table_rows(report_text: str, *, heading: str) -> list[str]:
+    lines = report_text.splitlines()
+    try:
+        start = lines.index(heading)
+    except ValueError as error:
+        raise RuntimeError(f"FG-4 RESULTS.md omits section {heading!r}") from error
+    heading_level = len(heading) - len(heading.lstrip("#"))
+    rows = []
+    for line in lines[start + 1 :]:
+        if line.startswith("#"):
+            level = len(line) - len(line.lstrip("#"))
+            if level <= heading_level:
+                break
+        stripped = line.strip()
+        if re.match(r"^\|\s*(8|32|128|256)\s*\|", stripped):
+            rows.append(stripped)
+    return rows
+
+
+def _inspect_results_table_disclosures(results_path: Path) -> int:
+    report_text = results_path.read_text(encoding="utf-8")
+    sections = {
+        "Family D": (
+            "### Family D cost-model comparison",
+            {
+                2: (
+                    "external nccl-table cost model",
+                    "dense sm90 fallback",
+                    "half-precision all-gather",
+                    "reduce-scatter",
+                ),
+                3: (
+                    "packet clos cost model",
+                    "dense sm90 fallback",
+                    "half-precision all-gather",
+                    "reduce-scatter",
+                ),
+            },
+        ),
+        "first-run void": (
+            "## First-run void evidence",
+            {
+                1: (
+                    "dense sm90 fallback",
+                    "half-precision all-gather",
+                    "reduce-scatter",
+                ),
+                2: ("sparse all-pairs fluidized fp8",),
+            },
+        ),
+        "Family S": (
+            "## Family S: published strategy comparison, unscored",
+            {
+                1: (
+                    "dense sm90 fallback",
+                    "half-precision all-gather",
+                    "reduce-scatter",
+                ),
+                2: (
+                    "sparse realized top-k routing",
+                    "fp8 dispatch",
+                    "bf16 combine",
+                ),
+            },
+        ),
+    }
+    inspected = 0
+    for section_name, (heading, cell_requirements) in sections.items():
+        rows = _markdown_table_rows(report_text, heading=heading)
+        if len(rows) != 4:
+            raise RuntimeError(
+                f"FG-4 RESULTS.md {section_name} table requires four EP rows"
+            )
+        for index, row in enumerate(rows):
+            cells = [cell.strip().lower() for cell in row.strip("|").split("|")]
+            for cell_index, required_terms in cell_requirements.items():
+                missing = [
+                    term for term in required_terms if term not in cells[cell_index]
+                ]
+                if missing:
+                    raise RuntimeError(
+                        f"FG-4 RESULTS.md {section_name} row {index} omits "
+                        + ", ".join(repr(term) for term in missing)
+                    )
+        inspected += len(rows)
+    family_d_rows = _markdown_table_rows(
+        report_text,
+        heading="### Family D cost-model comparison",
+    )
+    if "not a contention cell" not in family_d_rows[0].lower():
+        raise RuntimeError("FG-4 RESULTS.md EP 8 row hides its interpretation limit")
+    if "unscored diagnostic" not in family_d_rows[-1].lower():
+        raise RuntimeError("FG-4 RESULTS.md EP 256 row hides its unscored status")
+    return inspected
+
+
 def _inspect_artifact_disclosures(
     *,
     record_path: Path,
     csv_path: Path,
     figures_dir: Path,
+    results_path: Path,
 ) -> dict[str, Any]:
     """Inspect emitted records, CSV rows and figure text for FG-4 disclosure."""
 
@@ -1321,22 +1570,24 @@ def _inspect_artifact_disclosures(
         "sparse routed",
         "fp8 dispatch",
         "bf16 combine",
-        "identical half traffic",
     ):
         if term not in pdf_text:
             raise RuntimeError(f"FG-4 generated PDF omits {term!r}")
+    results_rows_inspected = _inspect_results_table_disclosures(results_path)
     return {
         "record_rows_inspected": len(record["rows"]),
         "csv_rows_inspected": len(csv_rows),
         "figure_series_inspected": len(series),
         "figure_caption_inspected": True,
         "pdf_text_inspected": True,
+        "results_table_rows_inspected": results_rows_inspected,
     }
 
 
 def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
     started = time.monotonic()
     config = _load_config()
+    dense = config["strategies"]["dense_sm90_general_fallback"]
     htsim = _configured_path(HTSIM_ENV)
     txt2bin = _configured_path(TXT2BIN_ENV)
     venv = _configured_path(EXTERNAL_VENV_ENV)
@@ -1367,6 +1618,11 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
         row["sparse_packet"]
         for row in first["widths"]
         if row["expert_parallel"] == widest_width
+    )
+    fixed_overhead_analysis = next(
+        row["family_d_fixed_overhead_analysis"]
+        for row in first["widths"]
+        if row["family_d_fixed_overhead_analysis"] is not None
     )
     dense_chunk_bytes = tokens_per_rank * config["model"]["hidden_size"] * 2
     dense_bytes_per_rank = 2 * (widest_width - 1) * dense_chunk_bytes
@@ -1427,8 +1683,9 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
         },
         "traffic_model_disclosure": {
             "family_d": (
-                "same dense strategy and logical bytes in both arms; only the "
-                "pricing mechanism differs"
+                "same requested dense logical element count in both arms, but "
+                "different physical realizations and cost models; the ratio is "
+                "not contention isolation"
             ),
             "family_s": (
                 "dense SM90 general fallback versus sparse routed FP8 dispatch "
@@ -1436,6 +1693,15 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
             ),
             "deployment_strategy_selection": "unknown to this study",
         },
+        "external_table_identification": {
+            "dtype_identifier": dense["external_dtype_identifier"],
+            "dtype_interpretation": dense["external_dtype_interpretation"],
+            "message_axis_name": dense["external_message_axis_name"],
+            "caller_argument_interpretation": dense[
+                "external_message_argument_interpretation"
+            ],
+        },
+        "family_d_fixed_overhead_analysis": fixed_overhead_analysis,
         "evidence_classes": {
             "compute_and_external_dispatch": "MEASURED-EXTERNAL",
             "packet_dispatch_and_combine": "SIM-DERIVED",
@@ -1495,6 +1761,7 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
         record_path=attempt_record,
         csv_path=attempt_csv,
         figures_dir=attempt / "figures",
+        results_path=STUDY / "RESULTS.md",
     )
     record["artifact_disclosure_inspection"] = disclosure_inspection
     record["fatal_guards"]["FG-4"] = True
@@ -1509,6 +1776,7 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
         record_path=attempt_record,
         csv_path=attempt_csv,
         figures_dir=attempt / "figures",
+        results_path=STUDY / "RESULTS.md",
     )
     if write_tracked:
         TRACKED_RECORD.write_bytes(_json_bytes(record))
@@ -1542,14 +1810,19 @@ def _validate_record(path: Path) -> dict[str, Any]:
             record_path=path,
             csv_path=TRACKED_CSV,
             figures_dir=TRACKED_FIGURES,
+            results_path=STUDY / "RESULTS.md",
         )
         results_text = (STUDY / "RESULTS.md").read_text(encoding="utf-8")
-        opening = results_text[:2000]
+        opening = " ".join(results_text[:8000].split())
         for required in (
             "VOID against FG-4",
             "0.2742607736975033",
             "strategy comparison",
             "does not know which strategy",
+            "two cost models",
+            "NOT evidence",
+            "0 of 3",
+            "UNSCORED DIAGNOSTIC",
         ):
             if required not in opening:
                 raise SystemExit(f"RESULTS.md opening omits {required!r}")

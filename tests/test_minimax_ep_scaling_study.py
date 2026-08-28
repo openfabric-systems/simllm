@@ -80,6 +80,67 @@ def test_corrected_dense_population_and_extrapolation_are_predeclared() -> None:
     assert extrapolated["simulated_messages_per_layer"] == 0
     assert extrapolated["represented_messages"] == 2 * 256 * 255 * 65
     assert extrapolated["extrapolation"]["anchor_expert_parallel"] == 128
+    assert extrapolated["population_scored"] is False
+    assert extrapolated["extrapolation"]["rule_commit"] == "a6ba97f"
+    assert extrapolated["extrapolation"]["frozen_before_implementation"] is False
+    assert extrapolated["extrapolation"]["scored"] is False
+
+
+def test_family_d_generator_classifies_cost_models_and_diagnostic() -> None:
+    runner = _runner()
+    measured = runner._family_d_assessment(
+        width=128,
+        gpus_per_node=8,
+        ratio=0.8026183885459625,
+        population_scored=True,
+    )
+    assert measured == {
+        "contention_comparison": False,
+        "cross_node_contention_present": True,
+        "score_status": "scored measured cell",
+        "outcome": "REFUTED",
+        "passed": False,
+        "scored": True,
+    }
+
+    diagnostic = runner._family_d_assessment(
+        width=256,
+        gpus_per_node=8,
+        ratio=1.187022158460092,
+        population_scored=False,
+    )
+    assert diagnostic == {
+        "contention_comparison": False,
+        "cross_node_contention_present": True,
+        "score_status": "unscored post-specified diagnostic",
+        "outcome": "UNSCORED DIAGNOSTIC",
+        "passed": None,
+        "scored": False,
+    }
+
+
+def test_fg4_inspector_rejects_mutated_results_table(tmp_path: Path) -> None:
+    runner = _runner()
+    report = (STUDY / "RESULTS.md").read_text(encoding="utf-8")
+    required = (
+        "external NCCL-table cost model: dense SM90 fallback, generic "
+        "half-precision all-gather plus reduce-scatter"
+    )
+    assert required in report
+    mutated = tmp_path / "RESULTS.md"
+    mutated.write_text(
+        report.replace(required, "external NCCL-table cost model: traffic", 1),
+        encoding="utf-8",
+        newline="\n",
+    )
+
+    with pytest.raises(RuntimeError, match="FG-4 RESULTS.md Family D row 0"):
+        runner._inspect_artifact_disclosures(
+            record_path=RECORD,
+            csv_path=RESULTS_CSV,
+            figures_dir=STUDY / "figures",
+            results_path=mutated,
+        )
 
 
 def test_figure_rendering_uses_the_declared_external_python(
