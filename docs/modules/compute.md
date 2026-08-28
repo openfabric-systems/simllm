@@ -1797,15 +1797,22 @@ binary64 value, applies the source tool's three GEMM and 367 generation-
 attention speed-of-light corrections, records every ignored or rewritten key
 dimension, and requires the primary database version with shared-layer
 inheritance disabled. The resolver implements the source interpolation rules
-and serves only `MEASURED-EXTERNAL` values under the frozen identity.
+and serves only `MEASURED-EXTERNAL` values under the frozen identity. Before
+use, the reader verifies the compressed payload plus `system.json`,
+`model-config.json` and `family-mapping.json` against their manifest hashes and
+verifies the converted files' source-specific change notices.
 
-The first comparison is nonvoid: all eight fatal guards hold, importer identity
-passes 25 of 25, all 26 resolver points are bit-equal, all four
-Qwen3-32B-FP8 pass totals are bit-equal, and the complete repeated conversion
-and evaluation takes 78.428689 seconds. The ULP finding ledger is empty. The
-artifact carries Apache 2.0, the preserved NVIDIA notices and an explicit
-modified-file statement. COMP-82 through COMP-86 own every extension beyond
-this exact identity and offline composition surface.
+The repaired comparison is nonvoid: all eight fatal guards hold, all 25
+importer-identity rows pass from an independent payload recount, all 37
+resolver points are bit-equal, all four Qwen3-32B-FP8 pass totals and their
+terms are bit-equal, and the complete repeated conversion and evaluation takes
+86.032942 seconds. The combined I2 and P1 ULP finding ledger is empty. The
+artifact carries the exact Apache 2.0 bytes, both preserved NVIDIA copyright
+lines and file-local conversion notices backed by an exhaustive `MODIFIED`
+ledger. COMP-82 through COMP-87 own every extension beyond this exact identity
+and offline composition surface. COMP-87 specifically owns the imported but
+undispatched WideEP MoE, MLA BMM, Mamba2, MLA and generation-MLA operation
+families.
 
 ## Open tasks
 
@@ -2376,6 +2383,17 @@ this exact identity and offline composition surface.
   enabled selection to move the expected end-to-end term exactly, and require
   the disabled selection to preserve every accepted provider timestamp,
   completion order, metric and run-record byte.
+
+- COMP-87 (Completeness; P2; L): add dispatched resolver operations for the
+  imported WideEP MoE, MLA BMM, Mamba2, MLA and generation-MLA families. Their
+  rows are preserved and hash-verified, but `query_operation` rejects them and
+  no pass composition can select them; that refusal is the explicit off path.
+  Freeze the source rule list, exact and interpolation points, ignored or
+  rewritten dimensions, and live SDK parity before implementation. Acceptance
+  requires bit-equal local-versus-live values on every enabled family and a
+  supported composition that consumes each selected operation. The disabled
+  path must preserve the current rejection behavior, 37 I2 results, pass
+  totals, artifact payload and source-identity ledger exactly.
 
 - COMP-4 (Completeness; P2; M): add generic multi-axis interpolation as an
   explicit optional path without weakening the device-model v1 boundary.

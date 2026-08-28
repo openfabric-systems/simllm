@@ -3,20 +3,28 @@
     "directory_identity": "85e72f990f00ea457de522d0b773e678f5e067740689912df5646f6296273284",
     "files": {
       "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
-      "MODIFIED": "0f93928e72da11eae92a95d3396884b3edb1b75ab58cbb329eee4f3be0dd3133",
-      "THIRD_PARTY_NOTICE": "3abf9540ea9cebf33fae0a796c52097a0b591cb1cccf0718705d0dd8a4f3a4bb",
+      "MODIFIED": "bfe7e227252dc60f86bd78f9427ac9930fd2f25255308b05f1c8de695e826446",
+      "THIRD_PARTY_NOTICE": "8883f78c9d753e647963f468145231e9c14e42e8642fda36b0b5c9b6f89e9c57",
       "family-mapping.json": "63a65ff85d1e45835d550bac31127a17f38a0c3b3a7d46733048067db63dc248",
-      "manifest.json": "650b0c40c5e78ad1b4ce1fc39bb4bf3cf664ae7b88113b26087a47384b7a3317",
-      "model-config.json": "15f594725b6ac2a481d1abbed79890ef3527cc2f92ac25129bec6dad9dfab824",
+      "manifest.json": "6be827d3dca584dce57594a2dc190b441e3de8ca932242fa71cfe56b59a89344",
+      "model-config.json": "28f872ba386022a4417e2d21f11fd14f2a75ab213c8ab364e4d0704473997523",
       "rows-0f606718c5e413e898d9ad33a3d7e803e532d5d5bd8a1c29929e7f8b2458e8ef.jsonl.xz": "0f606718c5e413e898d9ad33a3d7e803e532d5d5bd8a1c29929e7f8b2458e8ef",
       "source-files.sha256": "85e72f990f00ea457de522d0b773e678f5e067740689912df5646f6296273284",
-      "system.json": "29403ee2385dc4b150d1ca802b1ba1ddf75e9cd978c6366dcddbc4f8651d9127"
+      "system.json": "1ee7f75a56b0d078d360c159e5fe4b3ec052f456f32d8123dab0a19256012921"
     },
     "payload_sha256": "0f606718c5e413e898d9ad33a3d7e803e532d5d5bd8a1c29929e7f8b2458e8ef"
   },
-  "attempt": "attempt-0001",
-  "bulk_evidence": "${SIMLLM_P3X_T1_BULK_ROOT}/attempt-0001",
-  "elapsed_seconds": 78.42868915852159,
+  "attempt": "attempt-0002",
+  "bulk_evidence": "${SIMLLM_P3X_T1_BULK_ROOT}/attempt-0002",
+  "diagnostics": {
+    "I2-27-cap-off": {
+      "differs_from_capped": true,
+      "frozen_hex": "0x1.cc9259aaacb10p+3",
+      "local_hex": "0x1.cc9259aaacb10p+3",
+      "ulp_distance_from_capped": 85475858518375
+    }
+  },
+  "elapsed_seconds": 86.03294150251895,
   "expectations_sha256": "efecb44a4cc51a0c4f9c4dec74fe6aeedc1151d7ddfede560bc145b8554b4253",
   "family_tallies": {
     "I1": {
@@ -24,8 +32,8 @@
       "passed": 25
     },
     "I2": {
-      "denominator": 26,
-      "passed": 26
+      "denominator": 37,
+      "passed": 37
     },
     "P1": {
       "denominator": 4,
@@ -46,29 +54,59 @@
     "FG-7": true,
     "FG-8": true
   },
+  "freeze_addendum_sha256": "cfd2b2444c4c9d286ddc5a3e2ca4ed546b08f55b407591ca6257170d378038b8",
   "freeze_ancestry": {
     "expectations": true,
     "mutation_guard": true,
-    "resolver_queries": true
+    "resolver_queries": true,
+    "review_addendum": true
   },
   "freeze_commits": {
-    "expectations": "44959ef",
-    "mutation_guard": "f7ec05a",
-    "resolver_queries": "afe7ee6"
+    "expectations": "44959eff60ac1b08499b98c17fabb7fbb1cf4925",
+    "mutation_guard": "f7ec05a29fe6222c03e8f7cc4b7dbcf3f40b1693",
+    "resolver_queries": "afe7ee6e2947616c3b64e6e7c2dbc1fcf3553ef1",
+    "review_addendum": "25dc6b5f9a188657701e6eedcd537f84cec68854"
+  },
+  "freeze_worktree_bytes": {
+    "expectations": {
+      "blob_sha256": "efecb44a4cc51a0c4f9c4dec74fe6aeedc1151d7ddfede560bc145b8554b4253",
+      "commit": "44959eff60ac1b08499b98c17fabb7fbb1cf4925",
+      "git_show_succeeded": true,
+      "matches": true,
+      "path": "examples/external_db_parity_v1/expectations.md",
+      "working_sha256": "efecb44a4cc51a0c4f9c4dec74fe6aeedc1151d7ddfede560bc145b8554b4253"
+    },
+    "query_points": {
+      "blob_sha256": "b255a8db42ed7426a0815927c2a53c23396603e44df213212a601422e05fa8ab",
+      "commit": "25dc6b5f9a188657701e6eedcd537f84cec68854",
+      "git_show_succeeded": true,
+      "matches": true,
+      "path": "examples/external_db_parity_v1/query_points.json",
+      "working_sha256": "b255a8db42ed7426a0815927c2a53c23396603e44df213212a601422e05fa8ab"
+    },
+    "review_addendum": {
+      "blob_sha256": "cfd2b2444c4c9d286ddc5a3e2ca4ed546b08f55b407591ca6257170d378038b8",
+      "commit": "25dc6b5f9a188657701e6eedcd537f84cec68854",
+      "git_show_succeeded": true,
+      "matches": true,
+      "path": "examples/external_db_parity_v1/freeze_addendum.md",
+      "working_sha256": "cfd2b2444c4c9d286ddc5a3e2ca4ed546b08f55b407591ca6257170d378038b8"
+    }
   },
   "licensing": {
     "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
-    "MODIFIED": "0f93928e72da11eae92a95d3396884b3edb1b75ab58cbb329eee4f3be0dd3133",
-    "THIRD_PARTY_NOTICE": "3abf9540ea9cebf33fae0a796c52097a0b591cb1cccf0718705d0dd8a4f3a4bb"
+    "MODIFIED": "bfe7e227252dc60f86bd78f9427ac9930fd2f25255308b05f1c8de695e826446",
+    "THIRD_PARTY_NOTICE": "8883f78c9d753e647963f468145231e9c14e42e8642fda36b0b5c9b6f89e9c57"
   },
+  "licensing_findings": [],
   "machine": {
     "architecture": "x86_64",
     "cpu": "AMD Ryzen 9 3950X 16-Core Processor",
     "logical_cpus": 32,
-    "python": "3.10.18",
+    "python": "3.12.12",
     "system": "Linux"
   },
-  "query_config_sha256": "6ea189213e88e5b0726139790c0c0e053a94de485ff3d6dca29c970de6979e60",
+  "query_config_sha256": "b255a8db42ed7426a0815927c2a53c23396603e44df213212a601422e05fa8ab",
   "rows": [
     {
       "detail": "representative raw binary64 row",
@@ -632,6 +670,127 @@
       "ulp_distance": 0
     },
     {
+      "detail": "GEMM cross-site inverse-square utilization blend excludes sites beyond log2-space distance 2.0",
+      "expected_hex": "",
+      "external_hex": "0x1.d16e300d9dc77p+3",
+      "family": "I2",
+      "id": "I2-27",
+      "kind": "scored",
+      "local_hex": "0x1.d16e300d9dc77p+3",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "exact GEMM table hit returns the load-time speed-of-light-clamped served value",
+      "expected_hex": "",
+      "external_hex": "0x1.02253ae9a795bp-7",
+      "family": "I2",
+      "id": "I2-28",
+      "kind": "scored",
+      "local_hex": "0x1.02253ae9a795bp-7",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "exact generation-attention table cell returns the load-time speed-of-light-clamped served value",
+      "expected_hex": "",
+      "external_hex": "0x1.d0d73a2abadb5p-4",
+      "family": "I2",
+      "id": "I2-29",
+      "kind": "scored",
+      "local_hex": "0x1.d0d73a2abadb5p-4",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "generation-attention attn_dtype is ignored; invariance_pair=generation-attention-attn-dtype; pair_equal=True",
+      "expected_hex": "",
+      "external_hex": "0x1.ac4d0074b0848p-4",
+      "family": "I2",
+      "id": "I2-30",
+      "kind": "scored",
+      "local_hex": "0x1.ac4d0074b0848p-4",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "generation-attention attn_dtype is ignored; invariance_pair=generation-attention-attn-dtype; pair_equal=True",
+      "expected_hex": "",
+      "external_hex": "0x1.ac4d0074b0848p-4",
+      "family": "I2",
+      "id": "I2-31",
+      "kind": "scored",
+      "local_hex": "0x1.ac4d0074b0848p-4",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "dispatched standard MoE ignores non-low-latency kernel_source; invariance_pair=standard-moe-kernel-source; pair_equal=True",
+      "expected_hex": "",
+      "external_hex": "0x1.b6d43d5555555p-4",
+      "family": "I2",
+      "id": "I2-32",
+      "kind": "scored",
+      "local_hex": "0x1.b6d43d5555555p-4",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "dispatched standard MoE ignores non-low-latency kernel_source; invariance_pair=standard-moe-kernel-source; pair_equal=True",
+      "expected_hex": "",
+      "external_hex": "0x1.b6d43d5555555p-4",
+      "family": "I2",
+      "id": "I2-33",
+      "kind": "scored",
+      "local_hex": "0x1.b6d43d5555555p-4",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "GDN model_name is ignored; invariance_pair=gdn-model-name; pair_equal=True",
+      "expected_hex": "",
+      "external_hex": "0x1.5b7571999999ap-2",
+      "family": "I2",
+      "id": "I2-34",
+      "kind": "scored",
+      "local_hex": "0x1.5b7571999999ap-2",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "GDN model_name is ignored; invariance_pair=gdn-model-name; pair_equal=True",
+      "expected_hex": "",
+      "external_hex": "0x1.5b7571999999ap-2",
+      "family": "I2",
+      "id": "I2-35",
+      "kind": "scored",
+      "local_hex": "0x1.5b7571999999ap-2",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "GDN num_tokens is ignored; invariance_pair=gdn-num-tokens; pair_equal=True",
+      "expected_hex": "",
+      "external_hex": "0x1.5b7571999999ap-2",
+      "family": "I2",
+      "id": "I2-36",
+      "kind": "scored",
+      "local_hex": "0x1.5b7571999999ap-2",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
+      "detail": "GDN num_tokens is ignored; invariance_pair=gdn-num-tokens; pair_equal=True",
+      "expected_hex": "",
+      "external_hex": "0x1.5b7571999999ap-2",
+      "family": "I2",
+      "id": "I2-37",
+      "kind": "scored",
+      "local_hex": "0x1.5b7571999999ap-2",
+      "passed": true,
+      "ulp_distance": 0
+    },
+    {
       "detail": "bit-equal total and per-term composition",
       "expected_hex": "0x1.8d2164d537eb3p+6",
       "external_hex": "0x1.8d2164d537eb3p+6",
@@ -676,7 +835,7 @@
       "ulp_distance": 0
     },
     {
-      "detail": "conversion plus evaluation took 78.428689 seconds",
+      "detail": "conversion plus evaluation took 86.032942 seconds",
       "expected_hex": "",
       "external_hex": "",
       "family": "W",
@@ -687,7 +846,7 @@
       "ulp_distance": ""
     },
     {
-      "detail": "installed hashes and tracked conversion identity",
+      "detail": "installed hashes, independent payload recount, manifest claim and tracked identity",
       "expected_hex": "",
       "external_hex": "",
       "family": "FG",
@@ -698,7 +857,7 @@
       "ulp_distance": ""
     },
     {
-      "detail": "license, notices and modified-file statement",
+      "detail": "exact license bytes, notices, file-local notices and modified-file inventory",
       "expected_hex": "",
       "external_hex": "",
       "family": "FG",
@@ -731,7 +890,7 @@
       "ulp_distance": ""
     },
     {
-      "detail": "frozen below-SOL cell and mutation counts",
+      "detail": "frozen GEMM and generation-attention below-SOL cells plus mutation counts",
       "expected_hex": "",
       "external_hex": "",
       "family": "FG",
@@ -764,7 +923,7 @@
       "ulp_distance": ""
     },
     {
-      "detail": "freeze commits precede attempt 0001: {'expectations': True, 'resolver_queries': True, 'mutation_guard': True}",
+      "detail": "freeze commits precede attempt 0002: {'expectations': True, 'resolver_queries': True, 'mutation_guard': True, 'review_addendum': True}; working bytes match git-show blobs: {'expectations': True, 'query_points': True, 'review_addendum': True}",
       "expected_hex": "",
       "external_hex": "",
       "family": "FG",
@@ -775,7 +934,7 @@
       "ulp_distance": ""
     }
   ],
-  "run_commit": "df5344a7234de46e2fd22c5ad8bc0c3dfec49913",
+  "run_commit": "bba456c00fec42f946ec1f0dbd179d1f2e40181e",
   "run_state": "nonvoid",
   "schema": "simllm-external-db-parity-record-v1",
   "study": "external_db_parity_v1",

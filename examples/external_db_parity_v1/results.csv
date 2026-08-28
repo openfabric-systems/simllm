@@ -50,16 +50,27 @@ I2,I2-23,scored,True,,0x1.8bedafbfae0efp-5,0x1.8bedafbfae0efp-5,0,compute-scale 
 I2,I2-24,scored,True,,0x1.87e3466666666p-8,0x1.87e3466666666p-8,0,compute-scale holds the clamped global boundary value flat
 I2,I2-25,scored,True,,0x1.943710a8afa7ap-6,0x1.943710a8afa7ap-6,0,scale-matrix raw two-dimensional grid interpolation
 I2,I2-26,scored,True,,0x1.80db044444444p+2,0x1.80db044444444p+2,0,scale-matrix clamps coordinates then restores query SOL by boundary-utilization scaling
+I2,I2-27,scored,True,,0x1.d16e300d9dc77p+3,0x1.d16e300d9dc77p+3,0,GEMM cross-site inverse-square utilization blend excludes sites beyond log2-space distance 2.0
+I2,I2-28,scored,True,,0x1.02253ae9a795bp-7,0x1.02253ae9a795bp-7,0,exact GEMM table hit returns the load-time speed-of-light-clamped served value
+I2,I2-29,scored,True,,0x1.d0d73a2abadb5p-4,0x1.d0d73a2abadb5p-4,0,exact generation-attention table cell returns the load-time speed-of-light-clamped served value
+I2,I2-30,scored,True,,0x1.ac4d0074b0848p-4,0x1.ac4d0074b0848p-4,0,generation-attention attn_dtype is ignored; invariance_pair=generation-attention-attn-dtype; pair_equal=True
+I2,I2-31,scored,True,,0x1.ac4d0074b0848p-4,0x1.ac4d0074b0848p-4,0,generation-attention attn_dtype is ignored; invariance_pair=generation-attention-attn-dtype; pair_equal=True
+I2,I2-32,scored,True,,0x1.b6d43d5555555p-4,0x1.b6d43d5555555p-4,0,dispatched standard MoE ignores non-low-latency kernel_source; invariance_pair=standard-moe-kernel-source; pair_equal=True
+I2,I2-33,scored,True,,0x1.b6d43d5555555p-4,0x1.b6d43d5555555p-4,0,dispatched standard MoE ignores non-low-latency kernel_source; invariance_pair=standard-moe-kernel-source; pair_equal=True
+I2,I2-34,scored,True,,0x1.5b7571999999ap-2,0x1.5b7571999999ap-2,0,GDN model_name is ignored; invariance_pair=gdn-model-name; pair_equal=True
+I2,I2-35,scored,True,,0x1.5b7571999999ap-2,0x1.5b7571999999ap-2,0,GDN model_name is ignored; invariance_pair=gdn-model-name; pair_equal=True
+I2,I2-36,scored,True,,0x1.5b7571999999ap-2,0x1.5b7571999999ap-2,0,GDN num_tokens is ignored; invariance_pair=gdn-num-tokens; pair_equal=True
+I2,I2-37,scored,True,,0x1.5b7571999999ap-2,0x1.5b7571999999ap-2,0,GDN num_tokens is ignored; invariance_pair=gdn-num-tokens; pair_equal=True
 P1,P1-01,scored,True,0x1.8d2164d537eb3p+6,0x1.8d2164d537eb3p+6,0x1.8d2164d537eb3p+6,0,bit-equal total and per-term composition
 P1,P1-02,scored,True,0x1.6344a3614677ep+3,0x1.6344a3614677ep+3,0x1.6344a3614677ep+3,0,bit-equal total and per-term composition
 P1,P1-03,scored,True,0x1.7b53c1bc0e6d2p+6,0x1.7b53c1bc0e6d2p+6,0x1.7b53c1bc0e6d2p+6,0,bit-equal total and per-term composition
 P1,P1-04,scored,True,0x1.66a63c02685c1p+3,0x1.66a63c02685c1p+3,0x1.66a63c02685c1p+3,0,bit-equal total and per-term composition
-W,W-01,scored,True,,,,,conversion plus evaluation took 78.428689 seconds
-FG,FG-1,fatal,True,,,,,installed hashes and tracked conversion identity
-FG,FG-2,fatal,True,,,,,"license, notices and modified-file statement"
+W,W-01,scored,True,,,,,conversion plus evaluation took 86.032942 seconds
+FG,FG-1,fatal,True,,,,,"installed hashes, independent payload recount, manifest claim and tracked identity"
+FG,FG-2,fatal,True,,,,,"exact license bytes, notices, file-local notices and modified-file inventory"
 FG,FG-3,fatal,True,,,,,all converted rows come from the primary version
 FG,FG-4,fatal,True,,,,,every served value carries frozen external identity
-FG,FG-5,fatal,True,,,,,frozen below-SOL cell and mutation counts
+FG,FG-5,fatal,True,,,,,frozen GEMM and generation-attention below-SOL cells plus mutation counts
 FG,FG-6,fatal,True,,,,,both sides repeated bit-equal in fresh processes
 FG,FG-7,fatal,True,,,,,declared mappings reject gaps and overlap
-FG,FG-8,fatal,True,,,,,"freeze commits precede attempt 0001: {'expectations': True, 'resolver_queries': True, 'mutation_guard': True}"
+FG,FG-8,fatal,True,,,,,"freeze commits precede attempt 0002: {'expectations': True, 'resolver_queries': True, 'mutation_guard': True, 'review_addendum': True}; working bytes match git-show blobs: {'expectations': True, 'query_points': True, 'review_addendum': True}"

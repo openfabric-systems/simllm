@@ -21,8 +21,8 @@ ARTIFACT = (
 )
 RECORD = STUDY / "record.json"
 RESULTS_CSV = STUDY / "results.csv"
-RECORD_SHA256 = "cc8ef61ee6615b070a0d5bb12998334dc60ca7b913c468e0c75ddea3e5541e97"
-RESULTS_CSV_SHA256 = "6d9ccae2438b478fa26312a2388a0aaf4ceb954bfa6c69c29b24409ab15a1bdd"
+RECORD_SHA256 = "5251a1a85f0e98759237367b19383d269926675ae74409729553bc53f48d77ef"
+RESULTS_CSV_SHA256 = "4d6921dcd569220905ae910d26c3bf01ed049597abc5036b669891e7992069d3"
 
 
 def _sha256(path: Path) -> str:
@@ -44,7 +44,7 @@ def test_tracked_record_is_locked_and_nonvoid() -> None:
     assert _sha256(RECORD) == RECORD_SHA256
     assert _sha256(RESULTS_CSV) == RESULTS_CSV_SHA256
     assert b"\r" not in RESULTS_CSV.read_bytes()
-    assert len(RESULTS_CSV.read_text(encoding="utf-8").splitlines()) == 65
+    assert len(RESULTS_CSV.read_text(encoding="utf-8").splitlines()) == 76
 
     record = json.loads(RECORD.read_text(encoding="utf-8"))
     assert record["schema"] == "simllm-external-db-parity-record-v1"
@@ -52,12 +52,14 @@ def test_tracked_record_is_locked_and_nonvoid() -> None:
     assert record["voiding_guards"] == []
     assert record["family_tallies"] == {
         "I1": {"denominator": 25, "passed": 25},
-        "I2": {"denominator": 26, "passed": 26},
+        "I2": {"denominator": 37, "passed": 37},
         "P1": {"denominator": 4, "passed": 4},
         "W": {"denominator": 1, "passed": 1},
     }
     assert all(record["fatal_guards"].values())
     assert record["ulp_findings"] == []
+    assert record["attempt"] == "attempt-0002"
+    assert record["freeze_commits"]["review_addendum"].startswith("25dc6b5")
 
 
 def test_local_worker_runs_directly_without_pythonpath(tmp_path: Path) -> None:
