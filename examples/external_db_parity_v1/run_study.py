@@ -2,10 +2,12 @@
 
 The coordinator imports the pinned source into a new append-only attempt,
 executes the local resolver and live external SDK twice in fresh processes,
-and evaluates fatal guards plus the I1, I2, P1 and W families. Bulk evidence
-goes to a caller-supplied root. ``--write-tracked`` additionally writes the
-portable compact record and CSV in this study directory, overwriting those two
-tracked publication files in place.
+and evaluates fatal guards plus the I1, I2, I2S, P1 and W families. I2 retains
+the original pre-specified denominator while I2S holds the post-specified
+review and cap-supplement rows. Bulk evidence goes to a caller-supplied root.
+``--write-tracked`` additionally writes the portable compact record and CSV in
+this study directory, overwriting those two tracked publication files in
+place.
 """
 
 from __future__ import annotations
@@ -32,6 +34,7 @@ STUDY = Path(__file__).resolve().parent
 ROOT = STUDY.parents[1]
 sys.path.insert(0, os.fspath(ROOT))
 QUERY_CONFIG = STUDY / "query_points.json"
+SUPPLEMENT_CONFIG = STUDY / "query_points_supplement.json"
 EXPECTATIONS = STUDY / "expectations.md"
 FREEZE_ADDENDUM = STUDY / "freeze_addendum.md"
 TRACKED_ARTIFACT = (
@@ -62,11 +65,16 @@ FREEZE_COMMITS = {
     "resolver_queries": "afe7ee6e2947616c3b64e6e7c2dbc1fcf3553ef1",
     "mutation_guard": "f7ec05a29fe6222c03e8f7cc4b7dbcf3f40b1693",
     "review_addendum": "25dc6b5f9a188657701e6eedcd537f84cec68854",
+    "cap_supplement": "a679b0e85733219f877f520421bf8b45221febaa",
 }
 FREEZE_BLOBS = {
     "expectations": (FREEZE_COMMITS["expectations"], EXPECTATIONS),
     "query_points": (FREEZE_COMMITS["review_addendum"], QUERY_CONFIG),
     "review_addendum": (FREEZE_COMMITS["review_addendum"], FREEZE_ADDENDUM),
+    "query_points_supplement": (
+        FREEZE_COMMITS["cap_supplement"],
+        SUPPLEMENT_CONFIG,
+    ),
 }
 P1_ORACLES = (
     {
@@ -207,8 +215,25 @@ def _query_config() -> dict[str, Any]:
     return json.loads(QUERY_CONFIG.read_text(encoding="utf-8"))
 
 
-def _all_queries(config: dict[str, Any]) -> list[dict[str, Any]]:
-    return [*config["queries"], *config["review_addendum"]["queries"]]
+def _supplement_config() -> dict[str, Any]:
+    return json.loads(SUPPLEMENT_CONFIG.read_text(encoding="utf-8"))
+
+
+def _query_groups(
+    config: dict[str, Any],
+    supplement: dict[str, Any],
+) -> dict[str, list[dict[str, Any]]]:
+    return {
+        "I2": list(config["queries"]),
+        "I2S": [
+            *config["review_addendum"]["queries"],
+            *supplement["queries"],
+        ],
+    }
+
+
+def _expects_structured_miss(query: dict[str, Any]) -> bool:
+    return query.get("expected_cap_on", {}).get("kind") == "structured_miss"
 
 
 def _mutation_guards(config: dict[str, Any]) -> tuple[dict[str, Any], ...]:
@@ -276,16 +301,31 @@ def _local_worker(artifact: Path) -> dict[str, Any]:
 
     database = ExternalOperationDatabase.load(artifact)
     config = _query_config()
-    queries: dict[str, dict[str, Any]] = {}
+    supplement = _supplement_config()
+    query_groups = _query_groups(config, supplement)
+    queries: dict[str, dict[str, dict[str, Any]]] = {
+        family: {} for family in query_groups
+    }
     served = []
-    for query in _all_queries(config):
-        value = _local_query(database, query)
-        served.append(value)
-        queries[query["id"]] = {
-            "hex": value.hex,
-            "operation": value.operation,
-            "rule": value.rule,
-        }
+    for family, family_queries in query_groups.items():
+        for query in family_queries:
+            try:
+                value = _local_query(database, query)
+            except Exception as error:
+                if not _expects_structured_miss(query):
+                    raise
+                queries[family][query["id"]] = {
+                    "kind": "refusal",
+                    "refusal_kind": type(error).__name__,
+                }
+                continue
+            served.append(value)
+            queries[family][query["id"]] = {
+                "kind": "value",
+                "hex": value.hex,
+                "operation": value.operation,
+                "rule": value.rule,
+            }
 
     passes: dict[str, dict[str, Any]] = {}
     pass_model = ExternalQwen32BPassModel(database)
@@ -337,9 +377,19 @@ def _local_worker(artifact: Path) -> dict[str, Any]:
         }
 
     cap_query = next(
-        query for query in _all_queries(config) if query["id"] == "I2-27"
+        query
+        for query in config["review_addendum"]["queries"]
+        if query["id"] == "I2-27"
     )
     cap_off = database.query_gemm_cap_off_diagnostic(**cap_query["args"])
+    supplement_cap_query = next(
+        query for query in supplement["queries"] if query["id"] == "I2S-01"
+    )
+    supplement_cap_off = database.query_gemm_cap_off_diagnostic(
+        **supplement_cap_query["args"]
+    )
+    supplement_cap_on_hex = queries["I2S"]["I2S-01"]["hex"]
+    supplement_cap_on = float.fromhex(supplement_cap_on_hex)
     recount = _recount_payload(artifact)
 
     overlap_rejected = False
@@ -375,7 +425,8 @@ def _local_worker(artifact: Path) -> dict[str, Any]:
         "manifest_row_count": recount["manifest_row_count"],
         "manifest_row_counts": recount["manifest_row_counts"],
         "i1": i1,
-        "i2": queries,
+        "i2": queries["I2"],
+        "i2s": queries["I2S"],
         "p1": passes,
         "mutation": {
             "guards": mutation_results,
@@ -388,12 +439,29 @@ def _local_worker(artifact: Path) -> dict[str, Any]:
             "I2-27-cap-off": {
                 "local_hex": cap_off.hex,
                 "frozen_hex": cap_query["cap_off_diagnostic"]["local_hex"],
-                "differs_from_capped": cap_off.hex != queries["I2-27"]["hex"],
+                "differs_from_capped": cap_off.hex != queries["I2S"]["I2-27"]["hex"],
                 "ulp_distance_from_capped": _ulp_distance(
                     cap_off.hex,
-                    queries["I2-27"]["hex"],
+                    queries["I2S"]["I2-27"]["hex"],
                 ),
-            }
+            },
+            "I2S-01-cap-off": {
+                "cap_on_hex": supplement_cap_on_hex,
+                "local_hex": supplement_cap_off.hex,
+                "frozen_hex": supplement_cap_query[
+                    "expected_cap_off_mutation"
+                ]["hex"],
+                "matches_frozen": supplement_cap_off.hex
+                == supplement_cap_query["expected_cap_off_mutation"]["hex"],
+                "differs_from_capped": supplement_cap_off.hex
+                != supplement_cap_on_hex,
+                "cap_on_minus_cap_off_ms": supplement_cap_on
+                - supplement_cap_off.latency_ms,
+                "ulp_distance_from_capped": _ulp_distance(
+                    supplement_cap_off.hex,
+                    supplement_cap_on_hex,
+                ),
+            },
         },
         "evidence": {
             "class": EXTERNAL_EVIDENCE_CLASS,
@@ -565,17 +633,32 @@ def _external_worker() -> dict[str, Any]:
 
     database, model, backend = _external_database()
     config = _query_config()
-    queries = {
-        query["id"]: {
-            "hex": _external_query(
-                database,
-                query["operation"],
-                query["args"],
-                lookup=query.get("lookup"),
-            ).hex()
-        }
-        for query in _all_queries(config)
+    supplement = _supplement_config()
+    query_groups = _query_groups(config, supplement)
+    queries: dict[str, dict[str, dict[str, Any]]] = {
+        family: {} for family in query_groups
     }
+    for family, family_queries in query_groups.items():
+        for query in family_queries:
+            try:
+                value = _external_query(
+                    database,
+                    query["operation"],
+                    query["args"],
+                    lookup=query.get("lookup"),
+                )
+            except Exception as error:
+                if not _expects_structured_miss(query):
+                    raise
+                queries[family][query["id"]] = {
+                    "kind": "refusal",
+                    "refusal_kind": type(error).__name__,
+                }
+                continue
+            queries[family][query["id"]] = {
+                "kind": "value",
+                "hex": value.hex(),
+            }
     passes: dict[str, dict[str, Any]] = {}
     for oracle in P1_ORACLES:
         runtime = RuntimeConfig(
@@ -614,7 +697,8 @@ def _external_worker() -> dict[str, Any]:
     return {
         "worker": "external",
         "identity": _external_identity(_external_package_root()),
-        "i2": queries,
+        "i2": queries["I2"],
+        "i2s": queries["I2S"],
         "p1": passes,
         "mutation_hex": {
             mutation["id"]: _external_query(
@@ -779,15 +863,30 @@ def _ulp_distance(left_hex: str, right_hex: str) -> int:
     return abs(left - right)
 
 
+def _query_provenance(family: str, row_id: str) -> tuple[str, str]:
+    if family == "I2":
+        return FREEZE_COMMITS["resolver_queries"], "pre-specified"
+    if family != "I2S":
+        raise ValueError(f"unsupported query family {family!r}")
+    if row_id.startswith("I2S-"):
+        return FREEZE_COMMITS["cap_supplement"], "post-specified"
+    return FREEZE_COMMITS["review_addendum"], "post-specified"
+
+
 def _scored_row(
     family: str,
     row_id: str,
     passed: bool,
     *,
+    freeze_commit: str,
+    specification_status: str,
     expected_hex: str = "",
     local_hex: str = "",
     external_hex: str = "",
+    local_refusal_kind: str = "",
+    external_refusal_kind: str = "",
     detail: str = "",
+    provenance_note: str = "",
 ) -> dict[str, Any]:
     ulps = ""
     if local_hex and external_hex:
@@ -797,25 +896,43 @@ def _scored_row(
         "id": row_id,
         "kind": "scored",
         "passed": passed,
+        "freeze_commit": freeze_commit,
+        "specification_status": specification_status,
         "expected_hex": expected_hex,
         "local_hex": local_hex,
         "external_hex": external_hex,
+        "local_refusal_kind": local_refusal_kind,
+        "external_refusal_kind": external_refusal_kind,
         "ulp_distance": ulps,
         "detail": detail,
+        "provenance_note": provenance_note,
     }
 
 
-def _fatal_row(guard_id: str, passed: bool, detail: str) -> dict[str, Any]:
+def _fatal_row(
+    guard_id: str,
+    passed: bool,
+    detail: str,
+    *,
+    freeze_commit: str,
+    specification_status: str,
+    provenance_note: str = "",
+) -> dict[str, Any]:
     return {
         "family": "FG",
         "id": guard_id,
         "kind": "fatal",
         "passed": passed,
+        "freeze_commit": freeze_commit,
+        "specification_status": specification_status,
         "expected_hex": "",
         "local_hex": "",
         "external_hex": "",
+        "local_refusal_kind": "",
+        "external_refusal_kind": "",
         "ulp_distance": "",
         "detail": detail,
+        "provenance_note": provenance_note,
     }
 
 
@@ -840,18 +957,33 @@ def _evaluate(
                 "I1",
                 row_id,
                 actual == expected_hex,
+                freeze_commit=FREEZE_COMMITS["expectations"],
+                specification_status="pre-specified",
                 expected_hex=expected_hex,
                 local_hex=actual,
                 detail="representative raw binary64 row",
             )
         )
+    pre_specified_count_tables = {
+        "context_attention",
+        "gemm",
+        "generation_attention",
+        "moe",
+    }
     for table, expected_count in I1_COUNTS.items():
         actual_count = local["row_counts"].get(table)
+        pre_specified = table in pre_specified_count_tables
         rows.append(
             _scored_row(
                 "I1",
                 f"I1-count-{table}",
                 actual_count == expected_count,
+                freeze_commit=FREEZE_COMMITS[
+                    "expectations" if pre_specified else "review_addendum"
+                ],
+                specification_status=(
+                    "pre-specified" if pre_specified else "post-specified"
+                ),
                 detail=f"expected {expected_count} rows, found {actual_count}",
             )
         )
@@ -860,53 +992,116 @@ def _evaluate(
             "I1",
             "I1-count-total",
             local["row_count"] == I1_TOTAL,
+            freeze_commit=FREEZE_COMMITS["expectations"],
+            specification_status="pre-specified",
             detail=f"expected {I1_TOTAL} rows, found {local['row_count']}",
         )
     )
 
-    all_queries = _all_queries(config)
-    for query in all_queries:
-        row_id = query["id"]
-        local_hex = local["i2"][row_id]["hex"]
-        external_hex = external["i2"][row_id]["hex"]
-        pair_id = query.get("invariance_pair")
-        pair_equal = True
-        if pair_id is not None:
-            pair_rows = [
-                candidate
-                for candidate in all_queries
-                if candidate.get("invariance_pair") == pair_id
-            ]
-            pair_hexes = {
-                *[local["i2"][candidate["id"]]["hex"] for candidate in pair_rows],
-                *[external["i2"][candidate["id"]]["hex"] for candidate in pair_rows],
-            }
-            pair_equal = len(pair_hexes) == 1
-        passed = local_hex == external_hex and pair_equal
-        if local_hex != external_hex:
-            ulp_findings.append(
-                {
-                    "family": "I2",
-                    "row": row_id,
-                    "local_hex": local_hex,
-                    "external_hex": external_hex,
-                    "ulp_distance": _ulp_distance(local_hex, external_hex),
+    supplement = _supplement_config()
+    query_groups = _query_groups(config, supplement)
+    for family, family_queries in query_groups.items():
+        worker_key = family.lower()
+        for query in family_queries:
+            row_id = query["id"]
+            freeze_commit, specification_status = _query_provenance(family, row_id)
+            local_result = local[worker_key][row_id]
+            external_result = external[worker_key][row_id]
+            expected = query.get("expected_cap_on", {})
+            if expected.get("kind") == "structured_miss":
+                expected_local = expected["local_exception"]
+                expected_external = expected["external_exception"]
+                local_refusal = local_result.get("refusal_kind", "")
+                external_refusal = external_result.get("refusal_kind", "")
+                passed = (
+                    local_result.get("kind") == "refusal"
+                    and external_result.get("kind") == "refusal"
+                    and local_refusal == expected_local
+                    and external_refusal == expected_external
+                )
+                rows.append(
+                    _scored_row(
+                        family,
+                        row_id,
+                        passed,
+                        freeze_commit=freeze_commit,
+                        specification_status=specification_status,
+                        local_refusal_kind=local_refusal,
+                        external_refusal_kind=external_refusal,
+                        detail=(
+                            f"{query['rule']}; expected local refusal "
+                            f"{expected_local} and external refusal "
+                            f"{expected_external}"
+                        ),
+                        provenance_note=(
+                            "frozen by the concurrent cap-supplement session; "
+                            "runner wiring is integration, not new specification"
+                        ),
+                    )
+                )
+                continue
+
+            local_hex = local_result["hex"]
+            external_hex = external_result["hex"]
+            expected_hex = expected.get("hex", "")
+            pair_id = query.get("invariance_pair")
+            pair_equal = True
+            if pair_id is not None:
+                pair_rows = [
+                    candidate
+                    for candidate in family_queries
+                    if candidate.get("invariance_pair") == pair_id
+                ]
+                pair_hexes = {
+                    *[
+                        local[worker_key][candidate["id"]]["hex"]
+                        for candidate in pair_rows
+                    ],
+                    *[
+                        external[worker_key][candidate["id"]]["hex"]
+                        for candidate in pair_rows
+                    ],
                 }
+                pair_equal = len(pair_hexes) == 1
+            passed = (
+                local_hex == external_hex
+                and pair_equal
+                and (not expected_hex or local_hex == expected_hex)
             )
-        rows.append(
-            _scored_row(
-                "I2",
-                row_id,
-                passed,
-                local_hex=local_hex,
-                external_hex=external_hex,
-                detail=(
-                    query["rule"]
-                    if pair_id is None
-                    else f"{query['rule']}; invariance_pair={pair_id}; pair_equal={pair_equal}"
-                ),
+            if local_hex != external_hex:
+                ulp_findings.append(
+                    {
+                        "family": family,
+                        "row": row_id,
+                        "local_hex": local_hex,
+                        "external_hex": external_hex,
+                        "ulp_distance": _ulp_distance(local_hex, external_hex),
+                    }
+                )
+            rows.append(
+                _scored_row(
+                    family,
+                    row_id,
+                    passed,
+                    freeze_commit=freeze_commit,
+                    specification_status=specification_status,
+                    expected_hex=expected_hex,
+                    local_hex=local_hex,
+                    external_hex=external_hex,
+                    detail=(
+                        query["rule"]
+                        if pair_id is None
+                        else f"{query['rule']}; invariance_pair={pair_id}; "
+                        f"pair_equal={pair_equal}"
+                    ),
+                    provenance_note=(
+                        "frozen by the concurrent cap-supplement session; "
+                        "runner wiring is integration, not new specification"
+                        if row_id.startswith("I2S-")
+                        else ""
+                    ),
+                )
             )
-        )
 
     for oracle in P1_ORACLES:
         row_id = oracle["id"]
@@ -947,6 +1142,8 @@ def _evaluate(
                 "P1",
                 row_id,
                 passed,
+                freeze_commit=FREEZE_COMMITS["expectations"],
+                specification_status="pre-specified",
                 expected_hex=expected_hex,
                 local_hex=local_value["hex"],
                 external_hex=external_value["hex"],
@@ -963,6 +1160,8 @@ def _evaluate(
             "W",
             "W-01",
             elapsed_seconds <= 120.0,
+            freeze_commit=FREEZE_COMMITS["expectations"],
+            specification_status="pre-specified",
             detail=f"conversion plus evaluation took {elapsed_seconds:.6f} seconds",
         )
     )
@@ -994,6 +1193,8 @@ def _evaluate(
             "FG-1",
             fg1,
             "installed hashes, independent payload recount, manifest claim and tracked identity",
+            freeze_commit=FREEZE_COMMITS["expectations"],
+            specification_status="pre-specified",
         )
     )
 
@@ -1012,11 +1213,21 @@ def _evaluate(
                 if not licensing_findings
                 else json.dumps(licensing_findings)
             ),
+            freeze_commit=FREEZE_COMMITS["expectations"],
+            specification_status="pre-specified",
         )
     )
 
     fg3 = local["versions"] == ["1.3.0rc10"] and source["shared_layer"] is False
-    rows.append(_fatal_row("FG-3", fg3, "all converted rows come from the primary version"))
+    rows.append(
+        _fatal_row(
+            "FG-3",
+            fg3,
+            "all converted rows come from the primary version",
+            freeze_commit=FREEZE_COMMITS["expectations"],
+            specification_status="pre-specified",
+        )
+    )
 
     local_source = local["source"]
     fg4 = (
@@ -1027,7 +1238,15 @@ def _evaluate(
         == EXPECTED_IDENTITY["aiconfigurator_core"]
         and local_source["data_slice_sha256"] == EXPECTED_IDENTITY["slice_sha256"]
     )
-    rows.append(_fatal_row("FG-4", fg4, "every served value carries frozen external identity"))
+    rows.append(
+        _fatal_row(
+            "FG-4",
+            fg4,
+            "every served value carries frozen external identity",
+            freeze_commit=FREEZE_COMMITS["expectations"],
+            specification_status="pre-specified",
+        )
+    )
 
     mutation_checks = []
     for mutation in _mutation_guards(config):
@@ -1050,11 +1269,25 @@ def _evaluate(
             "FG-5",
             fg5,
             "frozen GEMM and generation-attention below-SOL cells plus mutation counts",
+            freeze_commit=FREEZE_COMMITS["review_addendum"],
+            specification_status="post-specified",
+            provenance_note=(
+                "FG-5-GENERATION-ATTENTION was frozen post-specification at "
+                f"{FREEZE_COMMITS['review_addendum']}"
+            ),
         )
     )
 
     fg6 = local_deterministic and external_deterministic
-    rows.append(_fatal_row("FG-6", fg6, "both sides repeated bit-equal in fresh processes"))
+    rows.append(
+        _fatal_row(
+            "FG-6",
+            fg6,
+            "both sides repeated bit-equal in fresh processes",
+            freeze_commit=FREEZE_COMMITS["expectations"],
+            specification_status="pre-specified",
+        )
+    )
 
     mapping = local["mapping"]
     fg7 = (
@@ -1064,7 +1297,15 @@ def _evaluate(
         and mapping["sha256"] == _sha256(TRACKED_ARTIFACT / "family-mapping.json")
         and sum(mapping["statuses"].values()) > 0
     )
-    rows.append(_fatal_row("FG-7", fg7, "declared mappings reject gaps and overlap"))
+    rows.append(
+        _fatal_row(
+            "FG-7",
+            fg7,
+            "declared mappings reject gaps and overlap",
+            freeze_commit=FREEZE_COMMITS["expectations"],
+            specification_status="pre-specified",
+        )
+    )
 
     ancestry = {name: _is_ancestor(commit) for name, commit in FREEZE_COMMITS.items()}
     freeze_blobs = _freeze_blob_status()
@@ -1082,6 +1323,8 @@ def _evaluate(
                 f"working bytes match git-show blobs: "
                 f"{ {name: entry['matches'] for name, entry in freeze_blobs.items()} }"
             ),
+            freeze_commit=FREEZE_COMMITS["expectations"],
+            specification_status="pre-specified",
         )
     )
 
@@ -1096,8 +1339,12 @@ def _evaluate(
 
 def _family_tallies(rows: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
     tallies = {}
-    for family in ("I1", "I2", "P1", "W"):
-        family_rows = [row for row in rows if row["kind"] == "scored" and row["family"] == family]
+    for family in ("I1", "I2", "I2S", "P1", "W"):
+        family_rows = [
+            row
+            for row in rows
+            if row["kind"] == "scored" and row["family"] == family
+        ]
         tallies[family] = {
             "passed": sum(row["passed"] for row in family_rows),
             "denominator": len(family_rows),
@@ -1114,11 +1361,16 @@ def _csv_bytes(rows: list[dict[str, Any]]) -> bytes:
         "id",
         "kind",
         "passed",
+        "freeze_commit",
+        "specification_status",
         "expected_hex",
         "local_hex",
         "external_hex",
+        "local_refusal_kind",
+        "external_refusal_kind",
         "ulp_distance",
         "detail",
+        "provenance_note",
     ]
     writer = csv.DictWriter(output, fieldnames=fieldnames, lineterminator="\n")
     writer.writeheader()
@@ -1177,6 +1429,7 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
     )
     failed_guards = [row["id"] for row in rows if row["kind"] == "fatal" and not row["passed"]]
     run_state = "void" if failed_guards else "nonvoid"
+    family_tallies = _family_tallies(rows)
     record = {
         "schema": SCHEMA,
         "study": "external_db_parity_v1",
@@ -1187,8 +1440,34 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
         "expectations_sha256": _sha256(EXPECTATIONS),
         "freeze_addendum_sha256": _sha256(FREEZE_ADDENDUM),
         "query_config_sha256": _sha256(QUERY_CONFIG),
+        "query_supplement_sha256": _sha256(SUPPLEMENT_CONFIG),
         "freeze_commits": FREEZE_COMMITS,
         "run_commit": _git("rev-parse", "HEAD"),
+        "scoring_registers": {
+            "I2": {
+                "specification_status": "pre-specified",
+                "freeze_commit": FREEZE_COMMITS["resolver_queries"],
+                "denominator": family_tallies["I2"]["denominator"],
+            },
+            "I2S": {
+                "specification_status": "post-specified",
+                "freeze_commits": {
+                    "review_addendum": FREEZE_COMMITS["review_addendum"],
+                    "concurrent_cap_supplement": FREEZE_COMMITS[
+                        "cap_supplement"
+                    ],
+                },
+                "denominator": family_tallies["I2S"]["denominator"],
+                "reporting_rule": (
+                    "report separately from I2 and never sum the two registers"
+                ),
+            },
+        },
+        "supplement_integration": {
+            "freeze_commit": FREEZE_COMMITS["cap_supplement"],
+            "freeze_origin": "concurrent session",
+            "work_class": "integration of frozen rows, not new specification",
+        },
         "artifact": {
             "directory_identity": EXPECTED_IDENTITY["slice_sha256"],
             "payload_sha256": local_runs[0]["payload_sha256"],
@@ -1206,7 +1485,7 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
             "python": platform.python_version(),
         },
         "elapsed_seconds": elapsed,
-        "family_tallies": _family_tallies(rows),
+        "family_tallies": family_tallies,
         "fatal_guards": {
             row["id"]: row["passed"] for row in rows if row["kind"] == "fatal"
         },
@@ -1252,7 +1531,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     tallies = record["family_tallies"]
     print(f"run_state={record['run_state']} elapsed_seconds={record['elapsed_seconds']:.6f}")
-    for family in ("I1", "I2", "P1", "W"):
+    for family in ("I1", "I2", "I2S", "P1", "W"):
         print(f"{family}={tallies[family]['passed']}/{tallies[family]['denominator']}")
     print(f"fatal_guards={record['fatal_guards']}")
     print(f"ulp_findings={len(record['ulp_findings'])}")

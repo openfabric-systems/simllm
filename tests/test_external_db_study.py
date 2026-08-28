@@ -82,7 +82,8 @@ def test_local_worker_runs_directly_without_pythonpath(tmp_path: Path) -> None:
     )
     result = json.loads(completed.stdout)
     assert result["row_count"] == 284717
-    assert len(result["i2"]) == 37
+    assert len(result["i2"]) == 26
+    assert len(result["i2s"]) == 13
     assert len(result["p1"]) == 4
     assert result["evidence"]["all_match"] is True
     assert result["row_counts"] == result["manifest_row_counts"]
@@ -92,6 +93,20 @@ def test_local_worker_runs_directly_without_pythonpath(tmp_path: Path) -> None:
         "frozen_hex": "0x1.cc9259aaacb10p+3",
         "local_hex": "0x1.cc9259aaacb10p+3",
         "ulp_distance_from_capped": 85475858518375,
+    }
+    assert result["diagnostics"]["I2S-01-cap-off"] == {
+        "cap_on_hex": "0x1.649d515151514p-11",
+        "cap_on_minus_cap_off_ms": 0.0002849416034136591,
+        "differs_from_capped": True,
+        "frozen_hex": "0x1.9e7234bf96873p-12",
+        "local_hex": "0x1.9e7234bf96873p-12",
+        "matches_frozen": True,
+        "ulp_distance_from_capped": 3486215443295393,
+    }
+    assert result["i2s"]["I2S-01"]["hex"] == "0x1.649d515151514p-11"
+    assert result["i2s"]["I2S-02"] == {
+        "kind": "refusal",
+        "refusal_kind": "InterpolationDataNotAvailableError",
     }
 
     record = json.loads(RECORD.read_text(encoding="utf-8"))
@@ -104,10 +119,26 @@ def test_local_worker_runs_directly_without_pythonpath(tmp_path: Path) -> None:
     expected_i2 = {
         row["id"]: row["local_hex"]
         for row in record["rows"]
-        if row["family"] == "I2"
+        if row["family"] == "I2" and int(row["id"].rsplit("-", 1)[1]) <= 26
     }
     regenerated_i2 = {row_id: result["i2"][row_id]["hex"] for row_id in expected_i2}
     assert regenerated_i2 == expected_i2
+    expected_i2s = {
+        row["id"]: row["local_hex"]
+        for row in record["rows"]
+        if row["local_hex"]
+        and (
+            row["family"] == "I2S"
+            or (
+                row["family"] == "I2"
+                and int(row["id"].rsplit("-", 1)[1]) > 26
+            )
+        )
+    }
+    regenerated_i2s = {
+        row_id: result["i2s"][row_id]["hex"] for row_id in expected_i2s
+    }
+    assert regenerated_i2s == expected_i2s
     expected_p1 = {
         row["id"]: row["local_hex"]
         for row in record["rows"]
@@ -122,7 +153,12 @@ def test_local_worker_runs_directly_without_pythonpath(tmp_path: Path) -> None:
 def test_freeze_working_bytes_match_recorded_git_blobs() -> None:
     runner = _load_runner()
     status = runner._freeze_blob_status()
-    assert set(status) == {"expectations", "query_points", "review_addendum"}
+    assert set(status) == {
+        "expectations",
+        "query_points",
+        "query_points_supplement",
+        "review_addendum",
+    }
     assert all(entry["git_show_succeeded"] for entry in status.values())
     assert all(entry["matches"] for entry in status.values())
 
@@ -168,12 +204,14 @@ def test_i2_and_p1_term_misses_both_publish_ulp_findings() -> None:
             "model_sha256": runner.EXPECTED_IDENTITY["model_sha256"],
         },
         "i2": copy.deepcopy(local["i2"]),
+        "i2s": copy.deepcopy(local["i2s"]),
         "p1": copy.deepcopy(local["p1"]),
         "mutation_hex": {
             guard_id: value["query_hex"]
             for guard_id, value in local["mutation"]["guards"].items()
         },
     }
+    external["i2s"]["I2S-02"]["refusal_kind"] = "PerfDataNotAvailableError"
     i2_local = float.fromhex(local["i2"]["I2-01"]["hex"])
     external["i2"]["I2-01"]["hex"] = math.nextafter(i2_local, math.inf).hex()
     term = next(iter(external["p1"]["P1-01"]["terms"]))
@@ -204,6 +242,73 @@ def test_i2_and_p1_term_misses_both_publish_ulp_findings() -> None:
     )
     p1_row = next(row for row in rows if row["id"] == "P1-01")
     assert p1_row["passed"] is True
+    assert runner._family_tallies(rows)["I2"] == {
+        "denominator": 26,
+        "passed": 25,
+    }
+    assert runner._family_tallies(rows)["I2S"] == {
+        "denominator": 13,
+        "passed": 13,
+    }
+    assert all(row["freeze_commit"] for row in rows)
+    assert all(
+        row["specification_status"] in {"pre-specified", "post-specified"}
+        for row in rows
+    )
+
+
+def test_i2s_structured_miss_scores_refusal_kinds_not_messages() -> None:
+    runner = _load_runner()
+    local = runner._local_worker(ARTIFACT)
+    external = {
+        "identity": {
+            "slice_file_count": 27,
+            "slice_sha256": runner.EXPECTED_IDENTITY["slice_sha256"],
+            "closure_sha256": runner.EXPECTED_IDENTITY["closure_sha256"],
+            "system_sha256": runner.EXPECTED_IDENTITY["system_sha256"],
+            "model_sha256": runner.EXPECTED_IDENTITY["model_sha256"],
+        },
+        "i2": copy.deepcopy(local["i2"]),
+        "i2s": copy.deepcopy(local["i2s"]),
+        "p1": copy.deepcopy(local["p1"]),
+        "mutation_hex": {
+            guard_id: value["query_hex"]
+            for guard_id, value in local["mutation"]["guards"].items()
+        },
+    }
+    external["i2s"]["I2S-02"] = {
+        "kind": "refusal",
+        "refusal_kind": "PerfDataNotAvailableError",
+    }
+    rows, _ = runner._evaluate(
+        local=local,
+        external=external,
+        local_deterministic=True,
+        external_deterministic=True,
+        imported_artifact=ARTIFACT,
+        attempt_number=2,
+        elapsed_seconds=1.0,
+    )
+    miss = next(row for row in rows if row["id"] == "I2S-02")
+    assert miss["passed"] is True
+    assert miss["local_refusal_kind"] == "InterpolationDataNotAvailableError"
+    assert miss["external_refusal_kind"] == "PerfDataNotAvailableError"
+
+    external["i2s"]["I2S-02"] = {
+        "kind": "value",
+        "hex": "0x0.0p+0",
+    }
+    failed_rows, _ = runner._evaluate(
+        local=local,
+        external=external,
+        local_deterministic=True,
+        external_deterministic=True,
+        imported_artifact=ARTIFACT,
+        attempt_number=2,
+        elapsed_seconds=1.0,
+    )
+    failed_miss = next(row for row in failed_rows if row["id"] == "I2S-02")
+    assert failed_miss["passed"] is False
 
 
 def test_live_sdk_families_match_the_tracked_record_when_available() -> None:
@@ -233,7 +338,19 @@ def test_live_sdk_families_match_the_tracked_record_when_available() -> None:
     expected_i2 = {
         row["id"]: row["external_hex"]
         for row in record["rows"]
-        if row["family"] == "I2"
+        if row["family"] == "I2" and int(row["id"].rsplit("-", 1)[1]) <= 26
+    }
+    expected_i2s = {
+        row["id"]: row["external_hex"]
+        for row in record["rows"]
+        if row["external_hex"]
+        and (
+            row["family"] == "I2S"
+            or (
+                row["family"] == "I2"
+                and int(row["id"].rsplit("-", 1)[1]) > 26
+            )
+        )
     }
     expected_p1 = {
         row["id"]: row["external_hex"]
@@ -241,6 +358,17 @@ def test_live_sdk_families_match_the_tracked_record_when_available() -> None:
         if row["family"] == "P1"
     }
     assert {row_id: result["i2"][row_id]["hex"] for row_id in expected_i2} == expected_i2
+    assert {row_id: result["i2s"][row_id]["hex"] for row_id in expected_i2s} == (
+        expected_i2s
+    )
+    assert result["i2s"]["I2S-01"] == {
+        "hex": "0x1.649d515151514p-11",
+        "kind": "value",
+    }
+    assert result["i2s"]["I2S-02"] == {
+        "kind": "refusal",
+        "refusal_kind": "PerfDataNotAvailableError",
+    }
     assert {row_id: result["p1"][row_id]["hex"] for row_id in expected_p1} == expected_p1
     assert result["mutation_hex"] == {
         "FG-5-GEMM": "0x1.02253ae9a795bp-7",
