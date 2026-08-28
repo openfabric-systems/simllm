@@ -5,6 +5,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import sys
 from fractions import Fraction
 from pathlib import Path
 
@@ -28,6 +29,14 @@ def _reader():
 
 def _sign():
     return _module("core63_independent_sign.py", "deployment_curve_core63_sign")
+
+
+def _residency():
+    sys.path.insert(0, str(STUDY_DIR))
+    try:
+        return _module("core63_residency.py", "deployment_curve_core63_residency")
+    finally:
+        sys.path.pop(0)
 
 
 def _expectations() -> dict:
@@ -173,6 +182,80 @@ def test_independent_sign_is_anchor_free_and_strict() -> None:
 
     assert observed["corrected_step"] == "decrease"
     assert observed["predicted_throughput"] == "increase"
+
+
+def test_residency_step_uses_only_frozen_family_scale() -> None:
+    basis = {
+        "component_basis": _selected_entry(),
+        "kernel_rows": [
+            {
+                "first_launch_order": "0",
+                "name": "fused_moe_kernel",
+                "total_duration_per_step_ns": "131520.0",
+            },
+            {
+                "first_launch_order": "1",
+                "name": "attention_family_kernel",
+                "total_duration_per_step_ns": "1744160.0",
+            },
+        ],
+    }
+
+    observed = _residency().derive_residency_step(_expectations(), basis)
+
+    retained = Fraction(1_744_159_500)
+    routed = Fraction(131_520_000)
+    expected = Fraction(500) + Fraction(61, 4) * (retained + routed / 9)
+    assert observed["step"]["residency_corrected_ps"]["numerator"] == (
+        expected.numerator
+    )
+    assert observed["step"]["residency_corrected_ps"]["denominator"] == (
+        expected.denominator
+    )
+    assert observed["family_decomposition"]["routed_kernel_row_count"] == 1
+    assert observed["zero_free_or_fitted_constants"] is True
+
+
+def test_standard_calibration_is_separate_and_classifies_undercorrection() -> None:
+    expectations = _expectations()
+    derivation = {
+        "step": {
+            "residency_corrected_ps": {
+                "numerator": 321_855_436_381,
+                "denominator": 12,
+                "published_ps_round_half_up": 26_821_286_365,
+            }
+        }
+    }
+
+    observed = _residency().compare_standard_calibration(expectations, derivation)
+
+    assert observed["anchor_id"] == "sglang_decode_standard"
+    assert observed["role"] == "calibration-only"
+    assert observed["residency_corrected"]["classification"] == "UNDERCORRECTION"
+    assert Fraction(
+        observed["residency_corrected"]["prediction_exact"]["numerator"],
+        observed["residency_corrected"]["prediction_exact"]["denominator"],
+    ) > Fraction(
+        observed["current"]["prediction_exact"]["numerator"],
+        observed["current"]["prediction_exact"]["denominator"],
+    )
+
+
+def test_preservation_lock_verifies_all_frozen_artifacts() -> None:
+    observed = _residency().verify_preservation_lock(
+        _expectations(), REPOSITORY_ROOT
+    )
+
+    assert observed == {
+        "checked_count": 93,
+        "manifest_sha256": (
+            "3586ddd96cfad09d8b7c8015eda6641ba5f4180a1f55c5b9f34e06cd29eb445d"
+        ),
+        "mismatches": [],
+        "prior_records_mutated": False,
+        "status": "PASS",
+    }
 
 
 def test_candidate_projection_stops_before_record_tail() -> None:
