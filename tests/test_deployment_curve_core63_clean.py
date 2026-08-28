@@ -1,0 +1,141 @@
+from __future__ import annotations
+
+import json
+import sys
+from fractions import Fraction
+from pathlib import Path
+
+import pytest
+
+STUDY_DIR = (
+    Path(__file__).resolve().parents[1] / "examples/deployment_curve_v1"
+)
+sys.path.insert(0, str(STUDY_DIR))
+
+from core63_clean_residency import (
+    independent_recompute,
+    validate_access_events,
+    validate_clean_expectations,
+)
+
+
+def _fraction(row: dict[str, int]) -> Fraction:
+    return Fraction(row["numerator"], row["denominator"])
+
+
+def test_committed_clean_expectations_validate() -> None:
+    expectations = json.loads(
+        (STUDY_DIR / "core63_clean_expectations.json").read_text(encoding="utf-8")
+    )
+
+    validate_clean_expectations(expectations)
+
+
+def test_access_validation_requires_partial_contemporaneous_pairs() -> None:
+    events = []
+    for access_number in range(1, 7):
+        common = {
+            "access_id": f"A{access_number:02d}",
+            "classification": "synthetic",
+            "held_out_mtp_value_accessed": False,
+            "record": f"record-{access_number}",
+            "record_size_bytes": 100,
+            "schema": "simllm-deployment-curve-core63-clean-access-v1",
+            "selector": f"/field-{access_number}",
+            "whole_file_streamed": False,
+        }
+        events.append(
+            {
+                **common,
+                "bytes_accessed": 0,
+                "event": "BEGIN",
+                "event_index": len(events) + 1,
+                "status": "IN_PROGRESS",
+            }
+        )
+        events.append(
+            {
+                **common,
+                "bytes_accessed": 50,
+                "event": "END",
+                "event_index": len(events) + 1,
+                "status": "PASS",
+            }
+        )
+
+    result = validate_access_events(events)
+
+    assert result["access_count"] == 6
+    assert result["forbidden_access_ledger"] == []
+    assert result["whole_file_streams"] == 0
+
+
+def test_access_validation_rejects_full_byte_count() -> None:
+    events = []
+    for access_number in range(1, 7):
+        common = {
+            "access_id": f"A{access_number:02d}",
+            "classification": "synthetic",
+            "held_out_mtp_value_accessed": False,
+            "record": f"record-{access_number}",
+            "record_size_bytes": 100,
+            "schema": "simllm-deployment-curve-core63-clean-access-v1",
+            "selector": f"/field-{access_number}",
+            "whole_file_streamed": False,
+        }
+        events.extend(
+            [
+                {
+                    **common,
+                    "bytes_accessed": 0,
+                    "event": "BEGIN",
+                    "event_index": len(events) + 1,
+                    "status": "IN_PROGRESS",
+                },
+                {
+                    **common,
+                    "bytes_accessed": 100 if access_number == 6 else 50,
+                    "event": "END",
+                    "event_index": len(events) + 2,
+                    "status": "PASS",
+                },
+            ]
+        )
+
+    with pytest.raises(ValueError, match="final source byte"):
+        validate_access_events(events)
+
+
+def test_independent_recompute_uses_only_routed_marker() -> None:
+    inputs = {
+        "calibration_context": {
+            "current_step_ps": 1_000_000,
+            "per_node_tokens": 1,
+            "published_tokens_per_second_per_node": 2_000_000,
+        },
+        "component_basis": {
+            "kernels": [{"components": {"fixed_overhead_ps": 100}}],
+            "measured_service_ps": 2100,
+        },
+        "kernel_rows": [
+            {
+                "first_launch_order": "1",
+                "name": "attention_kernel",
+                "total_duration_per_step_ns": "1.5",
+            },
+            {
+                "first_launch_order": "2",
+                "name": "Fused_MoE_Kernel_stage",
+                "total_duration_per_step_ns": "0.6",
+            },
+        ],
+    }
+
+    result = independent_recompute(inputs)
+
+    assert [
+        row["family"] for row in result["component_classification_ledger"]
+    ] == ["retained", "routed_expert"]
+    assert _fraction(result["retained_service_ps"]) == 1400
+    assert _fraction(result["routed_service_ps"]) == 600
+    assert _fraction(result["step"]["corrected_ps"]) == Fraction(67400, 3)
