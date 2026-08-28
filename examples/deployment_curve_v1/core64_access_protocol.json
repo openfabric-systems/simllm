@@ -1,0 +1,40 @@
+{
+  "access_contract": {
+    "access_event_order": [
+      "BEGIN before source open",
+      "END immediately after selector completion"
+    ],
+    "expected_access_count": 3,
+    "expected_access_event_count": 6,
+    "field_reader": "examples/deployment_curve_v1/core64_field_reader.py",
+    "forbidden_access_ledger": [],
+    "held_out_mtp_numeric_access_permitted": false,
+    "reader_stdout_permitted": false,
+    "whole_file_byte_streams_permitted": false
+  },
+  "allowlist": [
+    {
+      "classification": "published_core63_standard_decode_basis",
+      "record": "examples/deployment_curve_v1/core63_clean_calibration_result.json",
+      "selector": "/{calibration_only,residency_derivation,frozen_scope_fields}"
+    },
+    {
+      "classification": "ep72_attention_parallelism",
+      "record": "offline/calibration/deployment-projections/ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2.json",
+      "selector": "/units[1]/attention_parallelism"
+    },
+    {
+      "classification": "ep72_standard_decode_rank_shape",
+      "record": "offline/calibration/deployment-projections/ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2.json",
+      "selector": "/units[1]/case_projections[0]"
+    }
+  ],
+  "forbidden_selectors": [
+    "/units[1]/case_projections[1]",
+    "all held-out MTP anchor numeric fields",
+    "all fifth scored run artifacts"
+  ],
+  "schema": "simllm-deployment-curve-core64-access-protocol-v1",
+  "status": "EXPECTATIONS_ONLY",
+  "task": "CORE-64"
+}

@@ -177,6 +177,13 @@ examples/deployment_scan_v1/figures/*.png -text -diff
 tests/test_deployment_scan_study.py text eol=lf
 tests/test_deployment_curve_core63_clean*.py text eol=lf
 notes/2026-08-28-core63clean-worker-sizing.md text eol=lf
+notes/2026-08-28-core64-worker-sizing.md text eol=lf
+examples/deployment_curve_v1/core64_*.json text eol=lf
+examples/deployment_curve_v1/core64_*.jsonl text eol=lf
+examples/deployment_curve_v1/core64_*.md text eol=lf
+examples/deployment_curve_v1/core64_*.py text eol=lf
+examples/deployment_curve_v1/core64_*.txt text eol=lf
+tests/test_deployment_curve_core64*.py text eol=lf
 simllm/compute/transformer.py text eol=lf
 simllm/compute/provider.py text eol=lf
 simllm/backends/htsim_rnic.py text eol=lf

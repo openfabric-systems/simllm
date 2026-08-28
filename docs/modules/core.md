@@ -1096,6 +1096,29 @@ scale one. CORE-64 therefore stays open on that exact component-backed gap,
 with decode-side overlap still out of scope until a real decode communication
 service term exists.
 
+The [CORE-64 per-rank shape result](../../examples/deployment_curve_v1/core64_shape_result.md)
+finds no deployment-shape mismatch in the retained standard-decode families.
+Nine eight-GPU decode nodes at attention DP72 turn the disclosed 256 requests
+per node into `9 * 256 / 72 = 32` requests per rank. KV 2,000 therefore gives
+64,000 aggregate KV-token references per rank, exactly matching the TP1
+batch-32, KV-2,000 capture. MLA, attention, compressed-KV read, dense early
+MLP, router, shared expert and LM head all stay at scale one; the inherited
+routed `1/9` scale and 489 ps fixed term are unchanged. The resulting movement
+is exactly 0.000000 tokens/s/node: the prediction remains 9,544.657796 against
+22,282, with a signed -12,737.342204 tokens/s/node difference and -57.164268
+percent residual. The first three-selector tranche was retained after a
+nonnumeric attention-label spelling rejection, and the frozen retry passed
+the identical selectors. All twelve access events are contemporaneous, every
+selector stops before whole-file coverage and before the MTP case, the
+forbidden ledger is empty, and all 134 preservation locks pass.
+
+This honest null result does not satisfy CORE-64's literal gap-resolution
+clause, so CORE-64 remains open and CORE-65 receives the exact physical
+attribution remainder. The logical projection is total, but the retained TP1
+kernel stream has no total binding to SGLang's EP72 physical MLA,
+shared-expert, dense and output launches. No semantic mapping or calibration
+constant is invented.
+
 ## Open tasks
 
 ### Precision
@@ -1108,6 +1131,18 @@ service term exists.
   locality explicitly, and publish the signed movement from 9,544.657796
   tokens/s/node against the 22,282 calibration anchor. Decode-side overlap
   remains out of scope until a real decode communication service term exists.
+
+- CORE-65 (Precision; P0; L): resolve the exact remaining -12,737.342204
+  tokens/s/node, or -57.164268 percent, standard-decode physical attribution
+  gap after CORE-64 proves that every disclosed EP72 per-rank request, KV,
+  MLA, shared-expert, dense, router and output shape matches the TP1 capture.
+  Bind the retained kernel stream totally to SGLang's EP72 physical operation
+  identities or obtain a matching EP72 per-rank capture, then derive any
+  component-specific service movement without fitting a calibration constant.
+  Preserve the inherited routed `1/9` scale, the 489 ps fixed term, every
+  prior artifact and the explicit family-locality ledger. The held-out MTP
+  value and fifth scored run remain out of scope, and decode-side overlap
+  remains deferred until a real decode communication service term exists.
 
 - CORE-53 (Precision; P1; M): replace the first disaggregated session slice's
   roofline bootstrap with the accepted COMP-64 kernel-cycle lookup record.
