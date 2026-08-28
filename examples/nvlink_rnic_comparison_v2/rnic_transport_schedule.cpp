@@ -311,6 +311,9 @@ std::vector<CompletionRow> simulatePacket(
     };
 
     while (completed < rows.size()) {
+        TimePs now_ps = calendar.nextSlotStartPs();
+        enqueueReleased(now_ps);
+        admitWaiting(now_ps);
         if (active_by_class.empty()) {
             calendar.beginEpoch(calendar.nextSlotIndex(), {});
             if (release_index >= rows.size()) {
@@ -320,10 +323,13 @@ std::vector<CompletionRow> simulatePacket(
             if (next_release > calendar.nextSlotStartPs()) {
                 calendar.rebaseIdle(next_release);
             }
+            now_ps = calendar.nextSlotStartPs();
+            enqueueReleased(now_ps);
+            admitWaiting(now_ps);
         }
-        const TimePs now_ps = calendar.nextSlotStartPs();
-        enqueueReleased(now_ps);
-        admitWaiting(now_ps);
+        if (active_by_class.empty()) {
+            throw std::logic_error("packet simulation did not admit a released class");
+        }
 
         std::vector<RnicMaxMinFlow> active;
         active.reserve(active_by_class.size());
