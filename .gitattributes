@@ -182,6 +182,7 @@ examples/deployment_curve_v1/core64_*.json text eol=lf
 examples/deployment_curve_v1/core64_*.jsonl text eol=lf
 examples/deployment_curve_v1/core64_*.md text eol=lf
 examples/deployment_curve_v1/core64_*.py text eol=lf
+examples/deployment_curve_v1/core64_*.txt text eol=lf
 tests/test_deployment_curve_core64*.py text eol=lf
 simllm/compute/transformer.py text eol=lf
 simllm/compute/provider.py text eol=lf

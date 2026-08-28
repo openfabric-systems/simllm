@@ -63,9 +63,12 @@
     "total_decode_ranks": 72
   },
   "preservation": {
+    "additional_git_blob_lock_count": 41,
+    "additional_git_blob_manifest_path": "examples/deployment_curve_v1/core64_prior_git_blobs.txt",
+    "expected_total_checked_count": 134,
     "inherited_manifest_path": "examples/deployment_curve_v1/core63_preservation_lock.sha256",
     "inherited_manifest_sha256": "3586ddd96cfad09d8b7c8015eda6641ba5f4180a1f55c5b9f34e06cd29eb445d",
-    "minimum_checked_count": 93,
+    "minimum_checked_count": 134,
     "prior_artifacts_mutated": false
   },
   "registry_intent": {
