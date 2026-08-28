@@ -1411,15 +1411,14 @@ prefill row plus only one decode shape, so COMP-73 owns the target-record
 coverage needed for closure; see
 [the session kernel-cycle result](../../examples/pd_session_kernel_cycle_v1/RESULTS.md).
 
-The nonvoid
-[offline model-extraction study](../../examples/model_extraction_v1/RESULTS.md)
-publishes the Granite column's vLLM and SGLang inventories. Both framework
-paths emit all 15 cases with identical structural denominators, exactly 97
-logical family invocations per case and two graph-template classes; repeated
-extractions are byte identical and no fatal guard is violated. This makes the
-first COMP-54 coverage column literal. It is structure-only evidence: all
-physical implementation fields remain absent by design, and the task stays
-open for the nominated Qwen3.8-27B column and the Kimi K3 structure half.
+The nonvoid offline model-extraction studies publish the Granite, Qwen3.8-27B
+and comparison-specific Qwen3-32B-FP8 columns for both framework rows. Their
+structural denominators agree across vLLM and SGLang, repeated extractions are
+byte identical and all physical implementation fields remain absent by design.
+The latest Qwen3-32B-FP8 column binds exact revision
+`aa55da1ecc13d006e8b8e4f54579b1ea8c3db2df`, covers all 15 declared cases and
+emits exactly 257 logical visits per case. COMP-54 stays open for the Kimi K3
+structure half.
 
 The kernel-time determinism contract above is stated publicly and enforced. The
 pre-registered
@@ -2605,11 +2604,11 @@ Granite arm's absent repetitions.
   rejects rather than emitting a partial column. COMP-50 owns the canonical
   record rules this task reuses; this task owns the extraction
   orchestration, the inventory schema, the per-framework drivers and the
-  coverage denominators it publishes. The Granite first slice is published
-  for both framework rows by `model_extraction_v1`; complete the remaining
-  nominated columns (Qwen3.8-27B, and the Kimi K3 structure half beside the
-  COMP-59 physical envelope) with their own exact checkpoint identities and
-  freeze-first shape grids, and until then this task stays open.
+  coverage denominators it publishes. The Granite, Qwen3.8-27B and
+  comparison-specific Qwen3-32B-FP8 slices are published for both framework
+  rows with exact checkpoint identities and freeze-first shape grids. Complete
+  the Kimi K3 structure half beside the COMP-59 physical envelope; until then
+  this task stays open.
 - COMP-59 (Completeness; P1; L): fill coverage columns for models whose
   weights exceed the reachable fleet, with the Kimi K3 class (2.8T-parameter
   MXFP4 MoE against 1.6 TB of total A100 HBM and about 1.15 TB of GH200

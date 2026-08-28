@@ -231,6 +231,54 @@ class FrameworkTextStack:
 
 
 @dataclass(frozen=True, slots=True)
+class FrameworkDenseStack:
+    """Normalized dense text stack read from one framework config."""
+
+    architecture: str
+    model_type: str
+    scope: str
+    geometry: ModelGeometry
+    attention_mechanism: str
+    quantization: str
+    weight_block_size: tuple[int, int]
+    excluded_components: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        strings = (
+            self.architecture,
+            self.model_type,
+            self.scope,
+            self.attention_mechanism,
+            self.quantization,
+        )
+        if any(not isinstance(value, str) or not value for value in strings):
+            raise ValueError("framework dense-stack strings must be nonblank")
+        if not isinstance(self.geometry, ModelGeometry):
+            raise TypeError("framework dense-stack geometry must be ModelGeometry")
+        if (
+            len(self.weight_block_size) != 2
+            or any(type(value) is not int or value <= 0 for value in self.weight_block_size)
+        ):
+            raise ValueError("framework dense-stack weight block must be two positive integers")
+        if not self.excluded_components or any(
+            not isinstance(value, str) or not value for value in self.excluded_components
+        ):
+            raise ValueError("framework dense-stack exclusions must be nonblank")
+
+    def to_obj(self) -> dict[str, Any]:
+        return {
+            "architecture": self.architecture,
+            "model_type": self.model_type,
+            "scope": self.scope,
+            "geometry": self.geometry.to_obj(),
+            "attention_mechanism": self.attention_mechanism,
+            "quantization": self.quantization,
+            "weight_block_size": list(self.weight_block_size),
+            "excluded_components": list(self.excluded_components),
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class FrameworkDeepseekStack:
     """Normalized DeepSeek-V3 structure read from one framework config."""
 
@@ -337,6 +385,7 @@ class FrameworkConfigurationProjection:
     configuration_seam: str
     architecture_binding: str
     text_implementation: str
+    dense_stack: FrameworkDenseStack | None = None
     text_stack: FrameworkTextStack | None = None
     deepseek_stack: FrameworkDeepseekStack | None = None
 
@@ -350,13 +399,21 @@ class FrameworkConfigurationProjection:
         ):
             if not isinstance(value, str) or not value:
                 raise ValueError("configuration projection strings must be nonblank")
-        stacks = (self.text_stack is not None, self.deepseek_stack is not None)
+        stacks = (
+            self.dense_stack is not None,
+            self.text_stack is not None,
+            self.deepseek_stack is not None,
+        )
         if stacks.count(True) != 1:
             raise TypeError("configuration projection requires exactly one typed stack")
         if self.text_stack is not None and not isinstance(
             self.text_stack, FrameworkTextStack
         ):
             raise TypeError("configuration projection text stack must be typed")
+        if self.dense_stack is not None and not isinstance(
+            self.dense_stack, FrameworkDenseStack
+        ):
+            raise TypeError("configuration projection dense stack must be typed")
         if self.deepseek_stack is not None and not isinstance(
             self.deepseek_stack, FrameworkDeepseekStack
         ):
@@ -372,7 +429,9 @@ class FrameworkConfigurationProjection:
             "architecture_binding": self.architecture_binding,
             "text_implementation": self.text_implementation,
         }
-        if self.text_stack is not None:
+        if self.dense_stack is not None:
+            value["dense_stack"] = self.dense_stack.to_obj()
+        elif self.text_stack is not None:
             value["text_stack"] = self.text_stack.to_obj()
         else:
             assert self.deepseek_stack is not None
@@ -413,7 +472,7 @@ def _model_identity(value: object) -> ModelCheckpointIdentity:
         "architecture",
         "model_type",
     }
-    structure_fields = ({"text_stack"}, {"deepseek_stack"})
+    structure_fields = ({"dense_stack"}, {"text_stack"}, {"deepseek_stack"})
     actual_fields = frozenset(value)
     accepted = {frozenset(core_fields)} | {
         frozenset(core_fields | metadata_fields | structure)
@@ -569,12 +628,13 @@ def _expected_dims(
         moe_intermediate_size = (
             geometry.intermediate_size if geometry.num_experts else None
         )
-    elif (
-        identity.quantization == "fp8-e4m3-block-128x128"
-        and deepseek_stack is not None
-    ):
+    elif identity.quantization == "fp8-e4m3-block-128x128":
         weight_dtype_bytes = 1
-        moe_intermediate_size = deepseek_stack.moe_intermediate_size
+        moe_intermediate_size = (
+            deepseek_stack.moe_intermediate_size
+            if deepseek_stack is not None
+            else None
+        )
     else:
         raise ModelExtractionError(
             "checkpoint quantization does not match its declared structure"
@@ -1661,6 +1721,46 @@ def _validate_text_stack(
     return projected
 
 
+def _validate_dense_stack(
+    reference_model: Mapping[str, Any],
+    projection: FrameworkConfigurationProjection,
+) -> FrameworkDenseStack:
+    if projection.dense_stack is None:
+        raise ModelExtractionError("framework omitted the declared dense stack")
+    stack = reference_model.get("dense_stack")
+    if not isinstance(stack, dict):
+        raise ModelExtractionError("suite dense-stack contract must be an object")
+    expected_fields = {
+        "scope",
+        "attention_mechanism",
+        "quantization",
+        "weight_block_size",
+        "excluded_components",
+    }
+    if set(stack) != expected_fields:
+        raise ModelExtractionError("suite dense-stack contract has unexpected fields")
+    expected = {
+        "architecture": reference_model.get("architecture"),
+        "model_type": reference_model.get("model_type"),
+        "geometry": reference_model["geometry"],
+        **stack,
+    }
+    projected = projection.dense_stack
+    if projected.to_obj() != expected:
+        raise ModelExtractionError(
+            "framework dense-stack projection does not match the suite"
+        )
+    if projected.geometry.num_experts or projected.geometry.top_k:
+        raise ModelExtractionError("dense-stack projection cannot declare experts")
+    if projected.attention_mechanism != "grouped-query causal self-attention":
+        raise ModelExtractionError("dense-stack attention mechanism changed")
+    if projected.quantization != "fp8-e4m3-block-128x128":
+        raise ModelExtractionError("dense-stack quantization changed")
+    if projected.weight_block_size != (128, 128):
+        raise ModelExtractionError("dense-stack FP8 block changed")
+    return projected
+
+
 def _validate_deepseek_stack_contract(
     reference_model: Mapping[str, Any],
     projection: FrameworkConfigurationProjection,
@@ -1737,16 +1837,21 @@ def extract_model_inventory(
     )
     validate_checkpoint(checkpoint_root, model, metadata_only=metadata_only)
     case_records_from_suite(suite)
+    has_dense_contract = "dense_stack" in reference_model
     has_text_contract = "text_stack" in reference_model
     has_deepseek_contract = "deepseek_stack" in reference_model
-    if has_text_contract and has_deepseek_contract:
+    if sum((has_dense_contract, has_text_contract, has_deepseek_contract)) > 1:
         raise ModelExtractionError("suite cannot declare two structure contracts")
     text_stack = None
     deepseek_stack = None
-    if (has_text_contract or has_deepseek_contract) and framework_projection is None:
+    if (
+        has_dense_contract or has_text_contract or has_deepseek_contract
+    ) and framework_projection is None:
         raise ModelExtractionError("suite requires a framework structure projection")
     if framework_projection is not None:
-        if has_text_contract:
+        if has_dense_contract:
+            _validate_dense_stack(reference_model, framework_projection)
+        elif has_text_contract:
             text_stack = _validate_text_stack(reference_model, framework_projection)
         elif has_deepseek_contract:
             deepseek_stack = _validate_deepseek_stack_contract(
@@ -1896,6 +2001,7 @@ __all__ = [
     "QWEN_GATED_DELTA_NET_FAMILIES",
     "FrameworkConfigurationProjection",
     "FrameworkDeepseekStack",
+    "FrameworkDenseStack",
     "FrameworkTextStack",
     "ModelExtractionError",
     "case_records_from_suite",
