@@ -77,8 +77,9 @@ def _request(tensor_parallel: int, batch_size: int) -> dict[str, object]:
         },
         "launch_mode": "eager",
         "synthetic_input": {
-            "kind": "token-ids-v1",
-            "seed": 17,
+            "kind": "rank-local-input-v1",
+            "token_seed": 17,
+            "state_seed": 23,
             "vocabulary_size": 32_000,
         },
         "replays": 8,

@@ -181,9 +181,14 @@ def _validate_shape(value: object, phase: str, path: str) -> Mapping[str, Any]:
 
 def _validate_synthetic_input(value: object, path: str) -> Mapping[str, Any]:
     synthetic = _object(value, path)
-    _fields(synthetic, path, {"kind", "seed", "vocabulary_size"})
-    _exact_string(synthetic["kind"], "token-ids-v1", f"{path}.kind")
-    _integer(synthetic["seed"], f"{path}.seed", nonnegative=True)
+    _fields(
+        synthetic,
+        path,
+        {"kind", "token_seed", "state_seed", "vocabulary_size"},
+    )
+    _exact_string(synthetic["kind"], "rank-local-input-v1", f"{path}.kind")
+    _integer(synthetic["token_seed"], f"{path}.token_seed", nonnegative=True)
+    _integer(synthetic["state_seed"], f"{path}.state_seed", nonnegative=True)
     vocabulary_size = _positive_integer(
         synthetic["vocabulary_size"], f"{path}.vocabulary_size"
     )
@@ -261,12 +266,10 @@ def synthetic_token_rows(
     payload = validated.value
     shape = payload["shape"]
     if payload["phase"] == "decode":
-        lengths = tuple(int(length) for length in shape["per_request_kv_lengths"])
+        lengths = (1,) * int(shape["batch_size"])
     else:
-        lengths = (
-            int(shape["computed_new_tokens"]) + int(shape["existing_context_tokens"]),
-        )
-    seed = int(payload["synthetic_input"]["seed"])
+        lengths = (int(shape["computed_new_tokens"]),)
+    seed = int(payload["synthetic_input"]["token_seed"])
     vocabulary_size = int(payload["synthetic_input"]["vocabulary_size"])
     return tuple(
         tuple(
@@ -282,8 +285,19 @@ def synthetic_input_sha256(
 ) -> str:
     """Hash the exact deterministic token rows supplied to a target."""
 
-    rows = synthetic_token_rows(request)
-    return sha256_bytes(canonical_bytes([list(row) for row in rows]))
+    validated = (
+        request
+        if isinstance(request, LocalShardCaptureRequest)
+        else validate_local_shard_request(request)
+    )
+    rows = synthetic_token_rows(validated)
+    descriptor = {
+        "recipe": validated.value["synthetic_input"],
+        "phase": validated.value["phase"],
+        "shape": validated.value["shape"],
+        "token_rows": [list(row) for row in rows],
+    }
+    return sha256_bytes(canonical_bytes(descriptor))
 
 
 def _same_member(

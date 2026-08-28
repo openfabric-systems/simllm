@@ -84,8 +84,9 @@ def request_value(
         },
         "launch_mode": "eager",
         "synthetic_input": {
-            "kind": "token-ids-v1",
-            "seed": 17,
+            "kind": "rank-local-input-v1",
+            "token_seed": 17,
+            "state_seed": 23,
             "vocabulary_size": 32_000,
         },
         "replays": 8,
@@ -151,16 +152,30 @@ def test_request_rejects_a_physical_rank_outside_logical_parallelism() -> None:
         )
 
 
-def test_synthetic_rows_preserve_batch_and_per_request_kv_lengths() -> None:
+def test_decode_synthetic_rows_are_new_tokens_not_recomputed_kv_history() -> None:
     request = validate_local_shard_request(request_value(batch_size=3))
 
     first = synthetic_token_rows(request)
     second = synthetic_token_rows(request.record.canonical)
 
-    assert tuple(map(len, first)) == (4, 5, 6)
+    assert tuple(map(len, first)) == (1, 1, 1)
     assert len(first) == 3
     assert first == second
     assert first[0] != first[1]
+
+
+def test_prefill_rows_cover_only_computed_tokens_not_existing_kv() -> None:
+    raw = request_value()
+    raw["phase"] = "prefill"
+    raw["shape"] = {
+        "computed_new_tokens": 128,
+        "existing_context_tokens": 512,
+    }
+
+    rows = synthetic_token_rows(raw)
+
+    assert len(rows) == 1
+    assert len(rows[0]) == 128
 
 
 def test_result_rejects_architecture_and_model_identity_mismatch() -> None:
