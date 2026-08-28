@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import argparse
 import bisect
+import ctypes
+import ctypes.util
 import hashlib
 import importlib.metadata
 import importlib.util
@@ -40,6 +42,7 @@ from typing import Any
 
 EXTERNAL_DATABASE_SCHEMA = "simllm-external-operation-database-v1"
 EXTERNAL_DATABASE_ROW_SCHEMA = "simllm-external-operation-row-v1"
+EXTERNAL_DATABASE_CONVERTER_SCHEMA = "simllm-external-database-converter-v1"
 EXTERNAL_FAMILY_MAPPING_SCHEMA = "simllm-external-family-mapping-v1"
 EXTERNAL_EVIDENCE_CLASS = "MEASURED-EXTERNAL"
 EXTERNAL_VENV_ENV = "SIMLLM_EXTERNAL_AIC_VENV"
@@ -53,7 +56,25 @@ EXPECTED_SLICE_HASH = "85e72f990f00ea457de522d0b773e678f5e067740689912df5646f629
 EXPECTED_CLOSURE_HASH = "d559d6694f30ad269ecbf697e0193c7d95e4aba1cfb929836d381a46b675876f"
 EXPECTED_SYSTEM_HASH = "142584d6bddd98207fd04e844029b0ba5d6fcd4c6f41016c5e77f0cbe4053614"
 EXPECTED_MODEL_HASH = "e546dacd2c772660270233f5579e9ab923cc2a7ec5ed3c58c27c2bc62cbf5169"
+EXPECTED_APACHE_LICENSE_HASH = "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
 EXPECTED_ROW_COUNT = 284_717
+
+SYSTEM_CONVERSION_NOTICE = (
+    "This file was converted by SimLLM from aiconfigurator-core 0.11.0 "
+    "systems/h200_sxm.yaml; see MODIFIED."
+)
+MODEL_CONVERSION_NOTICE = (
+    "This file was converted by SimLLM from aiconfigurator-core 0.11.0 "
+    "model_configs/Qwen--Qwen3-32B-FP8_config.json; see MODIFIED."
+)
+NVIDIA_SYSTEM_COPYRIGHT = (
+    "SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & "
+    "AFFILIATES. All rights reserved."
+)
+NVIDIA_COLLECTION_COPYRIGHT = (
+    "SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & "
+    "AFFILIATES. All rights reserved."
+)
 
 ARTIFACT_DIRECTORY_NAME = EXPECTED_SLICE_HASH
 ARTIFACT_RELATIVE_ROOT = Path("offline/calibration/external-databases")
@@ -202,7 +223,7 @@ class ExternalLatency:
     source: ExternalSourceIdentity
     operation: str
     rule: str
-    evidence_class: str = EXTERNAL_EVIDENCE_CLASS
+    evidence_class: str
 
     def __post_init__(self) -> None:
         if self.evidence_class != EXTERNAL_EVIDENCE_CLASS:
@@ -261,6 +282,65 @@ def _sha256_file(path: Path) -> str:
 
 def _json_bytes(value: Any) -> bytes:
     return (json.dumps(value, sort_keys=True, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+
+
+def _liblzma_version() -> str:
+    library_name = ctypes.util.find_library("lzma")
+    if library_name is None:
+        raise ExternalDatabaseIdentityError("the linked liblzma version is unavailable")
+    library = ctypes.CDLL(library_name)
+    version_string = library.lzma_version_string
+    version_string.restype = ctypes.c_char_p
+    raw = version_string()
+    if raw is None:
+        raise ExternalDatabaseIdentityError("the linked liblzma version is unavailable")
+    return raw.decode("ascii")
+
+
+def _conversion_recipe(*, pyyaml_version: str, liblzma_version: str) -> dict[str, Any]:
+    return {
+        "converter_schema": EXTERNAL_DATABASE_CONVERTER_SCHEMA,
+        "pyyaml": pyyaml_version,
+        "liblzma": liblzma_version,
+        "row_ordering": (
+            "tables follow the declared manifest inventory order; rows within each "
+            "table retain PyArrow to_pylist source order; no row sort is applied"
+        ),
+        "float_encoding": (
+            "Python float.hex() encodes raw and served IEEE-754 binary64 values"
+        ),
+        "json_lines": {
+            "record": "one six-element JSON array per source row",
+            "separators": [",", ":"],
+            "ensure_ascii": True,
+            "encoding": "ASCII",
+            "line_termination": "LF (0x0a) after every record",
+        },
+        "xz": {
+            "format": "FORMAT_XZ",
+            "check": "CHECK_CRC64",
+            "preset": 9,
+            "extreme": True,
+            "preset_expression": "9 | PRESET_EXTREME",
+            "stream_layout": (
+                "one XZ stream from one lzma.compress call over the complete JSON Lines payload"
+            ),
+        },
+    }
+
+
+def _validate_conversion_recipe(conversion: Mapping[str, Any]) -> None:
+    recipe = _require_mapping(conversion.get("recipe"), "manifest.conversion.recipe")
+    if recipe.get("converter_schema") != EXTERNAL_DATABASE_CONVERTER_SCHEMA:
+        raise ExternalDatabaseIdentityError("external converter schema identity mismatch")
+    for name in ("pyyaml", "liblzma"):
+        _require_string(recipe.get(name), f"manifest.conversion.recipe.{name}")
+    expected = _conversion_recipe(
+        pyyaml_version=str(recipe["pyyaml"]),
+        liblzma_version=str(recipe["liblzma"]),
+    )
+    if dict(recipe) != expected:
+        raise ExternalDatabaseIdentityError("external conversion recipe is incomplete or changed")
 
 
 def _sorted_sha256_manifest(root: Path, relative_paths: Iterable[str]) -> bytes:
@@ -573,24 +653,123 @@ def _served_latency(
     return raw
 
 
-def _artifact_notices() -> tuple[str, str]:
-    notice = """Third-party converted operation database
+def _artifact_notices(payload_name: str) -> tuple[str, str]:
+    notice = f"""Third-party converted operation database
 
-SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+{NVIDIA_SYSTEM_COPYRIGHT}
+{NVIDIA_COLLECTION_COPYRIGHT}
 SPDX-License-Identifier: Apache-2.0
 
 Source packages: aiconfigurator 0.11.0 and aiconfigurator-core 0.11.0.
-The source collection manifests carry the SPDX and copyright notices above.
+The 2025-2026 line comes from systems/h200_sxm.yaml. The 2026 line comes
+from each source collection_meta.yaml in the converted database slice.
 """
-    modified = """Modified-file statement
+    modified = f"""Modified-file statement
 
 SimLLM converted the source Parquet and YAML slice into deterministic compressed
 JSON Lines plus portable JSON metadata. The conversion normalizes audited lookup
 keys and records both the source latency and the latency after the source tool's
 GEMM and generation-attention speed-of-light clamps. No measured latency was
 otherwise altered. The converted files are not original NVIDIA distribution files.
+
+Artifact derivations:
+
+- LICENSE: byte-identical Apache License 2.0 text from the aiconfigurator 0.11.0
+  installed package license.
+- MODIFIED: SimLLM's file-by-file conversion and modification statement.
+- THIRD_PARTY_NOTICE: the SPDX and copyright lines retained from
+  systems/h200_sxm.yaml and the ten collection_meta.yaml source files.
+- family-mapping.json: SimLLM's audited exact, composite and gap projection of
+  the imported external operation families.
+- manifest.json: SimLLM's generated source identity, conversion recipe, table
+  inventory, hashes, mutations and resolver provenance record.
+- model-config.json: JSON conversion of
+  model_configs/Qwen--Qwen3-32B-FP8_config.json with a file-local notice.
+- {payload_name}: row-preserving conversion of the 17 source Parquet tables
+  to ordered JSON Lines with raw and served float.hex values, then one XZ stream.
+- source-files.sha256: sorted SHA-256 manifest of the 27 source slice files.
+- system.json: JSON conversion of systems/h200_sxm.yaml with a file-local notice.
 """
     return notice, modified
+
+
+def external_artifact_licensing_findings(
+    artifact_dir: str | os.PathLike[str],
+    repository_notice: str | os.PathLike[str],
+) -> tuple[str, ...]:
+    """Return exact licensing-guard findings for one converted artifact."""
+
+    artifact = Path(artifact_dir)
+    findings = []
+    license_path = artifact / "LICENSE"
+    if not license_path.is_file() or _sha256_file(license_path) != EXPECTED_APACHE_LICENSE_HASH:
+        findings.append("LICENSE is not byte-identical to the frozen upstream Apache 2.0 text")
+
+    try:
+        third_party = (artifact / "THIRD_PARTY_NOTICE").read_text(encoding="utf-8")
+    except FileNotFoundError:
+        third_party = ""
+    for line in (
+        NVIDIA_SYSTEM_COPYRIGHT,
+        NVIDIA_COLLECTION_COPYRIGHT,
+        "SPDX-License-Identifier: Apache-2.0",
+    ):
+        if line not in third_party.splitlines():
+            findings.append(f"THIRD_PARTY_NOTICE is missing exact line {line!r}")
+
+    expected_notices = {
+        "system.json": SYSTEM_CONVERSION_NOTICE,
+        "model-config.json": MODEL_CONVERSION_NOTICE,
+    }
+    for filename, expected_notice in expected_notices.items():
+        try:
+            document = json.loads((artifact / filename).read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError):
+            findings.append(f"{filename} is missing or invalid")
+            continue
+        if document.get("notice") != expected_notice:
+            findings.append(f"{filename} has no exact file-local conversion notice")
+
+    try:
+        modified = (artifact / "MODIFIED").read_text(encoding="utf-8")
+    except FileNotFoundError:
+        modified = ""
+    manifest = artifact / "manifest.json"
+    payload_names = []
+    if manifest.is_file():
+        try:
+            payload_names.append(
+                str(json.loads(manifest.read_text(encoding="utf-8"))["conversion"]["payload"])
+            )
+        except (KeyError, TypeError, json.JSONDecodeError):
+            pass
+    for filename in (
+        "LICENSE",
+        "MODIFIED",
+        "THIRD_PARTY_NOTICE",
+        "family-mapping.json",
+        "manifest.json",
+        "model-config.json",
+        *payload_names,
+        "source-files.sha256",
+        "system.json",
+    ):
+        if f"- {filename}:" not in modified:
+            findings.append(f"MODIFIED does not enumerate {filename}")
+
+    try:
+        repository_lines = Path(repository_notice).read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        repository_lines = []
+    repository_required = (
+        "offline/calibration/external-databases is derived from aiconfigurator 0.11.0",
+        "and aiconfigurator-core 0.11.0. Copyright (c) 2025-2026 NVIDIA CORPORATION &",
+        "AFFILIATES. All rights reserved. Licensed under the Apache License, Version",
+    )
+    for line in repository_required:
+        if line not in repository_lines:
+            findings.append(f"repository NOTICE is missing exact line {line!r}")
+    return tuple(findings)
 
 
 def _source_provenance() -> list[dict[str, Any]]:
@@ -648,6 +827,8 @@ def _write_worker_artifact(output_root: Path) -> Path:
         raise ExternalDatabaseIdentityError("Qwen3-32B-FP8 model configuration hash mismatch")
     system_spec = yaml.safe_load(system_yaml_path.read_text(encoding="utf-8"))
     model_config = json.loads(model_path.read_text(encoding="utf-8"))
+    system_spec["notice"] = SYSTEM_CONVERSION_NOTICE
+    model_config["notice"] = MODEL_CONVERSION_NOTICE
 
     table_records: list[bytes] = []
     table_manifest: list[dict[str, Any]] = []
@@ -705,6 +886,13 @@ def _write_worker_artifact(output_root: Path) -> Path:
     payload_hash = _sha256_bytes(payload)
     payload_name = f"rows-{payload_hash}.jsonl.xz"
     family_mapping_bytes = (_repo_root() / "simllm/calibration/external_family_mapping.json").read_bytes()
+    system_spec_bytes = _json_bytes(system_spec)
+    model_config_bytes = _json_bytes(model_config)
+    converted_files_sha256 = {
+        "family-mapping.json": _sha256_bytes(family_mapping_bytes),
+        "model-config.json": _sha256_bytes(model_config_bytes),
+        "system.json": _sha256_bytes(system_spec_bytes),
+    }
     manifest = {
         "schema": EXTERNAL_DATABASE_SCHEMA,
         "source": {
@@ -736,10 +924,15 @@ def _write_worker_artifact(output_root: Path) -> Path:
             "python": platform_python_version(),
             "numpy": versions["numpy"],
             "pyarrow": versions["pyarrow"],
+            "recipe": _conversion_recipe(
+                pyyaml_version=str(yaml.__version__),
+                liblzma_version=_liblzma_version(),
+            ),
         },
         "tables": table_manifest,
         "source_hash_manifest": "source-files.sha256",
-        "family_mapping_sha256": _sha256_bytes(family_mapping_bytes),
+        "converted_files_sha256": converted_files_sha256,
+        "family_mapping_sha256": converted_files_sha256["family-mapping.json"],
         "resolver_sources": _source_provenance(),
         "ignored_dimensions": {
             "generation_attention": ["attn_dtype"],
@@ -771,10 +964,10 @@ def _write_worker_artifact(output_root: Path) -> Path:
     try:
         (temporary / payload_name).write_bytes(payload)
         (temporary / "manifest.json").write_bytes(_json_bytes(manifest))
-        (temporary / "system.json").write_bytes(_json_bytes(system_spec))
-        (temporary / "model-config.json").write_bytes(_json_bytes(model_config))
+        (temporary / "system.json").write_bytes(system_spec_bytes)
+        (temporary / "model-config.json").write_bytes(model_config_bytes)
         (temporary / "source-files.sha256").write_bytes(slice_manifest)
-        notice, modified = _artifact_notices()
+        notice, modified = _artifact_notices(payload_name)
         (temporary / "THIRD_PARTY_NOTICE").write_text(notice, encoding="utf-8", newline="\n")
         (temporary / "MODIFIED").write_text(modified, encoding="utf-8", newline="\n")
         license_candidates = sorted(package_root.parent.glob("aiconfigurator_core-*.dist-info/licenses/LICENSE"))
@@ -782,6 +975,10 @@ def _write_worker_artifact(output_root: Path) -> Path:
             license_candidates = sorted(package_root.parent.glob("aiconfigurator-*.dist-info/licenses/LICENSE"))
         if not license_candidates:
             raise ExternalDatabaseIdentityError("installed Apache 2.0 license text is unavailable")
+        if _sha256_file(license_candidates[0]) != EXPECTED_APACHE_LICENSE_HASH:
+            raise ExternalDatabaseIdentityError(
+                "installed Apache 2.0 license text differs from the frozen upstream bytes"
+            )
         shutil.copyfile(license_candidates[0], temporary / "LICENSE")
         (temporary / "family-mapping.json").write_bytes(family_mapping_bytes)
         os.replace(temporary, artifact)
@@ -1252,6 +1449,7 @@ class ExternalOperationDatabase:
                 f"artifact source identity differs from the frozen source: {source.as_dict()}"
             )
         conversion = _require_mapping(manifest.get("conversion"), "manifest.conversion")
+        _validate_conversion_recipe(conversion)
         payload_name = _require_string(conversion.get("payload"), "manifest.conversion.payload")
         payload_hash = _require_string(
             conversion.get("payload_sha256"),
@@ -1305,11 +1503,37 @@ class ExternalOperationDatabase:
         source_manifest = (artifact / "source-files.sha256").read_bytes()
         if _sha256_bytes(source_manifest) != EXPECTED_SLICE_HASH:
             raise ExternalDatabaseIdentityError("stored source hash recipe does not reproduce the frozen slice hash")
+        converted_hashes = _require_mapping(
+            manifest.get("converted_files_sha256"),
+            "manifest.converted_files_sha256",
+        )
+        converted_names = {
+            "system.json",
+            "model-config.json",
+            "family-mapping.json",
+        }
+        if set(converted_hashes) != converted_names:
+            raise ExternalDatabaseIdentityError(
+                "converted file hash bindings must cover system, model and family mapping exactly"
+            )
+        for filename in sorted(converted_names):
+            expected_hash = _require_string(
+                converted_hashes.get(filename),
+                f"manifest.converted_files_sha256.{filename}",
+            )
+            if _sha256_file(artifact / filename) != expected_hash:
+                raise ExternalDatabaseIdentityError(
+                    f"converted artifact hash mismatch for {filename}"
+                )
         system_spec = json.loads((artifact / "system.json").read_text(encoding="utf-8"))
         model_config = json.loads((artifact / "model-config.json").read_text(encoding="utf-8"))
         family_mapping = json.loads((artifact / "family-mapping.json").read_text(encoding="utf-8"))
-        if _sha256_file(artifact / "family-mapping.json") != manifest.get("family_mapping_sha256"):
+        if converted_hashes["family-mapping.json"] != manifest.get("family_mapping_sha256"):
             raise ExternalDatabaseIdentityError("external family mapping hash mismatch")
+        if system_spec.get("notice") != SYSTEM_CONVERSION_NOTICE:
+            raise ExternalDatabaseIdentityError("system.json conversion notice mismatch")
+        if model_config.get("notice") != MODEL_CONVERSION_NOTICE:
+            raise ExternalDatabaseIdentityError("model-config.json conversion notice mismatch")
         if family_mapping.get("schema") != EXTERNAL_FAMILY_MAPPING_SCHEMA:
             raise ExternalDatabaseIdentityError("external family mapping schema mismatch")
         if family_mapping.get("source_slice_sha256") != EXPECTED_SLICE_HASH:
@@ -1329,10 +1553,10 @@ class ExternalOperationDatabase:
 
     @property
     def row_counts(self) -> dict[str, int]:
-        return {
-            str(entry["table"]): int(entry["rows"])
-            for entry in self.manifest["tables"]
-        }
+        counts: dict[str, int] = defaultdict(int)
+        for row in self._rows:
+            counts[row.table] += 1
+        return dict(counts)
 
     @property
     def payload_sha256(self) -> str:
@@ -1364,6 +1588,24 @@ class ExternalOperationDatabase:
                 f"raw external row is unavailable for table={table!r}, key={frozen!r}"
             ) from error
 
+    def served_latency(self, table: str, key: Sequence[Any]) -> float:
+        """Return one exact table cell after the source loader's mutations."""
+
+        frozen = tuple(_freeze_key(component) for component in key)
+        try:
+            node: Any = self._tables[table]
+            for component in frozen:
+                node = node[component]
+        except KeyError as error:
+            raise ExternalDatabaseGapError(
+                f"served external row is unavailable for table={table!r}, key={frozen!r}"
+            ) from error
+        if isinstance(node, Mapping):
+            raise ExternalDatabaseGapError(
+                f"served external row key is incomplete for table={table!r}, key={frozen!r}"
+            )
+        return float(node)
+
     def _slice(self, table: str, *categorical: Any) -> Mapping[Any, Any]:
         try:
             node: Any = self._tables[table]
@@ -1385,16 +1627,25 @@ class ExternalOperationDatabase:
             source=self.source,
             operation=operation,
             rule=rule,
+            evidence_class=EXTERNAL_EVIDENCE_CLASS,
         )
 
-    def query_gemm(self, *, m: int, n: int, k: int, quant_mode: str) -> ExternalLatency:
+    def _query_gemm_with_cap(
+        self,
+        *,
+        m: int,
+        n: int,
+        k: int,
+        quant_mode: str,
+        max_site_distance: float | None,
+    ) -> ExternalLatency:
         data = self._slice("gemm", quant_mode)
         config = _InterpConfig(
             axes=("m", "n", "k"),
             resolver=_ScatteredSites(
                 site_axes=("n", "k"),
                 curve_axis="m",
-                max_site_distance=2.0,
+                max_site_distance=max_site_distance,
             ),
             sol_fn=lambda m_value, n_value, k_value: _gemm_sol_ms(
                 self.system_spec,
@@ -1405,6 +1656,33 @@ class ExternalOperationDatabase:
             ),
         )
         return self._result(_interpolate(config, data, m, n, k), "gemm", "scattered-site")
+
+    def query_gemm(self, *, m: int, n: int, k: int, quant_mode: str) -> ExternalLatency:
+        return self._query_gemm_with_cap(
+            m=m,
+            n=n,
+            k=k,
+            quant_mode=quant_mode,
+            max_site_distance=2.0,
+        )
+
+    def query_gemm_cap_off_diagnostic(
+        self,
+        *,
+        m: int,
+        n: int,
+        k: int,
+        quant_mode: str,
+    ) -> ExternalLatency:
+        """Run the study-only GEMM resolver with its distance cap disabled."""
+
+        return self._query_gemm_with_cap(
+            m=m,
+            n=n,
+            k=k,
+            quant_mode=quant_mode,
+            max_site_distance=None,
+        )
 
     def _quantize_query(
         self,
@@ -1539,7 +1817,9 @@ class ExternalOperationDatabase:
         kv_quant_mode: str,
         window_size: int = 0,
         head_size: int = 128,
+        attn_dtype: str | None = None,
     ) -> ExternalLatency:
+        del attn_dtype
         if n_kv > n:
             raise ValueError("n_kv must be no greater than n")
         n_kv_key = 0 if n == n_kv else n_kv
@@ -1635,7 +1915,12 @@ class ExternalOperationDatabase:
         quant_mode: str,
         workload_distribution: str,
         is_gated: bool = True,
+        kernel_source: str | None = None,
     ) -> ExternalLatency:
+        if kernel_source == "moe_torch_flow_min_latency":
+            raise ExternalDatabaseGapError(
+                "the low-latency standard MoE table has no dispatched resolver"
+            )
         by_distribution = self._slice("moe", quant_mode)
         distribution = (
             workload_distribution
@@ -1798,7 +2083,10 @@ class ExternalOperationDatabase:
         num_v_heads: int,
         head_v_dim: int,
         d_conv: int,
+        model_name: str | None = None,
+        num_tokens: int | None = None,
     ) -> ExternalLatency:
+        del model_name, num_tokens
         categorical = (
             kernel_source,
             phase,
@@ -2392,5 +2680,6 @@ __all__ = [
     "ExternalQwen32BPassModel",
     "ExternalSourceIdentity",
     "default_artifact_dir",
+    "external_artifact_licensing_findings",
     "import_external_database",
 ]

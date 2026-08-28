@@ -4,8 +4,8 @@ The coordinator imports the pinned source into a new append-only attempt,
 executes the local resolver and live external SDK twice in fresh processes,
 and evaluates fatal guards plus the I1, I2, P1 and W families. Bulk evidence
 goes to a caller-supplied root. ``--write-tracked`` additionally writes the
-portable compact record and CSV in this study directory and refuses to
-overwrite either file.
+portable compact record and CSV in this study directory, overwriting those two
+tracked publication files in place.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ import hashlib
 import importlib.metadata
 import importlib.util
 import json
+import lzma
 import os
 import platform
 import re
@@ -23,6 +24,7 @@ import struct
 import subprocess
 import sys
 import time
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +33,7 @@ ROOT = STUDY.parents[1]
 sys.path.insert(0, os.fspath(ROOT))
 QUERY_CONFIG = STUDY / "query_points.json"
 EXPECTATIONS = STUDY / "expectations.md"
+FREEZE_ADDENDUM = STUDY / "freeze_addendum.md"
 TRACKED_ARTIFACT = (
     ROOT
     / "offline/calibration/external-databases"
@@ -55,9 +58,15 @@ EXPECTED_IDENTITY = {
     "model_sha256": "e546dacd2c772660270233f5579e9ab923cc2a7ec5ed3c58c27c2bc62cbf5169",
 }
 FREEZE_COMMITS = {
-    "expectations": "44959ef",
-    "resolver_queries": "afe7ee6",
-    "mutation_guard": "f7ec05a",
+    "expectations": "44959eff60ac1b08499b98c17fabb7fbb1cf4925",
+    "resolver_queries": "afe7ee6e2947616c3b64e6e7c2dbc1fcf3553ef1",
+    "mutation_guard": "f7ec05a29fe6222c03e8f7cc4b7dbcf3f40b1693",
+    "review_addendum": "25dc6b5f9a188657701e6eedcd537f84cec68854",
+}
+FREEZE_BLOBS = {
+    "expectations": (FREEZE_COMMITS["expectations"], EXPECTATIONS),
+    "query_points": (FREEZE_COMMITS["review_addendum"], QUERY_CONFIG),
+    "review_addendum": (FREEZE_COMMITS["review_addendum"], FREEZE_ADDENDUM),
 }
 P1_ORACLES = (
     {
@@ -165,6 +174,7 @@ I1_COUNTS = {
     "scale_matrix": 1628,
     "wideep_moe": 4158,
 }
+I1_TOTAL = sum(I1_COUNTS.values())
 
 
 def _sha256(path: Path) -> str:
@@ -197,6 +207,62 @@ def _query_config() -> dict[str, Any]:
     return json.loads(QUERY_CONFIG.read_text(encoding="utf-8"))
 
 
+def _all_queries(config: dict[str, Any]) -> list[dict[str, Any]]:
+    return [*config["queries"], *config["review_addendum"]["queries"]]
+
+
+def _mutation_guards(config: dict[str, Any]) -> tuple[dict[str, Any], ...]:
+    return (
+        config["load_time_mutation_guard"],
+        config["review_addendum"]["load_time_mutation_guard"],
+    )
+
+
+def _recount_payload(artifact: Path) -> dict[str, Any]:
+    manifest = json.loads((artifact / "manifest.json").read_text(encoding="utf-8"))
+    payload = artifact / manifest["conversion"]["payload"]
+    counts: Counter[str] = Counter()
+    total = 0
+    with lzma.open(payload, "rt", encoding="ascii", newline="\n") as handle:
+        for line in handle:
+            record = json.loads(line)
+            counts[str(record[1])] += 1
+            total += 1
+    manifest_counts = {
+        str(entry["table"]): int(entry["rows"])
+        for entry in manifest["tables"]
+    }
+    return {
+        "row_count": total,
+        "row_counts": dict(counts),
+        "manifest_row_count": int(manifest["conversion"]["rows"]),
+        "manifest_row_counts": manifest_counts,
+    }
+
+
+def _local_query(database: Any, query: dict[str, Any]) -> Any:
+    if query.get("lookup") != "served_cell":
+        return database.query_operation(query["operation"], query["args"])
+    if query["operation"] != "generation_attention":
+        raise ValueError(f"unsupported local served-cell operation {query['operation']!r}")
+    args = query["args"]
+    n_kv_key = 0 if args["n"] == args["n_kv"] else args["n_kv"]
+    key = (
+        args["kv_quant_mode"],
+        n_kv_key,
+        args["head_size"],
+        args["window_size"],
+        args["n"],
+        args["b"],
+        args["s"],
+    )
+    return database._result(
+        database.served_latency("generation_attention", key),
+        "generation_attention",
+        "exact-served-cell",
+    )
+
+
 def _local_worker(artifact: Path) -> dict[str, Any]:
     sys.path.insert(0, os.fspath(ROOT))
     from simllm.calibration.external_db import (
@@ -212,8 +278,8 @@ def _local_worker(artifact: Path) -> dict[str, Any]:
     config = _query_config()
     queries: dict[str, dict[str, Any]] = {}
     served = []
-    for query in config["queries"]:
-        value = database.query_operation(query["operation"], query["args"])
+    for query in _all_queries(config):
+        value = _local_query(database, query)
         served.append(value)
         queries[query["id"]] = {
             "hex": value.hex,
@@ -247,20 +313,34 @@ def _local_worker(artifact: Path) -> dict[str, Any]:
         row_id: database.raw_latency(table, key).hex()
         for row_id, table, key, _expected in I1_ROWS
     }
-    mutation = config["load_time_mutation_guard"]
-    mutation_cells = [
-        cell
-        for cell in database.load_time_mutations("gemm")
-        if tuple(cell["key"])
-        == (
-            mutation["args"]["quant_mode"],
-            mutation["args"]["m"],
-            mutation["args"]["n"],
-            mutation["args"]["k"],
-        )
-    ]
-    mutation_served = database.query_operation(mutation["operation"], mutation["args"])
-    served.append(mutation_served)
+    mutation_results = {}
+    for mutation in _mutation_guards(config):
+        if "normalized_key" in mutation:
+            expected_key = tuple(mutation["normalized_key"])
+        else:
+            expected_key = (
+                mutation["args"]["quant_mode"],
+                mutation["args"]["m"],
+                mutation["args"]["n"],
+                mutation["args"]["k"],
+            )
+        cells = [
+            cell
+            for cell in database.load_time_mutations(mutation["operation"])
+            if tuple(cell["key"]) == expected_key
+        ]
+        mutation_served = _local_query(database, mutation)
+        served.append(mutation_served)
+        mutation_results[mutation["id"]] = {
+            "cells": cells,
+            "query_hex": mutation_served.hex,
+        }
+
+    cap_query = next(
+        query for query in _all_queries(config) if query["id"] == "I2-27"
+    )
+    cap_off = database.query_gemm_cap_off_diagnostic(**cap_query["args"])
+    recount = _recount_payload(artifact)
 
     overlap_rejected = False
     ledger = ExternalCompositionLedger(database)
@@ -290,18 +370,30 @@ def _local_worker(artifact: Path) -> dict[str, Any]:
         "source": database.source.as_dict(),
         "payload_sha256": database.payload_sha256,
         "versions": sorted(database.versions()),
-        "row_count": database.row_count,
-        "row_counts": database.row_counts,
+        "row_count": recount["row_count"],
+        "row_counts": recount["row_counts"],
+        "manifest_row_count": recount["manifest_row_count"],
+        "manifest_row_counts": recount["manifest_row_counts"],
         "i1": i1,
         "i2": queries,
         "p1": passes,
         "mutation": {
-            "cells": mutation_cells,
-            "query_hex": mutation_served.hex,
+            "guards": mutation_results,
             "gemm_mutation_count": len(database.load_time_mutations("gemm")),
             "generation_attention_mutation_count": len(
                 database.load_time_mutations("generation_attention")
             ),
+        },
+        "diagnostics": {
+            "I2-27-cap-off": {
+                "local_hex": cap_off.hex,
+                "frozen_hex": cap_query["cap_off_diagnostic"]["local_hex"],
+                "differs_from_capped": cap_off.hex != queries["I2-27"]["hex"],
+                "ulp_distance_from_capped": _ulp_distance(
+                    cap_off.hex,
+                    queries["I2-27"]["hex"],
+                ),
+            }
         },
         "evidence": {
             "class": EXTERNAL_EVIDENCE_CLASS,
@@ -408,10 +500,31 @@ def _external_database() -> tuple[Any, Any, Any]:
     return database, model, get_backend("trtllm")
 
 
-def _external_query(database: Any, operation: str, arguments: dict[str, Any]) -> float:
+def _external_query(
+    database: Any,
+    operation: str,
+    arguments: dict[str, Any],
+    *,
+    lookup: str | None = None,
+) -> float:
     from aiconfigurator_core.sdk import common
 
     args = dict(arguments)
+    if lookup == "served_cell":
+        if operation != "generation_attention":
+            raise ValueError(f"unsupported external served-cell operation {operation!r}")
+        from aiconfigurator_core.sdk.operations.attention import GenerationAttention
+
+        GenerationAttention.load_data(database)
+        wrapper = database._generation_attention_data
+        wrapper.raise_if_not_loaded()
+        n_kv_key = 0 if args["n"] == args["n_kv"] else args["n_kv"]
+        leaf = wrapper[
+            common.KVCacheQuantMode[args["kv_quant_mode"]]
+        ][n_kv_key][args["head_size"]][args["window_size"]][args["n"]][
+            args["b"]
+        ][args["s"]]
+        return float(leaf["latency"] if isinstance(leaf, dict) else leaf)
     if operation == "gemm":
         args["quant_mode"] = common.GEMMQuantMode[args["quant_mode"]]
         return float(database.query_gemm(**args))
@@ -428,17 +541,21 @@ def _external_query(database: Any, operation: str, arguments: dict[str, Any]) ->
         args["fmha_quant_mode"] = common.FMHAQuantMode[args["fmha_quant_mode"]]
         return float(database.query_context_attention(**args))
     if operation == "generation_attention":
+        args.pop("attn_dtype", None)
         args["kvcache_quant_mode"] = common.KVCacheQuantMode[
             args.pop("kv_quant_mode")
         ]
         return float(database.query_generation_attention(**args))
     if operation == "moe":
+        args.pop("kernel_source", None)
         args["quant_mode"] = common.MoEQuantMode[args["quant_mode"]]
         return float(database.query_moe(**args))
     if operation == "custom_allreduce":
         args["quant_mode"] = common.CommQuantMode[args["quant_mode"]]
         return float(database.query_custom_allreduce(**args))
     if operation == "gdn":
+        args.pop("model_name", None)
+        args.pop("num_tokens", None)
         return float(database.query_gdn(**args))
     raise ValueError(f"unsupported external query operation {operation!r}")
 
@@ -450,9 +567,14 @@ def _external_worker() -> dict[str, Any]:
     config = _query_config()
     queries = {
         query["id"]: {
-            "hex": _external_query(database, query["operation"], query["args"]).hex()
+            "hex": _external_query(
+                database,
+                query["operation"],
+                query["args"],
+                lookup=query.get("lookup"),
+            ).hex()
         }
-        for query in config["queries"]
+        for query in _all_queries(config)
     }
     passes: dict[str, dict[str, Any]] = {}
     for oracle in P1_ORACLES:
@@ -489,17 +611,20 @@ def _external_worker() -> dict[str, Any]:
                 for name, value in [*context.items(), *generation.items()]
             },
         }
-    mutation = config["load_time_mutation_guard"]
     return {
         "worker": "external",
         "identity": _external_identity(_external_package_root()),
         "i2": queries,
         "p1": passes,
-        "mutation_hex": _external_query(
-            database,
-            mutation["operation"],
-            mutation["args"],
-        ).hex(),
+        "mutation_hex": {
+            mutation["id"]: _external_query(
+                database,
+                mutation["operation"],
+                mutation["args"],
+                lookup=mutation.get("lookup"),
+            ).hex()
+            for mutation in _mutation_guards(config)
+        },
     }
 
 
@@ -537,6 +662,52 @@ def _run_worker(
     return json.loads(completed.stdout)
 
 
+def _live_worker_runs_or_void(
+    *,
+    python: Path,
+    artifact: Path,
+    attempt: Path,
+    attempt_number: int,
+) -> tuple[list[dict[str, Any]] | None, dict[str, Any] | None]:
+    try:
+        runs = [
+            _run_worker(
+                python=python,
+                worker="external",
+                artifact=artifact,
+                attempt=attempt,
+                repetition=repetition,
+            )
+            for repetition in (1, 2)
+        ]
+    except (RuntimeError, json.JSONDecodeError) as error:
+        stderr_paths = sorted(attempt.glob("external-run-*.stderr.txt"))
+        stderr_path = stderr_paths[-1] if stderr_paths else None
+        stderr_text = (
+            stderr_path.read_text(encoding="utf-8", errors="replace")
+            if stderr_path is not None
+            else ""
+        )
+        record = {
+            "schema": SCHEMA,
+            "study": "external_db_parity_v1",
+            "run_state": "void",
+            "voiding_guards": ["LIVE-WORKER"],
+            "attempt": f"attempt-{attempt_number:04d}",
+            "bulk_evidence": f"${{{BULK_ROOT_ENV}}}/attempt-{attempt_number:04d}",
+            "run_commit": _git("rev-parse", "HEAD"),
+            "failure": {
+                "worker": "external",
+                "error": str(error),
+                "stderr_file": stderr_path.name if stderr_path is not None else None,
+                "stderr": stderr_text,
+            },
+        }
+        _write_new(attempt / "record.json", _json_bytes(record))
+        return None, record
+    return runs, None
+
+
 def _new_attempt(root: Path) -> tuple[Path, int]:
     root.mkdir(parents=True, exist_ok=True)
     existing = []
@@ -568,6 +739,29 @@ def _is_ancestor(commit: str) -> bool:
         check=False,
     )
     return completed.returncode == 0
+
+
+def _freeze_blob_status() -> dict[str, dict[str, Any]]:
+    status = {}
+    for name, (commit, path) in FREEZE_BLOBS.items():
+        relative = path.relative_to(ROOT).as_posix()
+        completed = subprocess.run(
+            ["git", "show", f"{commit}:{relative}"],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+        )
+        working = path.read_bytes()
+        blob = completed.stdout
+        status[name] = {
+            "commit": commit,
+            "path": relative,
+            "git_show_succeeded": completed.returncode == 0,
+            "blob_sha256": hashlib.sha256(blob).hexdigest(),
+            "working_sha256": hashlib.sha256(working).hexdigest(),
+            "matches": completed.returncode == 0 and blob == working,
+        }
+    return status
 
 
 def _cpu_model() -> str:
@@ -637,6 +831,7 @@ def _evaluate(
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     config = _query_config()
     rows: list[dict[str, Any]] = []
+    ulp_findings: list[dict[str, Any]] = []
 
     for row_id, _table, _key, expected_hex in I1_ROWS:
         actual = local["i1"][row_id]
@@ -664,27 +859,55 @@ def _evaluate(
         _scored_row(
             "I1",
             "I1-count-total",
-            local["row_count"] == 284717,
-            detail=f"expected 284717 rows, found {local['row_count']}",
+            local["row_count"] == I1_TOTAL,
+            detail=f"expected {I1_TOTAL} rows, found {local['row_count']}",
         )
     )
 
-    for query in config["queries"]:
+    all_queries = _all_queries(config)
+    for query in all_queries:
         row_id = query["id"]
         local_hex = local["i2"][row_id]["hex"]
         external_hex = external["i2"][row_id]["hex"]
+        pair_id = query.get("invariance_pair")
+        pair_equal = True
+        if pair_id is not None:
+            pair_rows = [
+                candidate
+                for candidate in all_queries
+                if candidate.get("invariance_pair") == pair_id
+            ]
+            pair_hexes = {
+                *[local["i2"][candidate["id"]]["hex"] for candidate in pair_rows],
+                *[external["i2"][candidate["id"]]["hex"] for candidate in pair_rows],
+            }
+            pair_equal = len(pair_hexes) == 1
+        passed = local_hex == external_hex and pair_equal
+        if local_hex != external_hex:
+            ulp_findings.append(
+                {
+                    "family": "I2",
+                    "row": row_id,
+                    "local_hex": local_hex,
+                    "external_hex": external_hex,
+                    "ulp_distance": _ulp_distance(local_hex, external_hex),
+                }
+            )
         rows.append(
             _scored_row(
                 "I2",
                 row_id,
-                local_hex == external_hex,
+                passed,
                 local_hex=local_hex,
                 external_hex=external_hex,
-                detail=query["rule"],
+                detail=(
+                    query["rule"]
+                    if pair_id is None
+                    else f"{query['rule']}; invariance_pair={pair_id}; pair_equal={pair_equal}"
+                ),
             )
         )
 
-    ulp_findings = []
     for oracle in P1_ORACLES:
         row_id = oracle["id"]
         local_value = local["p1"][row_id]
@@ -708,9 +931,10 @@ def _evaluate(
                         ),
                     }
                 )
-        if not passed:
+        if not passed or diverging_terms:
             ulp_findings.append(
                 {
+                    "family": "P1",
                     "oracle": row_id,
                     "total_ulp_distance": _ulp_distance(
                         local_value["hex"], external_value["hex"]
@@ -748,6 +972,10 @@ def _evaluate(
         (imported_artifact / "manifest.json").read_text(encoding="utf-8")
     )
     source = imported_manifest["source"]
+    manifest_counts = {
+        str(entry["table"]): int(entry["rows"])
+        for entry in imported_manifest["tables"]
+    }
     fg1 = (
         identity["slice_file_count"] == 27
         and identity["slice_sha256"] == EXPECTED_IDENTITY["slice_sha256"]
@@ -755,24 +983,37 @@ def _evaluate(
         and identity["system_sha256"] == EXPECTED_IDENTITY["system_sha256"]
         and identity["model_sha256"] == EXPECTED_IDENTITY["model_sha256"]
         and source["data_slice_sha256"] == EXPECTED_IDENTITY["slice_sha256"]
+        and local["row_counts"] == local["manifest_row_counts"] == manifest_counts
+        and local["row_count"]
+        == local["manifest_row_count"]
+        == sum(manifest_counts.values())
         and _tree_hashes(imported_artifact) == _tree_hashes(TRACKED_ARTIFACT)
     )
-    rows.append(_fatal_row("FG-1", fg1, "installed hashes and tracked conversion identity"))
-
-    license_text = (TRACKED_ARTIFACT / "LICENSE").read_text(encoding="utf-8")
-    third_party = (TRACKED_ARTIFACT / "THIRD_PARTY_NOTICE").read_text(encoding="utf-8")
-    modified = (TRACKED_ARTIFACT / "MODIFIED").read_text(encoding="utf-8")
-    notice = (ROOT / "NOTICE").read_text(encoding="utf-8")
-    fg2 = (
-        "Apache License" in license_text
-        and "Version 2.0" in license_text
-        and "SPDX-License-Identifier: Apache-2.0" in third_party
-        and "NVIDIA CORPORATION & AFFILIATES" in third_party
-        and "converted" in modified
-        and "otherwise altered" in modified
-        and "offline/calibration/external-databases" in notice
+    rows.append(
+        _fatal_row(
+            "FG-1",
+            fg1,
+            "installed hashes, independent payload recount, manifest claim and tracked identity",
+        )
     )
-    rows.append(_fatal_row("FG-2", fg2, "license, notices and modified-file statement"))
+
+    from simllm.calibration.external_db import external_artifact_licensing_findings
+
+    licensing_findings = external_artifact_licensing_findings(
+        imported_artifact,
+        ROOT / "NOTICE",
+    )
+    rows.append(
+        _fatal_row(
+            "FG-2",
+            not licensing_findings,
+            (
+                "exact license bytes, notices, file-local notices and modified-file inventory"
+                if not licensing_findings
+                else json.dumps(licensing_findings)
+            ),
+        )
+    )
 
     fg3 = local["versions"] == ["1.3.0rc10"] and source["shared_layer"] is False
     rows.append(_fatal_row("FG-3", fg3, "all converted rows come from the primary version"))
@@ -788,18 +1029,29 @@ def _evaluate(
     )
     rows.append(_fatal_row("FG-4", fg4, "every served value carries frozen external identity"))
 
-    mutation = config["load_time_mutation_guard"]
-    mutation_cells = local["mutation"]["cells"]
+    mutation_checks = []
+    for mutation in _mutation_guards(config):
+        actual = local["mutation"]["guards"][mutation["id"]]
+        cells = actual["cells"]
+        mutation_checks.append(
+            len(cells) == 1
+            and cells[0]["raw_hex"] == mutation["raw_hex"]
+            and cells[0]["served_hex"] == mutation["served_hex"]
+            and actual["query_hex"] == mutation["served_hex"]
+            and external["mutation_hex"][mutation["id"]] == mutation["served_hex"]
+        )
     fg5 = (
-        len(mutation_cells) == 1
-        and mutation_cells[0]["raw_hex"] == mutation["raw_hex"]
-        and mutation_cells[0]["served_hex"] == mutation["served_hex"]
-        and local["mutation"]["query_hex"] == mutation["served_hex"]
-        and external["mutation_hex"] == mutation["served_hex"]
+        all(mutation_checks)
         and local["mutation"]["gemm_mutation_count"] == 3
         and local["mutation"]["generation_attention_mutation_count"] == 367
     )
-    rows.append(_fatal_row("FG-5", fg5, "frozen below-SOL cell and mutation counts"))
+    rows.append(
+        _fatal_row(
+            "FG-5",
+            fg5,
+            "frozen GEMM and generation-attention below-SOL cells plus mutation counts",
+        )
+    )
 
     fg6 = local_deterministic and external_deterministic
     rows.append(_fatal_row("FG-6", fg6, "both sides repeated bit-equal in fresh processes"))
@@ -815,16 +1067,31 @@ def _evaluate(
     rows.append(_fatal_row("FG-7", fg7, "declared mappings reject gaps and overlap"))
 
     ancestry = {name: _is_ancestor(commit) for name, commit in FREEZE_COMMITS.items()}
-    fg8 = all(ancestry.values()) and attempt_number >= 1
+    freeze_blobs = _freeze_blob_status()
+    fg8 = (
+        all(ancestry.values())
+        and all(entry["matches"] for entry in freeze_blobs.values())
+        and attempt_number >= 1
+    )
     rows.append(
         _fatal_row(
             "FG-8",
             fg8,
-            f"freeze commits precede attempt {attempt_number:04d}: {ancestry}",
+            (
+                f"freeze commits precede attempt {attempt_number:04d}: {ancestry}; "
+                f"working bytes match git-show blobs: "
+                f"{ {name: entry['matches'] for name, entry in freeze_blobs.items()} }"
+            ),
         )
     )
 
-    return rows, {"ulp_findings": ulp_findings, "freeze_ancestry": ancestry}
+    return rows, {
+        "ulp_findings": ulp_findings,
+        "freeze_ancestry": ancestry,
+        "freeze_worktree_bytes": freeze_blobs,
+        "diagnostics": local["diagnostics"],
+        "licensing_findings": list(licensing_findings),
+    }
 
 
 def _family_tallies(rows: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
@@ -889,16 +1156,15 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
         )
         for repetition in (1, 2)
     ]
-    external_runs = [
-        _run_worker(
-            python=external_python,
-            worker="external",
-            artifact=imported_artifact,
-            attempt=attempt,
-            repetition=repetition,
-        )
-        for repetition in (1, 2)
-    ]
+    external_runs, void_record = _live_worker_runs_or_void(
+        python=external_python,
+        artifact=imported_artifact,
+        attempt=attempt,
+        attempt_number=attempt_number,
+    )
+    if void_record is not None:
+        return void_record
+    assert external_runs is not None
     elapsed = time.monotonic() - start
     rows, findings = _evaluate(
         local=local_runs[0],
@@ -919,6 +1185,7 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
         "attempt": f"attempt-{attempt_number:04d}",
         "bulk_evidence": f"${{{BULK_ROOT_ENV}}}/attempt-{attempt_number:04d}",
         "expectations_sha256": _sha256(EXPECTATIONS),
+        "freeze_addendum_sha256": _sha256(FREEZE_ADDENDUM),
         "query_config_sha256": _sha256(QUERY_CONFIG),
         "freeze_commits": FREEZE_COMMITS,
         "run_commit": _git("rev-parse", "HEAD"),
@@ -951,8 +1218,8 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
     _write_new(attempt / "record.json", record_bytes)
     _write_new(attempt / "results.csv", csv_bytes)
     if write_tracked:
-        _write_new(STUDY / "record.json", record_bytes)
-        _write_new(STUDY / "results.csv", csv_bytes)
+        (STUDY / "record.json").write_bytes(record_bytes)
+        (STUDY / "results.csv").write_bytes(csv_bytes)
     return record
 
 
@@ -979,6 +1246,10 @@ def main(argv: list[str] | None = None) -> int:
     if raw_bulk is None:
         raise SystemExit(f"pass --bulk-root or set {BULK_ROOT_ENV}")
     record = _coordinator(Path(raw_bulk), write_tracked=args.write_tracked)
+    if record["run_state"] == "void" and "failure" in record:
+        print("run_state=void")
+        print(f"live_worker_failure={record['failure']['error']}")
+        return 1
     tallies = record["family_tallies"]
     print(f"run_state={record['run_state']} elapsed_seconds={record['elapsed_seconds']:.6f}")
     for family in ("I1", "I2", "P1", "W"):

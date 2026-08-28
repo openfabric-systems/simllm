@@ -41,6 +41,7 @@ __all__ = [
     "compile_pool_local_batch_service_provider",
     "compile_profile_table",
     "compile_session_profile_provider",
+    "external_artifact_licensing_findings",
     "import_external_database",
     "interpolate_batch_service_ps",
     "resolve_registry_root",
@@ -95,6 +96,10 @@ _EXPORTS = {
     "ExternalSourceIdentity": (
         "simllm.calibration.external_db",
         "ExternalSourceIdentity",
+    ),
+    "external_artifact_licensing_findings": (
+        "simllm.calibration.external_db",
+        "external_artifact_licensing_findings",
     ),
     "KERNEL_CYCLE_INPUT_SCHEMA": (
         "simllm.calibration.kernel_cycle_lut",

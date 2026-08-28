@@ -27,5 +27,6 @@
     "num_gpus_per_node": 8,
     "p2p_latency": 1e-05,
     "pcie_bw": 64000000000
-  }
+  },
+  "notice": "This file was converted by SimLLM from aiconfigurator-core 0.11.0 systems/h200_sxm.yaml; see MODIFIED."
 }
