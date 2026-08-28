@@ -1802,17 +1802,21 @@ use, the reader verifies the compressed payload plus `system.json`,
 `model-config.json` and `family-mapping.json` against their manifest hashes and
 verifies the converted files' source-specific change notices.
 
-The repaired comparison is nonvoid: all eight fatal guards hold, all 25
-importer-identity rows pass from an independent payload recount, all 37
-resolver points are bit-equal, all four Qwen3-32B-FP8 pass totals and their
-terms are bit-equal, and the complete repeated conversion and evaluation takes
-86.032942 seconds. The combined I2 and P1 ULP finding ledger is empty. The
-artifact carries the exact Apache 2.0 bytes, both preserved NVIDIA copyright
-lines and file-local conversion notices backed by an exhaustive `MODIFIED`
-ledger. COMP-82 through COMP-87 own every extension beyond this exact identity
-and offline composition surface. COMP-87 specifically owns the imported but
-undispatched WideEP MoE, MLA BMM, Mamba2, MLA and generation-MLA operation
-families.
+The reconciled comparison is nonvoid: all eight fatal guards hold, all 25
+importer-identity rows pass from an independent payload recount, all 26
+pre-specified I2 resolver points are bit-equal, and all 13 post-specified I2S
+rows pass in their own register. The two query denominators are never summed.
+All four Qwen3-32B-FP8 pass totals and their terms are bit-equal, and the
+complete repeated conversion and evaluation takes 83.376052 seconds. The I2,
+I2S and P1 ULP finding ledgers are empty. The I2S register attributes the 11
+review-addendum rows to `25dc6b5` and the concurrent two-point supplement to
+`a679b0e`; the latter includes one bit-equal value and one structured miss on
+both sides. The artifact carries the exact Apache 2.0 bytes, both preserved
+NVIDIA copyright lines and file-local conversion notices backed by an
+exhaustive `MODIFIED` ledger. COMP-82 through COMP-87 own every extension
+beyond this exact identity and offline composition surface. COMP-87
+specifically owns the imported but undispatched WideEP MoE, MLA BMM, Mamba2,
+MLA and generation-MLA operation families.
 
 ## Open tasks
 
@@ -2392,8 +2396,9 @@ families.
   rewritten dimensions, and live SDK parity before implementation. Acceptance
   requires bit-equal local-versus-live values on every enabled family and a
   supported composition that consumes each selected operation. The disabled
-  path must preserve the current rejection behavior, 37 I2 results, pass
-  totals, artifact payload and source-identity ledger exactly.
+  path must preserve the current rejection behavior, 26 pre-specified I2
+  results, 13 separately reported post-specified I2S results, pass totals,
+  artifact payload and source-identity ledger exactly.
 
 - COMP-4 (Completeness; P2; M): add generic multi-axis interpolation as an
   explicit optional path without weakening the device-model v1 boundary.

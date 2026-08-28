@@ -2,32 +2,41 @@
 
 The imported operation database remains bit-identical to the pinned external
 Python resolver at the frozen seam after the adversarial review repairs. The
-repaired comparison is nonvoid: all four scored families pass, all eight fatal
-guards hold, and the combined interpolation and pass-composition ledger has no
-unit in the last place (ULP) finding.
+reconciled comparison is nonvoid: every scored family passes in its own
+register, all eight fatal guards hold, and each query register plus the
+pass-composition ledger has no unit in the last place (ULP) finding.
 
 ## What ran
 
 `external_db_parity_v1` converted the pinned H200 SXM TensorRT-LLM 1.3.0rc10
 slice, loaded the converted artifact without the external software development
 kit (SDK), independently decompressed and recounted the payload, and compared
-37 resolver queries plus four Qwen3-32B-FP8 pass compositions against live SDK
-calls. Both sides ran twice in fresh processes. Bulk evidence is retained at
-`${SIMLLM_P3X_T1_BULK_ROOT}/attempt-0002`; the portable compact evidence is in
-[record.json](record.json) and [results.csv](results.csv).
+the original 26 resolver queries, a separate 13-row post-specified register,
+and four Qwen3-32B-FP8 pass compositions against live SDK calls. The
+post-specified register contains the 11 review-addendum rows and both cap
+supplement rows. Both sides ran twice in fresh processes. Bulk evidence is
+retained at `${SIMLLM_P3X_T1_BULK_ROOT}/attempt-0003`; the portable compact
+evidence is in [record.json](record.json) and [results.csv](results.csv).
 
 ## What came out
 
-The deciding result is zero ULP difference across all 37 resolver queries and
-all four pass totals. No per-term pass-composition difference was found. The
+The deciding result is zero ULP difference in both query registers and all
+four pass totals. No per-term pass-composition difference was found. The
 scored families remain separate:
 
 | Family | Result | Meaning |
 |---|---:|---|
 | I1 | 25 / 25 | Seven frozen raw binary64 rows, 17 independently recounted table sizes and the independently recounted 284,717-row total match their frozen oracles. |
-| I2 | 37 / 37 | All 26 original points and 11 review-addendum points are bit-equal to the live SDK. |
+| I2, pre-specified | 26 / 26 | Every point frozen at `afe7ee6` before the first comparison run is bit-equal to the live SDK. |
+| I2S, post-specified | 13 / 13 | All 11 rows frozen at `25dc6b5` and both concurrent-session supplement rows frozen at `a679b0e` pass in their own register. |
 | P1 | 4 / 4 | Both prefill and both decode pass totals match the live SDK and frozen literals; their local and live terms also match. |
-| W | 1 / 1 | Conversion plus both repeated local and live evaluations took 86.032942 seconds, below 120 seconds. |
+| W | 1 / 1 | Conversion plus both repeated local and live evaluations took 83.376052 seconds, below 120 seconds. |
+
+I2 and I2S are never summed. The I2 denominator remains the 26 points known
+before the first comparison. The I2S rows were added after a review found that
+the original coverage did not discriminate the 2.0 site-distance cap or the
+load-time clamps, so adding them to I2 would misstate post-specified evidence
+as pre-specified evidence.
 
 FG-1 through FG-8 all passed. The manifest's row inventory equals the payload
 recount, but it is a voiding cross-check rather than the source of the scored
@@ -36,10 +45,20 @@ counts. The distance-cap diagnostic changed GEMM query `I2-27` from the capped
 `0x1.cc9259aaacb10p+3`, a difference of 85,475,858,518,375 ULP. The cap-off
 value is not scored.
 
-The study has discriminating coverage for exactly these rules: the 2.0 GEMM
-site-distance cap, the GEMM and generation-attention load-time
-speed-of-light clamps, generation-attention `attn_dtype` invariance, standard
-mixture-of-experts non-low-latency `kernel_source` invariance, and GDN
+The concurrent session froze `I2S-01` and `I2S-02` at `a679b0e`. Wiring them
+into attempt 0003 was integration work, not new specification. `I2S-01`
+returned the frozen cap-on value `0x1.649d515151514p-11` on both sides. The
+study-only local cap-off mutation returned the frozen
+`0x1.9e7234bf96873p-12`, which is lower by 0.0002849416034136591 ms and differs
+by 3,486,215,443,295,393 ULP. `I2S-02` returned no value: the local resolver
+raised `InterpolationDataNotAvailableError` and the live SDK raised
+`PerfDataNotAvailableError`. The score compares those refusal kinds and does
+not compare their message strings.
+
+The post-specified register has discriminating coverage for exactly these
+rules: the 2.0 GEMM site-distance cap, the GEMM and generation-attention
+load-time speed-of-light clamps, generation-attention `attn_dtype` invariance,
+standard mixture-of-experts non-low-latency `kernel_source` invariance, and GDN
 `model_name` and `num_tokens` invariance. The other I2 rows are local-versus-
 live parity points, not rule-removal discrimination controls.
 
@@ -68,9 +87,11 @@ follows:
   record.
 - B-2 adds a cap-discriminating GEMM point and an unscored cap-off value. B-3
   scores exact hits on both clamped families and extends FG-5 to the second
-  family. B-4 adds four ignored-dimension pairs. B-9 combines I2 and P1 in the
-  top-level ULP findings. B-5 is registered as COMP-87 because WideEP MoE, MLA
-  BMM, Mamba2, MLA and generation-MLA dispatch remain outside this resolver.
+  family. The generation-attention FG-5 cell is explicitly post-specified at
+  `25dc6b5`. B-4 adds four ignored-dimension pairs. B-9 publishes I2, I2S and
+  P1 findings under their own family names. B-5 is registered as COMP-87
+  because WideEP MoE, MLA BMM, Mamba2, MLA and generation-MLA dispatch remain
+  outside this resolver.
 - C-1 preserves the NVIDIA 2025-2026 source-file notice as well as the 2026
   collection notice. C-2 adds file-local conversion notices to both converted
   JSON files and enumerates every artifact derivation in `MODIFIED`. C-3 uses
@@ -82,6 +103,15 @@ follows:
   study implementation and test surface to LF line endings.
 
 ## Physical sanity
+
+Before reading `I2S-01`, the arithmetic floor is 512 floating-point operations
+divided by 989 TFLOP/s, or about 0.000000000518 ms. The larger memory floor is
+576 bytes divided by 4.8 TB/s, or 0.00000012 ms. A deliberately loose ceiling
+of 0.01 ms allows more than 80,000 times that memory floor for dispatch and
+fixed small-kernel overhead. The measured 0.0006801882210899801 ms sits about
+5,668 times above the memory floor and about 14.7 times below that ceiling. It
+is physically plausible, but that check does not validate the interpolation
+rule.
 
 Before reading the prefill result, the tensor-core floor is about 28.3 ms:
 `2 * 32 billion parameters * 3,500 tokens / TP4`, divided by the declared
@@ -132,21 +162,28 @@ and first comparison. The immutable `expectations.md` bytes retain SHA-256
 After review and before the repair implementation or second comparison, commit
 `25dc6b5` froze the independent table-count inventory, the cap-discriminating
 point, both clamp hits, all four invariance pairs and the second FG-5 cell in
-`freeze_addendum.md` and `query_points.json`. Repair commit `bba456c` then ran
-append-only attempt 0002. FG-8 verified both ancestry and current working bytes
-against the recorded Git blobs.
+`freeze_addendum.md` and `query_points.json`. Those rows are post-specified.
+Concurrent commit `a679b0e` separately froze the two-point cap supplement and
+required its own I2S register. Repair commit `bba456c` ran append-only attempt
+0002 without wiring that supplement. Integration commit `3b5c169` wired the
+already-frozen supplement, restored the original I2 denominator and ran
+append-only attempt 0003. FG-8 verified ancestry and current working bytes for
+all four freeze files against their recorded Git blobs.
 
 ## What it changes for the project
 
 P3X-T1 remains a literal matched pricing seam for the frozen external Python
-surface, and its scored coverage and guard claims now match the evidence that
-produces them. The compute module can consume this artifact without PyArrow,
-PyYAML or the external SDK, independently verify its payload and converted JSON
-files, retain source identity on every result, and distinguish exact mappings
-from declared composites and gaps. COMP-87 newly owns the imported operation
-families that still have no dispatched resolver path. No existing compute
-calibration task closes and no milestone advances beyond the already matched
-offline seam.
+surface, and its scoring chronology now matches the evidence that produces it.
+The published I2 claim narrows from an incorrect 37-row denominator to the
+original 26-row pre-specified denominator. I2S carries all 13 post-specified
+rows without changing the matched-seam result. Wiring the supplement changed
+no numerical conclusion: both new rows passed, including the structured miss,
+and the cap-off diagnostic strengthened the existing cap-discrimination
+finding. The compute module can consume this artifact without PyArrow, PyYAML
+or the external SDK, independently verify its payload and converted JSON files,
+retain source identity on every result, and distinguish exact mappings from
+declared composites and gaps. No existing compute calibration task closes and
+no milestone advances beyond the already matched offline seam.
 
 ## What it does not change
 
@@ -158,4 +195,6 @@ or place the external pass on the supported `ExecutionGraph` to
 output token (TPOT) chain (COMP-86). It does not dispatch WideEP MoE, MLA BMM,
 Mamba2, MLA or generation-MLA operations (COMP-87), reproduce external Pareto
 rows, or compare serving mechanisms. The payload, original raw-row oracles,
-four pass totals and their zero-ULP numerical result are unchanged.
+four pass totals and their zero-ULP numerical result are unchanged. It does not
+turn the 13 post-specified rows into pre-specified evidence, and it does not
+combine their denominator with I2.

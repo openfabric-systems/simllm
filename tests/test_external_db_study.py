@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import csv
 import hashlib
 import importlib.util
 import json
@@ -21,8 +22,8 @@ ARTIFACT = (
 )
 RECORD = STUDY / "record.json"
 RESULTS_CSV = STUDY / "results.csv"
-RECORD_SHA256 = "5251a1a85f0e98759237367b19383d269926675ae74409729553bc53f48d77ef"
-RESULTS_CSV_SHA256 = "4d6921dcd569220905ae910d26c3bf01ed049597abc5036b669891e7992069d3"
+RECORD_SHA256 = "38d616b3245a8a42bd06ee9f79d3397d16476cd4acd46dfecd7bd503a55a0e96"
+RESULTS_CSV_SHA256 = "273ad38c8ce309fdc6612c1d620f33b35be85beefb7c754c4585845621dd5687"
 
 
 def _sha256(path: Path) -> str:
@@ -44,7 +45,7 @@ def test_tracked_record_is_locked_and_nonvoid() -> None:
     assert _sha256(RECORD) == RECORD_SHA256
     assert _sha256(RESULTS_CSV) == RESULTS_CSV_SHA256
     assert b"\r" not in RESULTS_CSV.read_bytes()
-    assert len(RESULTS_CSV.read_text(encoding="utf-8").splitlines()) == 76
+    assert len(RESULTS_CSV.read_text(encoding="utf-8").splitlines()) == 78
 
     record = json.loads(RECORD.read_text(encoding="utf-8"))
     assert record["schema"] == "simllm-external-db-parity-record-v1"
@@ -52,14 +53,52 @@ def test_tracked_record_is_locked_and_nonvoid() -> None:
     assert record["voiding_guards"] == []
     assert record["family_tallies"] == {
         "I1": {"denominator": 25, "passed": 25},
-        "I2": {"denominator": 37, "passed": 37},
+        "I2": {"denominator": 26, "passed": 26},
+        "I2S": {"denominator": 13, "passed": 13},
         "P1": {"denominator": 4, "passed": 4},
         "W": {"denominator": 1, "passed": 1},
     }
     assert all(record["fatal_guards"].values())
     assert record["ulp_findings"] == []
-    assert record["attempt"] == "attempt-0002"
+    assert record["attempt"] == "attempt-0003"
     assert record["freeze_commits"]["review_addendum"].startswith("25dc6b5")
+    assert record["freeze_commits"]["cap_supplement"].startswith("a679b0e")
+    assert record["scoring_registers"]["I2"] == {
+        "denominator": 26,
+        "freeze_commit": "afe7ee6e2947616c3b64e6e7c2dbc1fcf3553ef1",
+        "specification_status": "pre-specified",
+    }
+    assert record["scoring_registers"]["I2S"]["denominator"] == 13
+    assert record["scoring_registers"]["I2S"]["reporting_rule"] == (
+        "report separately from I2 and never sum the two registers"
+    )
+    assert record["supplement_integration"] == {
+        "freeze_commit": "a679b0e85733219f877f520421bf8b45221febaa",
+        "freeze_origin": "concurrent session",
+        "work_class": "integration of frozen rows, not new specification",
+    }
+    assert len(record["rows"]) == 77
+    assert all(row["freeze_commit"] for row in record["rows"])
+    assert all(
+        row["specification_status"] in {"pre-specified", "post-specified"}
+        for row in record["rows"]
+    )
+    miss = next(row for row in record["rows"] if row["id"] == "I2S-02")
+    assert miss["passed"] is True
+    assert miss["local_refusal_kind"] == "InterpolationDataNotAvailableError"
+    assert miss["external_refusal_kind"] == "PerfDataNotAvailableError"
+    fg5 = next(row for row in record["rows"] if row["id"] == "FG-5")
+    assert fg5["specification_status"] == "post-specified"
+    assert "25dc6b5" in fg5["provenance_note"]
+
+    with RESULTS_CSV.open(encoding="utf-8", newline="") as handle:
+        csv_rows = list(csv.DictReader(handle))
+    assert len(csv_rows) == len(record["rows"])
+    assert all(row["freeze_commit"] for row in csv_rows)
+    assert all(
+        row["specification_status"] in {"pre-specified", "post-specified"}
+        for row in csv_rows
+    )
 
 
 def test_local_worker_runs_directly_without_pythonpath(tmp_path: Path) -> None:
