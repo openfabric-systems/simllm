@@ -11,8 +11,11 @@ from xml.etree import ElementTree
 import pytest
 
 from simllm.backends.htsim_nvlink import (
+    DEFAULT_NVLINK_ARBITRATION_POLICY,
+    LEGACY_NVLINK_FLOW_POLICY,
     NVLINK_SCORED_EVIDENCE_CLASS,
     NVLINK_SCORED_PROFILE_STATUS,
+    NvlinkArbitrationPolicy,
     NvlinkCandidateProfile,
     NvlinkDomainResult,
     NvlinkDomainService,
@@ -265,6 +268,53 @@ def test_tx_bonds_packets_over_four_directional_serializers(candidate):
     )
 
 
+def test_tx_credits_are_independent_on_each_bonded_link(candidate):
+    tx = NvlinkTx(dataclasses.replace(candidate.tx, credits_per_destination=1))
+    return_ps = 1_000_000
+    sent = tx.transmit(
+        tx.packetize(
+            NvlinkTransfer(
+                extent_id="per-link-credit",
+                source=0,
+                destination=1,
+                payload_bytes=5 * 256,
+            )
+        ),
+        credit_return_latency_ps=return_ps,
+    )
+
+    assert [packet.link_index for packet in sent] == [0, 1, 2, 3, 0]
+    assert sent[4].tx_started_at_ps == sent[0].tx_finished_at_ps + return_ps
+    assert all(
+        packet.tx_started_at_ps < sent[4].tx_started_at_ps for packet in sent[:4]
+    )
+
+
+def test_transfer_offer_rate_paces_packet_release_without_changing_unpaced_bytes(candidate):
+    tx = NvlinkTx(candidate.tx)
+    unpaced = tx.packetize(
+        NvlinkTransfer(
+            extent_id="unpaced",
+            source=0,
+            destination=1,
+            payload_bytes=3 * 256,
+        )
+    )
+    paced = tx.packetize(
+        NvlinkTransfer(
+            extent_id="paced",
+            source=0,
+            destination=1,
+            payload_bytes=3 * 256,
+            offered_rate_bytes_per_second=100_000_000_000,
+        )
+    )
+
+    assert [packet.released_at_ps for packet in unpaced] == [0, 0, 0]
+    assert [packet.released_at_ps for packet in paced] == [0, 2720, 5440]
+    assert [packet.wire_bytes for packet in paced] == [packet.wire_bytes for packet in unpaced]
+
+
 def test_pass_through_switch_returns_the_exact_packet_tuple(candidate):
     tx = NvlinkTx(candidate.tx)
     sent = tx.transmit(
@@ -372,6 +422,48 @@ def test_analytic_bypass_returns_the_callers_object_by_identity():
     assert result is analytic
 
 
+def test_arbitrated_entry_defaults_to_release_aware_round_robin(candidate):
+    transfers = [
+        NvlinkTransfer(
+            extent_id=f"default-{source}",
+            source=source,
+            destination=3,
+            payload_bytes=16 * 256,
+            offered_rate_bytes_per_second=(
+                100_000_000_000 if source == 0 else 60_000_000_000
+            ),
+        )
+        for source in range(3)
+    ]
+    service = NvlinkDomainService(candidate)
+
+    implicit = service.serve_arbitrated(transfers, analytic_result=None)
+    explicit = service.serve_arbitrated(
+        transfers,
+        analytic_result=None,
+        policy=NvlinkArbitrationPolicy.RELEASE_AWARE_ROUND_ROBIN,
+    )
+
+    assert DEFAULT_NVLINK_ARBITRATION_POLICY is (
+        NvlinkArbitrationPolicy.RELEASE_AWARE_ROUND_ROBIN
+    )
+    assert isinstance(implicit, NvlinkDomainResult)
+    assert isinstance(explicit, NvlinkDomainResult)
+    assert implicit.canonical_json_bytes() == explicit.canonical_json_bytes()
+
+
+def test_arbitrated_entry_preserves_the_analytic_bypass_by_identity():
+    analytic = {"duration_ps": 19}
+
+    assert (
+        NvlinkDomainService().serve_arbitrated(
+            [NvlinkTransfer(extent_id="off", source=0, destination=1, payload_bytes=1)],
+            analytic_result=analytic,
+        )
+        is analytic
+    )
+
+
 def test_static_flow_policy_preserves_the_preimplementation_canonical_bytes(candidate):
     transfers = [
         NvlinkTransfer(
@@ -406,6 +498,7 @@ def test_static_flow_policy_preserves_the_preimplementation_canonical_bytes(cand
 
     assert isinstance(implicit, NvlinkDomainResult)
     assert isinstance(explicit, NvlinkDomainResult)
+    assert LEGACY_NVLINK_FLOW_POLICY is NvlinkFlowPolicy.STATIC_INTERLEAVE
     assert implicit.canonical_json_bytes() == explicit.canonical_json_bytes()
     assert hashlib.sha256(implicit.canonical_json_bytes()).hexdigest() == (
         "2f2af64619ed3c6341b209d877d9f1e6984a67e44b97b5eb176a157294a6c252"
