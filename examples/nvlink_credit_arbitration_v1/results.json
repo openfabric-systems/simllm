@@ -1,0 +1,240 @@
+{
+  "authority": {
+    "expectations_commit": "15e68c26e81f155dfa475122ad867882a5735287",
+    "expectations_sha256": "d127597dbeab23ae29f18214c583e4b958de9c57bf398d0a8308ad614f5cd7a0",
+    "legacy_identity_sha256": "2f2af64619ed3c6341b209d877d9f1e6984a67e44b97b5eb176a157294a6c252",
+    "preservation": {
+      "candidate_profile_sha256": "d33ef5b2c6fa87cc97e1e7b45a43a841a5da45f5462311e3981fbc903c56deb2",
+      "path_content_digest_sha256": "61af15faf7c7080f40a33f8f9d5503b3b0278f15be15997e90c6895cddf85c72",
+      "tracked_bytes": 6429838,
+      "tracked_file_count": 89
+    }
+  },
+  "behavioral_summary": {
+    "family_count": 3,
+    "instance_count": 15,
+    "passed_instances": 15,
+    "refuted_instances": 0,
+    "verdict": "PASS"
+  },
+  "bulk_record": {
+    "child": "traf73-simulation-e9a52e4/results.json",
+    "root_environment_variable": "SIMLLM_NVFAIR_BULK_ROOT",
+    "sha256": "570d37ceef74559a878d880be1eaee5b71be2fc2ca2b7f6c36c09b976591ef61"
+  },
+  "evidence_classes": {
+    "behavioral": "policy_direction_and_bounded_share_predictions",
+    "fatal": "conservation_and_physical_ceiling_preconditions",
+    "hardware": "registered_not_run",
+    "structural": "per_link_credit_ownership_and_legacy_byte_identity"
+  },
+  "fatal_summary": {
+    "guard_instances": 105,
+    "violations": 0,
+    "verdict": "PASS"
+  },
+  "hardware_status": "REGISTERED_NOT_RUN",
+  "physical_sanity": {
+    "bond_packet_cadence_ps": 2720,
+    "candidate_credit_return_ps": 200000,
+    "candidate_per_link_window_serialization_ps": 2785280,
+    "per_link_packet_serialization_ps": 10880,
+    "prediction": "candidate_credit_returns_before_slot_reuse_so_no_nominal_stall_knee"
+  },
+  "run_configuration": {
+    "degrees": [2, 3, 4, 8, 16],
+    "extrapolated_degrees": [4, 8, 16],
+    "greedy_offered_rate_bytes_per_second": 100000000000,
+    "packets_per_sender": 240,
+    "policies": [
+      "release_aware_round_robin",
+      "static_interleave",
+      "greedy_capture"
+    ],
+    "small_offered_rate_bytes_per_second": 60000000000,
+    "steady_excluded_packets_each_edge": 40
+  },
+  "schema": "simllm-nvlink-credit-arbitration-result-v1",
+  "scoring_chronology": {
+    "correction_class": "post_specified_aggregate_quantization_bound",
+    "first_run_commit": "0888344",
+    "first_run_result_sha256": "b5713abb3902795cffd8e86ef1a9a4b40bd420a253928f36ab2d2c33442143ad",
+    "first_run_verdict": "PASS_WITH_TWO_AGGREGATE_SCORER_REFUTATIONS",
+    "unchanged": [
+      "workload",
+      "time_window",
+      "policy",
+      "physical_ceiling",
+      "preservation_lock",
+      "per_sender_expectation_and_tolerance"
+    ]
+  },
+  "simulation_rows": [
+    {
+      "aggregate_wire_gbps": 160.0,
+      "behavioral_verdict": "PASS",
+      "degree": 2,
+      "jain_wire_rate": 0.941176,
+      "max_rx_buffer_occupancy_bytes": 32640,
+      "policy": "release_aware_round_robin",
+      "receiver_raw_utilization": 0.772566,
+      "topology_class": "PHYSICAL_NV4",
+      "wire_gbps_per_source": [100.0, 60.0]
+    },
+    {
+      "aggregate_wire_gbps": 119.99989,
+      "behavioral_verdict": "PASS",
+      "degree": 2,
+      "jain_wire_rate": 1.0,
+      "max_rx_buffer_occupancy_bytes": 50320,
+      "policy": "static_interleave",
+      "receiver_raw_utilization": 0.579424,
+      "topology_class": "PHYSICAL_NV4",
+      "wire_gbps_per_source": [59.999945, 59.999945]
+    },
+    {
+      "aggregate_wire_gbps": 160.0,
+      "behavioral_verdict": "PASS",
+      "degree": 2,
+      "jain_wire_rate": 0.941176,
+      "max_rx_buffer_occupancy_bytes": 32640,
+      "policy": "greedy_capture",
+      "receiver_raw_utilization": 0.772566,
+      "topology_class": "PHYSICAL_NV4",
+      "wire_gbps_per_source": [100.0, 60.0]
+    },
+    {
+      "aggregate_wire_gbps": 207.001522,
+      "behavioral_verdict": "PASS",
+      "degree": 3,
+      "jain_wire_rate": 0.966533,
+      "max_rx_buffer_occupancy_bytes": 50592,
+      "policy": "release_aware_round_robin",
+      "receiver_raw_utilization": 0.999515,
+      "topology_class": "PHYSICAL_NV4",
+      "wire_gbps_per_source": [87.158536, 59.921493, 59.921493]
+    },
+    {
+      "aggregate_wire_gbps": 179.999835,
+      "behavioral_verdict": "PASS",
+      "degree": 3,
+      "jain_wire_rate": 1.0,
+      "max_rx_buffer_occupancy_bytes": 62560,
+      "policy": "static_interleave",
+      "receiver_raw_utilization": 0.869136,
+      "topology_class": "PHYSICAL_NV4",
+      "wire_gbps_per_source": [59.999945, 59.999945, 59.999945]
+    },
+    {
+      "aggregate_wire_gbps": 207.001522,
+      "behavioral_verdict": "PASS",
+      "degree": 3,
+      "jain_wire_rate": 0.909619,
+      "max_rx_buffer_occupancy_bytes": 50592,
+      "policy": "greedy_capture",
+      "receiver_raw_utilization": 0.999515,
+      "topology_class": "PHYSICAL_NV4",
+      "wire_gbps_per_source": [99.75977, 53.620876, 53.620876]
+    },
+    {
+      "aggregate_wire_gbps": 207.001522,
+      "behavioral_verdict": "PASS",
+      "degree": 4,
+      "jain_wire_rate": 1.0,
+      "max_rx_buffer_occupancy_bytes": 90032,
+      "policy": "release_aware_round_robin",
+      "receiver_raw_utilization": 0.999515,
+      "topology_class": "SIMULATED_MESH_EXTRAPOLATION",
+      "wire_gbps_per_source": [51.750381, 51.750381, 51.750381, 51.750381]
+    },
+    {
+      "aggregate_wire_gbps": 207.001522,
+      "behavioral_verdict": "PASS",
+      "degree": 4,
+      "jain_wire_rate": 1.0,
+      "max_rx_buffer_occupancy_bytes": 90032,
+      "policy": "static_interleave",
+      "receiver_raw_utilization": 0.999515,
+      "topology_class": "SIMULATED_MESH_EXTRAPOLATION",
+      "wire_gbps_per_source": [51.750381, 51.750381, 51.750381, 51.750381]
+    },
+    {
+      "aggregate_wire_gbps": 207.001522,
+      "behavioral_verdict": "PASS",
+      "degree": 4,
+      "jain_wire_rate": 0.777057,
+      "max_rx_buffer_occupancy_bytes": 90032,
+      "policy": "greedy_capture",
+      "receiver_raw_utilization": 0.999515,
+      "topology_class": "SIMULATED_MESH_EXTRAPOLATION",
+      "wire_gbps_per_source": [99.75977, 35.539418, 36.162917, 35.539418]
+    },
+    {
+      "aggregate_wire_gbps": 207.001522,
+      "behavioral_verdict": "PASS",
+      "degree": 8,
+      "jain_wire_rate": 1.0,
+      "max_rx_buffer_occupancy_bytes": 339456,
+      "policy": "release_aware_round_robin",
+      "receiver_raw_utilization": 0.999515,
+      "topology_class": "SIMULATED_MESH_EXTRAPOLATION",
+      "wire_gbps_per_source": [25.87519, 25.87519, 25.87519, 25.87519, 25.87519, 25.87519, 25.87519, 25.87519]
+    },
+    {
+      "aggregate_wire_gbps": 207.001522,
+      "behavioral_verdict": "PASS",
+      "degree": 8,
+      "jain_wire_rate": 1.0,
+      "max_rx_buffer_occupancy_bytes": 339456,
+      "policy": "static_interleave",
+      "receiver_raw_utilization": 0.999515,
+      "topology_class": "SIMULATED_MESH_EXTRAPOLATION",
+      "wire_gbps_per_source": [25.87519, 25.87519, 25.87519, 25.87519, 25.87519, 25.87519, 25.87519, 25.87519]
+    },
+    {
+      "aggregate_wire_gbps": 207.001522,
+      "behavioral_verdict": "PASS",
+      "degree": 8,
+      "jain_wire_rate": 0.461915,
+      "max_rx_buffer_occupancy_bytes": 339456,
+      "policy": "greedy_capture",
+      "receiver_raw_utilization": 0.999515,
+      "topology_class": "SIMULATED_MESH_EXTRAPOLATION",
+      "wire_gbps_per_source": [99.75977, 14.963965, 15.587464, 15.587464, 15.587464, 15.587464, 14.963965, 14.963965]
+    },
+    {
+      "aggregate_wire_gbps": 207.001522,
+      "behavioral_verdict": "PASS",
+      "degree": 16,
+      "jain_wire_rate": 1.0,
+      "max_rx_buffer_occupancy_bytes": 861696,
+      "policy": "release_aware_round_robin",
+      "receiver_raw_utilization": 0.999515,
+      "topology_class": "SIMULATED_MESH_EXTRAPOLATION",
+      "wire_gbps_per_source": [12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595]
+    },
+    {
+      "aggregate_wire_gbps": 207.001522,
+      "behavioral_verdict": "PASS",
+      "degree": 16,
+      "jain_wire_rate": 1.0,
+      "max_rx_buffer_occupancy_bytes": 861696,
+      "policy": "static_interleave",
+      "receiver_raw_utilization": 0.999515,
+      "topology_class": "SIMULATED_MESH_EXTRAPOLATION",
+      "wire_gbps_per_source": [12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595, 12.937595]
+    },
+    {
+      "aggregate_wire_gbps": 207.001522,
+      "behavioral_verdict": "PASS",
+      "degree": 16,
+      "jain_wire_rate": 0.249819,
+      "max_rx_buffer_occupancy_bytes": 861696,
+      "policy": "greedy_capture",
+      "receiver_raw_utilization": 0.999515,
+      "topology_class": "SIMULATED_MESH_EXTRAPOLATION",
+      "wire_gbps_per_source": [99.75977, 7.481983, 7.481983, 7.481983, 7.481983, 7.481983, 6.858484, 6.858484, 6.858484, 6.858484, 6.858484, 6.858484, 6.858484, 6.858484, 7.481983, 7.481983]
+    }
+  ],
+  "task_id": "TRAF-73"
+}
