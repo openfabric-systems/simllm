@@ -1,0 +1,3 @@
+aiconfigurator 0.11.0
+database: h200_sxm trtllm 1.3.0rc10
+retrieved: 2026-08-27T23:12 CEST, offline perf-DB search, no GPU
