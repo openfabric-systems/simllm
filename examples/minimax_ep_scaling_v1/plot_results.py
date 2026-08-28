@@ -11,37 +11,54 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 
-QWEN_REFERENCE_RATIO = 1.042715399805
 
-
-def render(record_path: Path, output_dir: Path) -> tuple[Path, Path]:
+def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
     record = json.loads(record_path.read_text(encoding="utf-8"))
     rows = record["rows"]
     widths = [row["expert_parallel"] for row in rows]
     external_steps = [row["aiconfigurator_step_ms"] for row in rows]
-    simllm_steps = [row["simllm_step_ms"] for row in rows]
-    ratios = [row["ratio"] for row in rows]
-    dispatch_shares = [100 * row["dispatch_share"] for row in rows]
-    full_peer_indices = [
-        index for index, row in enumerate(rows) if not row["peer_subset"]
+    sparse_steps = [row["family_s_packet_step_ms"] for row in rows]
+    dense_external = [row["family_d_external_ms"] for row in rows]
+    dense_packet = [row["family_d_packet_ms"] for row in rows]
+    contention_ratios = [row["family_d_ratio"] for row in rows]
+    dense_measured_indices = [
+        index
+        for index, row in enumerate(rows)
+        if row["family_d_simulated_messages_per_layer"] > 0
     ]
-    subset_indices = [index for index, row in enumerate(rows) if row["peer_subset"]]
+    dense_extrapolated_indices = [
+        index
+        for index, row in enumerate(rows)
+        if row["family_d_simulated_messages_per_layer"] == 0
+    ]
+
+    dense_label = "Dense fallback: half all-gather + reduce-scatter"
+    sparse_label = "Sparse routed: FP8 dispatch + BF16 combine"
+    packet_dense_label = "Dense packet: same half all-gather + reduce-scatter"
+    ratio_label = "Dense packet / dense external, identical half traffic"
+    caption = (
+        "Family D compares identical dense half-precision all-gather plus "
+        "reduce-scatter bytes. Family S compares that dense fallback with sparse "
+        "routed FP8 dispatch plus BF16 combine. Every point samples one layer of "
+        "65; D at EP 256 extrapolates from the measured full EP 128 population."
+    )
 
     plt.rcParams.update(
         {
             "font.family": "DejaVu Sans",
-            "font.size": 9,
-            "axes.labelsize": 9,
-            "axes.titlesize": 10,
-            "legend.fontsize": 8,
-            "xtick.labelsize": 8,
-            "ytick.labelsize": 8,
+            "font.size": 8,
+            "axes.labelsize": 8,
+            "axes.titlesize": 9,
+            "legend.fontsize": 6.2,
+            "xtick.labelsize": 7,
+            "ytick.labelsize": 7,
             "axes.linewidth": 0.8,
         }
     )
-    figure, (left, right) = plt.subplots(1, 2, figsize=(7.5, 3.35))
+    figure, (left, middle, right) = plt.subplots(1, 3, figsize=(7.5, 3.25))
     blue = "#2F6B9A"
     orange = "#D56A2C"
+    green = "#2D7D63"
 
     left.plot(
         widths,
@@ -49,96 +66,128 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path]:
         color=blue,
         marker="o",
         linewidth=1.8,
-        markersize=5,
-        label="AIConfigurator",
+        markersize=4.5,
+        label=dense_label,
     )
     left.plot(
         widths,
-        simllm_steps,
-        color=orange,
-        linewidth=1.8,
-        label="SimLLM",
-    )
-    left.scatter(
-        [widths[index] for index in full_peer_indices],
-        [simllm_steps[index] for index in full_peer_indices],
+        sparse_steps,
         color=orange,
         marker="D",
-        facecolors="white",
-        linewidths=1.4,
-        s=28,
-        zorder=3,
+        linewidth=1.8,
+        markersize=4.2,
+        label=sparse_label,
     )
-    left.scatter(
-        [widths[index] for index in subset_indices],
-        [simllm_steps[index] for index in subset_indices],
-        color=orange,
-        marker="s",
-        facecolors="white",
-        linewidths=1.4,
-        s=31,
-        zorder=3,
-    )
-    for index, (width, step, share) in enumerate(
-        zip(widths, external_steps, dispatch_shares, strict=True)
-    ):
-        offset = 10 if index == 0 else -13
-        left.annotate(
-            f"{share:.1f}% dispatch",
-            (width, step),
-            xytext=(0, offset),
-            textcoords="offset points",
-            ha="center",
-            va="bottom" if index == 0 else "top",
-            color=blue,
-            fontsize=7,
-        )
-    left.set_title("Decode step on external timing base")
+    left.set_title("Family S strategy steps")
     left.set_xlabel("Expert-parallel width")
     left.set_ylabel("Step time (ms)")
     left.set_xscale("log", base=2)
     left.set_xticks(widths)
     left.xaxis.set_major_formatter(ScalarFormatter())
     left.grid(axis="y", color="#D8D8D8", linewidth=0.6)
-    left.legend(frameon=False, loc="upper left")
-
-    right.plot(
-        widths,
-        ratios,
-        color=orange,
-        linewidth=1.8,
-        label="SimLLM / AIConfigurator",
+    left.legend(
+        frameon=True,
+        facecolor="white",
+        edgecolor="none",
+        framealpha=0.94,
+        loc="upper left",
     )
-    right.scatter(
-        [widths[index] for index in full_peer_indices],
-        [ratios[index] for index in full_peer_indices],
-        color=orange,
-        marker="D",
+
+    middle.plot(
+        widths,
+        dense_external,
+        color=blue,
+        marker="o",
+        linewidth=1.8,
+        markersize=4.5,
+        label=dense_label,
+    )
+    middle.plot(
+        widths,
+        dense_packet,
+        color=green,
+        linewidth=1.8,
+        label=packet_dense_label,
+    )
+    middle.scatter(
+        [widths[index] for index in dense_measured_indices],
+        [dense_packet[index] for index in dense_measured_indices],
+        color=green,
+        marker="o",
+        s=23,
+        zorder=3,
+    )
+    middle.scatter(
+        [widths[index] for index in dense_extrapolated_indices],
+        [dense_packet[index] for index in dense_extrapolated_indices],
+        color=green,
+        marker="s",
         facecolors="white",
         linewidths=1.4,
         s=28,
         zorder=3,
     )
+    middle.set_title("Family D identical traffic")
+    middle.set_xlabel("Expert-parallel width")
+    middle.set_ylabel("Collective time (ms)")
+    middle.set_xscale("log", base=2)
+    middle.set_yscale("log")
+    middle.set_xticks(widths)
+    middle.xaxis.set_major_formatter(ScalarFormatter())
+    middle.grid(axis="y", color="#D8D8D8", linewidth=0.6)
+    middle.legend(
+        frameon=True,
+        facecolor="white",
+        edgecolor="none",
+        framealpha=0.94,
+        loc="upper left",
+    )
+
+    right.plot(
+        widths,
+        contention_ratios,
+        color=green,
+        linewidth=1.8,
+        label=ratio_label,
+    )
     right.scatter(
-        [widths[index] for index in subset_indices],
-        [ratios[index] for index in subset_indices],
-        color=orange,
+        [widths[index] for index in dense_measured_indices],
+        [contention_ratios[index] for index in dense_measured_indices],
+        color=green,
+        marker="o",
+        s=23,
+        zorder=3,
+    )
+    right.scatter(
+        [widths[index] for index in dense_extrapolated_indices],
+        [contention_ratios[index] for index in dense_extrapolated_indices],
+        color=green,
         marker="s",
         facecolors="white",
         linewidths=1.4,
-        s=31,
+        s=28,
         zorder=3,
     )
     right.axhline(
-        QWEN_REFERENCE_RATIO,
+        1.0,
         color="#555555",
         linestyle=(0, (4, 3)),
         linewidth=1.1,
-        label=f"Qwen3-32B reference\n{QWEN_REFERENCE_RATIO}",
+        label="Frozen lower bound 1.0",
     )
-    right.set_title("Packet-priced step ratio")
+    for width, ratio in zip(widths, contention_ratios, strict=True):
+        right.annotate(
+            f"{ratio:.3f}",
+            (width, ratio),
+            xytext=(0, 5),
+            textcoords="offset points",
+            ha="center",
+            fontsize=6.2,
+            color=green,
+        )
+    right.set_title("Family D contention ratio")
     right.set_xlabel("Expert-parallel width")
-    right.set_ylabel("Step-time ratio")
+    right.set_ylabel("Packet dense / external dense")
     right.set_xscale("log", base=2)
     right.set_xticks(widths)
     right.xaxis.set_major_formatter(ScalarFormatter())
@@ -148,29 +197,82 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path]:
         facecolor="white",
         edgecolor="none",
         framealpha=0.92,
-        loc="upper left",
+        loc="best",
     )
 
     figure.text(
         0.5,
-        0.015,
-        (
-            "Hollow diamonds use full peers for one layer of 65. The hollow square "
-            "uses one receiver per node with every sender. Traffic abstractions differ."
-        ),
+        0.01,
+        caption,
         ha="center",
         va="bottom",
-        fontsize=7.2,
+        fontsize=6.2,
         color="#333333",
+        wrap=True,
     )
-    figure.tight_layout(rect=(0, 0.075, 1, 1), w_pad=2.5)
+    figure.tight_layout(rect=(0, 0.12, 1, 1), w_pad=1.7)
     output_dir.mkdir(parents=True, exist_ok=True)
     png = output_dir / "minimax_ep_scaling.png"
     pdf = output_dir / "minimax_ep_scaling.pdf"
+    metadata = output_dir / "minimax_ep_scaling.metadata.json"
     figure.savefig(png, dpi=300, bbox_inches="tight", facecolor="white")
     figure.savefig(pdf, bbox_inches="tight", facecolor="white")
     plt.close(figure)
-    return png, pdf
+    metadata.write_text(
+        json.dumps(
+            {
+                "caption": caption,
+                "series": [
+                    {
+                        "panel": "family-s-strategy-steps",
+                        "label": dense_label,
+                        "strategy": rows[0]["family_s_dense_strategy"],
+                        "traffic_definition": rows[0][
+                            "family_s_dense_traffic_definition"
+                        ],
+                    },
+                    {
+                        "panel": "family-s-strategy-steps",
+                        "label": sparse_label,
+                        "strategy": rows[0]["family_s_sparse_strategy"],
+                        "traffic_definition": rows[0][
+                            "family_s_sparse_traffic_definition"
+                        ],
+                    },
+                    {
+                        "panel": "family-d-identical-traffic",
+                        "label": dense_label,
+                        "strategy": rows[0]["family_d_external_strategy"],
+                        "traffic_definition": rows[0][
+                            "family_d_external_traffic_definition"
+                        ],
+                    },
+                    {
+                        "panel": "family-d-identical-traffic",
+                        "label": packet_dense_label,
+                        "strategy": rows[0]["family_d_packet_strategy"],
+                        "traffic_definition": rows[0][
+                            "family_d_packet_traffic_definition"
+                        ],
+                    },
+                    {
+                        "panel": "family-d-contention-ratio",
+                        "label": ratio_label,
+                        "strategy": "same dense strategy in numerator and denominator",
+                        "traffic_definition": rows[0][
+                            "family_d_packet_traffic_definition"
+                        ],
+                    },
+                ],
+            },
+            sort_keys=True,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    return png, pdf, metadata
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -182,9 +284,10 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
-    png, pdf = render(args.record, args.output_dir)
+    png, pdf, metadata = render(args.record, args.output_dir)
     print(png)
     print(pdf)
+    print(metadata)
     return 0
 
 

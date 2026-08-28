@@ -1092,6 +1092,26 @@ route to those higher degrees.
   reproduce this result exactly when hardware calibration is disabled.
   TRAF-26 supplies independently routed peer workloads; COMP-88 separately
   owns the donor NCCL extrapolation, which is not equivalent traffic.
+- TRAF-74 (Precision; P1; L): replace the MiniMax full-population packet
+  arm's deterministic balanced assignment surrogate with independently
+  observed per-rank expert assignments. The corrected surrogate routes whole
+  token-expert assignments only to destinations they reach and preserves its
+  exact off path, but it does not identify a deployed engine's routing
+  distribution. Freeze at least two routing concentrations and two
+  expert-parallel widths before capture. Acceptance reports distinct
+  destinations per source, cross-node senders per receiver, phase makespan and
+  the resulting TTFT or TPOT change against held-out multi-node evidence.
+  TRAF-26 owns supplying complete peer workloads; this entry owns the active
+  surrogate's routing-geometry precision.
+- TRAF-75 (Precision; P1; M): propagate separate expert-dispatch and
+  expert-combine element widths from supported framework configuration through
+  the execution graph and traffic lowering. The traffic seam accepts explicit
+  directional precision, while callers that omit it retain the exact symmetric
+  model-dtype baseline. Acceptance covers FP8 dispatch with ordinary BF16
+  combine, an explicitly enabled low-precision combine mode, and the symmetric
+  bypass, then demonstrates the expected byte and TTFT or TPOT changes through
+  the supported metric chain. This entry owns combine-precision selection;
+  TRAF-74 owns destination geometry and TRAF-73 owns transport calibration.
 - TRAF-20 (Precision; P2; M): qualify the delivered `loggopsim-ideal`
   fast level for schedule-shape studies that do not need per-flow transport
   behavior. The

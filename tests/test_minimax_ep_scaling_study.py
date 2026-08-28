@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import importlib.util
 import json
 import os
 import subprocess
@@ -19,6 +20,8 @@ RESULTS_CSV_SHA256 = "b806306e2b2bc9ff81f4a0895fbc5694845e423fd37171d32c45ff98a5
 PNG_SHA256 = "e7c2b72fa85bf4cd9bf1169e6371bb164382e39016c0613d3e8029d9c81ebf85"
 PDF_SHA256 = "3efe36eda7d08706176e6169162827e8cfcb7e15e9d3d3d913df46ffaebd01f1"
 WIDTHS = (8, 32, 128, 256)
+FIRST_FREEZE_SHA256 = "9b355278c779c7834d18eaf3b19d16929f7b1800926e0ba1ba271f14a5d613ed"
+CORRECTED_FREEZE_SHA256 = "b237945a945e1b1500ab299cf81faf20e704541f6c3e591b1cf90c418b5bb116"
 
 
 def _sha256(path: Path) -> str:
@@ -27,6 +30,54 @@ def _sha256(path: Path) -> str:
 
 def _record() -> dict[str, object]:
     return json.loads(RECORD.read_text(encoding="utf-8"))
+
+
+def _runner():
+    spec = importlib.util.spec_from_file_location(
+        "simllm_minimax_ep_scaling_runner",
+        STUDY / "run_study.py",
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_both_expectation_freezes_are_immutable() -> None:
+    assert _sha256(STUDY / "expectations.md") == FIRST_FREEZE_SHA256
+    assert _sha256(STUDY / "expectations_v2.md") == CORRECTED_FREEZE_SHA256
+
+
+def test_corrected_dense_population_and_extrapolation_are_predeclared() -> None:
+    runner = _runner()
+    config = runner._load_config()
+    assert config["chronology"]["corrected_expectations_commit"] == "4d1e41c"
+    assert config["void_first_run"]["published_headline_ratio"] == 0.2742607736975033
+
+    ep8 = runner._dense_packet_phases(config, width=8)
+    assert len(ep8) == 2
+    assert all(len(phase.phase.segments) == 56 for phase in ep8)
+    assert all(phase.fabric_segments == () for phase in ep8)
+    assert all(phase.nvlink_bytes == 56 * 24_576 for phase in ep8)
+
+    ep32 = runner._dense_packet_phases(config, width=32)
+    assert all(len(phase.phase.segments) == 992 for phase in ep32)
+    assert all(len(phase.fabric_segments) == 768 for phase in ep32)
+    assert all(len(phase.nvlink_segments) == 224 for phase in ep32)
+
+    extrapolated = runner._extrapolate_dense_packet_width(
+        config,
+        width=256,
+        anchor={
+            "expert_parallel": 128,
+            "layer_packet_ms": 0.5,
+            "population_status": "measured full rank and message population",
+        },
+    )
+    assert extrapolated["layer_packet_ms"] == 0.5 * 31 / 15
+    assert extrapolated["simulated_messages_per_layer"] == 0
+    assert extrapolated["represented_messages"] == 2 * 256 * 255 * 65
+    assert extrapolated["extrapolation"]["anchor_expert_parallel"] == 128
 
 
 def test_tracked_minimax_record_is_locked_and_nonvoid() -> None:

@@ -1,7 +1,8 @@
 {
-  "schema": "simllm-minimax-ep-scaling-study-config-v1",
+  "schema": "simllm-minimax-ep-scaling-study-config-v2",
   "chronology": {
     "expectations_commit": "61b66c4",
+    "corrected_expectations_commit": "4d1e41c",
     "frozen_before_implementation": true,
     "oracle_collection": "live pinned SDK in a fresh process"
   },
@@ -200,6 +201,24 @@
           "line": 309
         }
       ]
+    },
+    {
+      "id": "A-15",
+      "behavior": "price sparse dispatch at one FP8 byte per element and ordinary combine at two BF16 bytes per element because low-precision combine is a separate explicit mode",
+      "sources": [
+        {
+          "file": "aiconfigurator_core/sdk/operations/moe.py",
+          "line": 2099
+        },
+        {
+          "file": "aiconfigurator_core/sdk/operations/moe.py",
+          "line": 2114
+        },
+        {
+          "file": "aiconfigurator_core/sdk/operations/moe.py",
+          "line": 2360
+        }
+      ]
     }
   ],
   "operating_point": {
@@ -219,18 +238,72 @@
     "ring_cam_wire_capacity_bytes": 2097152,
     "switch_shared_buffer_bytes": 33554432
   },
+  "strategies": {
+    "dense_sm90_general_fallback": {
+      "name": "dense SM90 general fallback",
+      "logical_traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements",
+      "external_pricing_definition": "NCCL table with effective ranks min(E, 8) and fixed 450 GB/s intra-node and 50 GB/s inter-node extrapolation tiers",
+      "packet_pricing_definition": "the identical dense half-precision collective and bytes expanded as synchronized direct all-pairs transfers over the declared placement"
+    },
+    "sparse_routed_payload": {
+      "name": "sparse routed expert payload",
+      "logical_traffic_definition": "top-k token assignments routed only to realized expert-owner ranks, with FP8 dispatch and BF16 combine",
+      "dispatch_bytes_per_element": 1,
+      "combine_bytes_per_element": 2,
+      "precision_justification": "the represented sparse path quantizes dispatch to FP8 and returns ordinary combine in BF16; low-precision combine is a separate mode and is disabled"
+    }
+  },
   "packet_sampling": {
     "sampled": true,
     "sampled_layers": [
       0
     ],
     "represented_layer_executions": 65,
-    "rule": "simulate layer 0 and multiply the serial dispatch-plus-combine layer makespan by 65; widths through EP 128 retain every directed pair, while EP 256 retains every source and one receiver at GPU-local index zero per node",
-    "peer_population": "full through EP 128; at EP 256 sample one receiver per 8-GPU node with all 256 sources retained",
-    "full_population_max_width": 128,
-    "receiver_stride_at_widest": 8,
-    "label_full": "sampled layer: full peer population, one layer of 65",
-    "label_receiver_subset": "sampled layer and peers: one receiver per node with full sender fan-in, one layer of 65"
+    "rule": "simulate layer 0 and multiply the serial dispatch-plus-combine layer makespan by 65",
+    "label_full": "sampled layer only: full rank and message population, one layer of 65",
+    "dense_direct_full_population_max_width": 128,
+    "dense_widest_anchor_width": 128,
+    "dense_widest_extrapolation_rule": "multiply the EP 128 measured per-layer makespan by the ratio of EP 256 to EP 128 cross-node bytes per rank, (256 - 8) / (128 - 8) = 31 / 15; message size, link rate, placement rule and represented layer count stay fixed"
+  },
+  "void_first_run": {
+    "status": "VOID against FG-4",
+    "run_commit": "df47c6532c71312d36eb96ed528f6ebd772e5952",
+    "published_headline_ratio": 0.2742607736975033,
+    "rows": [
+      {
+        "expert_parallel": 8,
+        "packet_dispatch_combine_ms": 0.02496,
+        "packet_priced_step_ms": 12.087042942232175,
+        "packet_to_external_step_ratio": 0.8643398194341548,
+        "simulated_messages_per_layer": 112,
+        "population_status": "full all-pairs fluidized population"
+      },
+      {
+        "expert_parallel": 32,
+        "packet_dispatch_combine_ms": 4.0350336,
+        "packet_priced_step_ms": 11.72994880117192,
+        "packet_to_external_step_ratio": 0.4262782480503487,
+        "simulated_messages_per_layer": 1984,
+        "population_status": "full all-pairs fluidized population"
+      },
+      {
+        "expert_parallel": 128,
+        "packet_dispatch_combine_ms": 5.5890432,
+        "packet_priced_step_ms": 13.679158504693262,
+        "packet_to_external_step_ratio": 0.3048657016451342,
+        "simulated_messages_per_layer": 32512,
+        "population_status": "full all-pairs fluidized population"
+      },
+      {
+        "expert_parallel": 256,
+        "packet_dispatch_combine_ms": 7.1043648,
+        "packet_priced_step_ms": 16.73784003997693,
+        "packet_to_external_step_ratio": 0.2742607736975033,
+        "simulated_messages_per_layer": 16320,
+        "full_messages_per_layer": 130560,
+        "population_status": "one eighth receiver sample without a full-population anchor"
+      }
+    ]
   },
   "widths": [
     {

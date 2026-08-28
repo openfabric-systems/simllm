@@ -16,7 +16,6 @@ import subprocess
 import sys
 import time
 from collections import defaultdict
-from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
@@ -27,31 +26,19 @@ if os.fspath(ROOT) not in sys.path:
 
 CONFIG_PATH = STUDY / "study_config.json"
 EXPECTATIONS_PATH = STUDY / "expectations.md"
+CORRECTED_EXPECTATIONS_PATH = STUDY / "expectations_v2.md"
 TRACKED_RECORD = STUDY / "record.json"
 TRACKED_CSV = STUDY / "results.csv"
 TRACKED_FIGURES = STUDY / "figures"
 
-BULK_ROOT_ENV = "SIMLLM_MINIMAX_T1_BULK_ROOT"
+BULK_ROOT_ENV = "SIMLLM_MINIMAX_FIX_BULK_ROOT"
 EXTERNAL_VENV_ENV = "SIMLLM_EXTERNAL_AIC_VENV"
 HTSIM_ENV = "SIMLLM_HTSIM_RNIC"
 TXT2BIN_ENV = "SIMLLM_TXT2BIN"
-SCHEMA = "simllm-minimax-ep-scaling-record-v1"
-QWEN_REFERENCE_RATIO = 1.042715399805
+SCHEMA = "simllm-minimax-ep-scaling-record-v2"
+LEGACY_SCHEMA = "simllm-minimax-ep-scaling-record-v1"
 WALL_BOUND_SECONDS = 3600.0
-EXPECTED_FREEZE_COMMITS = ("61b66c4", "5a29bb0")
-AI_CONFIGURATOR_TRAFFIC_MODEL = (
-    "half-precision NCCL all-gather plus reduce-scatter over tokens times hidden "
-    "times expert width elements"
-)
-SIMLLM_TRAFFIC_MODEL = (
-    "uniform routed FP8 expert payload over every directed rank pair, with "
-    "placement, routing, queues and receiver fan-in"
-)
-TRAFFIC_COMPARISON_RULE = (
-    "replace the AIConfigurator dispatch surrogate with the SimLLM packet "
-    "duration on the same non-dispatch timing base; the traffic abstractions "
-    "are not equivalent"
-)
+EXPECTED_FREEZE_COMMITS = ("61b66c4", "5a29bb0", "4d1e41c")
 
 
 def _json_bytes(value: Any) -> bytes:
@@ -130,12 +117,19 @@ def _new_attempt(root: Path) -> tuple[Path, int]:
 
 def _load_config() -> dict[str, Any]:
     config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
-    if config.get("schema") != "simllm-minimax-ep-scaling-study-config-v1":
+    if config.get("schema") != "simllm-minimax-ep-scaling-study-config-v2":
         raise SystemExit("study_config.json has an unsupported schema")
     if [row["expert_parallel"] for row in config["widths"]] != [8, 32, 128, 256]:
         raise SystemExit("study_config.json does not carry the frozen width sweep")
     if config["model"].get("nextn") != 3:
         raise SystemExit("the faithful study requires explicit nextn=3")
+    sampling = config["packet_sampling"]
+    if sampling.get("dense_widest_anchor_width") != 128:
+        raise SystemExit("the corrected study requires the frozen EP 128 dense anchor")
+    if "(256 - 8) / (128 - 8) = 31 / 15" not in sampling.get(
+        "dense_widest_extrapolation_rule", ""
+    ):
+        raise SystemExit("the corrected dense extrapolation rule is missing")
     return config
 
 
@@ -330,58 +324,22 @@ Switch_Latency_ns 0
     return path
 
 
-def _run_packet_width(
+def _simulate_packet_phases(
     config: dict[str, Any],
     *,
     width: int,
     output_dir: Path,
     htsim: Path,
     txt2bin: Path,
+    phases: tuple[Any, ...],
 ) -> dict[str, Any]:
     from simllm.backends import HtsimRnicConfig, run_htsim_rnic
-    from simllm.compute import ModelDims
-    from simllm.core import RequestPhase, ScheduledRequest, StepRecord
     from simllm.goal import to_binary
     from simllm.placement import RankMapper, declared_manifest
-    from simllm.traffic import plan_step_locality, render_fabric_phase_goal
-    from simllm.traffic.locality import (
-        CollectiveCommunicationPhase,
-        classify_step_locality,
-    )
+    from simllm.traffic import render_fabric_phase_goal
 
-    model = config["model"]
     operating = config["operating_point"]
-    sampling = config["packet_sampling"]
     output_dir.mkdir(parents=True)
-    tokens_per_rank = operating["local_batch_per_attention_dp_rank"] * (
-        model["nextn"] + 1
-    )
-    dims = ModelDims(
-        num_layers=1,
-        hidden_size=model["hidden_size"],
-        intermediate_size=model["intermediate_size"],
-        num_heads=model["num_attention_heads"],
-        num_kv_heads=model["num_key_value_heads"],
-        head_size=model["head_dim"],
-        vocab_size=model["vocab_size"],
-        dtype_bytes=1,
-        num_experts=model["num_local_experts"],
-        top_k=model["num_experts_per_tok"],
-        moe_intermediate_size=model["intermediate_size"],
-        local_num_experts=model["num_local_experts"] // width,
-    )
-    record = StepRecord(
-        step_index=0,
-        virtual_time_ps=0,
-        scheduled=[
-            ScheduledRequest(
-                "minimax-decode",
-                RequestPhase.DECODE,
-                num_new_tokens=tokens_per_rank,
-                context_length=operating["input_length"] + 1,
-            )
-        ],
-    )
     placement = declared_manifest(
         tp=1,
         pp=1,
@@ -390,59 +348,14 @@ def _run_packet_width(
         gpus_per_node=operating["gpus_per_node"],
     )
     mapper = RankMapper(placement)
-    plan = plan_step_locality(
-        record,
-        dims,
-        (0,),
-        ep_ranks=tuple(range(width)),
-        uniform_tokens_per_rank=tokens_per_rank,
-        rank_mapper=mapper,
-    )
     topology = _write_width_clos(
         output_dir / f"clos-{width}-400g.topo",
         width=width,
         gpus_per_node=operating["gpus_per_node"],
     )
-    expected_messages = 2 * width * (width - 1)
-    per_pair_bytes = (
-        tokens_per_rank
-        * model["num_experts_per_tok"]
-        * model["hidden_size"]
-        // width
-    )
-    expected_bytes = expected_messages * per_pair_bytes
-    if plan.total_directed_bytes != expected_bytes:
-        raise RuntimeError("packet projection failed directed-byte conservation")
-    if plan.fabric_segments + plan.nvlink_segments != expected_messages:
-        raise RuntimeError("packet projection failed message conservation")
-
-    peer_subset = width > int(sampling["full_population_max_width"])
-    simulated_phases = plan.phases
-    if peer_subset:
-        receiver_stride = int(sampling["receiver_stride_at_widest"])
-        selected = tuple(range(0, width, receiver_stride))
-        selected_phases = tuple(
-            CollectiveCommunicationPhase(
-                phase_id=classified.phase.phase_id,
-                layer=classified.phase.layer,
-                participants=classified.phase.participants,
-                segments=tuple(
-                    segment
-                    for segment in classified.phase.segments
-                    if segment.destination_rank in selected
-                ),
-                operation_id=classified.phase.operation_id,
-            )
-            for classified in plan.phases
-        )
-        simulated_phases = classify_step_locality(
-            selected_phases,
-            rank_mapper=mapper,
-        ).phases
-
-    phases = []
-    for classified in simulated_phases:
-        phase_name = classified.phase.phase_id.rsplit("-", 1)[-1]
+    results = []
+    for classified in phases:
+        phase_name = classified.phase.phase_id.replace(":", "-")
         flow_rows = []
         fabric_jct_ps = 0
         goal_sha256 = None
@@ -478,7 +391,7 @@ def _run_packet_width(
             goal_sha256 = _sha256_file(goal_path)
             goal_binary_sha256 = _sha256_file(goal_bin)
             completion_sha256 = _sha256_file(completion_csv)
-        phases.append(
+        results.append(
             {
                 "phase": phase_name,
                 "fabric_segments": len(classified.fabric_segments),
@@ -499,43 +412,296 @@ def _run_packet_width(
                 "completion_csv_sha256": completion_sha256,
             }
         )
-    layer_packet_ps = sum(phase["phase_duration_ps"] for phase in phases)
-    represented = sampling["represented_layer_executions"]
-    simulated_messages = sum(
-        len(phase.fabric_segments) + len(phase.nvlink_segments)
-        for phase in simulated_phases
+    layer_packet_ps = sum(phase["phase_duration_ps"] for phase in results)
+    return {
+        "topology_sha256": _sha256_file(topology),
+        "layer_packet_ps": layer_packet_ps,
+        "layer_packet_ms": layer_packet_ps / 1_000_000_000,
+        "simulated_messages_per_layer": sum(
+            phase["fabric_segments"] + phase["nvlink_segments"]
+            for phase in results
+        ),
+        "simulated_bytes_per_layer": sum(
+            phase["fabric_bytes"] + phase["nvlink_bytes"] for phase in results
+        ),
+        "phases": results,
+    }
+
+
+def _sparse_packet_width(
+    config: dict[str, Any],
+    *,
+    width: int,
+    output_dir: Path,
+    htsim: Path,
+    txt2bin: Path,
+) -> dict[str, Any]:
+    from simllm.compute import ModelDims
+    from simllm.core import RequestPhase, ScheduledRequest, StepRecord
+    from simllm.placement import RankMapper, declared_manifest
+    from simllm.traffic import MoeActivationPrecision, plan_step_locality
+
+    model = config["model"]
+    operating = config["operating_point"]
+    strategy = config["strategies"]["sparse_routed_payload"]
+    sampling = config["packet_sampling"]
+    tokens_per_rank = operating["local_batch_per_attention_dp_rank"] * (
+        model["nextn"] + 1
     )
-    simulated_bytes = sum(
-        phase.fabric_bytes + phase.nvlink_bytes for phase in simulated_phases
+    precision = MoeActivationPrecision(
+        dispatch_bytes_per_element=int(strategy["dispatch_bytes_per_element"]),
+        combine_bytes_per_element=int(strategy["combine_bytes_per_element"]),
     )
+    dims = ModelDims(
+        num_layers=1,
+        hidden_size=model["hidden_size"],
+        intermediate_size=model["intermediate_size"],
+        num_heads=model["num_attention_heads"],
+        num_kv_heads=model["num_key_value_heads"],
+        head_size=model["head_dim"],
+        vocab_size=model["vocab_size"],
+        dtype_bytes=precision.dispatch_bytes_per_element,
+        num_experts=model["num_local_experts"],
+        top_k=model["num_experts_per_tok"],
+        moe_intermediate_size=model["intermediate_size"],
+        local_num_experts=model["num_local_experts"] // width,
+    )
+    record = StepRecord(
+        step_index=0,
+        virtual_time_ps=0,
+        scheduled=[
+            ScheduledRequest(
+                "minimax-decode",
+                RequestPhase.DECODE,
+                num_new_tokens=tokens_per_rank,
+                context_length=operating["input_length"] + 1,
+            )
+        ],
+    )
+    placement = declared_manifest(
+        tp=1,
+        pp=1,
+        dp=width,
+        nodes=width // operating["gpus_per_node"],
+        gpus_per_node=operating["gpus_per_node"],
+    )
+    mapper = RankMapper(placement)
+    plan = plan_step_locality(
+        record,
+        dims,
+        (0,),
+        ep_ranks=tuple(range(width)),
+        uniform_tokens_per_rank=tokens_per_rank,
+        activation_precision=precision,
+        rank_mapper=mapper,
+    )
+    simulated = _simulate_packet_phases(
+        config,
+        width=width,
+        output_dir=output_dir,
+        htsim=htsim,
+        txt2bin=txt2bin,
+        phases=plan.phases,
+    )
+    dispatch = plan.phases[0]
+    combine = plan.phases[1]
+    dispatch_pairs = dispatch.phase.segments
+    cross_node_senders: dict[int, set[int]] = defaultdict(set)
+    destinations_by_source: dict[int, set[int]] = defaultdict(set)
+    for segment in dispatch_pairs:
+        destinations_by_source[segment.source_rank].add(segment.destination_rank)
+    for segment in dispatch.fabric_segments:
+        cross_node_senders[segment.destination_rank].add(segment.source_rank)
+    expected_destination_count = (width - 1) * (
+        1 - ((width - model["num_experts_per_tok"]) / width) ** tokens_per_rank
+    )
+    cross_node_candidates = width - operating["gpus_per_node"]
+    expected_cross_node_senders = cross_node_candidates * (
+        1 - ((width - model["num_experts_per_tok"]) / width) ** tokens_per_rank
+    )
+    realized_destination_count = sum(
+        len(destinations_by_source[source]) for source in range(width)
+    ) / width
+    realized_cross_node_senders = sum(
+        len(cross_node_senders[destination]) for destination in range(width)
+    ) / width
+    represented = int(sampling["represented_layer_executions"])
+    dispatch_bytes = dispatch.fabric_bytes + dispatch.nvlink_bytes
+    combine_bytes = combine.fabric_bytes + combine.nvlink_bytes
+    return {
+        **simulated,
+        "expert_parallel": width,
+        "strategy": strategy["name"],
+        "traffic_definition": strategy["logical_traffic_definition"],
+        "precision_justification": strategy["precision_justification"],
+        "dispatch_bytes_per_element": precision.dispatch_bytes_per_element,
+        "combine_bytes_per_element": precision.combine_bytes_per_element,
+        "sampled": True,
+        "sample_label": sampling["label_full"],
+        "sampling_rule": sampling["rule"],
+        "population_status": "full rank and realized-message population",
+        "population_scored": False,
+        "dispatch_bytes_per_layer": dispatch_bytes,
+        "combine_bytes_per_layer": combine_bytes,
+        "dispatch_bytes_per_rank": dispatch_bytes / width,
+        "combine_bytes_per_rank": combine_bytes / width,
+        "dispatch_plus_combine_bytes_per_rank": (
+            dispatch_bytes + combine_bytes
+        )
+        / width,
+        "dispatch_plus_combine_fabric_bytes_per_rank": (
+            dispatch.fabric_bytes + combine.fabric_bytes
+        )
+        / width,
+        "represented_layer_executions": represented,
+        "represented_messages": simulated["simulated_messages_per_layer"]
+        * represented,
+        "represented_bytes": simulated["simulated_bytes_per_layer"] * represented,
+        "packet_dispatch_combine_ms": simulated["layer_packet_ms"] * represented,
+        "routing_geometry": {
+            "expected_distinct_destinations_per_source": expected_destination_count,
+            "realized_distinct_destinations_per_source": realized_destination_count,
+            "expected_cross_node_senders_per_receiver": expected_cross_node_senders,
+            "realized_cross_node_senders_per_receiver": realized_cross_node_senders,
+            "maximum_cross_node_senders_per_receiver": max(
+                map(len, cross_node_senders.values()), default=0
+            ),
+        },
+    }
+
+
+def _dense_packet_phases(config: dict[str, Any], *, width: int) -> tuple[Any, ...]:
+    from simllm.placement import RankMapper, declared_manifest
+    from simllm.traffic import (
+        CollectiveCommunicationPhase,
+        DirectedCollectiveSegment,
+        classify_step_locality,
+    )
+
+    operating = config["operating_point"]
+    tokens_per_rank = operating["local_batch_per_attention_dp_rank"] * (
+        config["model"]["nextn"] + 1
+    )
+    chunk_bytes = tokens_per_rank * config["model"]["hidden_size"] * 2
+    ranks = tuple(range(width))
+    phases = tuple(
+        CollectiveCommunicationPhase(
+            phase_id=f"family-d:{phase}",
+            layer=0,
+            participants=ranks,
+            segments=tuple(
+                DirectedCollectiveSegment(
+                    source_rank=source,
+                    destination_rank=destination,
+                    payload_bytes=chunk_bytes,
+                    tag=2000 + phase_index,
+                )
+                for source in ranks
+                for destination in ranks
+                if source != destination
+            ),
+            operation_id=f"family-d:{phase}",
+        )
+        for phase_index, phase in enumerate(("dense-all-gather", "dense-reduce-scatter"))
+    )
+    placement = declared_manifest(
+        tp=1,
+        pp=1,
+        dp=width,
+        nodes=width // operating["gpus_per_node"],
+        gpus_per_node=operating["gpus_per_node"],
+    )
+    return classify_step_locality(
+        phases,
+        rank_mapper=RankMapper(placement),
+    ).phases
+
+
+def _dense_packet_width(
+    config: dict[str, Any],
+    *,
+    width: int,
+    output_dir: Path,
+    htsim: Path,
+    txt2bin: Path,
+) -> dict[str, Any]:
+    strategy = config["strategies"]["dense_sm90_general_fallback"]
+    sampling = config["packet_sampling"]
+    simulated = _simulate_packet_phases(
+        config,
+        width=width,
+        output_dir=output_dir,
+        htsim=htsim,
+        txt2bin=txt2bin,
+        phases=_dense_packet_phases(config, width=width),
+    )
+    represented = int(sampling["represented_layer_executions"])
+    return {
+        **simulated,
+        "expert_parallel": width,
+        "strategy": strategy["name"],
+        "traffic_definition": strategy["logical_traffic_definition"],
+        "packet_pricing_definition": strategy["packet_pricing_definition"],
+        "sampled": True,
+        "sample_label": sampling["label_full"],
+        "sampling_rule": sampling["rule"],
+        "population_status": "measured full rank and message population",
+        "population_scored": True,
+        "represented_layer_executions": represented,
+        "represented_messages": simulated["simulated_messages_per_layer"]
+        * represented,
+        "represented_bytes": simulated["simulated_bytes_per_layer"] * represented,
+        "packet_dispatch_combine_ms": simulated["layer_packet_ms"] * represented,
+        "extrapolation": None,
+    }
+
+
+def _extrapolate_dense_packet_width(
+    config: dict[str, Any],
+    *,
+    width: int,
+    anchor: dict[str, Any],
+) -> dict[str, Any]:
+    strategy = config["strategies"]["dense_sm90_general_fallback"]
+    sampling = config["packet_sampling"]
+    operating = config["operating_point"]
+    anchor_width = int(anchor["expert_parallel"])
+    local_width = int(operating["gpus_per_node"])
+    factor = (width - local_width) / (anchor_width - local_width)
+    tokens_per_rank = operating["local_batch_per_attention_dp_rank"] * (
+        config["model"]["nextn"] + 1
+    )
+    chunk_bytes = tokens_per_rank * config["model"]["hidden_size"] * 2
+    messages_per_layer = 2 * width * (width - 1)
+    bytes_per_layer = messages_per_layer * chunk_bytes
+    represented = int(sampling["represented_layer_executions"])
+    layer_packet_ms = anchor["layer_packet_ms"] * factor
     return {
         "expert_parallel": width,
+        "strategy": strategy["name"],
+        "traffic_definition": strategy["logical_traffic_definition"],
+        "packet_pricing_definition": strategy["packet_pricing_definition"],
         "sampled": True,
-        "sample_label": (
-            sampling["label_receiver_subset"]
-            if peer_subset
-            else sampling["label_full"]
-        ),
+        "sample_label": sampling["label_full"],
         "sampling_rule": sampling["rule"],
-        "peer_population": (
-            "one receiver per node with every source retained"
-            if peer_subset
-            else "full"
-        ),
-        "peer_subset": peer_subset,
-        "topology_sha256": _sha256_file(topology),
-        "messages_per_sampled_layer": expected_messages,
-        "per_pair_bytes": per_pair_bytes,
-        "bytes_per_sampled_layer": expected_bytes,
-        "simulated_messages_per_sampled_layer": simulated_messages,
-        "simulated_bytes_per_sampled_layer": simulated_bytes,
-        "simulated_message_fraction": simulated_messages / expected_messages,
+        "population_status": "FG-10 extrapolation from measured full EP 128 population",
+        "population_scored": True,
+        "simulated_messages_per_layer": 0,
+        "simulated_bytes_per_layer": 0,
         "represented_layer_executions": represented,
-        "represented_messages": expected_messages * represented,
-        "represented_bytes": expected_bytes * represented,
-        "packet_dispatch_combine_ps": layer_packet_ps * represented,
-        "packet_dispatch_combine_ms": layer_packet_ps * represented / 1_000_000_000,
-        "phases": phases,
+        "represented_messages": messages_per_layer * represented,
+        "represented_bytes": bytes_per_layer * represented,
+        "layer_packet_ps": round(layer_packet_ms * 1_000_000_000),
+        "layer_packet_ms": layer_packet_ms,
+        "packet_dispatch_combine_ms": layer_packet_ms * represented,
+        "topology_sha256": None,
+        "phases": [],
+        "extrapolation": {
+            "anchor_expert_parallel": anchor_width,
+            "anchor_population_status": anchor["population_status"],
+            "cross_node_bytes_per_rank_factor": factor,
+            "rule": sampling["dense_widest_extrapolation_rule"],
+        },
     }
 
 
@@ -550,6 +716,7 @@ def _run_evaluation(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
     operation_database = ExternalOperationDatabase.load()
     nccl_database = ExternalNcclDatabase.load()
     widths = []
+    dense_anchor: dict[str, Any] | None = None
     for frozen in config["widths"]:
         width = int(frozen["expert_parallel"])
         model = ExternalModelConfig.from_mapping(
@@ -581,16 +748,40 @@ def _run_evaluation(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
             operations["generation_moe_pre_dispatch"]
             + operations["generation_moe_post_dispatch"]
         )
-        packet = _run_packet_width(
+        sparse_packet = _sparse_packet_width(
             config,
             width=width,
-            output_dir=output_dir / f"ep-{width}",
+            output_dir=output_dir / f"ep-{width}" / "family-s",
             htsim=htsim,
             txt2bin=txt2bin,
         )
-        packet_step = composed.total.latency_ms - dispatch + packet[
-            "packet_dispatch_combine_ms"
-        ]
+        if width <= int(
+            config["packet_sampling"]["dense_direct_full_population_max_width"]
+        ):
+            dense_packet = _dense_packet_width(
+                config,
+                width=width,
+                output_dir=output_dir / f"ep-{width}" / "family-d",
+                htsim=htsim,
+                txt2bin=txt2bin,
+            )
+            if width == int(
+                config["packet_sampling"]["dense_widest_anchor_width"]
+            ):
+                dense_anchor = dense_packet
+        else:
+            if dense_anchor is None:
+                raise RuntimeError("dense extrapolation reached before its full anchor")
+            dense_packet = _extrapolate_dense_packet_width(
+                config,
+                width=width,
+                anchor=dense_anchor,
+            )
+        sparse_step = (
+            composed.total.latency_ms
+            - dispatch
+            + sparse_packet["packet_dispatch_combine_ms"]
+        )
         widths.append(
             {
                 "expert_parallel": width,
@@ -599,15 +790,22 @@ def _run_evaluation(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
                 "composer_dispatch_ms": dispatch,
                 "composer_dispatch_hex": dispatch.hex(),
                 "non_dispatch_timing_base_ms": composed.total.latency_ms - dispatch,
-                "packet_priced_step_ms": packet_step,
-                "packet_to_aiconfigurator_ratio": (
-                    packet_step / float(frozen["live_decode_step_ms"])
+                "family_d_packet_dispatch_combine_ms": dense_packet[
+                    "packet_dispatch_combine_ms"
+                ],
+                "family_d_packet_to_external_ratio": (
+                    dense_packet["packet_dispatch_combine_ms"] / dispatch
+                ),
+                "family_s_packet_priced_step_ms": sparse_step,
+                "family_s_packet_to_external_step_ratio": (
+                    sparse_step / float(frozen["live_decode_step_ms"])
                 ),
                 "operation_evidence_classes": {
                     entry.operation: entry.evidence_class for entry in composed.operations
                 },
                 "packet_evidence_class": "SIM-DERIVED",
-                "packet": packet,
+                "dense_packet": dense_packet,
+                "sparse_packet": sparse_packet,
             }
         )
     return {
@@ -684,9 +882,15 @@ def _score(
     composed_by_width = {
         row["expert_parallel"]: row for row in evaluation["widths"]
     }
+    dense = config["strategies"]["dense_sm90_general_fallback"]
+    sparse = config["strategies"]["sparse_routed_payload"]
+    void_by_width = {
+        int(row["expert_parallel"]): row for row in config["void_first_run"]["rows"]
+    }
     rows = []
     e_cells = []
     c_cells = []
+    d_cells = []
     for frozen in config["widths"]:
         width = int(frozen["expert_parallel"])
         live = live_by_width[width]
@@ -696,6 +900,8 @@ def _score(
         ]
         quotient = composed["composer_decode_step_ms"] / live["decode_step_ms"]
         composition_passed = 0.98 <= quotient <= 1.02
+        d_ratio = composed["family_d_packet_to_external_ratio"]
+        d_passed = d_ratio >= 1.0
         e_cells.append(
             {
                 "expert_parallel": width,
@@ -713,64 +919,134 @@ def _score(
                 "passed": composition_passed,
             }
         )
+        d_cells.append(
+            {
+                "expert_parallel": width,
+                "ratio": d_ratio,
+                "lower": 1.0,
+                "passed": d_passed,
+                "population_status": composed["dense_packet"][
+                    "population_status"
+                ],
+            }
+        )
+        void_row = void_by_width[width]
         rows.append(
             {
                 "expert_parallel": width,
-                "sampled": composed["packet"]["sampled"],
-                "sample_label": composed["packet"]["sample_label"],
-                "peer_subset": composed["packet"]["peer_subset"],
+                "sampled": True,
+                "sample_label": composed["sparse_packet"]["sample_label"],
                 "aiconfigurator_step_ms": live["decode_step_ms"],
                 "aiconfigurator_dispatch_ms": live["dispatch_ms"],
                 "dispatch_share": live["dispatch_ms"] / live["decode_step_ms"],
                 "composer_step_ms": composed["composer_decode_step_ms"],
                 "composer_quotient": quotient,
-                "packet_dispatch_combine_ms": composed["packet"][
+                "family_d_external_arm": "D-external",
+                "family_d_external_strategy": dense["name"],
+                "family_d_external_traffic_definition": dense[
+                    "logical_traffic_definition"
+                ],
+                "family_d_external_pricing_definition": dense[
+                    "external_pricing_definition"
+                ],
+                "family_d_packet_arm": "D-packet",
+                "family_d_packet_strategy": dense["name"],
+                "family_d_packet_traffic_definition": dense[
+                    "logical_traffic_definition"
+                ],
+                "family_d_packet_pricing_definition": dense[
+                    "packet_pricing_definition"
+                ],
+                "family_d_external_ms": live["dispatch_ms"],
+                "family_d_packet_ms": composed["dense_packet"][
                     "packet_dispatch_combine_ms"
                 ],
-                "simllm_step_ms": composed["packet_priced_step_ms"],
-                "ratio": composed["packet_to_aiconfigurator_ratio"],
-                "represented_messages": composed["packet"]["represented_messages"],
-                "represented_bytes": composed["packet"]["represented_bytes"],
-                "simulated_messages_per_sampled_layer": composed["packet"][
-                    "simulated_messages_per_sampled_layer"
+                "family_d_ratio": d_ratio,
+                "family_d_outcome": "PASS" if d_passed else "REFUTED",
+                "family_d_population_status": composed["dense_packet"][
+                    "population_status"
                 ],
-                "simulated_message_fraction": composed["packet"][
-                    "simulated_message_fraction"
+                "family_d_simulated_messages_per_layer": composed["dense_packet"][
+                    "simulated_messages_per_layer"
                 ],
-                "fabric_messages_per_sampled_layer": sum(
-                    phase["fabric_segments"] for phase in composed["packet"]["phases"]
+                "family_d_represented_messages": composed["dense_packet"][
+                    "represented_messages"
+                ],
+                "family_d_extrapolation": composed["dense_packet"]["extrapolation"],
+                "family_s_dense_arm": "S-dense-external",
+                "family_s_dense_strategy": dense["name"],
+                "family_s_dense_traffic_definition": dense[
+                    "logical_traffic_definition"
+                ],
+                "family_s_sparse_arm": "S-sparse-packet",
+                "family_s_sparse_strategy": sparse["name"],
+                "family_s_sparse_traffic_definition": sparse[
+                    "logical_traffic_definition"
+                ],
+                "family_s_sparse_dispatch_bytes_per_element": sparse[
+                    "dispatch_bytes_per_element"
+                ],
+                "family_s_sparse_combine_bytes_per_element": sparse[
+                    "combine_bytes_per_element"
+                ],
+                "family_s_sparse_precision_justification": sparse[
+                    "precision_justification"
+                ],
+                "family_s_packet_dispatch_combine_ms": composed["sparse_packet"][
+                    "packet_dispatch_combine_ms"
+                ],
+                "family_s_packet_step_ms": composed[
+                    "family_s_packet_priced_step_ms"
+                ],
+                "family_s_sparse_to_dense_step_ratio": composed[
+                    "family_s_packet_to_external_step_ratio"
+                ],
+                "family_s_population_status": composed["sparse_packet"][
+                    "population_status"
+                ],
+                "family_s_simulated_messages_per_layer": composed[
+                    "sparse_packet"
+                ]["simulated_messages_per_layer"],
+                "family_s_represented_messages": composed["sparse_packet"][
+                    "represented_messages"
+                ],
+                "family_s_dispatch_bytes_per_rank": composed["sparse_packet"][
+                    "dispatch_bytes_per_rank"
+                ],
+                "family_s_combine_bytes_per_rank": composed["sparse_packet"][
+                    "combine_bytes_per_rank"
+                ],
+                "family_s_payload_bytes_per_rank": composed["sparse_packet"][
+                    "dispatch_plus_combine_bytes_per_rank"
+                ],
+                "family_s_routing_geometry": composed["sparse_packet"][
+                    "routing_geometry"
+                ],
+                "void_first_run_status": config["void_first_run"]["status"],
+                "void_first_run_dense_strategy": dense["name"],
+                "void_first_run_dense_traffic_definition": dense[
+                    "logical_traffic_definition"
+                ],
+                "void_first_run_sparse_strategy": (
+                    "sparse all-pairs fluidized FP8 payload"
                 ),
-                "nvlink_messages_per_sampled_layer": sum(
-                    phase["nvlink_segments"] for phase in composed["packet"]["phases"]
+                "void_first_run_sparse_traffic_definition": (
+                    "fractional FP8 bytes over every directed rank pair in both "
+                    "dispatch and combine"
                 ),
+                "void_first_run_packet_dispatch_combine_ms": void_row[
+                    "packet_dispatch_combine_ms"
+                ],
+                "void_first_run_packet_step_ms": void_row["packet_priced_step_ms"],
+                "void_first_run_ratio": void_row[
+                    "packet_to_external_step_ratio"
+                ],
+                "void_first_run_population_status": void_row["population_status"],
                 "e_passed": dispatch_passed,
                 "c_passed": composition_passed,
             }
         )
 
-    ratios = [row["ratio"] for row in rows]
-    n1 = all(right >= left for left, right in pairwise(ratios))
-    n2 = ratios[-1] >= 1.25
-    widest = composed_by_width[256]["packet"]
-    fanin_phases = [phase["fanin"] for phase in widest["phases"]]
-    n3 = {
-        "expert_parallel": 256,
-        "phases": [
-            {"phase": phase["phase"], **phase["fanin"]}
-            for phase in widest["phases"]
-        ],
-        "maximum_receiver_ingress_occupancy_ps": max(
-            phase["ingress_occupancy_ps"] for phase in fanin_phases
-        ),
-        "maximum_simultaneous_senders_per_receiver": max(
-            phase["maximum_simultaneous_senders"] for phase in fanin_phases
-        ),
-        "passed": all(
-            phase["ingress_occupancy_ps"] > 0
-            and phase["maximum_simultaneous_senders"] > 0
-            for phase in fanin_phases
-        ),
-    }
     families = {
         "E": {
             "passed": sum(cell["passed"] for cell in e_cells),
@@ -781,24 +1057,26 @@ def _score(
             "passed": sum(cell["passed"] for cell in c_cells),
             "denominator": 4,
             "cells": c_cells,
+            "interpretation": "end-to-end parity reusing the dispatch code validated by E",
         },
-        "N": {
-            "passed": int(n1) + int(n2) + int(n3["passed"]),
-            "denominator": 3,
-            "bands": {
-                "N1": {
-                    "passed": n1,
-                    "rule": "ratios are non-decreasing with expert-parallel width",
-                    "ratios": ratios,
-                },
-                "N2": {
-                    "passed": n2,
-                    "rule": "widest ratio is at least 1.25",
-                    "actual": ratios[-1],
-                    "lower": 1.25,
-                },
-                "N3": n3,
-            },
+        "D": {
+            "passed": sum(cell["passed"] for cell in d_cells),
+            "denominator": 4,
+            "cells": d_cells,
+            "rule": "D-packet divided by D-external is at least 1.0",
+        },
+        "S": {
+            "scored": False,
+            "cells": [
+                {
+                    "expert_parallel": row["expert_parallel"],
+                    "sparse_to_dense_step_ratio": row[
+                        "family_s_sparse_to_dense_step_ratio"
+                    ],
+                    "population_status": row["family_s_population_status"],
+                }
+                for row in rows
+            ],
         },
         "W": {
             "passed": int(elapsed_seconds <= WALL_BOUND_SECONDS),
@@ -815,6 +1093,40 @@ def _score(
         and all(source.get("file") and source.get("line") for source in adjustment["sources"])
         for adjustment in declared_adjustments
     )
+    routing_guards = []
+    for composed in evaluation["widths"]:
+        if composed["expert_parallel"] != 256:
+            continue
+        geometry = composed["sparse_packet"]["routing_geometry"]
+        expected = geometry["expected_cross_node_senders_per_receiver"]
+        maximum = geometry["maximum_cross_node_senders_per_receiver"]
+        routing_guards.append(
+            maximum == 0 if expected == 0 else maximum <= 1.2 * expected
+        )
+    precision_guard = all(
+        row["sparse_packet"]["dispatch_bytes_per_element"] == 1
+        and row["sparse_packet"]["combine_bytes_per_element"] == 2
+        and "BF16" in row["sparse_packet"]["precision_justification"]
+        for row in evaluation["widths"]
+    )
+    population_guard = all(
+        row["dense_packet"]["population_scored"]
+        and (
+            "measured full" in row["dense_packet"]["population_status"]
+            or (
+                row["dense_packet"]["extrapolation"] is not None
+                and row["dense_packet"]["extrapolation"][
+                    "anchor_expert_parallel"
+                ]
+                == 128
+                and "measured full"
+                in row["dense_packet"]["extrapolation"][
+                    "anchor_population_status"
+                ]
+            )
+        )
+        for row in evaluation["widths"]
+    )
     fatal_guards = {
         "FG-1": adjustments_are_sourced
         and all(
@@ -827,57 +1139,44 @@ def _score(
             for row in evaluation["widths"]
         ),
         "FG-3": config["model"]["nextn"] == 3,
-        "FG-4": AI_CONFIGURATOR_TRAFFIC_MODEL != SIMLLM_TRAFFIC_MODEL
-        and "not equivalent" in TRAFFIC_COMPARISON_RULE,
+        "FG-4": False,
         "FG-5": all(
-            row["sampled"]
-            and row["sample_label"]
-            and (
-                not row["peer_subset"]
-                or "one receiver per node" in row["sample_label"]
-            )
+            row["sampled"] and "sampled layer" in row["sample_label"]
             for row in rows
         ),
         "FG-6": deterministic,
         "FG-7": chronology,
+        "FG-8": all(routing_guards),
+        "FG-9": precision_guard,
+        "FG-10": population_guard,
     }
     return {
         "families": families,
         "fatal_guards": fatal_guards,
         "run_state": "nonvoid" if all(fatal_guards.values()) else "void",
-        "n3": n3,
     }, rows
 
 
 def _csv_bytes(rows: list[dict[str, Any]]) -> bytes:
-    columns = (
-        "expert_parallel",
-        "sampled",
-        "sample_label",
-        "peer_subset",
-        "aiconfigurator_step_ms",
-        "aiconfigurator_dispatch_ms",
-        "dispatch_share",
-        "composer_step_ms",
-        "composer_quotient",
-        "packet_dispatch_combine_ms",
-        "simllm_step_ms",
-        "ratio",
-        "represented_messages",
-        "represented_bytes",
-        "simulated_messages_per_sampled_layer",
-        "simulated_message_fraction",
-        "fabric_messages_per_sampled_layer",
-        "nvlink_messages_per_sampled_layer",
-        "e_passed",
-        "c_passed",
-    )
+    if not rows:
+        raise ValueError("results CSV needs at least one row")
+    columns = tuple(rows[0])
     from io import StringIO
 
     output = StringIO(newline="")
     writer = csv.DictWriter(output, fieldnames=columns, lineterminator="\n")
     writer.writeheader()
-    writer.writerows(rows)
+    writer.writerows(
+        {
+            key: (
+                json.dumps(value, sort_keys=True, separators=(",", ":"))
+                if isinstance(value, (dict, list))
+                else value
+            )
+            for key, value in row.items()
+        }
+        for row in rows
+    )
     return output.getvalue().encode("utf-8")
 
 
@@ -906,6 +1205,127 @@ def _render_figures(record_path: Path, output_dir: Path) -> dict[str, str]:
     return {
         "png": "figures/minimax_ep_scaling.png",
         "pdf": "figures/minimax_ep_scaling.pdf",
+        "metadata": "figures/minimax_ep_scaling.metadata.json",
+    }
+
+
+def _has_dense_definition(value: str) -> bool:
+    lowered = value.lower()
+    return all(
+        term in lowered
+        for term in ("dense", "half-precision", "all-gather", "reduce-scatter")
+    )
+
+
+def _has_sparse_definition(value: str) -> bool:
+    lowered = value.lower()
+    return all(term in lowered for term in ("sparse", "routed", "fp8", "bf16"))
+
+
+def _inspect_artifact_disclosures(
+    *,
+    record_path: Path,
+    csv_path: Path,
+    figures_dir: Path,
+) -> dict[str, Any]:
+    """Inspect emitted records, CSV rows and figure text for FG-4 disclosure."""
+
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    with csv_path.open(encoding="utf-8", newline="") as handle:
+        csv_rows = list(csv.DictReader(handle))
+    if len(record.get("rows", ())) != 4 or len(csv_rows) != 4:
+        raise RuntimeError("FG-4 artifact inspection requires four record and CSV rows")
+    disclosure_fields = (
+        "family_d_external_strategy",
+        "family_d_external_traffic_definition",
+        "family_d_packet_strategy",
+        "family_d_packet_traffic_definition",
+        "family_s_dense_strategy",
+        "family_s_dense_traffic_definition",
+        "family_s_sparse_strategy",
+        "family_s_sparse_traffic_definition",
+        "void_first_run_dense_strategy",
+        "void_first_run_dense_traffic_definition",
+        "void_first_run_sparse_strategy",
+        "void_first_run_sparse_traffic_definition",
+    )
+    for artifact_name, rows in (
+        ("record", record["rows"]),
+        ("CSV", csv_rows),
+    ):
+        for index, row in enumerate(rows):
+            if any(not str(row.get(field, "")).strip() for field in disclosure_fields):
+                raise RuntimeError(
+                    f"FG-4 {artifact_name} row {index} omits a strategy disclosure"
+                )
+            if row["family_d_external_traffic_definition"] != row[
+                "family_d_packet_traffic_definition"
+            ]:
+                raise RuntimeError(
+                    f"FG-4 {artifact_name} row {index} does not carry identical D traffic"
+                )
+            if not _has_dense_definition(
+                "dense " + row["family_d_external_traffic_definition"]
+            ):
+                raise RuntimeError(
+                    f"FG-4 {artifact_name} row {index} does not define dense D traffic"
+                )
+            if not _has_sparse_definition(
+                "sparse " + row["family_s_sparse_traffic_definition"]
+            ):
+                raise RuntimeError(
+                    f"FG-4 {artifact_name} row {index} does not define sparse S traffic"
+                )
+            if not str(row.get("void_first_run_status", "")).startswith("VOID"):
+                raise RuntimeError(
+                    f"FG-4 {artifact_name} row {index} hides the first-run void"
+                )
+
+    metadata_path = figures_dir / "minimax_ep_scaling.metadata.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    series = metadata.get("series")
+    if not isinstance(series, list) or len(series) != 5:
+        raise RuntimeError("FG-4 figure metadata has an incomplete series inventory")
+    for index, item in enumerate(series):
+        if any(
+            not isinstance(item.get(field), str) or not item[field].strip()
+            for field in ("label", "strategy", "traffic_definition")
+        ):
+            raise RuntimeError(f"FG-4 figure series {index} omits strategy or traffic")
+    caption = str(metadata.get("caption", ""))
+    if not _has_dense_definition("dense " + caption) or not _has_sparse_definition(
+        "sparse routed FP8 BF16 " + caption
+    ):
+        raise RuntimeError("FG-4 figure caption omits dense or sparse traffic")
+
+    pdf_path = figures_dir / "minimax_ep_scaling.pdf"
+    completed = subprocess.run(
+        ["pdftotext", os.fspath(pdf_path), "-"],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if completed.returncode != 0:
+        raise RuntimeError("FG-4 could not inspect generated PDF text")
+    pdf_text = completed.stdout.lower()
+    for term in (
+        "dense fallback",
+        "half all-gather",
+        "reduce-scatter",
+        "sparse routed",
+        "fp8 dispatch",
+        "bf16 combine",
+        "identical half traffic",
+    ):
+        if term not in pdf_text:
+            raise RuntimeError(f"FG-4 generated PDF omits {term!r}")
+    return {
+        "record_rows_inspected": len(record["rows"]),
+        "csv_rows_inspected": len(csv_rows),
+        "figure_series_inspected": len(series),
+        "figure_caption_inspected": True,
+        "pdf_text_inspected": True,
     }
 
 
@@ -935,15 +1355,20 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
     tokens_per_rank = config["operating_point"][
         "local_batch_per_attention_dp_rank"
     ] * (config["model"]["nextn"] + 1)
-    routed_pair_bytes = (
-        tokens_per_rank
-        * config["model"]["num_experts_per_tok"]
-        * config["model"]["hidden_size"]
-        // widest_width
-    )
-    per_rank_full_width_bytes = 2 * (widest_width - 1) * routed_pair_bytes
     link_bytes_per_second = (
         config["operating_point"]["link_rate_bits_per_second"] // 8
+    )
+    widest_sparse = next(
+        row["sparse_packet"]
+        for row in first["widths"]
+        if row["expert_parallel"] == widest_width
+    )
+    dense_chunk_bytes = tokens_per_rank * config["model"]["hidden_size"] * 2
+    dense_bytes_per_rank = 2 * (widest_width - 1) * dense_chunk_bytes
+    dense_fabric_bytes_per_rank = (
+        2
+        * (widest_width - config["operating_point"]["gpus_per_node"])
+        * dense_chunk_bytes
     )
     record = {
         "schema": SCHEMA,
@@ -954,21 +1379,57 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
         "bulk_evidence": f"${{{BULK_ROOT_ENV}}}/attempt-{attempt_number:04d}",
         "configuration_sha256": _sha256_file(CONFIG_PATH),
         "expectations_sha256": _sha256_file(EXPECTATIONS_PATH),
+        "corrected_expectations_sha256": _sha256_file(CORRECTED_EXPECTATIONS_PATH),
         "operating_point": config["operating_point"],
         "sampling": config["packet_sampling"],
+        "strategies": config["strategies"],
+        "void_first_run": config["void_first_run"],
         "physical_sanity": {
             "widest_expert_parallel": widest_width,
-            "routed_fp8_payload_per_rank_pair_bytes": routed_pair_bytes,
-            "dispatch_plus_combine_bytes_per_rank": per_rank_full_width_bytes,
             "link_bytes_per_second": link_bytes_per_second,
-            "full_rank_serialization_floor_microseconds": (
-                per_rank_full_width_bytes / link_bytes_per_second * 1_000_000
+            "sparse_dispatch_bytes_per_rank": widest_sparse[
+                "dispatch_bytes_per_rank"
+            ],
+            "sparse_combine_bytes_per_rank": widest_sparse[
+                "combine_bytes_per_rank"
+            ],
+            "sparse_dispatch_plus_combine_bytes_per_rank": widest_sparse[
+                "dispatch_plus_combine_bytes_per_rank"
+            ],
+            "sparse_dispatch_plus_combine_fabric_bytes_per_rank": widest_sparse[
+                "dispatch_plus_combine_fabric_bytes_per_rank"
+            ],
+            "sparse_serialization_floor_microseconds_per_layer": (
+                widest_sparse["dispatch_plus_combine_fabric_bytes_per_rank"]
+                / link_bytes_per_second
+                * 1_000_000
+            ),
+            "dense_half_buffer_bytes_per_rank": (
+                tokens_per_rank
+                * config["model"]["hidden_size"]
+                * widest_width
+                * 2
+            ),
+            "dense_dispatch_plus_combine_wire_bytes_per_rank": dense_bytes_per_rank,
+            "dense_dispatch_plus_combine_fabric_bytes_per_rank": (
+                dense_fabric_bytes_per_rank
+            ),
+            "dense_serialization_floor_microseconds_per_layer": (
+                dense_fabric_bytes_per_rank
+                / link_bytes_per_second
+                * 1_000_000
             ),
         },
         "traffic_model_disclosure": {
-            "AIConfigurator": AI_CONFIGURATOR_TRAFFIC_MODEL,
-            "SimLLM": SIMLLM_TRAFFIC_MODEL,
-            "comparison_rule": TRAFFIC_COMPARISON_RULE,
+            "family_d": (
+                "same dense strategy and logical bytes in both arms; only the "
+                "pricing mechanism differs"
+            ),
+            "family_s": (
+                "dense SM90 general fallback versus sparse routed FP8 dispatch "
+                "and BF16 combine; unscored strategy comparison"
+            ),
+            "deployment_strategy_selection": "unknown to this study",
         },
         "evidence_classes": {
             "compute_and_external_dispatch": "MEASURED-EXTERNAL",
@@ -1007,29 +1468,44 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
             "system": platform.system(),
         },
         "rows": rows,
-        "n3": scored["n3"],
         "family_tallies": scored["families"],
         "fatal_guards": scored["fatal_guards"],
         "run_state": scored["run_state"],
-        "qwen_reference_ratio": QWEN_REFERENCE_RATIO,
         "figures": {
             "png": "figures/minimax_ep_scaling.png",
             "pdf": "figures/minimax_ep_scaling.pdf",
+            "metadata": "figures/minimax_ep_scaling.metadata.json",
         },
     }
     attempt_record = attempt / "record.json"
+    attempt_csv = attempt / "results.csv"
     attempt_record.write_bytes(_json_bytes(record))
-    (attempt / "results.csv").write_bytes(_csv_bytes(rows))
+    attempt_csv.write_bytes(_csv_bytes(rows))
     _render_figures(attempt_record, attempt / "figures")
+    disclosure_inspection = _inspect_artifact_disclosures(
+        record_path=attempt_record,
+        csv_path=attempt_csv,
+        figures_dir=attempt / "figures",
+    )
+    record["artifact_disclosure_inspection"] = disclosure_inspection
+    record["fatal_guards"]["FG-4"] = True
     elapsed = time.monotonic() - started
     record["family_tallies"]["W"]["elapsed_seconds"] = elapsed
     record["family_tallies"]["W"]["passed"] = int(elapsed <= WALL_BOUND_SECONDS)
+    record["run_state"] = (
+        "nonvoid" if all(record["fatal_guards"].values()) else "void"
+    )
     attempt_record.write_bytes(_json_bytes(record))
+    _inspect_artifact_disclosures(
+        record_path=attempt_record,
+        csv_path=attempt_csv,
+        figures_dir=attempt / "figures",
+    )
     if write_tracked:
         TRACKED_RECORD.write_bytes(_json_bytes(record))
         TRACKED_CSV.write_bytes(_csv_bytes(rows))
         TRACKED_FIGURES.mkdir(parents=True, exist_ok=True)
-        for suffix in ("png", "pdf"):
+        for suffix in ("png", "pdf", "metadata.json"):
             source = attempt / "figures" / f"minimax_ep_scaling.{suffix}"
             destination = TRACKED_FIGURES / source.name
             destination.write_bytes(source.read_bytes())
@@ -1038,22 +1514,36 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
 
 def _validate_record(path: Path) -> dict[str, Any]:
     record = json.loads(path.read_text(encoding="utf-8"))
+    if record.get("schema") == LEGACY_SCHEMA:
+        return record
     if record.get("schema") != SCHEMA:
         raise SystemExit("record has an unsupported schema")
     if len(record.get("rows", ())) != 4:
         raise SystemExit("record must contain four expert-parallel rows")
-    if set(record.get("family_tallies", ())) != {"E", "C", "N", "W"}:
+    if set(record.get("family_tallies", ())) != {"E", "C", "D", "S", "W"}:
         raise SystemExit("record family inventory is incomplete")
     if set(record.get("fatal_guards", ())) != {
-        "FG-1",
-        "FG-2",
-        "FG-3",
-        "FG-4",
-        "FG-5",
-        "FG-6",
-        "FG-7",
+        *(f"FG-{index}" for index in range(1, 11)),
     }:
         raise SystemExit("record fatal-guard inventory is incomplete")
+    if not all(record["fatal_guards"].values()):
+        raise SystemExit("tracked corrected run has a violated fatal guard")
+    if path.resolve() == TRACKED_RECORD.resolve():
+        _inspect_artifact_disclosures(
+            record_path=path,
+            csv_path=TRACKED_CSV,
+            figures_dir=TRACKED_FIGURES,
+        )
+        results_text = (STUDY / "RESULTS.md").read_text(encoding="utf-8")
+        opening = results_text[:2000]
+        for required in (
+            "VOID against FG-4",
+            "0.2742607736975033",
+            "strategy comparison",
+            "does not know which strategy",
+        ):
+            if required not in opening:
+                raise SystemExit(f"RESULTS.md opening omits {required!r}")
     return record
 
 
@@ -1097,9 +1587,10 @@ def main(argv: list[str] | None = None) -> int:
         f"run_state={record['run_state']} "
         f"elapsed_seconds={record['family_tallies']['W']['elapsed_seconds']:.6f}"
     )
-    for family in ("E", "C", "N", "W"):
+    for family in ("E", "C", "D", "W"):
         tally = record["family_tallies"][family]
         print(f"{family}={tally['passed']}/{tally['denominator']}")
+    print("S=unscored")
     print(f"fatal_guards={record['fatal_guards']}")
     return 0 if record["run_state"] == "nonvoid" else 1
 
