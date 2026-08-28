@@ -996,6 +996,25 @@ the structural pass-through switch, the score's eleven unchanged internals in
 total, visibly separate; TRAF-65 remains open on its live held-out integration
 bar.
 
+The [TRAF-71 comparison](../../examples/nvlink_rnic_comparison_v1/RESULTS.md)
+places that scored three-module credit domain and pinned htsim `rnic-nn` on one
+zero-fit NVLink physical mapping and the byte-identical seven-rung, nine-seed
+staggered workload. rnic-nn is tighter in 8 of 21 rung-degree cells, NVLink in
+11, with two ties; at 64 KiB and above rnic-nn is tighter in only 5 of 9, so
+the frozen 7-of-9 smoothness prediction is honestly refuted. The merged NVLink
+raw sample and CDF hashes reproduce exactly. No credit-window stall occurs:
+the first credit returns at 210.880 ns while one 256-packet bonded-link round
+spans 696.320 ns. The small-rung roughness instead follows finite empirical-CDF
+steps and frozen stagger alignment, with RX arbitration contributing to the
+NVLink transport shape. Both arms share the degree-3-left-of-degree-1 sign only
+at 1 KiB; the five larger NVLink-only signs stay attributed to release-aware
+packet round robin and stable RX admission order. The pinned rnic-nn profile is
+central max-min packet-slot pacing with zero ACK events and reverse bytes, not
+ACK pacing. All 16 fatal guards pass, the inherited 60 artifacts and all 18
+merged flow-dynamics files remain byte-identical, both final figure pairs pass
+visual inspection, the two frozen scientific misses E3 and E5 remain visible,
+and TRAF-71 closes.
+
 ## Open tasks
 
 ### Precision

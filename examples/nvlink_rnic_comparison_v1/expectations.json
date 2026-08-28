@@ -1,0 +1,576 @@
+{
+  "diagnosis_decision_rules": {
+    "credit_window": "Attribute an NVLink-only widening above 64 KiB to credit-window pressure only when the packet ledger shows reuse of the 256-credit round and positive credit or RX admission delay.",
+    "homogeneous_capacity": "Any rnic-nn transient above one ordered-pair raw rate is a declared mapping bias, not an algorithm win.",
+    "incast_three": "If both transports retain degree 3 left of degree 1, assign the sign to the shared release pattern. If only NVLink retains it, assign the difference to credit and stable RX arbitration. If neither does, publish failure to reproduce before further interpretation.",
+    "max_min_pacing": "Attribute rnic-nn smoothness to central max-min packet-slot pacing, never to ACK pacing.",
+    "packetization": "Both transports carry exactly 16/272 wire-header fraction. A difference in small-rung intercept comes from serializer composition and slot phase, not a packet-overhead mismatch."
+  },
+  "expected_directions": [
+    {
+      "expectation": "At 256 bytes, rnic-nn p50 FCT is left of NVLink for every degree because its mapped two-serializer one-packet costs are 5440, 2720, and 2628 ps versus the NVLink no-queue 12194 ps.",
+      "id": "E1",
+      "scored": true
+    },
+    {
+      "expectation": "For each transport and degree, median-relative seed dispersion at 512 KiB is below its 1 KiB value because fixed 10880 ps release jitter occupies a smaller fraction of the longer FCT.",
+      "id": "E2",
+      "scored": true
+    },
+    {
+      "expectation": "At 64 KiB and above, rnic-nn is no wider than NVLink in at least seven of nine rung-degree cells because it has no credit-return stalls.",
+      "id": "E3",
+      "scored": true
+    },
+    {
+      "classification": "entailed preservation check",
+      "expectation": "The regenerated NVLink samples reproduce the merged degree-3-left-of-degree-1 p50 ordering at 1 KiB through 512 KiB, but not at 256 bytes.",
+      "id": "E4",
+      "scored": false
+    },
+    {
+      "expectation": "rnic-nn reproduces the degree-3-left-of-degree-1 ordering on at least four of the six 1 KiB through 512 KiB rungs. A miss points to NVLink credit or RX arbitration rather than the shared stagger schedule.",
+      "id": "E5",
+      "scored": true
+    },
+    {
+      "classification": "fatal source-semantics check",
+      "expectation": "The ACK-pacing mechanism claim is not applicable: the pinned rnic-nn event ledger contains DATA packets only and zero reverse bytes.",
+      "id": "E6",
+      "scored": false
+    }
+  ],
+  "fatal_guards": [
+    "the expectations digest or expectations commit is not the run authority",
+    "the tracked worktree is dirty before the gated run",
+    "the htsim submodule pin or immutable source export is not commit 1dcbfec",
+    "the study adapter is not built from that exact source export",
+    "the scored profile, source expectations or source result changes",
+    "any inherited preservation artifact changes",
+    "any of the 18 flow-dynamics study files changes",
+    "the two transports receive different release tuples in any cell",
+    "a cell does not contain exactly degree times 12 flows for every seed and transport",
+    "a flow, payload byte or packet is lost or duplicated",
+    "a completion precedes its exact picosecond release",
+    "rnic-nn emits an ACK, reverse byte, control packet, route, queue or loss event",
+    "a CDF is nonmonotone or does not terminate at one",
+    "the mapped rate, packet geometry or propagation differs from the frozen table",
+    "the run writes bulk evidence inside the tracked repository",
+    "a prior flow-dynamics runner, result or figure is executed or rewritten"
+  ],
+  "htsim_authority": {
+    "ack_pacing_claim": "NOT_APPLICABLE_EXPECTED",
+    "adapter_rule": "Build a study-local adapter from an immutable export of the pinned commit and call the runtime with exact picosecond releases. Do not edit htsim.",
+    "commit": "1dcbfec36a33753bf978cf6323bade1a6645fe4f",
+    "profile": "rnic-nn",
+    "runtime_class": "RnicPacketizedManifoldRuntime",
+    "source_semantics": "central max-min table and collision-free full-wire-quantum calendar; no route, queue, loss, backpressure, acknowledgement, PRBS pacer, or Ring-CAM",
+    "submodule_path": "third_party/htsim"
+  },
+  "metrics": {
+    "cdf": "per transport, degree and rung: mean empirical CDF across nine seeds on the sorted union of that transport's seed observations",
+    "cdf_band": "pointwise minimum to maximum empirical CDF across the nine seeds",
+    "dispersion_formula": "D=(max_seed(q_seed_0.50)-min_seed(q_seed_0.50)) / median_seed(q_seed_0.50)",
+    "dispersion_units": "dimensionless ratio, plotted as percent",
+    "fct_ps": "completion_time_ps minus the exact frozen release time",
+    "seed_quantile": "nearest-rank quantile ceil(p*n), clamped to one through n"
+  },
+  "physical_constants": {
+    "credit_return_ps": 200000,
+    "credit_round_payload_bytes": 65536,
+    "credit_round_wire_bytes": 69632,
+    "credit_unit_bytes": 272,
+    "credits_per_destination": 256,
+    "header_bytes": 16,
+    "links_per_ordered_pair": 4,
+    "max_payload_bytes": 256,
+    "max_wire_bytes": 272,
+    "nvlink_no_queue_one_packet_ps": 12194,
+    "pair_raw_bytes_per_second": 100000000000,
+    "per_link_bytes_per_second": 25000000000,
+    "propagation_ps": 0,
+    "rx_ingress_bytes_per_second": 207101921876,
+    "tx_endpoint_egress_bytes_per_second": 160795737454,
+    "wire_header_fraction": 0.058823529411764705
+  },
+  "physical_mapping": {
+    "degree_specific_rnic_rates": [
+      {
+        "binding_physical_resource": "bonded_ordered_pairs",
+        "degree": 1,
+        "formula": "min(degree*pair_raw, degree*tx_plateau, rx_plateau)*8",
+        "full_incast_per_flow_raw_share_bytes_per_second": 100000000000.0,
+        "full_wire_slot_ps": 2720,
+        "isolated_one_packet_two_serializer_ps": 5440,
+        "rnic_link_rate_bps": 800000000000
+      },
+      {
+        "binding_physical_resource": "bonded_ordered_pairs",
+        "degree": 2,
+        "formula": "min(degree*pair_raw, degree*tx_plateau, rx_plateau)*8",
+        "full_incast_per_flow_raw_share_bytes_per_second": 100000000000.0,
+        "full_wire_slot_ps": 1360,
+        "isolated_one_packet_two_serializer_ps": 2720,
+        "rnic_link_rate_bps": 1600000000000
+      },
+      {
+        "binding_physical_resource": "rx_ingress",
+        "degree": 3,
+        "formula": "min(degree*pair_raw, degree*tx_plateau, rx_plateau)*8",
+        "full_incast_per_flow_raw_share_bytes_per_second": 69033973958.66667,
+        "full_wire_slot_ps": 1314,
+        "isolated_one_packet_two_serializer_ps": 2628,
+        "rnic_link_rate_bps": 1656815375008
+      }
+    ],
+    "homogeneous_capacity_limit": "The pinned rnic-nn runtime accepts one symmetric endpoint capacity. The degree-specific minimum matches full-incast aggregate service exactly, but when fewer than degree senders are active it permits transient source rate above one 100 GB/s ordered pair. This can only bias rnic-nn FCT left and its dispersion downward; the result must quantify and retain this limitation.",
+    "rows": [
+      {
+        "expected_signed_effect": "none at full incast membership",
+        "fitted_constant": false,
+        "nvlink_credit_domain": "160795737454 byte/s shared by one source",
+        "physical_field": "TX endpoint egress plateau",
+        "rnic_nn": "enters min(degree*pair_raw, degree*tx_plateau, rx_plateau); it is nonbinding because one source has one 100 GB/s ordered pair"
+      },
+      {
+        "expected_signed_effect": "degree 3 is RX limited in both transports",
+        "fitted_constant": false,
+        "nvlink_credit_domain": "207101921876 byte/s shared at destination 3",
+        "physical_field": "RX ingress plateau",
+        "rnic_nn": "caps the degree-specific homogeneous endpoint link rate"
+      },
+      {
+        "expected_signed_effect": "degrees 1 and 2 are pair limited at full membership",
+        "fitted_constant": false,
+        "nvlink_credit_domain": "four links times 25000000000 byte/s",
+        "physical_field": "bonded ordered-pair links",
+        "rnic_nn": "degree times 100000000000 byte/s enters the endpoint minimum"
+      },
+      {
+        "expected_signed_effect": "neither transport receives an additive flight delay",
+        "fitted_constant": false,
+        "nvlink_credit_domain": "0 ps explicit transit term in the scored direct-link model",
+        "physical_field": "propagation",
+        "rnic_nn": "rnic-nn propagation_delay_ps=0"
+      },
+      {
+        "expected_signed_effect": "identical 5.882352941 percent wire-header fraction",
+        "fitted_constant": false,
+        "nvlink_credit_domain": "256 payload bytes plus 16 header bytes",
+        "physical_field": "packet geometry",
+        "rnic_nn": "max wire packet 272 bytes and DATA header 16 bytes"
+      },
+      {
+        "expected_signed_effect": "rnic-nn cannot incur credit-window stalls, biasing its large-rung FCT and dispersion downward if NVLink exhausts credits",
+        "fitted_constant": false,
+        "nvlink_credit_domain": "256 destination credits of 272 bytes, 200000 ps return, 69632 wire bytes or 65536 payload bytes per full credit round",
+        "physical_field": "credit or sender window",
+        "rnic_nn": "no credit, congestion window, or backpressure in the pinned profile"
+      },
+      {
+        "expected_signed_effect": "zero reverse load biases rnic-nn downward relative to an ACK-carrying design; an ACK-pacing attribution is not applicable to this pinned algorithm",
+        "fitted_constant": false,
+        "nvlink_credit_domain": "credit return is a timestamped resource release, not a packet",
+        "physical_field": "ACK and reverse direction",
+        "rnic_nn": "0 ACK bytes because the pinned profile emits no ACK or control packet"
+      },
+      {
+        "expected_signed_effect": "rnic-nn should remove credit burstiness but can retain deterministic tie-order steps",
+        "fitted_constant": false,
+        "nvlink_credit_domain": "per-source extent round robin at packet boundaries, then stable topology order for tied RX arrivals",
+        "physical_field": "arbitration",
+        "rnic_nn": "central progressive max-min grants plus deterministic packet-slot calendar"
+      }
+    ],
+    "zero_fitted_constants": true
+  },
+  "plot_contract": {
+    "bands": "a separate pointwise nine-seed min-max band for each curve",
+    "cdf_panel_key": "one panel per size rung, both transports and all degrees",
+    "cdf_panels": 7,
+    "cdf_stem": "nvlink-rnic-fct-cdf",
+    "cdf_x_scale": "log FCT in microseconds",
+    "degree_encoding": "one stable color per incast degree",
+    "dispersion_panel_key": "one panel per degree with transports side by side",
+    "dispersion_panels": 3,
+    "dispersion_stem": "nvlink-rnic-dispersion",
+    "formats": [
+      "pdf",
+      "png"
+    ],
+    "inspection": "Inspect final PNGs at publication size for clipping, overlap, readable log ticks, visible min-max bands, legend crossings and border contact.",
+    "path_rendering": "POSIX",
+    "required_annotation": "256 B is one packet: NVLink no-queue 12.194 ns; mapped rnic-nn two-serializer costs are 5.440, 2.720 and 2.628 ns for degrees 1, 2 and 3. One NVLink credit round spans 64 KiB payload and returns in 200 ns.",
+    "transport_styles": {
+      "nvlink-credit": "solid",
+      "rnic-nn": "dashed"
+    }
+  },
+  "preservation_lock": {
+    "direct_count": 18,
+    "direct_flow_dynamics_artifacts": [
+      {
+        "path": "examples/nvlink_flow_dynamics_v1/RESULTS.md",
+        "sha256": "2897bacb313fa3f2e8c2f11d11016432043d9f1ff5e591172c9183291f412255"
+      },
+      {
+        "path": "examples/nvlink_flow_dynamics_v1/build_expectations.py",
+        "sha256": "d5551a1576cf3f1ac831a6199771f25c8402cf79246e606a2368a599aac53919"
+      },
+      {
+        "path": "examples/nvlink_flow_dynamics_v1/expectations.json",
+        "sha256": "6e6e8f0ed7c79572f1ef893f7f7869d8a4e854200bdee514b4338b87955e1261"
+      },
+      {
+        "path": "examples/nvlink_flow_dynamics_v1/expectations.md",
+        "sha256": "68a343638abce8f4e9d197d1ed9fd57df6c2a8de37583797b03b12d0bacec8cd"
+      },
+      {
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-fct-cdf.pdf",
+        "sha256": "85bbaec757c0f3fdadc807fd1738238d53e99e8bf7e6a75c88f2e8a7c1618fd1"
+      },
+      {
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-fct-cdf.png",
+        "sha256": "85fe0389be7269c4770e8734c02da4aa83eba1c80987c9f0631435c6ee8d6411"
+      },
+      {
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-flow-dynamics.pdf",
+        "sha256": "ae771a01e1f20afec23912aaf56bcf086544e3ba8754419a8324f1699b194c5d"
+      },
+      {
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-flow-dynamics.png",
+        "sha256": "cf1f34bc4a1c9dfcbc3cafd51e8c4452f4d234bd70c313df57448e6ccf0a7a5e"
+      },
+      {
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-incast-degree-1.pdf",
+        "sha256": "0603e085fbb065b30775ee27b827b06165964e06b36000a05d9c2eecf5463a6b"
+      },
+      {
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-incast-degree-1.png",
+        "sha256": "44066be1db4f75c28885505449ee6b2e3fb3126ed6b018237f1a0979e8a2d325"
+      },
+      {
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-incast-degree-2.pdf",
+        "sha256": "b95394d911c13bbdc42f90507a56197fa945daa5a15d9b1f3d9b3c5598462866"
+      },
+      {
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-incast-degree-2.png",
+        "sha256": "15de61f42f54b65280a00dbe462cbf659f4bb6a385f61fb2a0a6ee4c647801c0"
+      },
+      {
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-incast-degree-3.pdf",
+        "sha256": "1b872235faab51dd37edda79e076a2205da71b1ce9297b6b7b8b1fa29271c2ac"
+      },
+      {
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-incast-degree-3.png",
+        "sha256": "32cf9ea4e1131228ee81a4d7c7d5321ceacecde07d13cd7f2dd7b3c45b3f0767"
+      },
+      {
+        "path": "examples/nvlink_flow_dynamics_v1/plot_study.py",
+        "sha256": "a4ef45521de447576c7a102d7b18f40fad501e60c6136940e99de2c2ae195773"
+      },
+      {
+        "path": "examples/nvlink_flow_dynamics_v1/publish_study.py",
+        "sha256": "6ad529d86310d870cf780235dd45b9bf0a61f1deb0e4783d77717ecf693f4742"
+      },
+      {
+        "path": "examples/nvlink_flow_dynamics_v1/results.json",
+        "sha256": "c9fb0752149c73f78faa60411ae2eea6a593a23ee65380121ae0decda2cb4004"
+      },
+      {
+        "path": "examples/nvlink_flow_dynamics_v1/run_study.py",
+        "sha256": "aa3871cd24e661f175a7ad80cb8d8a00ad0f56fdada90b91695fa13167fef477"
+      }
+    ],
+    "inherited_expected_artifacts": 60,
+    "inherited_flow_dynamics_lock_path": "examples/nvlink_flow_dynamics_v1/expectations.json"
+  },
+  "schema": "simllm-nvlink-rnic-comparison-expectations-v1",
+  "source_authority": {
+    "expectations_path": "examples/nvlink_flow_dynamics_v1/expectations.json",
+    "expectations_sha256": "6e6e8f0ed7c79572f1ef893f7f7869d8a4e854200bdee514b4338b87955e1261",
+    "profile_path": "examples/a100_nvlink_packet_v1/candidate-profile.json",
+    "profile_sha256": "d33ef5b2c6fa87cc97e1e7b45a43a841a5da45f5462311e3981fbc903c56deb2",
+    "result_path": "examples/nvlink_flow_dynamics_v1/results.json",
+    "result_sha256": "c9fb0752149c73f78faa60411ae2eea6a593a23ee65380121ae0decda2cb4004",
+    "result_verdict": "PASS_WITH_EXPECTED_FANOUT_REFUTATION"
+  },
+  "study": {
+    "date": "2026-08-28",
+    "name": "nvlink_rnic_comparison_v1",
+    "prohibited_writeback": "Observed values never change this file. A changed mapping or expected direction requires a new unscored study version.",
+    "rule": "Commit this freeze before the comparison adapter, runner, any transport execution, raw sample, measured dispersion, or result-dependent edit.",
+    "status": "expectations_only"
+  },
+  "task": "TRAF-71",
+  "verdict_rules": {
+    "closure": "Close TRAF-71 only after every cell and both transports publish, both figures render in both formats, visual inspection passes, preservation holds, all fatal guards pass and each expected direction has a verdict.",
+    "fatal": "Any fatal-guard failure makes the run void and TRAF-71 stays open.",
+    "honest_miss": "Every failed expected direction is published without retuning."
+  },
+  "workload": {
+    "cells": [
+      {
+        "degree": 1,
+        "release_interval_ps": 9145,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "6ef2bdb659ec7abb74adb297906bc2a1767f441a62fa5d3c15c33b64ff8fd2c5",
+        "size_bytes": 256,
+        "wave_service_ps": 12194
+      },
+      {
+        "degree": 1,
+        "release_interval_ps": 12952,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "01a886d11212179756f89dfc02be01153380202cad2786b6fb61e57409e8ee55",
+        "size_bytes": 1024,
+        "wave_service_ps": 17270
+      },
+      {
+        "degree": 1,
+        "release_interval_ps": 37432,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "e11a334009069e0be3cb284d2b67fcbbd58716be7d39f323e122b8d702c36750",
+        "size_bytes": 4096,
+        "wave_service_ps": 49910
+      },
+      {
+        "degree": 1,
+        "release_interval_ps": 135352,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "3b40fdf51d93da94774648e86860480101a3b8226edccfc84dc30c71eb9ceef3",
+        "size_bytes": 16384,
+        "wave_service_ps": 180470
+      },
+      {
+        "degree": 1,
+        "release_interval_ps": 527032,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "01882ef4893a877a666ce2a9c9f0c70493d7a6ffa3ae8fa1062aeecc2e50cdd5",
+        "size_bytes": 65536,
+        "wave_service_ps": 702710
+      },
+      {
+        "degree": 1,
+        "release_interval_ps": 2093752,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "2c81a776b05e9400f9c112391b00507031fc3e9602ea780f506d00edfd967974",
+        "size_bytes": 262144,
+        "wave_service_ps": 2791670
+      },
+      {
+        "degree": 1,
+        "release_interval_ps": 4182712,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "00c1f922f0d6cf26bdf677338197674526db9184822d6d1be6422ddd6bf803c2",
+        "size_bytes": 524288,
+        "wave_service_ps": 5576950
+      },
+      {
+        "degree": 2,
+        "release_interval_ps": 9145,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "f4b17409ebf1d2c5019103d7384e14df8ace840f557bb4f8520930c6178ec986",
+        "size_bytes": 256,
+        "wave_service_ps": 12194
+      },
+      {
+        "degree": 2,
+        "release_interval_ps": 12952,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "acbde09643a5956053f9a792fedc40389e9e95fe669647eef538aa3829ee8aa3",
+        "size_bytes": 1024,
+        "wave_service_ps": 17270
+      },
+      {
+        "degree": 2,
+        "release_interval_ps": 37432,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "ca655084392c712761b6bc8cd845d16d192e70676b501a1650fe39917be9f431",
+        "size_bytes": 4096,
+        "wave_service_ps": 49910
+      },
+      {
+        "degree": 2,
+        "release_interval_ps": 135352,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "db5056b2f7f96bcecfbd2ffc22dca291d74f19c154d3ab6225d342f725188f2d",
+        "size_bytes": 16384,
+        "wave_service_ps": 180470
+      },
+      {
+        "degree": 2,
+        "release_interval_ps": 527032,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "2a47e0151dc294286958ab288a204bd1e16ade9cfa23b876075191781bad2c4a",
+        "size_bytes": 65536,
+        "wave_service_ps": 702710
+      },
+      {
+        "degree": 2,
+        "release_interval_ps": 2093752,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "14fda8336fa3d3f1e1796c0a714a97439dfc57520e633ba2ff8c07f52e75a165",
+        "size_bytes": 262144,
+        "wave_service_ps": 2791670
+      },
+      {
+        "degree": 2,
+        "release_interval_ps": 4182712,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "0712adfda81185b74105d294ec9999369ce4aec2af83075a9bc4fc0dd0a9fc18",
+        "size_bytes": 524288,
+        "wave_service_ps": 5576950
+      },
+      {
+        "degree": 3,
+        "release_interval_ps": 11115,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "7dbc515b49935075a690321ee91bd63808484feb71a6530d9e5f89156370b07d",
+        "size_bytes": 256,
+        "wave_service_ps": 14821
+      },
+      {
+        "degree": 3,
+        "release_interval_ps": 19980,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "466e8360e201b6ba4c599fded17ae9d2aea27938ec844a85a5faf3f5eaa13e24",
+        "size_bytes": 1024,
+        "wave_service_ps": 26641
+      },
+      {
+        "degree": 3,
+        "release_interval_ps": 55441,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "5f7fad8e8b299ce30d7f6da200a8291a30db1daa7f7a695f702c95bf976be431",
+        "size_bytes": 4096,
+        "wave_service_ps": 73922
+      },
+      {
+        "degree": 3,
+        "release_interval_ps": 197284,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "76dbfb087acaf402d281c2d7e4ab51f11a7f98989cfe2805588b456252afc527",
+        "size_bytes": 16384,
+        "wave_service_ps": 263046
+      },
+      {
+        "degree": 3,
+        "release_interval_ps": 764657,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "bb922bbca26e140502dd7680aa1eb58bb9a55c5b5dfcdc687aaeb7d4ccd9f57e",
+        "size_bytes": 65536,
+        "wave_service_ps": 1019543
+      },
+      {
+        "degree": 3,
+        "release_interval_ps": 3034149,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "640f95a6b78a377e8e0ce6311d43239043d08909dbb7d69ece99379763606d85",
+        "size_bytes": 262144,
+        "wave_service_ps": 4045532
+      },
+      {
+        "degree": 3,
+        "release_interval_ps": 6060137,
+        "release_jitter_ps": [
+          -10880,
+          10880
+        ],
+        "release_schedule_sha256": "031321d1f7d9a58ab8db0b1210f583a37e0c67b3d753887b328aa4513d12aebf",
+        "size_bytes": 524288,
+        "wave_service_ps": 8080183
+      }
+    ],
+    "degrees": [
+      1,
+      2,
+      3
+    ],
+    "destination": 3,
+    "flow_sizes_bytes": [
+      256,
+      1024,
+      4096,
+      16384,
+      65536,
+      262144,
+      524288
+    ],
+    "identity": "byte-for-byte release tuples from nvlink_flow_dynamics_v1",
+    "release_generator": "Random(seed*1000003 + degree*10007 + size_bytes); each later wave adds release_interval_ps plus randint(jitter_low_ps,jitter_high_ps); each source adds randint(0,jitter_high_ps)",
+    "samples_per_seed_per_sender": 12,
+    "seed_count": 9,
+    "seeds": [
+      1103,
+      1907,
+      2801,
+      3691,
+      4513,
+      5381,
+      6271,
+      7159,
+      8053
+    ]
+  }
+}
