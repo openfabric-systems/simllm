@@ -37,6 +37,8 @@ CORE_REGISTRY = REPOSITORY_ROOT / "docs/modules/core.md"
 CORE_REGISTRY_LABEL = "docs/modules/core.md"
 CORE63_SELECTOR = "/task-entry[task_id=CORE-63]"
 CORE64_SELECTOR = "/task-entry[task_id=CORE-64]"
+CORE63_TAIL_SELECTOR = "/task-entry[last-leading task_id=CORE-63]"
+CORE64_TAIL_SELECTOR = "/task-entry[last-leading task_id=CORE-64]"
 
 VOID_STUDY = STUDY_DIR / "core63_calibration_result.md"
 VOID_STUDY_LABEL = "examples/deployment_curve_v1/core63_calibration_result.md"
@@ -635,6 +637,40 @@ def _extract_task_line(source: _PartialSource, task_id: str) -> str:
             return raw.decode("utf-8").rstrip("\n")
 
 
+def _is_task_entry_start(raw: bytes, task_id: str) -> bool:
+    text = raw.decode("utf-8").lstrip()
+    punctuation = "#*-|`[]0123456789.() "
+    while text and text[0] in punctuation:
+        text = text[1:].lstrip()
+    if not text.startswith(task_id):
+        return False
+    suffix = text[len(task_id) : len(task_id) + 1]
+    return not suffix or suffix in {" ", ":", "|", "*", "`"}
+
+
+def _extract_last_task_paragraph(source: _SparseSource, task_id: str) -> str:
+    """Find the final task mention from the tail and return its paragraph."""
+
+    following: list[str] = []
+    for raw in _reverse_nonterminal_lines(source):
+        if _is_task_entry_start(raw, task_id):
+            selected = [raw.decode("utf-8").rstrip("\r\n")]
+            for line in following:
+                stripped = line.strip()
+                if not stripped:
+                    break
+                if stripped.startswith("#") or (
+                    "CORE-" in stripped and task_id not in stripped
+                ):
+                    break
+                selected.append(line)
+            return "\n".join(selected)
+        following.insert(0, raw.decode("utf-8").rstrip("\r\n"))
+        if len(following) > 64:
+            following.pop()
+    raise WholeFileAccessRejected("reverse registry selector found no task entry")
+
+
 def _extract_markdown_section(source: _PartialSource, heading: str) -> str:
     marker = heading.encode("utf-8")
     while True:
@@ -757,6 +793,63 @@ def _read_sparse_kernels(
             },
         )
         raise
+
+
+def read_registry_tail_entries(access_ledger: Path) -> dict[str, str]:
+    """Read the last CORE-63 and CORE-64 registration paragraphs only."""
+
+    recorder = AccessRecorder(access_ledger)
+    values = {}
+    for task_id, selector in (
+        ("CORE-63", CORE63_TAIL_SELECTOR),
+        ("CORE-64", CORE64_TAIL_SELECTOR),
+    ):
+        record_size = CORE_REGISTRY.stat().st_size
+        classification = "literal_registry_entry_tail_resolution"
+        access_id = recorder.begin(
+            classification=classification,
+            record=CORE_REGISTRY_LABEL,
+            selector=selector,
+            record_size_bytes=record_size,
+        )
+        source: _SparseSource | None = None
+        try:
+            with CORE_REGISTRY.open("rb", buffering=0) as stream:
+                source = _SparseSource(stream, record_size)
+                value = _extract_last_task_paragraph(source, task_id)
+            recorder.finish(
+                access_id,
+                classification=classification,
+                record=CORE_REGISTRY_LABEL,
+                selector=selector,
+                record_size_bytes=record_size,
+                bytes_accessed=source.bytes_accessed,
+                status="PASS",
+                extra={
+                    "access_pattern": "reverse_nonterminal_task_paragraph",
+                    "unique_bytes_accessed": source.unique_bytes_accessed,
+                },
+            )
+            values[task_id] = value
+        except Exception as exc:
+            recorder.finish(
+                access_id,
+                classification=classification,
+                record=CORE_REGISTRY_LABEL,
+                selector=selector,
+                record_size_bytes=record_size,
+                bytes_accessed=0 if source is None else source.bytes_accessed,
+                status="REJECTED",
+                extra={
+                    "access_pattern": "reverse_nonterminal_task_paragraph",
+                    "error": type(exc).__name__,
+                    "unique_bytes_accessed": (
+                        0 if source is None else source.unique_bytes_accessed
+                    ),
+                },
+            )
+            raise
+    return values
 
 
 def read_clean_inputs(

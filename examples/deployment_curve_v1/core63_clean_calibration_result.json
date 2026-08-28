@@ -1,0 +1,1284 @@
+{
+  "access": {
+    "access_count": 6,
+    "access_event_count": 12,
+    "completed_accesses": [
+      {
+        "access_id": "A01",
+        "bytes_accessed": 3745,
+        "classification": "frozen_pre_run_standard_decode_context",
+        "event": "END",
+        "event_index": 2,
+        "held_out_mtp_value_accessed": false,
+        "record": "examples/deployment_curve_v1/core63_expectations.json",
+        "record_size_bytes": 6461,
+        "schema": "simllm-deployment-curve-core63-clean-access-v1",
+        "selector": "/calibration_context",
+        "status": "PASS",
+        "whole_file_streamed": false
+      },
+      {
+        "access_id": "A02",
+        "bytes_accessed": 21700,
+        "classification": "retained_measured_component_decomposition",
+        "event": "END",
+        "event_index": 4,
+        "held_out_mtp_value_accessed": false,
+        "record": "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json",
+        "record_size_bytes": 57417,
+        "schema": "simllm-deployment-curve-core63-clean-access-v1",
+        "selector": "/entries[7]",
+        "status": "PASS",
+        "whole_file_streamed": false
+      },
+      {
+        "access_id": "A03",
+        "access_pattern": "frozen_legacy_schema_plus_reverse_nonterminal_bytes",
+        "bytes_accessed": 13984,
+        "classification": "retained_standard_decode_kernel_decomposition",
+        "event": "END",
+        "event_index": 6,
+        "held_out_mtp_value_accessed": false,
+        "record": "<kernelprobe-root>/gh200lane/capture-198891-deepseek-v3-tp1-graph-decode/analysis/kernel-summary.csv",
+        "record_size_bytes": 13985,
+        "schema": "simllm-deployment-curve-core63-clean-access-v1",
+        "selected_row_count": 46,
+        "selector": "/rows[pool=decode,shape=decode_b32_c2000,device=0,is_collective=False]",
+        "status": "PASS",
+        "unique_bytes_accessed": 13984,
+        "whole_file_streamed": false
+      },
+      {
+        "access_id": "A04",
+        "bytes_accessed": 68204,
+        "classification": "literal_registry_entry",
+        "event": "END",
+        "event_index": 8,
+        "held_out_mtp_value_accessed": false,
+        "record": "docs/modules/core.md",
+        "record_size_bytes": 99636,
+        "schema": "simllm-deployment-curve-core63-clean-access-v1",
+        "selector": "/task-entry[task_id=CORE-63]",
+        "status": "PASS",
+        "whole_file_streamed": false
+      },
+      {
+        "access_id": "A05",
+        "bytes_accessed": 69896,
+        "classification": "conditional_registry_entry",
+        "event": "END",
+        "event_index": 10,
+        "held_out_mtp_value_accessed": false,
+        "record": "docs/modules/core.md",
+        "record_size_bytes": 99636,
+        "schema": "simllm-deployment-curve-core63-clean-access-v1",
+        "selector": "/task-entry[task_id=CORE-64]",
+        "status": "PASS",
+        "whole_file_streamed": false
+      },
+      {
+        "access_id": "A06",
+        "bytes_accessed": 3344,
+        "classification": "merged_void_protocol_findings_only",
+        "event": "END",
+        "event_index": 12,
+        "held_out_mtp_value_accessed": false,
+        "record": "examples/deployment_curve_v1/core63_calibration_result.md",
+        "record_size_bytes": 3576,
+        "schema": "simllm-deployment-curve-core63-clean-access-v1",
+        "selector": "/section[heading=Protocol, access and preservation]",
+        "status": "PASS",
+        "whole_file_streamed": false
+      }
+    ],
+    "contemporaneous_begin_before_open": true,
+    "cumulative_access_count": 16,
+    "cumulative_access_event_count": 32,
+    "forbidden_access_ledger": [],
+    "held_out_mtp_numeric_values_accessed_or_compared": false,
+    "preflight_attempts": [
+      {
+        "access_count": 3,
+        "access_event_count": 6,
+        "end_statuses": [
+          "PASS",
+          "PASS",
+          "REJECTED"
+        ],
+        "forbidden_access_ledger": [],
+        "held_out_mtp_numeric_values_accessed_or_compared": false,
+        "rejected_before_final_byte": true,
+        "rejection": "WholeFileAccessRejected",
+        "whole_file_streams": 0
+      },
+      {
+        "access_count": 3,
+        "access_event_count": 6,
+        "end_statuses": [
+          "PASS",
+          "PASS",
+          "REJECTED"
+        ],
+        "forbidden_access_ledger": [],
+        "held_out_mtp_numeric_values_accessed_or_compared": false,
+        "rejected_before_final_byte": true,
+        "rejection": "WholeFileAccessRejected",
+        "whole_file_streams": 0
+      },
+      {
+        "access_count": 4,
+        "access_event_count": 8,
+        "end_statuses": [
+          "PASS",
+          "PASS",
+          "PASS",
+          "REJECTED"
+        ],
+        "forbidden_access_ledger": [],
+        "held_out_mtp_numeric_values_accessed_or_compared": false,
+        "rejected_before_final_byte": true,
+        "rejection": "WholeFileAccessRejected",
+        "whole_file_streams": 0
+      }
+    ],
+    "successful_tranche": [
+      {
+        "access_id": "A01",
+        "bytes_accessed": 3745,
+        "classification": "frozen_pre_run_standard_decode_context",
+        "event": "END",
+        "event_index": 2,
+        "held_out_mtp_value_accessed": false,
+        "record": "examples/deployment_curve_v1/core63_expectations.json",
+        "record_size_bytes": 6461,
+        "schema": "simllm-deployment-curve-core63-clean-access-v1",
+        "selector": "/calibration_context",
+        "status": "PASS",
+        "whole_file_streamed": false
+      },
+      {
+        "access_id": "A02",
+        "bytes_accessed": 21700,
+        "classification": "retained_measured_component_decomposition",
+        "event": "END",
+        "event_index": 4,
+        "held_out_mtp_value_accessed": false,
+        "record": "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json",
+        "record_size_bytes": 57417,
+        "schema": "simllm-deployment-curve-core63-clean-access-v1",
+        "selector": "/entries[7]",
+        "status": "PASS",
+        "whole_file_streamed": false
+      },
+      {
+        "access_id": "A03",
+        "access_pattern": "frozen_legacy_schema_plus_reverse_nonterminal_bytes",
+        "bytes_accessed": 13984,
+        "classification": "retained_standard_decode_kernel_decomposition",
+        "event": "END",
+        "event_index": 6,
+        "held_out_mtp_value_accessed": false,
+        "record": "<kernelprobe-root>/gh200lane/capture-198891-deepseek-v3-tp1-graph-decode/analysis/kernel-summary.csv",
+        "record_size_bytes": 13985,
+        "schema": "simllm-deployment-curve-core63-clean-access-v1",
+        "selected_row_count": 46,
+        "selector": "/rows[pool=decode,shape=decode_b32_c2000,device=0,is_collective=False]",
+        "status": "PASS",
+        "unique_bytes_accessed": 13984,
+        "whole_file_streamed": false
+      },
+      {
+        "access_id": "A04",
+        "bytes_accessed": 68204,
+        "classification": "literal_registry_entry",
+        "event": "END",
+        "event_index": 8,
+        "held_out_mtp_value_accessed": false,
+        "record": "docs/modules/core.md",
+        "record_size_bytes": 99636,
+        "schema": "simllm-deployment-curve-core63-clean-access-v1",
+        "selector": "/task-entry[task_id=CORE-63]",
+        "status": "PASS",
+        "whole_file_streamed": false
+      },
+      {
+        "access_id": "A05",
+        "bytes_accessed": 69896,
+        "classification": "conditional_registry_entry",
+        "event": "END",
+        "event_index": 10,
+        "held_out_mtp_value_accessed": false,
+        "record": "docs/modules/core.md",
+        "record_size_bytes": 99636,
+        "schema": "simllm-deployment-curve-core63-clean-access-v1",
+        "selector": "/task-entry[task_id=CORE-64]",
+        "status": "PASS",
+        "whole_file_streamed": false
+      },
+      {
+        "access_id": "A06",
+        "bytes_accessed": 3344,
+        "classification": "merged_void_protocol_findings_only",
+        "event": "END",
+        "event_index": 12,
+        "held_out_mtp_value_accessed": false,
+        "record": "examples/deployment_curve_v1/core63_calibration_result.md",
+        "record_size_bytes": 3576,
+        "schema": "simllm-deployment-curve-core63-clean-access-v1",
+        "selector": "/section[heading=Protocol, access and preservation]",
+        "status": "PASS",
+        "whole_file_streamed": false
+      }
+    ],
+    "whole_file_streams": 0
+  },
+  "base_commit": "f21fa3fa6cb4722d206349da4fab34a6d16821bb",
+  "calibration_only": {
+    "anchor_id": "sglang_decode_standard",
+    "current": {
+      "prediction_exact": {
+        "denominator": 715103,
+        "numerator": 6400000000
+      },
+      "prediction_tokens_per_second_per_node": "8949.759685",
+      "published_display": "8949.76",
+      "signed_residual_percent": "-59.834128",
+      "step_ps": 28604120000
+    },
+    "movement": {
+      "direction": "increase",
+      "prediction_relative_percent": "6.647085",
+      "prediction_tokens_per_second_per_node": "594.898111",
+      "signed_residual_percentage_points": "2.669860"
+    },
+    "pass_bar_absolute_percent": "5.000000",
+    "per_node_tokens": 256,
+    "published_tokens_per_second_per_node": 22282,
+    "residency_corrected": {
+      "classification": "UNDERCORRECTION",
+      "prediction_exact": {
+        "denominator": 321855436381,
+        "numerator": 3072000000000000
+      },
+      "prediction_tokens_per_second_per_node": "9544.657796",
+      "signed_residual_percent": "-57.164268",
+      "step_ps": {
+        "decimal_ms": "26.821286365",
+        "decimal_ps": "26821286365.083333",
+        "denominator": 12,
+        "numerator": 321855436381,
+        "published_ps_round_half_up": 26821286365
+      }
+    },
+    "role": "calibration-only"
+  },
+  "expectations_commit": "9aac882518db0558245279e06031d6b9c0522474",
+  "final_retry_expectations_commit": "be7728ca4ac951473193106e0287ab868ccbb0d8",
+  "independent_recomputation": {
+    "calibration": {
+      "classification": "UNDERCORRECTION",
+      "corrected_prediction": {
+        "denominator": 321855436381,
+        "numerator": 3072000000000000
+      },
+      "corrected_signed_residual": {
+        "denominator": 3585791416720721,
+        "numerator": -2049791416720721
+      },
+      "prediction_movement": {
+        "denominator": 230159788122362243,
+        "numerator": 136921623161600000000
+      },
+      "signed_residual_movement": {
+        "denominator": 2564210199471237749263,
+        "numerator": 68460811580800000000
+      }
+    },
+    "component_classification_ledger": [
+      {
+        "family": "retained",
+        "first_launch_order": 0,
+        "name": "void at::native::vectorized_elementwise_kernel<(int)4, at::native::FillFunctor<int>, std::array<char *, (unsigned long)1>>(int, T2, T3)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 1536000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 1,
+        "name": "void at::native::index_elementwise_kernel<(int)128, (int)4, void at::native::gpu_index_kernel<void at::native::index_kernel_impl<at::native::OpaqueType<(int)4>>(at::TensorIteratorBase &, c10::ArrayRef<long>, c10::ArrayRef<long>)::[lambda(char *, const char *, long) (instance 1)]>(at::TensorIteratorBase &, c10::ArrayRef<long>, c10::ArrayRef<long>, const T1 &, bool)::[lambda(int) (instance 1)]>(long, T3)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 1504000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 2,
+        "name": "void at::native::unrolled_elementwise_kernel<at::native::direct_copy_kernel_cuda(at::TensorIteratorBase &)::[lambda() (instance 3)]::operator ()() const::[lambda() (instance 4)]::operator ()() const::[lambda(long) (instance 1)], std::array<char *, (unsigned long)2>, (int)4, TrivialOffsetCalculator<(int)1, unsigned int>, TrivialOffsetCalculator<(int)1, unsigned int>, at::native::memory::LoadWithCast<(int)1>, at::native::memory::StoreWithCast<(int)1>>(int, T1, T2, T4, T5, T6, T7)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 2912000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 3,
+        "name": "void at::native::vectorized_elementwise_kernel<(int)2, at::native::CUDAFunctor_add<long>, std::array<char *, (unsigned long)3>>(int, T2, T3)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 1056000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 4,
+        "name": "void at::native::vectorized_elementwise_kernel<(int)4, at::native::CUDAFunctor_add<int>, std::array<char *, (unsigned long)3>>(int, T2, T3)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 1024000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 6,
+        "name": "_compute_slot_mapping_kernel",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 9888000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 7,
+        "name": "void at::native::unrolled_elementwise_kernel<at::native::CUDAFunctorOnSelf_add<int>, std::array<char *, (unsigned long)2>, (int)4, TrivialOffsetCalculator<(int)1, unsigned int>, TrivialOffsetCalculator<(int)1, unsigned int>, at::native::memory::LoadWithoutCast, at::native::memory::StoreWithoutCast>(int, T1, T2, T4, T5, T6, T7)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 864000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 8,
+        "name": "void flash::prepare_varlen_num_blocks_kernel<(int)2, (bool)0>(int, int, int, const int *, const int *, const int *, const int *, const int *, const int *, int, int, int, int, int, cutlass::FastDivmod, cutlass::FastDivmod, int *, int *, int *, int *, int *, bool, bool, bool, int)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 1792000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 9,
+        "name": "void at::native::unrolled_elementwise_kernel<at::native::FillFunctor<int>, std::array<char *, (unsigned long)1>, (int)4, TrivialOffsetCalculator<(int)0, unsigned int>, TrivialOffsetCalculator<(int)1, unsigned int>, at::native::memory::LoadWithoutCast, at::native::memory::StoreWithoutCast>(int, T1, T2, T4, T5, T6, T7)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 704000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 10,
+        "name": "triton_red_fused__to_copy_embedding_rms_norm_0",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 3456000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 11,
+        "name": "void per_token_group_quant_8bit_kernel<c10::BFloat16, c10::Float8_e4m3fn, (bool)1, (bool)1, float>(const T1 *, void *, T5 *, int, int, int, float, float, float, int, int)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 62368000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 12,
+        "name": "void deep_gemm::sm90_fp8_gemm_1d2d_impl<(cute::UMMA::Major)0, (unsigned int)0, (unsigned int)2112, (unsigned int)7168, (unsigned int)1, (unsigned int)32, (unsigned int)16, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)32, (unsigned int)16, (unsigned int)128, (unsigned int)128, (unsigned int)1, (bool)0, (unsigned int)132, (deep_gemm::GemmType)0, cutlass::bfloat16_t, deep_gemm::epilogue::transform::EpilogueIdentity>(float *, int *, unsigned int, unsigned int, unsigned int, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 42496000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 13,
+        "name": "triton_poi_fused_1",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 1664000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 14,
+        "name": "triton_red_fused_2",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 3392000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 16,
+        "name": "void deep_gemm::sm90_fp8_gemm_1d2d_impl<(cute::UMMA::Major)0, (unsigned int)0, (unsigned int)24576, (unsigned int)1536, (unsigned int)1, (unsigned int)32, (unsigned int)96, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)64, (unsigned int)13, (unsigned int)128, (unsigned int)128, (unsigned int)2, (bool)0, (unsigned int)132, (deep_gemm::GemmType)0, cutlass::bfloat16_t, deep_gemm::epilogue::transform::EpilogueIdentity>(float *, int *, unsigned int, unsigned int, unsigned int, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 73952000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 17,
+        "name": "triton_poi_fused_add_clone_copy_expand_index_mul_neg_slice_split_stack_unsqueeze_view_3",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 3488000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 18,
+        "name": "void vllm::concat_and_cache_mla_kernel<__nv_bfloat16, __nv_bfloat16, (vllm::Fp8KVCacheDataType)0>(const T1 *, const T1 *, T2 *, const long *, int, int, int, int, int, int, int, const float *)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 8480000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 19,
+        "name": "nvjet_tst_256x32_64x5_2x1_v_bz_TNT",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 35104000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 20,
+        "name": "void cutlass::device_kernel<flash::enable_sm90_or_later<flash::FlashAttnFwdSm90<flash::CollectiveMainloopFwdSm90<(int)2, cute::tuple<cute::C<(int)1>, cute::C<(int)1>, cute::C<(int)1>>, cute::tuple<cute::C<(int)64>, cute::C<(int)64>, cute::C<(int)64>>, (int)512, cutlass::bfloat16_t, float, cutlass::arch::Sm90, (bool)0, (bool)0, (bool)0, (bool)1, (bool)1, (bool)0, (bool)1, (bool)0, (bool)0, (bool)1, (bool)1, (bool)0, cutlass::bfloat16_t, (int)1>, flash::CollectiveEpilogueFwd<cute::tuple<cute::C<(int)64>, cute::C<(int)512>, cute::C<(int)64>>, cute::tuple<cute::C<(int)1>, cute::C<(int)1>, cute::C<(int)1>>, cutlass::bfloat16_t, cutlass::arch::Sm90, (int)256, (bool)1, (bool)1, (bool)1, (bool)0, (int)1>, flash::VarlenDynamicPersistentTileScheduler<(int)64, (int)64, (int)256, (int)128, (bool)1, (bool)1, (bool)1, (bool)0, (bool)0, (bool)1>>>>(T1::Params)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 187104000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 21,
+        "name": "void cutlass::device_kernel<flash::FlashAttnFwdCombine<cute::tuple<cute::C<(int)8>, cute::C<(int)128>>, (int)5, (int)256, (int)1, (bool)0, (bool)1, cutlass::bfloat16_t, float, cutlass::arch::Sm90>>(T1::Params)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 66208000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 22,
+        "name": "nvjet_tst_128x32_64x10_1x1_h_bz_NNT",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 33952000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 24,
+        "name": "void deep_gemm::sm90_fp8_gemm_1d2d_impl<(cute::UMMA::Major)0, (unsigned int)0, (unsigned int)7168, (unsigned int)16384, (unsigned int)1, (unsigned int)32, (unsigned int)64, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)16, (unsigned int)128, (unsigned int)128, (unsigned int)1, (bool)0, (unsigned int)132, (deep_gemm::GemmType)0, cutlass::bfloat16_t, deep_gemm::epilogue::transform::EpilogueIdentity>(float *, int *, unsigned int, unsigned int, unsigned int, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 174592000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 25,
+        "name": "triton_red_fused_fused_add_rms_norm_0",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 8896000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 27,
+        "name": "void deep_gemm::sm90_fp8_gemm_1d2d_impl<(cute::UMMA::Major)0, (unsigned int)0, (unsigned int)36864, (unsigned int)7168, (unsigned int)1, (unsigned int)32, (unsigned int)144, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)32, (unsigned int)9, (unsigned int)128, (unsigned int)128, (unsigned int)2, (bool)0, (unsigned int)132, (deep_gemm::GemmType)0, cutlass::bfloat16_t, deep_gemm::epilogue::transform::EpilogueIdentity>(float *, int *, unsigned int, unsigned int, unsigned int, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 242336000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 28,
+        "name": "triton_poi_fused_mul_silu_slice_1",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 6816000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 30,
+        "name": "void deep_gemm::sm90_fp8_gemm_1d2d_impl<(cute::UMMA::Major)0, (unsigned int)0, (unsigned int)7168, (unsigned int)18432, (unsigned int)1, (unsigned int)32, (unsigned int)64, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)16, (unsigned int)128, (unsigned int)128, (unsigned int)1, (bool)0, (unsigned int)132, (deep_gemm::GemmType)0, cutlass::bfloat16_t, deep_gemm::epilogue::transform::EpilogueIdentity>(float *, int *, unsigned int, unsigned int, unsigned int, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 129888000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 31,
+        "name": "triton_red_fused_fused_add_rms_norm_2",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 9760000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 34,
+        "name": "triton_poi_fused_3",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 4800000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 35,
+        "name": "triton_red_fused_4",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 10016000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 38,
+        "name": "triton_poi_fused_add_clone_copy_expand_index_mul_neg_slice_split_stack_unsqueeze_view_5",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 10432000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 88,
+        "name": "triton_red_fused_fused_add_rms_norm_moe_forward_shared_0",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 3616000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 90,
+        "name": "nvjet_tst_64x32_64x16_4x1_v_bz_splitK_TNT",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 8640000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 91,
+        "name": "void deep_gemm::sm90_fp8_gemm_1d2d_impl<(cute::UMMA::Major)0, (unsigned int)0, (unsigned int)4096, (unsigned int)7168, (unsigned int)1, (unsigned int)32, (unsigned int)32, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)64, (unsigned int)16, (unsigned int)128, (unsigned int)128, (unsigned int)1, (bool)0, (unsigned int)132, (deep_gemm::GemmType)0, cutlass::bfloat16_t, deep_gemm::epilogue::transform::EpilogueIdentity>(float *, int *, unsigned int, unsigned int, unsigned int, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 16960000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 92,
+        "name": "void cublasLt::splitKreduce_kernel<(int)32, (int)16, int, float, __nv_bfloat16, float, __nv_bfloat16, (bool)0, float, __nv_bfloat16, __nv_bfloat16, (bool)1, (bool)0, (bool)0, (bool)0>(cublasLt::cublasSplitKParams<T6>, const T4 *, const T10 *, T9 *, T5 *, const T6 *, const T6 *, const T11 *, const T4 *, T11 *, void *, long, T6 *, int *, T6 *, T6 *, const T6 *, const T6 *, const T6 *, const T6 *, const T6 *)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 4416000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 93,
+        "name": "void vllm::moe::grouped_topk_fused_small_expert_count_kernel<__nv_bfloat16, float, int, (vllm::moe::ScoringFunc)1, (int)256, (bool)1, (int)8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 4000000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 94,
+        "name": "void per_token_group_quant_8bit_kernel<c10::BFloat16, c10::Float8_e4m3fn, (bool)0, (bool)1, float>(const T1 *, void *, T5 *, int, int, int, float, float, float, int, int)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 7648000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 95,
+        "name": "triton_poi_fused_mul_silu_slice_0",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 2432000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 96,
+        "name": "void vllm::moe::moe_align_block_size_kernel<int>(const T1 *, int *, int *, int *, int *, int, int, int, int, unsigned long, int *, int, int, bool)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 3392000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 98,
+        "name": "void vllm::moe::count_and_sort_expert_tokens_kernel<int>(const T1 *, int *, int *, int *, unsigned long, int, int, int, bool)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 1536000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 99,
+        "name": "void deep_gemm::sm90_fp8_gemm_1d2d_impl<(cute::UMMA::Major)0, (unsigned int)0, (unsigned int)7168, (unsigned int)2048, (unsigned int)1, (unsigned int)32, (unsigned int)64, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)16, (unsigned int)128, (unsigned int)128, (unsigned int)1, (bool)0, (unsigned int)132, (deep_gemm::GemmType)0, cutlass::bfloat16_t, deep_gemm::epilogue::transform::EpilogueIdentity>(float *, int *, unsigned int, unsigned int, unsigned int, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 7936000
+        }
+      },
+      {
+        "family": "routed_expert",
+        "first_launch_order": 100,
+        "name": "fused_moe_kernel",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 131520000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 101,
+        "name": "void vllm::act_and_mul_kernel<c10::BFloat16, __nv_bfloat162, &vllm::silu_kernel<c10::BFloat16>, &vllm::packed_silu_kernel<__nv_bfloat162>, (bool)1, (bool)1, (bool)0, (bool)0>(T1 *, const T1 *, int, float, float, float)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 2400000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 104,
+        "name": "void vllm::moe::moe_sum_vec_kernel<c10::BFloat16, int, (int)8, (bool)0>(T1 *, const T1 *, long, int, long, long, const T2 *, const int *, long, long)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 2752000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 105,
+        "name": "triton_red_fused_add_fused_add_rms_norm_mul_1",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 6368000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 107,
+        "name": "void at::native::vectorized_gather_kernel<(int)16, long>(char *, char *, T2 *, int, long, long, long, long, bool)",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 1632000
+        }
+      },
+      {
+        "family": "retained",
+        "first_launch_order": 108,
+        "name": "nvjet_tst_512x32_64x3_2x1_v_bz_TNT",
+        "service_ps": {
+          "denominator": 1,
+          "numerator": 529952000
+        }
+      }
+    ],
+    "fixed_service_ps": {
+      "denominator": 1,
+      "numerator": 489
+    },
+    "raw_service_ps": {
+      "denominator": 1,
+      "numerator": 1875680000
+    },
+    "retained_service_ps": {
+      "denominator": 1,
+      "numerator": 1744159511
+    },
+    "routed_service_ps": {
+      "denominator": 1,
+      "numerator": 131520000
+    },
+    "step": {
+      "corrected_ps": {
+        "denominator": 12,
+        "numerator": 321855436381
+      },
+      "formula": "F + 61/4 * (retained_4 + routed_4/9)"
+    }
+  },
+  "preservation_lock": {
+    "checked_count": 93,
+    "hash_only_values_decoded": false,
+    "manifest_sha256": "3586ddd96cfad09d8b7c8015eda6641ba5f4180a1f55c5b9f34e06cd29eb445d",
+    "mismatches": [],
+    "prior_artifacts_mutated": false,
+    "status": "PASS"
+  },
+  "registry_retry_expectations_commit": "cef67ebf32c5985ed14ea4ec38b48ef563ad67a5",
+  "registry_source_entries": {
+    "core63_verbatim": "separate and unchanged, COMP-76 is untouched, and CORE-63 is registered below.",
+    "core64_verbatim": "CORE-64 is registered for the exact standard-decode residual conditional on"
+  },
+  "residency_derivation": {
+    "architecture_arithmetic": {
+      "captured_routed_assignments": 256,
+      "ep72_expected_assignments_per_rank": {
+        "denominator": 9,
+        "numerator": 256
+      },
+      "formula": "256 * 8 * 4 / 288",
+      "routed_assignment_scale": {
+        "denominator": 9,
+        "numerator": 1
+      },
+      "uniform_routing_assumption": true
+    },
+    "component_reconstruction": {
+      "compute_service_ps": 1875679511,
+      "compute_sm_cycles": 3066736,
+      "fixed_service_ps": 489,
+      "measured_service_ps": 1875680000,
+      "memory_service_ps": 0,
+      "raw_kernel_service_ps": {
+        "decimal_ms": "1.875680000",
+        "decimal_ps": "1875680000.000000",
+        "denominator": 1,
+        "numerator": 1875680000,
+        "published_ps_round_half_up": 1875680000
+      },
+      "reconstruction_error_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "sm_hz": 1635000000
+    },
+    "family_decomposition": {
+      "fixed_service_ps": {
+        "decimal_ms": "4.89E-7",
+        "decimal_ps": "489.000000",
+        "denominator": 1,
+        "numerator": 489,
+        "published_ps_round_half_up": 489
+      },
+      "kernel_classification_ledger": [
+        {
+          "family": "retained",
+          "first_launch_order": 0,
+          "name": "void at::native::vectorized_elementwise_kernel<(int)4, at::native::FillFunctor<int>, std::array<char *, (unsigned long)1>>(int, T2, T3)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 1536000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 1,
+          "name": "void at::native::index_elementwise_kernel<(int)128, (int)4, void at::native::gpu_index_kernel<void at::native::index_kernel_impl<at::native::OpaqueType<(int)4>>(at::TensorIteratorBase &, c10::ArrayRef<long>, c10::ArrayRef<long>)::[lambda(char *, const char *, long) (instance 1)]>(at::TensorIteratorBase &, c10::ArrayRef<long>, c10::ArrayRef<long>, const T1 &, bool)::[lambda(int) (instance 1)]>(long, T3)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 1504000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 2,
+          "name": "void at::native::unrolled_elementwise_kernel<at::native::direct_copy_kernel_cuda(at::TensorIteratorBase &)::[lambda() (instance 3)]::operator ()() const::[lambda() (instance 4)]::operator ()() const::[lambda(long) (instance 1)], std::array<char *, (unsigned long)2>, (int)4, TrivialOffsetCalculator<(int)1, unsigned int>, TrivialOffsetCalculator<(int)1, unsigned int>, at::native::memory::LoadWithCast<(int)1>, at::native::memory::StoreWithCast<(int)1>>(int, T1, T2, T4, T5, T6, T7)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 2912000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 3,
+          "name": "void at::native::vectorized_elementwise_kernel<(int)2, at::native::CUDAFunctor_add<long>, std::array<char *, (unsigned long)3>>(int, T2, T3)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 1056000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 4,
+          "name": "void at::native::vectorized_elementwise_kernel<(int)4, at::native::CUDAFunctor_add<int>, std::array<char *, (unsigned long)3>>(int, T2, T3)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 1024000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 6,
+          "name": "_compute_slot_mapping_kernel",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 9888000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 7,
+          "name": "void at::native::unrolled_elementwise_kernel<at::native::CUDAFunctorOnSelf_add<int>, std::array<char *, (unsigned long)2>, (int)4, TrivialOffsetCalculator<(int)1, unsigned int>, TrivialOffsetCalculator<(int)1, unsigned int>, at::native::memory::LoadWithoutCast, at::native::memory::StoreWithoutCast>(int, T1, T2, T4, T5, T6, T7)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 864000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 8,
+          "name": "void flash::prepare_varlen_num_blocks_kernel<(int)2, (bool)0>(int, int, int, const int *, const int *, const int *, const int *, const int *, const int *, int, int, int, int, int, cutlass::FastDivmod, cutlass::FastDivmod, int *, int *, int *, int *, int *, bool, bool, bool, int)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 1792000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 9,
+          "name": "void at::native::unrolled_elementwise_kernel<at::native::FillFunctor<int>, std::array<char *, (unsigned long)1>, (int)4, TrivialOffsetCalculator<(int)0, unsigned int>, TrivialOffsetCalculator<(int)1, unsigned int>, at::native::memory::LoadWithoutCast, at::native::memory::StoreWithoutCast>(int, T1, T2, T4, T5, T6, T7)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 704000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 10,
+          "name": "triton_red_fused__to_copy_embedding_rms_norm_0",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 3456000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 11,
+          "name": "void per_token_group_quant_8bit_kernel<c10::BFloat16, c10::Float8_e4m3fn, (bool)1, (bool)1, float>(const T1 *, void *, T5 *, int, int, int, float, float, float, int, int)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 62368000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 12,
+          "name": "void deep_gemm::sm90_fp8_gemm_1d2d_impl<(cute::UMMA::Major)0, (unsigned int)0, (unsigned int)2112, (unsigned int)7168, (unsigned int)1, (unsigned int)32, (unsigned int)16, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)32, (unsigned int)16, (unsigned int)128, (unsigned int)128, (unsigned int)1, (bool)0, (unsigned int)132, (deep_gemm::GemmType)0, cutlass::bfloat16_t, deep_gemm::epilogue::transform::EpilogueIdentity>(float *, int *, unsigned int, unsigned int, unsigned int, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 42496000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 13,
+          "name": "triton_poi_fused_1",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 1664000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 14,
+          "name": "triton_red_fused_2",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 3392000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 16,
+          "name": "void deep_gemm::sm90_fp8_gemm_1d2d_impl<(cute::UMMA::Major)0, (unsigned int)0, (unsigned int)24576, (unsigned int)1536, (unsigned int)1, (unsigned int)32, (unsigned int)96, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)64, (unsigned int)13, (unsigned int)128, (unsigned int)128, (unsigned int)2, (bool)0, (unsigned int)132, (deep_gemm::GemmType)0, cutlass::bfloat16_t, deep_gemm::epilogue::transform::EpilogueIdentity>(float *, int *, unsigned int, unsigned int, unsigned int, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 73952000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 17,
+          "name": "triton_poi_fused_add_clone_copy_expand_index_mul_neg_slice_split_stack_unsqueeze_view_3",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 3488000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 18,
+          "name": "void vllm::concat_and_cache_mla_kernel<__nv_bfloat16, __nv_bfloat16, (vllm::Fp8KVCacheDataType)0>(const T1 *, const T1 *, T2 *, const long *, int, int, int, int, int, int, int, const float *)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 8480000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 19,
+          "name": "nvjet_tst_256x32_64x5_2x1_v_bz_TNT",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 35104000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 20,
+          "name": "void cutlass::device_kernel<flash::enable_sm90_or_later<flash::FlashAttnFwdSm90<flash::CollectiveMainloopFwdSm90<(int)2, cute::tuple<cute::C<(int)1>, cute::C<(int)1>, cute::C<(int)1>>, cute::tuple<cute::C<(int)64>, cute::C<(int)64>, cute::C<(int)64>>, (int)512, cutlass::bfloat16_t, float, cutlass::arch::Sm90, (bool)0, (bool)0, (bool)0, (bool)1, (bool)1, (bool)0, (bool)1, (bool)0, (bool)0, (bool)1, (bool)1, (bool)0, cutlass::bfloat16_t, (int)1>, flash::CollectiveEpilogueFwd<cute::tuple<cute::C<(int)64>, cute::C<(int)512>, cute::C<(int)64>>, cute::tuple<cute::C<(int)1>, cute::C<(int)1>, cute::C<(int)1>>, cutlass::bfloat16_t, cutlass::arch::Sm90, (int)256, (bool)1, (bool)1, (bool)1, (bool)0, (int)1>, flash::VarlenDynamicPersistentTileScheduler<(int)64, (int)64, (int)256, (int)128, (bool)1, (bool)1, (bool)1, (bool)0, (bool)0, (bool)1>>>>(T1::Params)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 187104000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 21,
+          "name": "void cutlass::device_kernel<flash::FlashAttnFwdCombine<cute::tuple<cute::C<(int)8>, cute::C<(int)128>>, (int)5, (int)256, (int)1, (bool)0, (bool)1, cutlass::bfloat16_t, float, cutlass::arch::Sm90>>(T1::Params)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 66208000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 22,
+          "name": "nvjet_tst_128x32_64x10_1x1_h_bz_NNT",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 33952000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 24,
+          "name": "void deep_gemm::sm90_fp8_gemm_1d2d_impl<(cute::UMMA::Major)0, (unsigned int)0, (unsigned int)7168, (unsigned int)16384, (unsigned int)1, (unsigned int)32, (unsigned int)64, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)16, (unsigned int)128, (unsigned int)128, (unsigned int)1, (bool)0, (unsigned int)132, (deep_gemm::GemmType)0, cutlass::bfloat16_t, deep_gemm::epilogue::transform::EpilogueIdentity>(float *, int *, unsigned int, unsigned int, unsigned int, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 174592000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 25,
+          "name": "triton_red_fused_fused_add_rms_norm_0",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 8896000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 27,
+          "name": "void deep_gemm::sm90_fp8_gemm_1d2d_impl<(cute::UMMA::Major)0, (unsigned int)0, (unsigned int)36864, (unsigned int)7168, (unsigned int)1, (unsigned int)32, (unsigned int)144, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)32, (unsigned int)9, (unsigned int)128, (unsigned int)128, (unsigned int)2, (bool)0, (unsigned int)132, (deep_gemm::GemmType)0, cutlass::bfloat16_t, deep_gemm::epilogue::transform::EpilogueIdentity>(float *, int *, unsigned int, unsigned int, unsigned int, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 242336000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 28,
+          "name": "triton_poi_fused_mul_silu_slice_1",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 6816000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 30,
+          "name": "void deep_gemm::sm90_fp8_gemm_1d2d_impl<(cute::UMMA::Major)0, (unsigned int)0, (unsigned int)7168, (unsigned int)18432, (unsigned int)1, (unsigned int)32, (unsigned int)64, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)16, (unsigned int)128, (unsigned int)128, (unsigned int)1, (bool)0, (unsigned int)132, (deep_gemm::GemmType)0, cutlass::bfloat16_t, deep_gemm::epilogue::transform::EpilogueIdentity>(float *, int *, unsigned int, unsigned int, unsigned int, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 129888000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 31,
+          "name": "triton_red_fused_fused_add_rms_norm_2",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 9760000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 34,
+          "name": "triton_poi_fused_3",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 4800000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 35,
+          "name": "triton_red_fused_4",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 10016000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 38,
+          "name": "triton_poi_fused_add_clone_copy_expand_index_mul_neg_slice_split_stack_unsqueeze_view_5",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 10432000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 88,
+          "name": "triton_red_fused_fused_add_rms_norm_moe_forward_shared_0",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 3616000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 90,
+          "name": "nvjet_tst_64x32_64x16_4x1_v_bz_splitK_TNT",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 8640000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 91,
+          "name": "void deep_gemm::sm90_fp8_gemm_1d2d_impl<(cute::UMMA::Major)0, (unsigned int)0, (unsigned int)4096, (unsigned int)7168, (unsigned int)1, (unsigned int)32, (unsigned int)32, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)64, (unsigned int)16, (unsigned int)128, (unsigned int)128, (unsigned int)1, (bool)0, (unsigned int)132, (deep_gemm::GemmType)0, cutlass::bfloat16_t, deep_gemm::epilogue::transform::EpilogueIdentity>(float *, int *, unsigned int, unsigned int, unsigned int, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 16960000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 92,
+          "name": "void cublasLt::splitKreduce_kernel<(int)32, (int)16, int, float, __nv_bfloat16, float, __nv_bfloat16, (bool)0, float, __nv_bfloat16, __nv_bfloat16, (bool)1, (bool)0, (bool)0, (bool)0>(cublasLt::cublasSplitKParams<T6>, const T4 *, const T10 *, T9 *, T5 *, const T6 *, const T6 *, const T11 *, const T4 *, T11 *, void *, long, T6 *, int *, T6 *, T6 *, const T6 *, const T6 *, const T6 *, const T6 *, const T6 *)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 4416000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 93,
+          "name": "void vllm::moe::grouped_topk_fused_small_expert_count_kernel<__nv_bfloat16, float, int, (vllm::moe::ScoringFunc)1, (int)256, (bool)1, (int)8>(T1 *, float *, T3 *, const T2 *, long, long, long, long, long, long, bool, double)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 4000000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 94,
+          "name": "void per_token_group_quant_8bit_kernel<c10::BFloat16, c10::Float8_e4m3fn, (bool)0, (bool)1, float>(const T1 *, void *, T5 *, int, int, int, float, float, float, int, int)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 7648000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 95,
+          "name": "triton_poi_fused_mul_silu_slice_0",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 2432000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 96,
+          "name": "void vllm::moe::moe_align_block_size_kernel<int>(const T1 *, int *, int *, int *, int *, int, int, int, int, unsigned long, int *, int, int, bool)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 3392000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 98,
+          "name": "void vllm::moe::count_and_sort_expert_tokens_kernel<int>(const T1 *, int *, int *, int *, unsigned long, int, int, int, bool)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 1536000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 99,
+          "name": "void deep_gemm::sm90_fp8_gemm_1d2d_impl<(cute::UMMA::Major)0, (unsigned int)0, (unsigned int)7168, (unsigned int)2048, (unsigned int)1, (unsigned int)32, (unsigned int)64, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)128, (unsigned int)16, (unsigned int)128, (unsigned int)128, (unsigned int)1, (bool)0, (unsigned int)132, (deep_gemm::GemmType)0, cutlass::bfloat16_t, deep_gemm::epilogue::transform::EpilogueIdentity>(float *, int *, unsigned int, unsigned int, unsigned int, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st, CUtensorMap_st)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 7936000
+          }
+        },
+        {
+          "family": "routed_expert",
+          "first_launch_order": 100,
+          "name": "fused_moe_kernel",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 131520000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 101,
+          "name": "void vllm::act_and_mul_kernel<c10::BFloat16, __nv_bfloat162, &vllm::silu_kernel<c10::BFloat16>, &vllm::packed_silu_kernel<__nv_bfloat162>, (bool)1, (bool)1, (bool)0, (bool)0>(T1 *, const T1 *, int, float, float, float)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 2400000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 104,
+          "name": "void vllm::moe::moe_sum_vec_kernel<c10::BFloat16, int, (int)8, (bool)0>(T1 *, const T1 *, long, int, long, long, const T2 *, const int *, long, long)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 2752000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 105,
+          "name": "triton_red_fused_add_fused_add_rms_norm_mul_1",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 6368000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 107,
+          "name": "void at::native::vectorized_gather_kernel<(int)16, long>(char *, char *, T2 *, int, long, long, long, long, bool)",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 1632000
+          }
+        },
+        {
+          "family": "retained",
+          "first_launch_order": 108,
+          "name": "nvjet_tst_512x32_64x3_2x1_v_bz_TNT",
+          "service_ps": {
+            "denominator": 1,
+            "numerator": 529952000
+          }
+        }
+      ],
+      "kernel_row_count": 46,
+      "retained_repeatable_four_layer_ps": {
+        "decimal_ms": "1.744159511",
+        "decimal_ps": "1744159511.000000",
+        "denominator": 1,
+        "numerator": 1744159511,
+        "published_ps_round_half_up": 1744159511
+      },
+      "routed_four_layer_ps": {
+        "decimal_ms": "0.131520000",
+        "decimal_ps": "131520000.000000",
+        "denominator": 1,
+        "numerator": 131520000,
+        "published_ps_round_half_up": 131520000
+      },
+      "routed_kernel_row_count": 1,
+      "routed_scaled_four_layer_ps": {
+        "decimal_ms": "0.014613333",
+        "decimal_ps": "14613333.333333",
+        "denominator": 3,
+        "numerator": 43840000,
+        "published_ps_round_half_up": 14613333
+      }
+    },
+    "independent_signoff": {
+      "corrected_step": "decrease",
+      "predicted_throughput": "increase",
+      "signed_residual": "less_negative_before_any_possible_crossing"
+    },
+    "step": {
+      "current_separated_ps": {
+        "decimal_ms": "28.604113032",
+        "decimal_ps": "28604113031.750000",
+        "denominator": 4,
+        "numerator": 114416452127,
+        "published_ps_round_half_up": 28604113032
+      },
+      "formula": "F + 61/4 * (retained_4 + routed_4/9)",
+      "residency_corrected_ps": {
+        "decimal_ms": "26.821286365",
+        "decimal_ps": "26821286365.083333",
+        "denominator": 12,
+        "numerator": 321855436381,
+        "published_ps_round_half_up": 26821286365
+      },
+      "signed_correction_direction": "decrease",
+      "signed_correction_ps": {
+        "decimal_ms": "1.782826667",
+        "decimal_ps": "1782826666.666667",
+        "denominator": 3,
+        "numerator": 5348480000,
+        "published_ps_round_half_up": 1782826667
+      }
+    },
+    "zero_free_or_fitted_constants": true
+  },
+  "retry_expectations_commit": "e4767f5bd4fc783605e1135039121092164664ca",
+  "runner_commit": "cef67ebf32c5985ed14ea4ec38b48ef563ad67a5",
+  "schema": "simllm-deployment-curve-core63-clean-calibration-v1",
+  "scope": {
+    "calibration_only": true,
+    "held_out_mtp_used_in_arithmetic_or_compared": false,
+    "model_weights_downloaded": false,
+    "parameters_amended_or_refit": false,
+    "scored_run_performed": false,
+    "void_post_derivation_numbers_used_as_inputs": false,
+    "web_pages_fetched": false,
+    "zero_free_or_fitted_constants": true
+  },
+  "status": "PASS_CLEAN_REPRODUCTION_UNDERCORRECTION",
+  "task": "CORE-63",
+  "void_protocol_findings": {
+    "ambient_record_inspection_repeated": false,
+    "contemporaneous_reader_logging": true,
+    "protocol_section_accessed_without_numerical_sections": true,
+    "whole_file_csv_stream_repeated": false
+  }
+}

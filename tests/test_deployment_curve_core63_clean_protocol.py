@@ -99,6 +99,26 @@ def test_registry_selector_does_not_assume_table_punctuation() -> None:
     assert source.bytes_accessed < len(payload)
 
 
+def test_reverse_registry_selector_returns_last_task_paragraph() -> None:
+    payload = (
+        b"# Core tasks\n\n"
+        b"### CORE-63 residency\n"
+        b"Acceptance: candidate evidence closes only the derivation.\n\n"
+        b"### CORE-64 follow-on\n"
+        b"Status: conditional on CORE-63.\n\n"
+        b"Footer\n"
+    )
+    source = reader._SparseSource(io.BytesIO(payload), len(payload))
+
+    value = reader._extract_last_task_paragraph(source, "CORE-63")
+
+    assert value == (
+        "### CORE-63 residency\n"
+        "Acceptance: candidate evidence closes only the derivation."
+    )
+    assert source.unique_bytes_accessed < len(payload)
+
+
 def test_access_begin_is_written_before_extractor_runs(tmp_path: Path) -> None:
     record = tmp_path / "record.json"
     record.write_text('{"selected":1,"later":2}\n', encoding="utf-8", newline="\n")
