@@ -1,0 +1,88 @@
+{
+  "base_main": "b8864f94afee9ac3caab59c0214eb9ed9daba36c",
+  "calibration_context": {
+    "anchor_tokens_per_second_per_node": "22282",
+    "inherited_prediction_tokens_per_second_per_node": "9544.657796",
+    "inherited_signed_residual_percent": "-57.164268",
+    "inherited_step_ps_round_half_up": 26821286365
+  },
+  "component_classification": {
+    "fixed_term": {
+      "description": "independently retained fixed term",
+      "expected_scale": "1",
+      "expected_shape_direction": "stay"
+    },
+    "logical_families": [
+      {"family_id": "mla_q_compression", "expected_shape_values": [32], "expected_scale": "1", "expected_shape_direction": "stay"},
+      {"family_id": "mla_q_decompression", "expected_shape_values": [32], "expected_scale": "1", "expected_shape_direction": "stay"},
+      {"family_id": "mla_kv_compression", "expected_shape_values": [32], "expected_scale": "1", "expected_shape_direction": "stay"},
+      {"family_id": "mla_kv_decompression", "expected_shape_values": [32], "expected_scale": "1", "expected_shape_direction": "stay"},
+      {"family_id": "mla_rotary_split", "expected_shape_values": [32], "expected_scale": "1", "expected_shape_direction": "stay"},
+      {"family_id": "mla_attention", "expected_shape_values": [32, 64000], "expected_scale": "1", "expected_shape_direction": "stay"},
+      {"family_id": "mla_compressed_kv_read", "expected_shape_values": [64000], "expected_scale": "1", "expected_shape_direction": "stay"},
+      {"family_id": "mla_output_projection", "expected_shape_values": [32], "expected_scale": "1", "expected_shape_direction": "stay"},
+      {"family_id": "dense_early_mlp", "expected_shape_values": [32], "expected_scale": "1", "expected_shape_direction": "stay"},
+      {"family_id": "moe_router", "expected_shape_values": [32], "expected_scale": "1", "expected_shape_direction": "stay"},
+      {"family_id": "moe_shared_expert", "expected_shape_values": [32], "expected_scale": "1", "expected_shape_direction": "stay"},
+      {"family_id": "moe_routed_experts", "expected_shape_values": [32], "expected_scale": "1/9 inherited from CORE-63", "expected_shape_direction": "no_new_core64_scale"},
+      {"family_id": "lm_head", "expected_shape_values": [32], "expected_scale": "1", "expected_shape_direction": "stay"},
+      {"family_id": "multi_token_prediction_head", "expected_shape_values": null, "expected_scale": null, "expected_shape_direction": "absent_and_forbidden"}
+    ],
+    "physical_kernel_rule": {
+      "case_insensitive_routed_marker": "fused_moe_kernel",
+      "nonmatching_noncollective_scale": "1",
+      "semantic_name_guessing_permitted": false
+    }
+  },
+  "expected_signed_direction": {
+    "corrected_step": "no_change",
+    "prediction": "no_change",
+    "prediction_movement_tokens_per_second_per_node": "0",
+    "signed_residual": "no_change",
+    "signed_residual_movement_percentage_points": "0"
+  },
+  "frozen_sources": [
+    {"git_blob": "77bf6f1d4f7ec4fe897781224643acbaf39f3f50", "path": "docs/papers/deepseek-deployment-disclosures.md", "role": "batch_node_count_kv_and_anchor_disclosure"},
+    {"git_blob": "3b040560a50b7bc64862308a7f14bb0bb9b773b4", "path": "examples/sglang_pd_session_v1/expectations.json", "role": "attention_dp72_dense_dp1_ep72_layout"},
+    {"git_blob": "81ac2757bf8166fdbad2a84f97f6b646ecb7499d", "path": "examples/model_extraction_deepseek_v3_v1/expectations.json", "role": "family_shapes_and_standard_decode_oracle"},
+    {"git_blob": "37c462106f42b22a4e9ffdca775281a938ba79d6", "path": "simllm/calibration/deepseek_deployment.py", "role": "rank_invariant_family_projection_semantics"},
+    {"git_blob": "e68a6f1959e641ea0502ee2ef47e67062f6f43ac", "path": "simllm/calibration/extraction.py", "role": "complete_ordered_deepseek_family_contract"},
+    {"bytes": 54069, "git_blob": "98f56eb4245998b7aec31b19a5361e69fbb2dff3", "path": "examples/deployment_curve_v1/core63_clean_calibration_result.json", "role": "published_standard_decode_basis"},
+    {"bytes": 27611, "content_sha256": "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2", "git_blob": "1292378045f5a281147d2d86a6c607c016aab16a", "path": "offline/calibration/deployment-projections/ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2.json", "role": "field_addressed_ep72_standard_decode_projection"}
+  ],
+  "per_rank_shape_derivation": {
+    "attention_data_parallel_size": 72,
+    "batch_per_node": 256,
+    "decode_nodes": 9,
+    "global_requests": 2304,
+    "gpus_per_node": 8,
+    "kv_tokens_per_rank": 64000,
+    "kv_tokens_per_request": 2000,
+    "requests_per_rank": 32,
+    "requests_per_rank_formula": "9 * 256 / 72",
+    "total_decode_ranks": 72
+  },
+  "preservation": {
+    "inherited_manifest_path": "examples/deployment_curve_v1/core63_preservation_lock.sha256",
+    "inherited_manifest_sha256": "3586ddd96cfad09d8b7c8015eda6641ba5f4180a1f55c5b9f34e06cd29eb445d",
+    "minimum_checked_count": 93,
+    "prior_artifacts_mutated": false
+  },
+  "registry_intent": {
+    "close_core64_only_if_literal_entry_is_satisfied": true,
+    "register_exact_remainder_otherwise": "CORE-65",
+    "reserved_id_verified_free_on_base_main": true
+  },
+  "schema": "simllm-deployment-curve-core64-expectations-v1",
+  "scope_locks": {
+    "decode_overlap_term_added": false,
+    "download_model_weights": false,
+    "fetch_web_pages": false,
+    "fit_parameters": false,
+    "modify_parallel_owned_lanes": false,
+    "perform_fifth_scored_run": false,
+    "read_or_compare_held_out_mtp_value": false
+  },
+  "status": "EXPECTATIONS_ONLY",
+  "task": "CORE-64"
+}
