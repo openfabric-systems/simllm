@@ -1,0 +1,9 @@
+Third-party converted operation database
+
+SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+
+Source packages: aiconfigurator 0.11.0 and aiconfigurator-core 0.11.0.
+The 2025-2026 line comes from systems/h200_sxm.yaml. The 2026 line comes
+from each source collection_meta.yaml in the converted database slice.

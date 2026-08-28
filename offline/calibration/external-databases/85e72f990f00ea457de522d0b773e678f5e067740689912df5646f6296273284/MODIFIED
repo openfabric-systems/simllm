@@ -1,0 +1,25 @@
+Modified-file statement
+
+SimLLM converted the source Parquet and YAML slice into deterministic compressed
+JSON Lines plus portable JSON metadata. The conversion normalizes audited lookup
+keys and records both the source latency and the latency after the source tool's
+GEMM and generation-attention speed-of-light clamps. No measured latency was
+otherwise altered. The converted files are not original NVIDIA distribution files.
+
+Artifact derivations:
+
+- LICENSE: byte-identical Apache License 2.0 text from the aiconfigurator 0.11.0
+  installed package license.
+- MODIFIED: SimLLM's file-by-file conversion and modification statement.
+- THIRD_PARTY_NOTICE: the SPDX and copyright lines retained from
+  systems/h200_sxm.yaml and the ten collection_meta.yaml source files.
+- family-mapping.json: SimLLM's audited exact, composite and gap projection of
+  the imported external operation families.
+- manifest.json: SimLLM's generated source identity, conversion recipe, table
+  inventory, hashes, mutations and resolver provenance record.
+- model-config.json: JSON conversion of
+  model_configs/Qwen--Qwen3-32B-FP8_config.json with a file-local notice.
+- rows-0f606718c5e413e898d9ad33a3d7e803e532d5d5bd8a1c29929e7f8b2458e8ef.jsonl.xz: row-preserving conversion of the 17 source Parquet tables
+  to ordered JSON Lines with raw and served float.hex values, then one XZ stream.
+- source-files.sha256: sorted SHA-256 manifest of the 27 source slice files.
+- system.json: JSON conversion of systems/h200_sxm.yaml with a file-local notice.

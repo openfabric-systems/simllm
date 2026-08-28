@@ -1,0 +1,113 @@
+{
+  "schema": "simllm-external-db-parity-query-supplement-v1",
+  "status": "FROZEN_POST_SPECIFIED_SUPPLEMENT",
+  "frozen_before_supplement_run": true,
+  "chronology": {
+    "classification": "post-specified supplement to an already-run family",
+    "finding": "the original I2 cross-site query did not discriminate the 2.0 maximum-site-distance rule",
+    "original_expectations_commit": "44959ef",
+    "original_query_commit": "afe7ee6",
+    "original_result_commit": "41ed5be",
+    "reporting_rule": "publish in a separate I2S register and never add its rows to the original I2 denominator of 26"
+  },
+  "source": {
+    "oracle": "external sdk",
+    "aiconfigurator": "0.11.0",
+    "aiconfigurator_core": "0.11.0",
+    "system": "h200_sxm",
+    "backend": "trtllm",
+    "database_version": "1.3.0rc10",
+    "database_mode": "SILICON",
+    "shared_layer": false,
+    "surface": "python",
+    "derivation": "values were evaluated twice in fresh pinned-SDK processes; cap-off changes only ScatteredSites.max_site_distance from 2.0 to null"
+  },
+  "family": {
+    "id": "I2S",
+    "evidence_class": "post-specified",
+    "scored_separately": true,
+    "original_i2_denominator": 26,
+    "supplement_denominator": 2
+  },
+  "queries": [
+    {
+      "id": "I2S-01",
+      "rule": "GEMM qualifying sites straddle the 2.0 joint log2 n-k distance cap",
+      "operation": "gemm",
+      "args": {
+        "m": 1,
+        "n": 16,
+        "k": 16,
+        "quant_mode": "bfloat16"
+      },
+      "distance_audit": {
+        "metric": "sqrt((log2(site_n)-log2(query_n))^2 + (log2(site_k)-log2(query_k))^2)",
+        "nearest_qualifying_sites": [
+          {
+            "n": 32,
+            "k": 32,
+            "distance": 1.4142135623730951,
+            "within_cap": true
+          },
+          {
+            "n": 32,
+            "k": 64,
+            "distance": 2.23606797749979,
+            "within_cap": false
+          },
+          {
+            "n": 64,
+            "k": 32,
+            "distance": 2.23606797749979,
+            "within_cap": false
+          },
+          {
+            "n": 64,
+            "k": 64,
+            "distance": 2.8284271247461903,
+            "within_cap": false
+          }
+        ]
+      },
+      "expected_cap_on": {
+        "kind": "value",
+        "decimal_ms": 0.0006801882210899801,
+        "hex": "0x1.649d515151514p-11",
+        "local": "bit-equal value",
+        "external": "bit-equal value"
+      },
+      "expected_cap_off_mutation": {
+        "kind": "value",
+        "decimal_ms": 0.000395246617676321,
+        "hex": "0x1.9e7234bf96873p-12",
+        "must_differ_from_cap_on": true
+      }
+    },
+    {
+      "id": "I2S-02",
+      "rule": "GEMM with no qualifying site inside the 2.0 joint log2 n-k distance cap",
+      "operation": "gemm",
+      "args": {
+        "m": 1,
+        "n": 4,
+        "k": 4,
+        "quant_mode": "bfloat16"
+      },
+      "distance_audit": {
+        "metric": "sqrt((log2(site_n)-log2(query_n))^2 + (log2(site_k)-log2(query_k))^2)",
+        "nearest_qualifying_site": {
+          "n": 32,
+          "k": 32,
+          "distance": 4.242640687119285,
+          "within_cap": false
+        }
+      },
+      "expected_cap_on": {
+        "kind": "structured_miss",
+        "reason": "no site within max_site_distance",
+        "local_exception": "InterpolationDataNotAvailableError",
+        "external_exception": "PerfDataNotAvailableError"
+      }
+    }
+  ]
+}

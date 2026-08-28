@@ -29,6 +29,7 @@ runs/
 !examples/vllm_skeleton_v1/results.csv
 !examples/rnic_device_v1/results.csv
 !examples/rnic_device_v1/native_tests.csv
+!examples/external_db_parity_v1/results.csv
 
 # Local agent rule files (kept out of the public repo on purpose)
 CLAUDE.md

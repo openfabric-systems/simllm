@@ -1,0 +1,251 @@
+{
+  "conversion": {
+    "format": "XZ-compressed JSON Lines with binary64 hex values",
+    "modified": true,
+    "numpy": "1.26.4",
+    "payload": "rows-0f606718c5e413e898d9ad33a3d7e803e532d5d5bd8a1c29929e7f8b2458e8ef.jsonl.xz",
+    "payload_bytes": 2119044,
+    "payload_sha256": "0f606718c5e413e898d9ad33a3d7e803e532d5d5bd8a1c29929e7f8b2458e8ef",
+    "pyarrow": "25.0.1",
+    "python": "3.12.12",
+    "recipe": {
+      "converter_schema": "simllm-external-database-converter-v1",
+      "float_encoding": "Python float.hex() encodes raw and served IEEE-754 binary64 values",
+      "json_lines": {
+        "encoding": "ASCII",
+        "ensure_ascii": true,
+        "line_termination": "LF (0x0a) after every record",
+        "record": "one six-element JSON array per source row",
+        "separators": [
+          ",",
+          ":"
+        ]
+      },
+      "liblzma": "5.2.3",
+      "pyyaml": "6.0.3",
+      "row_ordering": "tables follow the declared manifest inventory order; rows within each table retain PyArrow to_pylist source order; no row sort is applied",
+      "xz": {
+        "check": "CHECK_CRC64",
+        "extreme": true,
+        "format": "FORMAT_XZ",
+        "preset": 9,
+        "preset_expression": "9 | PRESET_EXTREME",
+        "stream_layout": "one XZ stream from one lzma.compress call over the complete JSON Lines payload"
+      }
+    },
+    "row_schema": "simllm-external-operation-row-v1",
+    "rows": 284717,
+    "uncompressed_bytes": 40716531
+  },
+  "converted_files_sha256": {
+    "family-mapping.json": "63a65ff85d1e45835d550bac31127a17f38a0c3b3a7d46733048067db63dc248",
+    "model-config.json": "28f872ba386022a4417e2d21f11fd14f2a75ab213c8ab364e4d0704473997523",
+    "system.json": "1ee7f75a56b0d078d360c159e5fe4b3ec052f456f32d8123dab0a19256012921"
+  },
+  "family_mapping_sha256": "63a65ff85d1e45835d550bac31127a17f38a0c3b3a7d46733048067db63dc248",
+  "ignored_dimensions": {
+    "gdn_mamba": [
+      "model_name",
+      "num_tokens"
+    ],
+    "generation_attention": [
+      "attn_dtype"
+    ],
+    "generation_mla_module": [
+      "mla_dtype",
+      "tp_size"
+    ],
+    "mla": [
+      "tp_size"
+    ],
+    "standard_moe": [
+      "kernel_source except low-latency table selection"
+    ],
+    "wideep_moe": [
+      "dp_num_tokens",
+      "rank0_num_tokens",
+      "moe_kernel",
+      "simulation_mode"
+    ]
+  },
+  "load_time_mutations": [
+    "GEMM latency is raised to its analytical speed-of-light floor",
+    "generation-attention latency is raised to its analytical speed-of-light floor"
+  ],
+  "power_fields": "absent in every source table; imported power and energy are zero",
+  "resolver_sources": [
+    {
+      "line": 105,
+      "path": "aiconfigurator_core/sdk/perf_interp/engine.py",
+      "semantic": "generic resolver"
+    },
+    {
+      "line": 111,
+      "path": "aiconfigurator_core/sdk/perf_interp/config.py",
+      "semantic": "resolver configuration"
+    },
+    {
+      "line": 835,
+      "path": "aiconfigurator_core/sdk/operations/gemm.py",
+      "semantic": "GEMM loader and keys"
+    },
+    {
+      "line": 1127,
+      "path": "aiconfigurator_core/sdk/operations/attention.py",
+      "semantic": "attention loaders and keys"
+    },
+    {
+      "line": 613,
+      "path": "aiconfigurator_core/sdk/operations/communication.py",
+      "semantic": "custom all-reduce rekey"
+    },
+    {
+      "line": 1538,
+      "path": "aiconfigurator_core/sdk/operations/mla.py",
+      "semantic": "MLA loaders and keys"
+    },
+    {
+      "line": 2391,
+      "path": "aiconfigurator_core/sdk/operations/moe.py",
+      "semantic": "MoE loaders and keys"
+    },
+    {
+      "line": 313,
+      "path": "aiconfigurator_core/sdk/backends/base_backend.py",
+      "semantic": "phase composition"
+    }
+  ],
+  "rewritten_dimensions": {
+    "custom_allreduce": {
+      "lookup": "half",
+      "source": "bfloat16"
+    },
+    "gdn_generation_recurrence": {
+      "lookup": "fused_sigmoid_gating_delta_rule_update",
+      "source": "fused_recurrent_gated_delta_rule"
+    }
+  },
+  "schema": "simllm-external-operation-database-v1",
+  "source": {
+    "aiconfigurator_core_version": "0.11.0",
+    "aiconfigurator_version": "0.11.0",
+    "backend": "trtllm",
+    "data_slice_sha256": "85e72f990f00ea457de522d0b773e678f5e067740689912df5646f6296273284",
+    "database_mode": "SILICON",
+    "database_version": "1.3.0rc10",
+    "estimator_surface": "python",
+    "manifest_provenance": "legacy",
+    "model_config_sha256": "e546dacd2c772660270233f5579e9ab923cc2a7ec5ed3c58c27c2bc62cbf5169",
+    "pricing_closure_sha256": "d559d6694f30ad269ecbf697e0193c7d95e4aba1cfb929836d381a46b675876f",
+    "shared_layer": false,
+    "strict_provenance": false,
+    "system": "h200_sxm",
+    "system_spec_sha256": "142584d6bddd98207fd04e844029b0ba5d6fcd4c6f41016c5e77f0cbe4053614",
+    "tool": "NVIDIA AIConfigurator"
+  },
+  "source_hash_manifest": "source-files.sha256",
+  "tables": [
+    {
+      "rows": 50574,
+      "source_path": "attention/trtllm/1.3.0rc10/context_attention_perf.parquet",
+      "source_sha256": "be2bb399dc4c0725fa2d198f88b3b9db7c2ae24fc3d2074a408617bd438f7153",
+      "table": "context_attention"
+    },
+    {
+      "rows": 24438,
+      "source_path": "attention/trtllm/1.3.0rc10/generation_attention_perf.parquet",
+      "source_sha256": "f6c13aaa1e0dd2d0af2ec21a16f9531945b6c0ebf1da5c7906d498d37c2932d2",
+      "table": "generation_attention"
+    },
+    {
+      "rows": 69,
+      "source_path": "comm/trtllm/1.3.0rc10/custom_allreduce_perf.parquet",
+      "source_sha256": "4a9f8807cf3593fb4ffa676ba552ef3864e8f3dd156cdbabf8f9b757a7b759cd",
+      "table": "custom_allreduce"
+    },
+    {
+      "rows": 6314,
+      "source_path": "encoder_attention/trtllm/1.3.0rc10/encoder_attention_perf.parquet",
+      "source_sha256": "b33cca6b99247695dab6395b76b41c4570c5bec7e6cdfc8195ce300389bf9ee3",
+      "table": "encoder_attention"
+    },
+    {
+      "rows": 101010,
+      "source_path": "gemm/trtllm/1.3.0rc10/gemm_perf.parquet",
+      "source_sha256": "8b39c5e73b7bafc2693c317b8fecf5c83766a5d36f86d4459745c9c3d699a90c",
+      "table": "gemm"
+    },
+    {
+      "rows": 1862,
+      "source_path": "linear_attention/trtllm/1.3.0rc10/gdn_perf.parquet",
+      "source_sha256": "1c33d9f1aac79b7d6055b76fd09cb6f0b3a1bce5b02d0300684144382dad869c",
+      "table": "gdn"
+    },
+    {
+      "rows": 469,
+      "source_path": "linear_attention/trtllm/1.3.0rc10/mamba2_perf.parquet",
+      "source_sha256": "92abb67573d6175594450f7fd7f306435c361a5762b240620b0161448526b8e7",
+      "table": "mamba2"
+    },
+    {
+      "rows": 1760,
+      "source_path": "mla/trtllm/1.3.0rc10/context_mla_perf.parquet",
+      "source_sha256": "d7a3c77119cd29a847755b80cd84d3bd1a3087f5d65a10485bda87858eaa48f1",
+      "table": "context_mla"
+    },
+    {
+      "rows": 2896,
+      "source_path": "mla/trtllm/1.3.0rc10/generation_mla_perf.parquet",
+      "source_sha256": "c66742a8fe6b056488577b7165dc300c812575fd6ed90b0c7422bac877375e86",
+      "table": "generation_mla"
+    },
+    {
+      "rows": 3873,
+      "source_path": "mla/trtllm/1.3.0rc10/mla_context_module_perf.parquet",
+      "source_sha256": "2377fb9154d8707063cc631b8930b08596837c58b4951614839f5e9d14642d3a",
+      "table": "context_mla_module"
+    },
+    {
+      "rows": 5888,
+      "source_path": "mla/trtllm/1.3.0rc10/mla_generation_module_perf.parquet",
+      "source_sha256": "6263e2f59146d3a700313ccb6113c83aeaec289adfb2bf0ad3fdc0576812fea3",
+      "table": "generation_mla_module"
+    },
+    {
+      "rows": 848,
+      "source_path": "mla_bmm/trtllm/1.3.0rc10/mla_bmm_perf.parquet",
+      "source_sha256": "dfdcd5bf97ef31edce58cf626d0fc0cfa3a186c60686a6db84d8521d9e385a1e",
+      "table": "mla_bmm"
+    },
+    {
+      "rows": 74358,
+      "source_path": "moe/trtllm/1.3.0rc10/moe_perf.parquet",
+      "source_sha256": "17b27e3a6af4e3c2b75410f565b8b83a08475b06eab03e18e18182e533d4f880",
+      "table": "moe"
+    },
+    {
+      "rows": 4158,
+      "source_path": "moe/trtllm/1.3.0rc10/wideep_moe_perf.parquet",
+      "source_sha256": "396c46bfaf0d4daf73c1ebf3cf289755dd372ea0c3f3a707c59c8b755b15af3a",
+      "table": "wideep_moe"
+    },
+    {
+      "rows": 1628,
+      "source_path": "quantize/trtllm/1.3.0rc10/computescale_perf.parquet",
+      "source_sha256": "0a3ce15b38802c5b3463a92005bdfae404f45ae4a5c6eff3c6b08d3dcef3fe70",
+      "table": "compute_scale"
+    },
+    {
+      "rows": 1628,
+      "source_path": "quantize/trtllm/1.3.0rc10/scale_matrix_perf.parquet",
+      "source_sha256": "8f67f6355e397abb3e31e8150b404c90d20d26ac752817a582d89fae5f82d7c8",
+      "table": "scale_matrix"
+    },
+    {
+      "rows": 2944,
+      "source_path": "sparse_attention/trtllm/1.3.0rc10/dsa_generation_module_perf.parquet",
+      "source_sha256": "a1d78b5bae8862cef86906d8afaf3929dc43963a518885f9ac30f0483f0a7b47",
+      "table": "generation_dsa_module"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "data_dir": "data/h200_sxm",
+  "gpu": {
+    "bfloat16_tc_flops": 989000000000000,
+    "fp8_tc_flops": 1978000000000000,
+    "int8_tc_flops": 1978000000000000,
+    "mem_bw": 4800000000000,
+    "mem_bw_empirical_scaling_factor": 0.8,
+    "mem_capacity": 151397597184,
+    "mem_empirical_constant_latency": 3e-06,
+    "power": 700,
+    "sm_version": 90
+  },
+  "misc": {
+    "nccl_mem": {
+      "1": 0,
+      "2": 358612992,
+      "4": 411041792,
+      "8": 411041792
+    },
+    "nccl_version": "2.26.2",
+    "other_mem": 3758096384
+  },
+  "node": {
+    "inter_node_bw": 50000000000,
+    "intra_node_bw": 450000000000,
+    "num_gpus_per_node": 8,
+    "p2p_latency": 1e-05,
+    "pcie_bw": 64000000000
+  },
+  "notice": "This file was converted by SimLLM from aiconfigurator-core 0.11.0 systems/h200_sxm.yaml; see MODIFIED."
+}
