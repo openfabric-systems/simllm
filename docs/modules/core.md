@@ -1144,7 +1144,6 @@ CORE-65 remains open and CORE-66 receives the exact EP72 hardware-capture
 remainder. All 154 preservation locks pass; no parameter was fitted, no MTP
 value was used or compared, and no fifth scored run occurred.
 
-<<<<<<< HEAD
 The [CORE-66 feasible-capture result](../../examples/deployment_curve_v1/core66_capture_result.md)
 records no hardware submission. The registered 72-rank cell is impossible on
 the project's three four-GPU GH200 nodes, and the frozen EP12 replacement was
@@ -1156,8 +1155,6 @@ was obtained. Both the `1/64` count-and-weight and `1/9` assignment checks stay
 undecided, and calibration-only signed movement is null because neither
 correction direction can be priced. CORE-66 remains open.
 
-=======
->>>>>>> origin/main
 ## Open tasks
 
 ### Precision

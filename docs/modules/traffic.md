@@ -1078,6 +1078,39 @@ route to those higher degrees.
 
 ### Precision
 
+- TRAF-74 (Precision; P1; L): validate the scored three-module A100 NVLink
+  incast prediction against one qualified four-A100 `NV4` node at the only
+  physically capturable degrees, one, two and three senders into one receiver.
+  The surrogate under test is the simultaneous-release packet and credit
+  domain using the measured TX egress and RX ingress plateaus plus the declared
+  packetization, credit round and structural pass-through switch identity. Run
+  256 KiB and 512 KiB long flows only through the unchanged corrected TRAF-70
+  persistent peer-write producer, because sequential PCIe sender launches make
+  true-sync small-flow incast unconstructible. Freeze the simulator's
+  per-source completion times and aggregate receiver goodput before one short,
+  exclusive, paced `a100-hourly` cell. Record the matching hardware quantities,
+  checksum and ordering ledgers, per-link data and raw counters, replay and
+  recovery deltas, throttle state, topology and competing processes. A cell
+  passes only when `(simulation - hardware) / hardware` is inside the frozen
+  band for its aggregate and every source median, every inherited fatal guard
+  is decidable and passes, and the frozen launch-skew budget is no more than ten
+  percent of the minimum hardware completion. A miss remains published and is
+  attributed by the frozen rules to the TX egress plateau, RX ingress plateau,
+  credit round, packetization or pass-through switch identity. Degrees 4, 8 and
+  16 remain declared simulation-only mesh extrapolations with no hardware
+  counterpart on this node class; agreement at degrees 1 to 3 supports but does
+  not prove them. Preserve every merged TRAF-69, TRAF-70 and TRAF-72 artifact
+  byte for byte and publish this study under its own records. The
+  [first frozen capture](../../examples/nvlink_incast_validation_v1/RESULTS.md),
+  Merlin job `200456`, completed all 42 rows with every inherited
+  TRAF-70 guard, the full matrix guard and the preservation guard passing. Its
+  degree-3 256 KiB samples reached a maximum sequential launch-skew fraction of
+  10.501 percent against the frozen 10.000 percent ceiling, so FG11 voided the
+  whole run before behavioral scoring. Retain that refutation as the study's
+  first result. Before a future capture, land a new expectations-only freeze
+  whose larger long-flow rungs leave physical margin below the launch-skew
+  ceiling; then run one new short paced cell. TRAF-74 stays open until a
+  non-void comparison publishes all six per-cell verdicts.
 - TRAF-20 (Precision; P2; M): qualify the delivered `loggopsim-ideal`
   fast level for schedule-shape studies that do not need per-flow transport
   behavior. The
@@ -1676,6 +1709,10 @@ route to those higher degrees.
   committed and now exposes parameter-specific evidence. The flow-dynamics
   gate is `OPEN`. TRAF-65 remains open for its separately required live
   held-out integration result.
+  This entry was registered as TRAF-73 and renumbered to TRAF-74 by the
+  integrator at merge time, because a concurrently dispatched study
+  claimed the same identifier; the study's own frozen artifacts keep the
+  original string so their digests stay intact.
 
 - TRAF-73 (Precision; P1; M): identify the effective NVLink credit window,
   credit-pool scope and downstream incast arbitration on the qualified NV4
