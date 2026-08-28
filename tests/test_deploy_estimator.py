@@ -189,6 +189,20 @@ def test_e1_roofline_literal_is_memory_bound() -> None:
     assert estimate.step_ps == 1_250_000_000
 
 
+@pytest.mark.parametrize("width", (2, 4, 8))
+def test_zero_collective_bytes_are_an_identity_at_every_width(width: int) -> None:
+    candidate = _candidate(pools=(_pool("decode", width=width),))
+
+    estimate = estimate_decode_step(
+        candidate,
+        1,
+        _inputs(model_work=_model_work(collective_bytes_per_item=0)),
+    )
+
+    assert estimate.fabric_floor.duration_ps == 0
+    assert estimate.intra_floor.duration_ps == 0
+
+
 def test_e2_fabric_floor_uses_largest_single_flow_and_floor_division() -> None:
     candidate = _candidate(pools=(_pool("decode", width=16),))
     inputs = _inputs(

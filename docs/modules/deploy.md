@@ -30,6 +30,10 @@ backend, allocating a GPU or importing a serving framework.
   identify the content-addressed inventory and declared GPU roofline inputs.
   `estimate_decode_step` reproduces the frozen 8, 16 and 72 GPU byte
   partitions, ideal link floors and inter-then-intra telescoping identity.
+  Zero collective work is an exact identity at TP2, TP4 and TP8, which lets a
+  device-only scan retain its declared tensor-parallel structure without
+  inventing network bytes; nonzero work and every wider width keep the
+  existing sourced-partition requirements and fail-closed behavior.
   Optional `BatchServicePoint` rows remain a separate measured scheduler
   service term and are interpolated only through the calibration module's
   installed surface function.
@@ -106,6 +110,17 @@ machine. Structural placement rendering, SGLang-side candidate construction,
 parallel scanning and promoted simulation remain explicit optional
 integrations under DEPLOY-2, DEPLOY-3, DEPLOY-7 and DEPLOY-8.
 
+The nonvoid
+[frontier comparison](../../examples/frontier_comparison_v1/RESULTS.md) binds
+the exact Qwen3-32B-FP8 inventory to the declared H200 roofline and scans 5,070
+bounded disaggregated candidates at each of three efficiency arms with zero
+pricing subprocesses. The exact external-best topology is feasible and stable,
+decode and prefill implied efficiencies are 0.586068 and 0.570209, and remain
+report-only. All 10 external rows satisfy the efficiency-1.0 dominance
+direction; 9 of 10 sit inside the matched-configuration 0.6 to 1.0 throughput
+bracket. This is comparison evidence, not silicon calibration: DEPLOY-9,
+DEPLOY-10 and DEPLOY-11 own the residual breadth and precision.
+
 ## Open tasks
 
 ### Precision
@@ -120,6 +135,16 @@ integrations under DEPLOY-2, DEPLOY-3, DEPLOY-7 and DEPLOY-8.
   the declared source-carrying input as the identity bypass, and require the
   measured path to predict held-out request service within 15 percent before
   it becomes the default for a covered cell.
+- DEPLOY-11 (Precision; P1; L): Calibrate the declared H200 device envelope
+  used by the Qwen3-32B frontier comparison against retained per-operation and
+  end-to-end service observations on H200 silicon. The surrogate being
+  replaced is the single declared roofline efficiency applied to inventory
+  FLOPs and logical HBM bytes. Identify compute-bound, memory-bound, prefill
+  and decode parameters from source-complete framework traces, then require
+  held-out service within 15 percent across the registered prompt, context,
+  batch and TP2, TP4 and TP8 cells. Keep the declared envelope as an explicit
+  comparison-only bypass until the measured profile passes; installing either
+  report-only e-star value is forbidden.
 
 ### Completeness
 
@@ -145,3 +170,17 @@ integrations under DEPLOY-2, DEPLOY-3, DEPLOY-7 and DEPLOY-8.
   placement, execution and simulation records by candidate key. Depend on
   DEPLOY-2 for rendered host packing, and preserve the planning-only record
   exactly when promotion is disabled.
+- DEPLOY-9 (Completeness; P2; M): Generalize deployment candidate enumeration
+  beyond the frontier comparison's frozen TP2, TP4 and TP8 widths, positive
+  role-worker splits and bounded decode batch ladder. Accept caller-declared,
+  source-stamped width and batch families in deterministic order, reject any
+  width whose work or network partition is unavailable, and reproduce the
+  frozen comparison candidate keys, points and frontiers byte exactly when the
+  generalized enumerator is disabled.
+- DEPLOY-10 (Completeness; P2; M): Add display-only comparison adapters for
+  external deployment planners and serving systems beyond the frozen
+  aiconfigurator 0.11.0 rows. Each adapter pins tool, version, database,
+  workload and source bytes, stamps every row `MEASURED-EXTERNAL`, and proves
+  by process interception and estimator-input inspection that no external row
+  enters pricing. With no adapter selected, preserve the accepted frontier
+  record and figure bytes exactly.

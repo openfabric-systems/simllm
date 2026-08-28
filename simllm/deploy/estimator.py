@@ -584,6 +584,8 @@ def _service_pool(candidate: DeploymentCandidate, role: str) -> PoolSpec:
 def _partition_bytes(pool: PoolSpec, total: int) -> tuple[int, tuple[int, ...]]:
     """Promote deployment_frontier_v1.partition_network_bytes verbatim."""
 
+    if total == 0 and pool.gpus_per_engine in {2, 4, 8}:
+        return 0, ()
     shape = _FROZEN_PARTITIONS.get(pool.gpus_per_engine)
     if shape is None:
         raise ValueError(
