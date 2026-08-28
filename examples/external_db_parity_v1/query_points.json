@@ -19,6 +19,101 @@
     "raw_hex": "0x1.eb4af55555555p-8",
     "served_hex": "0x1.02253ae9a795bp-7"
   },
+  "review_addendum": {
+    "freeze_file": "freeze_addendum.md",
+    "responds_to_findings": ["A-1", "B-2", "B-3", "B-4"],
+    "load_time_mutation_guard": {
+      "id": "FG-5-GENERATION-ATTENTION",
+      "rule": "generation-attention load raises a raw latency below the analytical speed-of-light floor",
+      "operation": "generation_attention",
+      "lookup": "served_cell",
+      "args": {"b": 128, "s": 1024, "n": 128, "n_kv": 8, "kv_quant_mode": "bfloat16", "window_size": 0, "head_size": 128},
+      "normalized_key": ["bfloat16", 8, 128, 0, 128, 128, 1024],
+      "raw_hex": "0x1.b78732aaaaaabp-4",
+      "served_hex": "0x1.d0d73a2abadb5p-4"
+    },
+    "queries": [
+      {
+        "id": "I2-27",
+        "rule": "GEMM cross-site inverse-square utilization blend excludes sites beyond log2-space distance 2.0",
+        "operation": "gemm",
+        "args": {"m": 257, "n": 131072, "k": 131072, "quant_mode": "bfloat16"},
+        "cap_off_diagnostic": {
+          "local_hex": "0x1.cc9259aaacb10p+3",
+          "included_site": {"n": 16384, "k": 65536, "distance": 3.1622776601683795}
+        }
+      },
+      {
+        "id": "I2-28",
+        "rule": "exact GEMM table hit returns the load-time speed-of-light-clamped served value",
+        "operation": "gemm",
+        "args": {"m": 32768, "n": 64, "k": 512, "quant_mode": "bfloat16"}
+      },
+      {
+        "id": "I2-29",
+        "rule": "exact generation-attention table cell returns the load-time speed-of-light-clamped served value",
+        "operation": "generation_attention",
+        "lookup": "served_cell",
+        "args": {"b": 128, "s": 1024, "n": 128, "n_kv": 8, "kv_quant_mode": "bfloat16", "window_size": 0, "head_size": 128}
+      },
+      {
+        "id": "I2-30",
+        "rule": "generation-attention attn_dtype is ignored",
+        "operation": "generation_attention",
+        "invariance_pair": "generation-attention-attn-dtype",
+        "args": {"b": 64, "s": 4000, "n": 96, "n_kv": 8, "kv_quant_mode": "fp8", "window_size": 0, "head_size": 64, "attn_dtype": "bfloat16"}
+      },
+      {
+        "id": "I2-31",
+        "rule": "generation-attention attn_dtype is ignored",
+        "operation": "generation_attention",
+        "invariance_pair": "generation-attention-attn-dtype",
+        "args": {"b": 64, "s": 4000, "n": 96, "n_kv": 8, "kv_quant_mode": "fp8", "window_size": 0, "head_size": 64, "attn_dtype": "fp8"}
+      },
+      {
+        "id": "I2-32",
+        "rule": "dispatched standard MoE ignores non-low-latency kernel_source",
+        "operation": "moe",
+        "invariance_pair": "standard-moe-kernel-source",
+        "args": {"num_tokens": 256, "hidden_size": 4096, "inter_size": 1536, "topk": 8, "num_experts": 128, "moe_tp_size": 4, "moe_ep_size": 4, "quant_mode": "bfloat16", "workload_distribution": "balanced", "kernel_source": "moe_torch_flow"}
+      },
+      {
+        "id": "I2-33",
+        "rule": "dispatched standard MoE ignores non-low-latency kernel_source",
+        "operation": "moe",
+        "invariance_pair": "standard-moe-kernel-source",
+        "args": {"num_tokens": 256, "hidden_size": 4096, "inter_size": 1536, "topk": 8, "num_experts": 128, "moe_tp_size": 4, "moe_ep_size": 4, "quant_mode": "bfloat16", "workload_distribution": "balanced", "kernel_source": "moe_torch_flow_cutlass"}
+      },
+      {
+        "id": "I2-34",
+        "rule": "GDN model_name is ignored",
+        "operation": "gdn",
+        "invariance_pair": "gdn-model-name",
+        "args": {"phase": "generation", "kernel_source": "fused_sigmoid_gating_delta_rule_update", "batch_size": 512, "seq_len": null, "d_model": 2048, "num_k_heads": 16, "head_k_dim": 128, "num_v_heads": 16, "head_v_dim": 128, "d_conv": 4, "model_name": "Qwen/Qwen3.5-0.8B"}
+      },
+      {
+        "id": "I2-35",
+        "rule": "GDN model_name is ignored",
+        "operation": "gdn",
+        "invariance_pair": "gdn-model-name",
+        "args": {"phase": "generation", "kernel_source": "fused_sigmoid_gating_delta_rule_update", "batch_size": 512, "seq_len": null, "d_model": 2048, "num_k_heads": 16, "head_k_dim": 128, "num_v_heads": 16, "head_v_dim": 128, "d_conv": 4, "model_name": "Qwen/Qwen3.5-397B-A17B"}
+      },
+      {
+        "id": "I2-36",
+        "rule": "GDN num_tokens is ignored",
+        "operation": "gdn",
+        "invariance_pair": "gdn-num-tokens",
+        "args": {"phase": "generation", "kernel_source": "fused_sigmoid_gating_delta_rule_update", "batch_size": 512, "seq_len": null, "d_model": 2048, "num_k_heads": 16, "head_k_dim": 128, "num_v_heads": 16, "head_v_dim": 128, "d_conv": 4, "num_tokens": 512}
+      },
+      {
+        "id": "I2-37",
+        "rule": "GDN num_tokens is ignored",
+        "operation": "gdn",
+        "invariance_pair": "gdn-num-tokens",
+        "args": {"phase": "generation", "kernel_source": "fused_sigmoid_gating_delta_rule_update", "batch_size": 512, "seq_len": null, "d_model": 2048, "num_k_heads": 16, "head_k_dim": 128, "num_v_heads": 16, "head_v_dim": 128, "d_conv": 4, "num_tokens": 1024}
+      }
+    ]
+  },
   "queries": [
     {
       "id": "I2-01",
