@@ -23,11 +23,12 @@ KERNEL_SUMMARY_RELATIVE = Path(
     "gh200lane/capture-198891-deepseek-v3-tp1-graph-decode/analysis/kernel-summary.csv"
 )
 KERNEL_SUMMARY_LABEL = f"$SIMLLM_KERNELPROBE_ROOT/{KERNEL_SUMMARY_RELATIVE.as_posix()}"
+KERNEL_SHAPE_LABEL = "decode_b32_c2000"
 KERNEL_SUMMARY_SELECTOR = (
-    "/rows[pool=decode,shape=32,device=0,is_collective=False]"
+    f"/rows[pool=decode,shape={KERNEL_SHAPE_LABEL},device=0,is_collective=False]"
 )
 LEGACY_KERNEL_SUMMARY_SELECTOR = (
-    "/rows[pool=decode,shape=32,is_collective=False]"
+    f"/rows[pool=decode,shape={KERNEL_SHAPE_LABEL},is_collective=False]"
 )
 KERNEL_SUMMARY_SHA256_FROM_PUBLISHED_CATALOG = (
     "c4d8ece981478ce57ebca95f7f2f168865713b66e87ed21a1d3f76976e834b7c"
@@ -145,7 +146,7 @@ def extract_standard_decode_kernels(
             observed_routes.add((pool.decode("ascii"), shape.decode("ascii")))
         except UnicodeDecodeError as exc:
             raise ValueError("kernel summary routing fields are not ASCII") from exc
-        if (pool, shape) != (b"decode", b"32"):
+        if (pool, shape) != (b"decode", KERNEL_SHAPE_LABEL.encode("ascii")):
             continue
         if not legacy_schema and prefix[2] != b"0":
             continue

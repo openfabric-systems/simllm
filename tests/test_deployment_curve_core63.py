@@ -98,7 +98,7 @@ def _legacy_csv_header() -> bytes:
 def _csv_row(
     *,
     pool: str,
-    shape: int,
+    shape: str,
     name: str,
     collective: bool = False,
     total_ns: str = "100.5",
@@ -124,7 +124,7 @@ def _csv_row(
     return output.getvalue().encode()
 
 
-def _legacy_csv_row(*, pool: str, shape: int, name: str) -> bytes:
+def _legacy_csv_row(*, pool: str, shape: str, name: str) -> bytes:
     current = dict(
         zip(
             _reader().EXPECTED_HEADER,
@@ -191,15 +191,19 @@ def test_csv_reader_decodes_only_selected_payloads_and_filters_collectives() -> 
     payload = b"".join(
         [
             _csv_header(),
-            b"decode,8,0," + b"\xff" * 20 + b"\n",
-            _csv_row(pool="decode", shape=32, name="fused_moe_kernel"),
+            b"decode,unselected,0," + b"\xff" * 20 + b"\n",
             _csv_row(
                 pool="decode",
-                shape=32,
+                shape=_reader().KERNEL_SHAPE_LABEL,
+                name="fused_moe_kernel",
+            ),
+            _csv_row(
+                pool="decode",
+                shape=_reader().KERNEL_SHAPE_LABEL,
                 name="ncclKernel",
                 collective=True,
             ),
-            _csv_row(pool="prefill", shape=32, name="forbidden"),
+            _csv_row(pool="prefill", shape="prefill_b32_c2000", name="forbidden"),
         ]
     )
 
@@ -214,7 +218,7 @@ def test_csv_reader_accepts_unselected_schema_columns() -> None:
     header = _csv_header().decode().rstrip("\n") + ",diagnostic\r\n"
     selected = _csv_row(
         pool="decode",
-        shape=32,
+        shape=_reader().KERNEL_SHAPE_LABEL,
         name="fused_moe_kernel",
     ).decode().rstrip("\n")
     payload = (header + selected + ",ignored\r\n").encode()
@@ -227,7 +231,7 @@ def test_csv_reader_accepts_unselected_schema_columns() -> None:
 def test_csv_reader_accepts_exact_logged_legacy_schema() -> None:
     payload = _legacy_csv_header() + _legacy_csv_row(
         pool="decode",
-        shape=32,
+        shape=_reader().KERNEL_SHAPE_LABEL,
         name="fused_moe_kernel",
     )
 
@@ -251,14 +255,16 @@ def test_csv_reader_selection_rejection_carries_only_routing_labels() -> None:
     reader = _reader()
     payload = _legacy_csv_header() + _legacy_csv_row(
         pool="decode_graph",
-        shape=32,
+        shape=_reader().KERNEL_SHAPE_LABEL,
         name="secret_kernel_payload",
     )
 
     with pytest.raises(reader.KernelSummarySelectionError) as caught:
         reader.extract_standard_decode_kernels(io.BytesIO(payload))
 
-    assert caught.value.observed_routes == (("decode_graph", "32"),)
+    assert caught.value.observed_routes == (
+        ("decode_graph", _reader().KERNEL_SHAPE_LABEL),
+    )
     assert "secret_kernel_payload" not in str(caught.value.observed_routes)
 
 
