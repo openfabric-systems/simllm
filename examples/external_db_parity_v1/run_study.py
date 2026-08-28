@@ -28,6 +28,7 @@ from typing import Any
 
 STUDY = Path(__file__).resolve().parent
 ROOT = STUDY.parents[1]
+sys.path.insert(0, os.fspath(ROOT))
 QUERY_CONFIG = STUDY / "query_points.json"
 EXPECTATIONS = STUDY / "expectations.md"
 TRACKED_ARTIFACT = (
