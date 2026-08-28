@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -78,6 +79,28 @@ def test_corrected_dense_population_and_extrapolation_are_predeclared() -> None:
     assert extrapolated["simulated_messages_per_layer"] == 0
     assert extrapolated["represented_messages"] == 2 * 256 * 255 * 65
     assert extrapolated["extrapolation"]["anchor_expert_parallel"] == 128
+
+
+def test_figure_rendering_uses_the_declared_external_python(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runner = _runner()
+    calls: list[tuple[list[str], dict[str, object]]] = []
+
+    def fake_run(command: list[str], **kwargs: object) -> SimpleNamespace:
+        calls.append((command, kwargs))
+        return SimpleNamespace(returncode=0, stderr="", stdout="")
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+    interpreter = tmp_path / "external-venv" / "bin" / "python"
+    runner._render_figures(
+        tmp_path / "record.json",
+        tmp_path / "figures",
+        python_executable=interpreter,
+    )
+
+    assert calls[0][0][0] == os.fspath(interpreter)
 
 
 def test_tracked_minimax_record_is_locked_and_nonvoid() -> None:

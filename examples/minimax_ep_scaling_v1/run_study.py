@@ -1180,11 +1180,16 @@ def _csv_bytes(rows: list[dict[str, Any]]) -> bytes:
     return output.getvalue().encode("utf-8")
 
 
-def _render_figures(record_path: Path, output_dir: Path) -> dict[str, str]:
+def _render_figures(
+    record_path: Path,
+    output_dir: Path,
+    *,
+    python_executable: Path,
+) -> dict[str, str]:
     output_dir.mkdir(parents=True, exist_ok=True)
     completed = subprocess.run(
         [
-            sys.executable,
+            os.fspath(python_executable),
             os.fspath(STUDY / "plot_results.py"),
             "--record",
             os.fspath(record_path),
@@ -1481,7 +1486,11 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
     attempt_csv = attempt / "results.csv"
     attempt_record.write_bytes(_json_bytes(record))
     attempt_csv.write_bytes(_csv_bytes(rows))
-    _render_figures(attempt_record, attempt / "figures")
+    _render_figures(
+        attempt_record,
+        attempt / "figures",
+        python_executable=_venv_python(venv),
+    )
     disclosure_inspection = _inspect_artifact_disclosures(
         record_path=attempt_record,
         csv_path=attempt_csv,
