@@ -21,8 +21,12 @@ from typing import Any
 
 STUDY_DIR = Path(__file__).resolve().parent
 REPOSITORY_ROOT = STUDY_DIR.parents[1]
+if os.fspath(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, os.fspath(REPOSITORY_ROOT))
 CONFIG_PATH = STUDY_DIR / "study_config.json"
 EXPECTATIONS_PATH = STUDY_DIR / "expectations.md"
+EXPECTATIONS_V2_PATH = STUDY_DIR / "expectations_v2.md"
+ADJUSTMENTS_PATH = STUDY_DIR / "external_adjustments.json"
 AGG_PATH = REPOSITORY_ROOT / "examples/frontier_comparison_v1/external/agg_pareto.csv"
 DISAGG_PATH = REPOSITORY_ROOT / "examples/frontier_comparison_v1/external/disagg_pareto.csv"
 ARTIFACT_PATH = (
@@ -36,8 +40,9 @@ CSV_PATH = STUDY_DIR / "results.csv"
 PDF_PATH = STUDY_DIR / "figures/matched-seam-frontier.pdf"
 PNG_PATH = STUDY_DIR / "figures/matched-seam-frontier.png"
 
-SCHEMA = "simllm-matched-seam-frontier-record-v1"
+SCHEMA = "simllm-matched-seam-frontier-record-v2"
 EXPECTATIONS_COMMIT = "4c7ec887ed86abb09d3b15f93e9b04f521252819"
+CORRECTED_EXPECTATIONS_COMMIT = "4ed8d1aae540d4cf548eace3c5b4008ba3500d9b"
 SERVICE_FREEZE_COMMIT = "5760301efb430aee99573ac4f89f1d572c040614"
 BINDING_COMMIT = "9e6782d04a99fd773d08dbf422df6d8ce9c81dbe"
 EXTERNAL_VENV_ENV = "SIMLLM_EXTERNAL_AIC_VENV"
@@ -84,6 +89,49 @@ def _load_json(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise TypeError(f"{path.name}: expected a JSON object")
     return value
+
+
+def _adjustment_table() -> dict[str, Any]:
+    table = _load_json(ADJUSTMENTS_PATH)
+    if table.get("schema") != "simllm-matched-seam-external-adjustments-v1":
+        raise ValueError("external adjustment table has an unexpected schema")
+    adjustments = table.get("adjustments")
+    if not isinstance(adjustments, list) or not adjustments:
+        raise ValueError("external adjustment table must contain adjustment rows")
+    identifiers = [str(row["id"]) for row in adjustments]
+    if len(identifiers) != len(set(identifiers)):
+        raise ValueError("external adjustment table contains duplicate IDs")
+    return table
+
+
+def _adjustments_by_id(table: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {str(row["id"]): row for row in table["adjustments"]}
+
+
+def _adjustment_float(table: dict[str, Any], adjustment_id: str) -> float:
+    return float(_adjustments_by_id(table)[adjustment_id]["value"])
+
+
+def _validate_adjustment_config(config: dict[str, Any], table: dict[str, Any]) -> None:
+    mapping = {
+        "prefill_latency_correction_hex": "prefill_latency_correction",
+        "decode_latency_correction_hex": "decode_latency_correction",
+        "prefill_rate_matching_degradation_hex": "prefill_rate_matching_degradation",
+        "decode_rate_matching_degradation_hex": "decode_rate_matching_degradation",
+        "autoscale_ttft_correction_hex": "autoscale_ttft_correction",
+    }
+    for config_key, adjustment_id in mapping.items():
+        configured = float.fromhex(config["composition"][config_key])
+        declared = _adjustment_float(table, adjustment_id)
+        if configured.hex() != declared.hex():
+            raise ValueError(
+                f"{config_key} differs from external adjustment {adjustment_id}"
+            )
+    frozen = config["frozen_inputs"]["external_adjustments"]
+    if frozen["path"] != ADJUSTMENTS_PATH.relative_to(REPOSITORY_ROOT).as_posix():
+        raise ValueError("external adjustment table path differs from the frozen input")
+    if frozen["sha256"] != _sha256(ADJUSTMENTS_PATH):
+        raise ValueError("external adjustment table hash differs from the frozen input")
 
 
 def _git(*args: str) -> subprocess.CompletedProcess[str]:
@@ -210,6 +258,99 @@ def _external_curve(path: Path, *, disaggregated: bool) -> list[dict[str, Any]]:
                 "batch": int(raw["bs"]),
             }
         rows.append(row)
+    return rows
+
+
+def _family_r_quotients(
+    services: dict[str, float],
+) -> list[tuple[int, Fraction]]:
+    quotients = []
+    for external in _external_curve(DISAGG_PATH, disaggregated=True):
+        configuration = external["configuration"]
+        service_id = (
+            f"decode-tp{configuration['decode_tp']}-b{configuration['decode_batch']}"
+        )
+        quotient = Fraction.from_float(services[service_id]) / _decimal_fraction(
+            external["tpot_ms"]
+        )
+        quotients.append((int(external["row"]), quotient))
+    return quotients
+
+
+def _family_r_sensitivity(
+    *,
+    config: dict[str, Any],
+    adjustment_table: dict[str, Any],
+    baseline_services: dict[str, float],
+) -> list[dict[str, Any]]:
+    from simllm.calibration.external_db import ExternalOperationDatabase
+    from simllm.deploy import ExternalQwen32BDeploymentBinding
+
+    baseline = _family_r_quotients(baseline_services)
+
+    def evaluate_removed(adjustment_id: str) -> list[tuple[int, Fraction]]:
+        database = ExternalOperationDatabase.load(ARTIFACT_PATH)
+        decode_scale = _adjustment_float(
+            adjustment_table, "decode_latency_correction"
+        )
+        if adjustment_id == "decode_latency_correction":
+            decode_scale = float(
+                _adjustments_by_id(adjustment_table)[adjustment_id]["removal_value"]
+            )
+        elif adjustment_id == "memory_bandwidth_empirical_scale":
+            database.system_spec["gpu"]["mem_bw_empirical_scaling_factor"] = float(
+                _adjustments_by_id(adjustment_table)[adjustment_id]["removal_value"]
+            )
+        elif adjustment_id == "memory_empirical_constant_latency":
+            database.system_spec["gpu"]["mem_empirical_constant_latency"] = float(
+                _adjustments_by_id(adjustment_table)[adjustment_id]["removal_value"]
+            )
+        else:
+            raise ValueError(
+                f"Family R sensitivity lacks a remove-one evaluator for {adjustment_id}"
+            )
+        binding = ExternalQwen32BDeploymentBinding(database)
+        services = {}
+        for oracle in config["oracles"]["decode"]:
+            value = binding.decode_service(
+                tensor_parallel=int(oracle["tensor_parallel"]),
+                batch_size=int(oracle["batch_size"]),
+                isl=int(oracle["isl"]),
+                osl=int(oracle["osl"]),
+                prefix=int(oracle["prefix"]),
+                stride=int(oracle["stride"]),
+                latency_correction_scale=decode_scale,
+            )
+            services[value.configuration_id] = value.service_ms
+        return _family_r_quotients(services)
+
+    rows = []
+    for adjustment in adjustment_table["adjustments"]:
+        adjustment_id = str(adjustment["id"])
+        if adjustment["family_r_reachable"]:
+            removed = evaluate_removed(adjustment_id)
+            method = "full decode-composition reevaluation with only this factor removed"
+        else:
+            removed = baseline
+            method = (
+                "complete Family R dependency trace proves this factor unreachable; "
+                "the baseline decode reevaluation is reused exactly"
+            )
+        quotients = [quotient for _, quotient in removed]
+        rows.append(
+            {
+                "adjustment_id": adjustment_id,
+                "baseline_reachable": bool(adjustment["family_r_reachable"]),
+                "removed_value": adjustment["removal_value"],
+                "minimum_quotient": _fraction_json(min(quotients)),
+                "maximum_quotient": _fraction_json(max(quotients)),
+                "method": method,
+                "rows": [
+                    {"row": row_number, "quotient": _fraction_json(quotient)}
+                    for row_number, quotient in removed
+                ],
+            }
+        )
     return rows
 
 
@@ -429,8 +570,8 @@ def _local_worker(
     txt2bin: Path,
     htsim_rnic: Path,
 ) -> dict[str, Any]:
-    if str(REPOSITORY_ROOT) not in sys.path:
-        sys.path.insert(0, str(REPOSITORY_ROOT))
+    import simllm.calibration.external_db as external_db_module
+    import simllm.deploy.estimator as estimator_module
     from simllm.calibration.external_db import ExternalOperationDatabase
     from simllm.deploy import (
         EstimatorInputs,
@@ -446,10 +587,51 @@ def _local_worker(
     )
 
     config = _load_json(CONFIG_PATH)
+    adjustment_table = _adjustment_table()
+    _validate_adjustment_config(config, adjustment_table)
+    applied_adjustments: set[str] = set()
+
+    def use_adjustment(adjustment_id: str) -> float:
+        applied_adjustments.add(adjustment_id)
+        return _adjustment_float(adjustment_table, adjustment_id)
+
     database = ExternalOperationDatabase.load(ARTIFACT_PATH)
+    memory_bandwidth_scale = use_adjustment("memory_bandwidth_empirical_scale")
+    memory_constant = use_adjustment("memory_empirical_constant_latency")
+    if float(database.system_spec["gpu"]["mem_bw_empirical_scaling_factor"]).hex() != (
+        memory_bandwidth_scale.hex()
+    ):
+        raise ValueError("imported memory-bandwidth adjustment differs from the table")
+    if float(database.system_spec["gpu"]["mem_empirical_constant_latency"]).hex() != (
+        memory_constant.hex()
+    ):
+        raise ValueError("imported memory-latency adjustment differs from the table")
+
+    context_calls = 0
+    original_context_attention = external_db_module.ExternalQwen32BPassModel._context_attention
+
+    def traced_context_attention(model: Any, **kwargs: Any) -> Any:
+        nonlocal context_calls
+        context_calls += 1
+        applied_adjustments.add("context_attention_extra_latency_correction")
+        return original_context_attention(model, **kwargs)
+
+    roofline_calls = 0
+    original_roofline_provider = estimator_module.RooflineProvider
+
+    class ForbiddenScoredRooflineProvider:
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            nonlocal roofline_calls
+            roofline_calls += 1
+            raise AssertionError(
+                "SimLLM RooflineProvider reached the corrected matched-seam scored path"
+            )
+
+    external_db_module.ExternalQwen32BPassModel._context_attention = traced_context_attention
+    estimator_module.RooflineProvider = ForbiddenScoredRooflineProvider
     binding = ExternalQwen32BDeploymentBinding(database)
-    decode_scale = float.fromhex(config["composition"]["decode_latency_correction_hex"])
-    prefill_scale = float.fromhex(config["composition"]["prefill_latency_correction_hex"])
+    decode_scale = use_adjustment("decode_latency_correction")
+    prefill_scale = use_adjustment("prefill_latency_correction")
     decode_services = {}
     surfaces: dict[int, list[Any]] = {}
     service_rows = []
@@ -546,11 +728,11 @@ def _local_worker(
         )
         for index, row in enumerate(agg_raw, start=1)
     ]
-    prefill_factor = _float_hex_fraction(
-        config["composition"]["prefill_rate_matching_degradation_hex"]
+    prefill_factor = Fraction.from_float(
+        use_adjustment("prefill_rate_matching_degradation")
     )
-    decode_factor = _float_hex_fraction(
-        config["composition"]["decode_rate_matching_degradation_hex"]
+    decode_factor = Fraction.from_float(
+        use_adjustment("decode_rate_matching_degradation")
     )
     prefill_service = prefill_services["prefill-tp4-b1"]
     ideal_points = []
@@ -662,6 +844,19 @@ def _local_worker(
         coordinate=_point_xy,
         identity=lambda point: str(point["candidate_key"]),
     )
+    sensitivity = _family_r_sensitivity(
+        config=config,
+        adjustment_table=adjustment_table,
+        baseline_services={
+            row["id"]: float(row["service_ms"])
+            for row in service_rows
+            if row["phase"] == "decode"
+        },
+    )
+    estimator_module.RooflineProvider = original_roofline_provider
+    external_db_module.ExternalQwen32BPassModel._context_attention = (
+        original_context_attention
+    )
     return {
         "worker": "local",
         "source": database.source.as_dict(),
@@ -682,6 +877,15 @@ def _local_worker(
         "packet_points": packet_points,
         "ideal_frontier": list(ideal_frontier),
         "packet_frontier": list(packet_frontier),
+        "external_adjustments": {
+            "applied_ids": sorted(applied_adjustments),
+            "context_attention_calls": context_calls,
+            "declared_ids": sorted(
+                str(row["id"]) for row in adjustment_table["adjustments"]
+            ),
+        },
+        "family_r_sensitivity": sensitivity,
+        "simllm_roofline_provider_calls": roofline_calls,
     }
 
 
@@ -730,7 +934,9 @@ def _sdk_database_model(tensor_parallel: int) -> tuple[Any, Any, Any]:
 
 def _live_sdk_worker() -> dict[str, Any]:
     import importlib.metadata
+    import inspect
 
+    import aiconfigurator
     from aiconfigurator_core.sdk.config import RuntimeConfig
 
     config = _load_json(CONFIG_PATH)
@@ -775,6 +981,28 @@ def _live_sdk_worker() -> dict[str, Any]:
                     "total_ms_hex": total.hex(),
                 }
             )
+    site_packages = Path(inspect.getfile(aiconfigurator)).resolve().parent.parent
+    adjustment_table = _adjustment_table()
+    source_verification = []
+    for adjustment in adjustment_table["adjustments"]:
+        locations = {}
+        for kind in ("source", "documentation"):
+            declared = adjustment[kind]
+            path = site_packages / declared["path"]
+            lines = path.read_text(encoding="utf-8").splitlines()
+            start_line = int(declared["start_line"])
+            end_line = int(declared["end_line"])
+            locations[kind] = {
+                "path": declared["path"],
+                "sha256": _sha256(path),
+                "sha256_matches": _sha256(path) == declared["sha256"],
+                "line_range_exists": 1 <= start_line <= end_line <= len(lines),
+                "start_line": start_line,
+                "end_line": end_line,
+            }
+        source_verification.append(
+            {"adjustment_id": adjustment["id"], "locations": locations}
+        )
     return {
         "worker": "live-sdk",
         "versions": {
@@ -782,6 +1010,77 @@ def _live_sdk_worker() -> dict[str, Any]:
             "aiconfigurator_core": importlib.metadata.version("aiconfigurator-core"),
         },
         "services": results,
+        "external_adjustment_sources": source_verification,
+    }
+
+
+def _live_sdk_for_evaluation(
+    *, external_python: Path, evaluation_root: Path
+) -> dict[str, Any]:
+    command = _worker_command(external_python, "live-sdk")
+    environment = dict(os.environ)
+    environment.pop("PYTHONPATH", None)
+    completed = subprocess.run(
+        command,
+        cwd=REPOSITORY_ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    _write_new(evaluation_root / "live-sdk.stdout.json", completed.stdout.encode())
+    _write_new(evaluation_root / "live-sdk.stderr.txt", completed.stderr.encode())
+    if completed.returncode:
+        raise RuntimeError(
+            "live SDK evaluation failed with status "
+            f"{completed.returncode}: {completed.stderr.strip()}"
+        )
+    value = json.loads(completed.stdout)
+    if not isinstance(value, dict):
+        raise TypeError("live SDK evaluation did not return a JSON object")
+    return value
+
+
+def _full_evaluation_worker(
+    *,
+    packet_root: Path,
+    txt2bin: Path,
+    htsim_rnic: Path,
+    external_python: Path,
+) -> dict[str, Any]:
+    evaluation_root = packet_root.parent
+    hashes_before = _tracked_hashes()
+    local = _local_worker(
+        packet_root=packet_root,
+        txt2bin=txt2bin,
+        htsim_rnic=htsim_rnic,
+    )
+    live_sdk = _live_sdk_for_evaluation(
+        external_python=external_python,
+        evaluation_root=evaluation_root,
+    )
+    hashes_after = _tracked_hashes()
+    rows, families = _evaluate(
+        local=local,
+        live_sdk=live_sdk,
+        hashes_before=hashes_before,
+        hashes_after=hashes_after,
+    )
+    return {
+        "schema": "simllm-matched-seam-scored-evaluation-v1",
+        "worker": "evaluation",
+        "source": local["source"],
+        "services": local["services"],
+        "live_sdk": {
+            "versions": live_sdk["versions"],
+            "services": live_sdk["services"],
+        },
+        "families": families,
+        "rows": rows,
+        "fatal_guards_without_fg6": {
+            row["id"]: row["passed"] for row in rows if row["kind"] == "fatal"
+        },
+        "family_tallies_without_wall_time": _family_tallies(rows),
     }
 
 
@@ -792,9 +1091,10 @@ def _worker_command(
     packet_root: Path | None = None,
     txt2bin: Path | None = None,
     htsim_rnic: Path | None = None,
+    external_python: Path | None = None,
 ) -> list[str]:
     command = [os.fspath(python), os.fspath(Path(__file__).resolve()), "--worker", worker]
-    if worker == "local":
+    if worker in {"local", "evaluation"}:
         assert packet_root is not None and txt2bin is not None and htsim_rnic is not None
         command.extend(
             (
@@ -806,6 +1106,9 @@ def _worker_command(
                 os.fspath(htsim_rnic),
             )
         )
+    if worker == "evaluation":
+        assert external_python is not None
+        command.extend(("--external-python", os.fspath(external_python)))
     return command
 
 
@@ -817,10 +1120,11 @@ def _run_worker(
     repetition: int,
     txt2bin: Path | None = None,
     htsim_rnic: Path | None = None,
-) -> dict[str, Any]:
+    external_python: Path | None = None,
+) -> tuple[dict[str, Any], bytes]:
     packet_root = None
-    if worker == "local":
-        packet_root = attempt / f"local-run-{repetition}" / "packet"
+    if worker in {"local", "evaluation"}:
+        packet_root = attempt / f"{worker}-run-{repetition}" / "packet"
         packet_root.parent.mkdir(parents=True, exist_ok=False)
     command = _worker_command(
         python,
@@ -828,11 +1132,14 @@ def _run_worker(
         packet_root=packet_root,
         txt2bin=txt2bin,
         htsim_rnic=htsim_rnic,
+        external_python=external_python,
     )
+    environment = dict(os.environ)
+    environment.pop("PYTHONPATH", None)
     completed = subprocess.run(
         command,
         cwd=REPOSITORY_ROOT,
-        env={**os.environ, "PYTHONPATH": os.fspath(REPOSITORY_ROOT)},
+        env=environment,
         capture_output=True,
         text=True,
         check=False,
@@ -848,7 +1155,7 @@ def _run_worker(
     value = json.loads(completed.stdout)
     if not isinstance(value, dict):
         raise TypeError(f"{worker} worker did not return a JSON object")
-    return value
+    return value, completed.stdout.encode()
 
 
 def _stamp_positive_evidence(stamp: dict[str, Any]) -> list[str]:
@@ -907,16 +1214,24 @@ def _fatal_row(guard_id: str, passed: bool, detail: str) -> dict[str, Any]:
     }
 
 
-def _unscored_row(row_id: str, observed: str, units: str, detail: str) -> dict[str, Any]:
+def _unscored_row(
+    row_id: str,
+    observed: str,
+    units: str,
+    detail: str,
+    *,
+    family: str = "D",
+    evidence_class: str = "MEASURED-EXTERNAL",
+) -> dict[str, Any]:
     return {
-        "family": "D",
+        "family": family,
         "id": row_id,
         "kind": "unscored",
         "passed": None,
         "expected": "",
         "observed": observed,
         "units": units,
-        "evidence_class": "MEASURED-EXTERNAL",
+        "evidence_class": evidence_class,
         "detail": detail,
     }
 
@@ -932,16 +1247,225 @@ def _family_tallies(rows: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
     return result
 
 
+def _validate_scored_value_trace(trace: dict[str, Any]) -> list[str]:
+    nodes = {str(node["id"]): node for node in trace["nodes"]}
+    if len(nodes) != len(trace["nodes"]):
+        return ["duplicate value-trace node ID"]
+    failures = []
+    reachable: set[str] = set()
+    pending = list(trace["scored_roots"])
+    while pending:
+        node_id = str(pending.pop())
+        if node_id in reachable:
+            continue
+        node = nodes.get(node_id)
+        if node is None:
+            failures.append(f"missing value-trace node {node_id}")
+            continue
+        reachable.add(node_id)
+        pending.extend(str(dependency) for dependency in node["dependencies"])
+    forbidden_kinds = {
+        "roofline",
+        "declared_efficiency",
+        "fitted_constant",
+        "fitted_curve",
+    }
+    for node_id in sorted(reachable):
+        node = nodes[node_id]
+        if str(node["origin"]).startswith("simllm") and node["kind"] in forbidden_kinds:
+            failures.append(
+                f"forbidden SimLLM-authored {node['kind']} reaches scored root through {node_id}"
+            )
+    return failures
+
+
+def _scored_value_trace(
+    local: dict[str, Any], adjustment_table: dict[str, Any]
+) -> dict[str, Any]:
+    nodes: list[dict[str, Any]] = []
+    roots: list[str] = []
+
+    def add(
+        node_id: str,
+        *,
+        kind: str,
+        origin: str,
+        value: object,
+        dependencies: tuple[str, ...] = (),
+    ) -> str:
+        nodes.append(
+            {
+                "id": node_id,
+                "kind": kind,
+                "origin": origin,
+                "value": value,
+                "dependencies": list(dependencies),
+            }
+        )
+        return node_id
+
+    for adjustment in adjustment_table["adjustments"]:
+        add(
+            f"adjustment:{adjustment['id']}",
+            kind="external_adjustment",
+            origin="external-aiconfigurator",
+            value=adjustment["value"],
+        )
+
+    service_nodes = {}
+    for service in local["services"]:
+        phase_dependencies = (
+            (
+                "adjustment:decode_latency_correction",
+                "adjustment:memory_bandwidth_empirical_scale",
+                "adjustment:memory_empirical_constant_latency",
+            )
+            if service["phase"] == "decode"
+            else (
+                "adjustment:prefill_latency_correction",
+                "adjustment:memory_bandwidth_empirical_scale",
+                "adjustment:memory_empirical_constant_latency",
+                "adjustment:context_attention_extra_latency_correction",
+            )
+        )
+        node_id = add(
+            f"external-service:{service['id']}",
+            kind="external_composed_service",
+            origin="external-aiconfigurator",
+            value=int(service["service_ps"]),
+            dependencies=phase_dependencies,
+        )
+        service_nodes[str(service["id"])] = node_id
+        roots.append(node_id)
+
+    service_by_id = {str(row["id"]): row for row in local["services"]}
+    prefill_service = service_by_id["prefill-tp4-b1"]
+    prefill_factor = Fraction.from_float(
+        _adjustment_float(adjustment_table, "prefill_rate_matching_degradation")
+    )
+    decode_factor = Fraction.from_float(
+        _adjustment_float(adjustment_table, "decode_rate_matching_degradation")
+    )
+    packet_by_row = {int(point["row"]): point for point in local["packet_points"]}
+    for point in local["ideal_points"]:
+        row = int(point["row"])
+        decode_id = (
+            f"decode-tp{point['configuration']['decode_tp']}"
+            f"-b{point['configuration']['decode_batch']}"
+        )
+        decode_service = service_by_id[decode_id]
+        if int(point["decode_step_ps"]) != int(decode_service["service_ps"]):
+            raise AssertionError("deployment decode step differs from traced external service")
+        if int(point["prefill_request_ps"]) != int(prefill_service["service_ps"]):
+            raise AssertionError("unpriced-network prefill differs from traced external service")
+        decode_node = add(
+            f"projection:decode-step:{row}",
+            kind="deterministic_projection",
+            origin="simllm-projection",
+            value=int(point["decode_step_ps"]),
+            dependencies=(service_nodes[decode_id],),
+        )
+        zero_network = add(
+            f"projection:unpriced-network:{row}",
+            kind="identity_zero_network_service",
+            origin="simllm-projection",
+            value=0,
+        )
+        prefill_node = add(
+            f"projection:prefill-request:{row}",
+            kind="deterministic_projection",
+            origin="simllm-projection",
+            value=int(point["prefill_request_ps"]),
+            dependencies=(service_nodes["prefill-tp4-b1"], zero_network),
+        )
+        x_value = Fraction(PICOSECONDS_PER_SECOND, int(point["decode_step_ps"]))
+        prefill_capacity = (
+            Fraction(
+                int(point["configuration"]["prefill_workers"])
+                * PICOSECONDS_PER_SECOND,
+                int(point["prefill_request_ps"]),
+            )
+            * prefill_factor
+        )
+        decode_capacity = (
+            Fraction(
+                int(point["configuration"]["decode_workers"])
+                * int(point["configuration"]["decode_batch"])
+                * PICOSECONDS_PER_SECOND,
+                OUTPUT_TOKENS * int(point["decode_step_ps"]),
+            )
+            * decode_factor
+        )
+        request_capacity = min(prefill_capacity, decode_capacity)
+        y_value = (
+            request_capacity
+            * OUTPUT_TOKENS
+            / int(point["configuration"]["used_gpus"])
+        )
+        if _fraction(point["x_tokens_per_second_per_user"]) != x_value:
+            raise AssertionError("traced x coordinate differs from the scored value")
+        if _fraction(point["y_tokens_per_second_per_gpu"]) != y_value:
+            raise AssertionError("traced y coordinate differs from the scored value")
+        x_node = add(
+            f"scored:ideal-x:{row}",
+            kind="scored_coordinate",
+            origin="simllm-projection",
+            value=_fraction_json(x_value),
+            dependencies=(decode_node,),
+        )
+        y_node = add(
+            f"scored:ideal-y:{row}",
+            kind="scored_coordinate",
+            origin="simllm-projection",
+            value=_fraction_json(y_value),
+            dependencies=(
+                decode_node,
+                prefill_node,
+                "adjustment:prefill_rate_matching_degradation",
+                "adjustment:decode_rate_matching_degradation",
+            ),
+        )
+        packet = packet_by_row[row]
+        packet_term = add(
+            f"simulation:packet-network:{row}",
+            kind="packet_simulation",
+            origin="simllm-simulation",
+            value=int(packet["packet_term"]["duration_ps"]),
+        )
+        packet_y = _fraction(packet["y_tokens_per_second_per_gpu"])
+        packet_node = add(
+            f"scored:packet-y:{row}",
+            kind="scored_coordinate",
+            origin="simllm-projection",
+            value=_fraction_json(packet_y),
+            dependencies=(
+                decode_node,
+                prefill_node,
+                packet_term,
+                "adjustment:prefill_rate_matching_degradation",
+                "adjustment:decode_rate_matching_degradation",
+            ),
+        )
+        roots.extend((x_node, y_node, packet_node))
+    trace = {
+        "schema": "simllm-matched-seam-scored-value-trace-v1",
+        "nodes": nodes,
+        "scored_roots": sorted(set(roots)),
+    }
+    trace["validation_failures"] = _validate_scored_value_trace(trace)
+    return trace
+
+
 def _evaluate(
     *,
     local: dict[str, Any],
-    local_deterministic: bool,
     live_sdk: dict[str, Any],
-    live_sdk_deterministic: bool,
     hashes_before: dict[str, str],
     hashes_after: dict[str, str],
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     config = _load_json(CONFIG_PATH)
+    adjustment_table = _adjustment_table()
+    _validate_adjustment_config(config, adjustment_table)
     external_disagg = _external_curve(DISAGG_PATH, disaggregated=True)
     external_agg = _external_curve(AGG_PATH, disaggregated=False)
     services = {row["id"]: row for row in local["services"]}
@@ -956,12 +1480,53 @@ def _evaluate(
     positive_evidence = [
         evidence for stamp in all_stamps for evidence in _stamp_positive_evidence(stamp)
     ]
-    fg1 = bool(positive_evidence) and set(positive_evidence) == {"MEASURED-EXTERNAL"}
+    value_trace = _scored_value_trace(local, adjustment_table)
+    fg1a = (
+        int(local["simllm_roofline_provider_calls"]) == 0
+        and not value_trace["validation_failures"]
+    )
     rows.append(
         _fatal_row(
-            "FG-1",
-            fg1,
-            "all positive ideal-arm stamp durations are MEASURED-EXTERNAL; packet additives are isolated to Family M",
+            "FG-1a",
+            fg1a,
+            "the deploy RooflineProvider interception fired zero times and the complete scored-value dependency graph contains no reachable SimLLM roofline, efficiency, fitted constant or fitted curve",
+        )
+    )
+    declared_adjustments = {
+        str(adjustment["id"]) for adjustment in adjustment_table["adjustments"]
+    }
+    applied_adjustments = set(local["external_adjustments"]["applied_ids"])
+    applied_adjustments.add("autoscale_ttft_correction")
+    source_locations = [
+        location
+        for adjustment in live_sdk["external_adjustment_sources"]
+        for location in adjustment["locations"].values()
+    ]
+    fg1b = (
+        applied_adjustments == declared_adjustments
+        and all(location["sha256_matches"] for location in source_locations)
+        and all(location["line_range_exists"] for location in source_locations)
+        and local["external_adjustments"]["context_attention_calls"] > 0
+    )
+    rows.append(
+        _fatal_row(
+            "FG-1b",
+            fg1b,
+            "applied external adjustments equal the tracked table exactly and every pinned source and documentation line verifies",
+        )
+    )
+    sensitivity_ids = {
+        str(row["adjustment_id"]) for row in local["family_r_sensitivity"]
+    }
+    fg1c = sensitivity_ids == declared_adjustments and all(
+        len(row["rows"]) == len(external_disagg)
+        for row in local["family_r_sensitivity"]
+    )
+    rows.append(
+        _fatal_row(
+            "FG-1c",
+            fg1c,
+            "every declared applied adjustment has a ten-row remove-one Family R sensitivity disclosure",
         )
     )
     source_slice = config["external_identity"]["slice_sha256"]
@@ -990,6 +1555,9 @@ def _evaluate(
         ),
         "service_freeze_before_binding": _is_ancestor(SERVICE_FREEZE_COMMIT, BINDING_COMMIT),
         "binding_before_run": _is_ancestor(BINDING_COMMIT),
+        "corrected_expectations_before_run": _is_ancestor(
+            CORRECTED_EXPECTATIONS_COMMIT
+        ),
     }
     rows.append(
         _fatal_row("FG-4", all(chronology.values()), json.dumps(chronology, sort_keys=True))
@@ -1003,14 +1571,6 @@ def _evaluate(
             "published disagg TTFT appears only in Family D and is not equated with isolated prefill service",
         )
     )
-    rows.append(
-        _fatal_row(
-            "FG-6",
-            local_deterministic and live_sdk_deterministic,
-            "local scored quantities and live SDK service oracles are bit-equal in second fresh processes",
-        )
-    )
-
     s_rows = []
     for phase in ("decode", "prefill"):
         expected_field = "expected_step_ms_hex" if phase == "decode" else "expected_service_ms_hex"
@@ -1056,6 +1616,23 @@ def _evaluate(
         rows.append(row)
         r_rows.append({**row, "row": external["row"], "quotient": _fraction_json(quotient)})
 
+    for sensitivity in local["family_r_sensitivity"]:
+        minimum = _fraction(sensitivity["minimum_quotient"])
+        maximum = _fraction(sensitivity["maximum_quotient"])
+        rows.append(
+            _unscored_row(
+                f"R-SENS-{sensitivity['adjustment_id']}",
+                f"[{float(minimum):.12f}, {float(maximum):.12f}]",
+                "Family R quotient range",
+                (
+                    f"remove {sensitivity['adjustment_id']} by replacing it with "
+                    f"{sensitivity['removed_value']}; {sensitivity['method']}"
+                ),
+                family="R",
+                evidence_class="DISCLOSURE",
+            )
+        )
+
     ideal_frontier = local["ideal_frontier"]
     packet_frontier = local["packet_frontier"]
     worked = ideal_frontier[3]
@@ -1080,6 +1657,7 @@ def _evaluate(
         )
     )
     f2_rows = []
+    boundary_rows = []
     answer_counts: Counter[str] = Counter()
     for external in external_disagg:
         external_x = _decimal_fraction(external["x_tokens_per_second_per_user"])
@@ -1106,6 +1684,39 @@ def _evaluate(
                 "quotient": _fraction_json(quotient),
                 "frontier_answer": answer_id,
             }
+        )
+        local_point = next(
+            point for point in local["ideal_points"] if point["row"] == external["row"]
+        )
+        exact_local_x = _fraction(local_point["x_tokens_per_second_per_user"])
+        signed_difference = exact_local_x - external_x
+        if -Fraction(1, 1000) <= signed_difference < 0:
+            boundary_rows.append(
+                {
+                    "row": external["row"],
+                    "exact_local_x": _fraction_json(exact_local_x),
+                    "published_x": external["x_tokens_per_second_per_user"],
+                    "published_rounding_unit": "0.001",
+                    "signed_difference": _fraction_json(signed_difference),
+                    "selected_frontier_answer": answer_id,
+                }
+            )
+    for boundary in boundary_rows:
+        difference = _fraction(boundary["signed_difference"])
+        local_x = _fraction(boundary["exact_local_x"])
+        rows.append(
+            _unscored_row(
+                f"F-BOUNDARY-{int(boundary['row']):02d}",
+                f"{float(difference):+.15f}",
+                "tokens/s/user",
+                (
+                    f"exact local x={float(local_x):.15f}; "
+                    f"published x={boundary['published_x']}; "
+                    f"selected={boundary['selected_frontier_answer']}"
+                ),
+                family="F",
+                evidence_class="DISCLOSURE",
+            )
         )
     coordinates = [_point_xy(point) for point in ideal_frontier]
     monotone = all(
@@ -1156,8 +1767,9 @@ def _evaluate(
             minimum_m >= 1,
             expected=">= 1.000000 for every candidate",
             observed=f"minimum={float(minimum_m):.12f}",
-            units="packet/ideal capacity-step quotient",
+            units="packet-priced/unpriced-network capacity-step quotient",
             evidence_class="MEASURED-EXTERNAL + SIM-DERIVED",
+            detail="the unpriced-network arm charges exactly zero network service",
         )
     )
     rows.append(
@@ -1167,14 +1779,15 @@ def _evaluate(
             maximum_m >= Fraction(102, 100),
             expected=">= 1.02 for at least one candidate",
             observed=f"maximum={float(maximum_m):.12f}",
-            units="packet/ideal capacity-step quotient",
+            units="packet-priced/unpriced-network capacity-step quotient",
             evidence_class="MEASURED-EXTERNAL + SIM-DERIVED",
+            detail="the unpriced-network arm charges exactly zero network service",
         )
     )
 
     raw_prefill = float(local["raw_prefill_tp4_b1"]["service_ms"])
     corrected = float(corrected_prefill)
-    autoscale = float.fromhex(config["composition"]["autoscale_ttft_correction_hex"])
+    autoscale = _adjustment_float(adjustment_table, "autoscale_ttft_correction")
     autoscaled = corrected * autoscale
     residual_from_pass = published_ttft - raw_prefill
     service_correction = corrected - raw_prefill
@@ -1201,7 +1814,10 @@ def _evaluate(
     rows.extend(d_rows)
     return rows, {
         "S": {"rows": s_rows},
-        "R": {"rows": r_rows},
+        "R": {
+            "rows": r_rows,
+            "remove_one_sensitivity": local["family_r_sensitivity"],
+        },
         "F": {
             "worked_axis_cell": worked,
             "bracket_rows": f2_rows,
@@ -1210,12 +1826,20 @@ def _evaluate(
             "packet_points": local["packet_points"],
             "ideal_frontier": ideal_frontier,
             "packet_frontier": packet_frontier,
+            "boundary_proximity_rows": boundary_rows,
         },
         "M": {
             "rows": m_rows,
             "minimum_quotient": _fraction_json(minimum_m),
-            "maximum_quotient": _fraction_json(maximum_m),
+            "maximum_packet_priced_to_unpriced_network_quotient": _fraction_json(
+                maximum_m
+            ),
             "packet_cells": local["packet_cells"],
+            "unpriced_network_service_ps": 0,
+            "third_loggopsim_priced_arm": {
+                "ran": False,
+                "scope": "not run; no isolated receiver-side serialization claim is made",
+            },
         },
         "D": {
             "published_ttft_ms": published_ttft,
@@ -1235,6 +1859,12 @@ def _evaluate(
         "candidate_grid": local["candidate_grid"],
         "chronology": chronology,
         "immutability": {"before": hashes_before, "after": hashes_after},
+        "external_adjustments": {
+            "table": adjustment_table,
+            "applied_ids": sorted(applied_adjustments),
+            "source_verification": live_sdk["external_adjustment_sources"],
+        },
+        "scored_value_trace": value_trace,
     }
 
 
@@ -1291,35 +1921,33 @@ def _coordinator(
         raise FileNotFoundError(f"{EXTERNAL_VENV_ENV} has no Python interpreter")
     attempt, attempt_number = _new_attempt(bulk_root)
     started = time.monotonic()
-    hashes_before = _tracked_hashes()
-    local_runs = [
+    evaluation_runs_with_bytes = [
         _run_worker(
             python=Path(sys.executable),
-            worker="local",
+            worker="evaluation",
             attempt=attempt,
             repetition=repetition,
             txt2bin=txt2bin,
             htsim_rnic=htsim_rnic,
+            external_python=external_python,
         )
         for repetition in (1, 2)
     ]
-    live_runs = [
-        _run_worker(
-            python=external_python,
-            worker="live-sdk",
-            attempt=attempt,
-            repetition=repetition,
+    evaluations = [value for value, _ in evaluation_runs_with_bytes]
+    evaluation_bytes = [payload for _, payload in evaluation_runs_with_bytes]
+    rows = list(evaluations[0]["rows"])
+    families = evaluations[0]["families"]
+    deterministic = evaluation_bytes[0] == evaluation_bytes[1]
+    evaluation_hashes = [hashlib.sha256(payload).hexdigest() for payload in evaluation_bytes]
+    rows.append(
+        _fatal_row(
+            "FG-6",
+            deterministic,
+            (
+                "complete scored evaluation JSON is byte-identical across two fresh "
+                "processes; elapsed_seconds and W-1 are excluded by name"
+            ),
         )
-        for repetition in (1, 2)
-    ]
-    hashes_after = _tracked_hashes()
-    rows, families = _evaluate(
-        local=local_runs[0],
-        local_deterministic=local_runs[0] == local_runs[1],
-        live_sdk=live_runs[0],
-        live_sdk_deterministic=live_runs[0] == live_runs[1],
-        hashes_before=hashes_before,
-        hashes_after=hashes_after,
     )
     failed_guards = [row["id"] for row in rows if row["kind"] == "fatal" and not row["passed"]]
     record = {
@@ -1331,13 +1959,18 @@ def _coordinator(
         "bulk_evidence": f"${{{BULK_ROOT_ENV}}}/attempt-{attempt_number:04d}",
         "run_commit": _git_output("rev-parse", "HEAD"),
         "freeze_commits": {
-            "expectations": EXPECTATIONS_COMMIT,
+            "first_expectations": EXPECTATIONS_COMMIT,
+            "corrected_expectations": CORRECTED_EXPECTATIONS_COMMIT,
             "service_oracles": SERVICE_FREEZE_COMMIT,
             "binding": BINDING_COMMIT,
         },
         "config_sha256": _sha256(CONFIG_PATH),
-        "expectations_sha256": _sha256(EXPECTATIONS_PATH),
-        "source": local_runs[0]["source"],
+        "expectations_sha256": {
+            "first_void_freeze": _sha256(EXPECTATIONS_PATH),
+            "corrected_freeze": _sha256(EXPECTATIONS_V2_PATH),
+        },
+        "external_adjustments_sha256": _sha256(ADJUSTMENTS_PATH),
+        "source": evaluations[0]["source"],
         "native_tools": {
             "htsim_rnic": {"filename": htsim_rnic.name, "sha256": _sha256(htsim_rnic)},
             "txt2bin": {"filename": txt2bin.name, "sha256": _sha256(txt2bin)},
@@ -1353,14 +1986,30 @@ def _coordinator(
         "family_tallies": _family_tallies(rows),
         "families": families,
         "rows": rows,
+        "determinism": {
+            "comparison": "byte-for-byte complete scored evaluation JSON",
+            "fresh_processes": 2,
+            "evaluation_sha256": evaluation_hashes,
+            "excluded_by_name": ["elapsed_seconds", "W-1"],
+            "equal": deterministic,
+        },
+        "first_published_run": {
+            "state": "void",
+            "voiding_guard": "FG-1",
+            "attempt": "attempt-0002",
+            "run_commit": "3e752d58c9e874f234110af69851384ea02873cd",
+            "reason": "the first freeze forbade roofline and fitted terms throughout a composition whose external resolver and empirical adjustments require them",
+        },
         "reporting_rule": "fatal guards, S, R, F, M, D and W are separate evidence classes and are never summed",
         "figure": {
             "pdf": PDF_PATH.relative_to(REPOSITORY_ROOT).as_posix(),
             "png": PNG_PATH.relative_to(REPOSITORY_ROOT).as_posix(),
             "caption": (
-                "The external aggregate and disaggregated curves and the SimLLM ideal curve "
-                "share MEASURED-EXTERNAL operation timing. The SimLLM packet curve adds "
-                "SIM-DERIVED KV redistribution, so surviving separation is composition mechanism."
+                "The external aggregate and disaggregated curves and the SimLLM "
+                "unpriced-network curve share MEASURED-EXTERNAL operation timing. "
+                "The packet-priced curve adds SIM-DERIVED network service. Its gap "
+                "prices the complete network against zero network service and does not "
+                "isolate receiver-side serialization."
             ),
         },
     }
@@ -1378,7 +2027,7 @@ def _coordinator(
         observed=f"{elapsed_seconds:.6f}",
         units="seconds",
         evidence_class="WALL",
-        detail="two local packet runs, two live SDK runs, all scoring and the figure",
+        detail="two complete fresh-process scored evaluations and the figure",
     )
     rows.append(wall_row)
     record["elapsed_seconds"] = elapsed_seconds
@@ -1400,10 +2049,11 @@ def _coordinator(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--worker", choices=("local", "live-sdk"))
+    parser.add_argument("--worker", choices=("local", "live-sdk", "evaluation"))
     parser.add_argument("--packet-root", type=Path)
     parser.add_argument("--txt2bin", type=Path)
     parser.add_argument("--htsim-rnic", type=Path)
+    parser.add_argument("--external-python", type=Path)
     parser.add_argument("--bulk-root", type=Path)
     parser.add_argument("--external-venv", type=Path)
     parser.add_argument("--write-tracked", action="store_true")
@@ -1420,6 +2070,25 @@ def main() -> None:
         return
     if args.worker == "live-sdk":
         print(json.dumps(_live_sdk_worker(), sort_keys=True))
+        return
+    if args.worker == "evaluation":
+        if (
+            args.packet_root is None
+            or args.txt2bin is None
+            or args.htsim_rnic is None
+            or args.external_python is None
+        ):
+            parser.error(
+                "evaluation worker requires --packet-root, --txt2bin, "
+                "--htsim-rnic and --external-python"
+            )
+        result = _full_evaluation_worker(
+            packet_root=args.packet_root,
+            txt2bin=args.txt2bin,
+            htsim_rnic=args.htsim_rnic,
+            external_python=args.external_python,
+        )
+        print(json.dumps(result, sort_keys=True))
         return
     bulk_root = args.bulk_root or (
         Path(os.environ[BULK_ROOT_ENV]) if BULK_ROOT_ENV in os.environ else None

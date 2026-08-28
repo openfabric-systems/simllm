@@ -6,6 +6,7 @@ import importlib.util
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,10 @@ STUDY = ROOT / "examples/matched_seam_frontier_v1"
 RUNNER = STUDY / "run_study.py"
 PLOTTER = STUDY / "plot_study.py"
 CONFIG = STUDY / "study_config.json"
+EXPECTATIONS = STUDY / "expectations.md"
+FIGURE_ADDENDUM = STUDY / "figure_addendum.md"
+EXPECTATIONS_V2 = STUDY / "expectations_v2.md"
+ADJUSTMENTS = STUDY / "external_adjustments.json"
 RECORD = STUDY / "record.json"
 RESULTS_CSV = STUDY / "results.csv"
 PDF = STUDY / "figures/matched-seam-frontier.pdf"
@@ -96,6 +101,102 @@ def test_published_record_and_figures_are_locked() -> None:
     with RESULTS_CSV.open(encoding="utf-8", newline="") as stream:
         csv_rows = list(csv.DictReader(stream))
     assert len(csv_rows) == len(record["rows"])
+
+
+def test_freezes_and_external_adjustment_table_are_locked() -> None:
+    config = json.loads(CONFIG.read_text(encoding="utf-8"))
+    frozen = config["frozen_inputs"]
+    assert _sha256(EXPECTATIONS) == frozen["expectations"]["sha256"]
+    assert _sha256(EXPECTATIONS_V2) == frozen["expectations_v2"]["sha256"]
+    assert _sha256(ADJUSTMENTS) == frozen["external_adjustments"]["sha256"]
+    assert _sha256(FIGURE_ADDENDUM) == (
+        "cc4dcb8c82bbcd5e542457b56d91ddf172af2cbe05e6bac5c865535dcc307762"
+    )
+    table = json.loads(ADJUSTMENTS.read_text(encoding="utf-8"))
+    adjustments = {row["id"]: row for row in table["adjustments"]}
+    assert set(adjustments) == {
+        "prefill_latency_correction",
+        "decode_latency_correction",
+        "prefill_rate_matching_degradation",
+        "decode_rate_matching_degradation",
+        "autoscale_ttft_correction",
+        "memory_bandwidth_empirical_scale",
+        "memory_empirical_constant_latency",
+        "context_attention_extra_latency_correction",
+    }
+    assert adjustments["prefill_rate_matching_degradation"]["value"] == "0.9"
+    assert adjustments["decode_rate_matching_degradation"]["value"] == "0.92"
+    assert "transposes those phase names" in table["phase_assignment_finding"]
+    assert all(row["source"]["start_line"] > 0 for row in adjustments.values())
+    assert all(row["documentation"]["start_line"] > 0 for row in adjustments.values())
+
+
+def test_scored_value_trace_rejects_reachable_simllm_fitted_value() -> None:
+    runner = _load_runner()
+    trace = {
+        "nodes": [
+            {
+                "id": "external",
+                "kind": "external_composed_service",
+                "origin": "external-aiconfigurator",
+                "value": 10,
+                "dependencies": [],
+            },
+            {
+                "id": "local-fit",
+                "kind": "fitted_constant",
+                "origin": "simllm-study",
+                "value": 2,
+                "dependencies": [],
+            },
+            {
+                "id": "scored",
+                "kind": "scored_coordinate",
+                "origin": "simllm-projection",
+                "value": 12,
+                "dependencies": ["external", "local-fit"],
+            },
+        ],
+        "scored_roots": ["scored"],
+    }
+
+    assert runner._validate_scored_value_trace(trace) == [
+        "forbidden SimLLM-authored fitted_constant reaches scored root through local-fit"
+    ]
+
+
+def test_runner_starts_directly_without_pythonpath(tmp_path: Path) -> None:
+    environment = dict(os.environ)
+    environment.pop("PYTHONPATH", None)
+    external_venv = tmp_path / "external-venv"
+    external_venv.mkdir()
+    txt2bin = tmp_path / "txt2bin"
+    txt2bin.touch()
+    htsim_rnic = tmp_path / "htsim_rnic"
+    htsim_rnic.touch()
+    completed = subprocess.run(
+        [
+            sys.executable,
+            os.fspath(RUNNER),
+            "--bulk-root",
+            os.fspath(tmp_path / "bulk"),
+            "--external-venv",
+            os.fspath(external_venv),
+            "--txt2bin",
+            os.fspath(txt2bin),
+            "--htsim-rnic",
+            os.fspath(htsim_rnic),
+        ],
+        cwd=tmp_path,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode != 0
+    assert "ModuleNotFoundError" not in completed.stderr
+    assert "SIMLLM_EXTERNAL_AIC_VENV has no Python interpreter" in completed.stderr
 
 
 def test_tracked_external_grid_constructs_all_declared_candidates() -> None:
@@ -191,17 +292,17 @@ def test_directed_figure_is_a_record_only_projection() -> None:
         "packet_y": pytest.approx(617.9391883424295),
         "quotient": "1.042715399805",
         "label": (
-            "Unpriced receiver-side serialization\n"
-            "under fan-in: several senders deliver\n"
-            "into one receiver at full rate at once,\n"
-            "exceeding the receiver's ingress bandwidth.\n"
-            "This workload: packet / ideal = 1.042715399805.\n"
-            "Ideal: MEASURED-EXTERNAL.\n"
-            "Packet: MEASURED-EXTERNAL + SIM-DERIVED."
+            "Their planner class prices no network cost.\n"
+            "Our unpriced-network arm charges zero network service.\n"
+            "This workload: packet-priced / unpriced-network\n"
+            "= 1.042715399805.\n"
+            "Unpriced: MEASURED-EXTERNAL.\n"
+            "Packet-priced: MEASURED-EXTERNAL + SIM-DERIVED."
         ),
     }
     assert plot["f209"] == {"quotient": "0.607495219355", "passed": False}
     assert "different schedule regime and is not plotted" in plot["caption"]
+    assert "does not isolate receiver-side serialization" in plot["caption"]
 
 
 def test_live_sdk_reproduces_frozen_service_oracles() -> None:

@@ -32,6 +32,15 @@
       "path": "examples/matched_seam_frontier_v1/expectations.md",
       "sha256": "fc5af307fee560fc7050011543e18e1cf77030d0aa6a13e6c5a014cb159a5726"
     },
+    "expectations_v2": {
+      "commit": "4ed8d1aae540d4cf548eace3c5b4008ba3500d9b",
+      "path": "examples/matched_seam_frontier_v1/expectations_v2.md",
+      "sha256": "fe403500575d674a25c8b7c6c59eb41aec65fce6cc29024609fa995b29585f35"
+    },
+    "external_adjustments": {
+      "path": "examples/matched_seam_frontier_v1/external_adjustments.json",
+      "sha256": "c6778a81cdc6078ce74f06733e4bce9d99a92b4ab3eccba4a83d14e7d063a09e"
+    },
     "parity_record": {
       "path": "examples/external_db_parity_v1/record.json",
       "sha256": "38d616b3245a8a42bd06ee9f79d3397d16476cd4acd46dfecd7bd503a55a0e96"

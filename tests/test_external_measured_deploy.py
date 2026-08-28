@@ -124,7 +124,15 @@ def _inputs(*, surfaces: tuple) -> EstimatorInputs:
 
 def test_external_surface_owns_the_scored_kernel_without_roofline(
     binding: ExternalQwen32BDeploymentBinding,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    import simllm.deploy.estimator as estimator_module
+
+    class UnexpectedRooflineProvider:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            raise AssertionError("RooflineProvider must be bypassed by the external surface")
+
+    monkeypatch.setattr(estimator_module, "RooflineProvider", UnexpectedRooflineProvider)
     values = binding.decode_surface(
         tensor_parallel=4,
         batch_sizes=(56, 64),

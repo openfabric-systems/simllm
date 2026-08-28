@@ -1,5 +1,24 @@
 # Matched-seam frontier result
 
+The first published run is void against its own FG-1. FG-1 required that no
+roofline term, declared efficiency or fitted constant appear anywhere in the
+scored arm. That requirement cannot hold for this study for two independent
+reasons. First, the external resolver is speed-of-light normalized by
+construction: it evaluates analytical rooflines inside scored cells, including
+240 roofline evaluations across 15 GEMM shapes in the TP4 batch-64 cell.
+Second, the external composition applies its own empirical factors, including
+the five serving factors then copied into the study configuration. The guard
+was not widened after seeing the result. The first run and every number it
+published remain below as void evidence. The corrected freeze at `4ed8d1a`
+defines a new run, and DEPLOY-12 is reopened because its prior closure rested on
+the void run.
+
+## First published run, retained void evidence
+
+The statements and numbers in this section reproduce the first publication for
+auditability. Its former nonvoid verdict, guard passes and task closure are
+invalidated by FG-1 and are not evidence for closing any task.
+
 What ran: `matched_seam_frontier_v1` evaluated the 25 aggregate and 10
 disaggregated topologies in the tracked external tables, composed all service
 from the imported Qwen3-32B-FP8 operation database, ran the TP4-to-TP2, TP4 and

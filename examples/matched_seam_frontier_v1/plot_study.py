@@ -12,7 +12,8 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "simllm-matched-seam-frontier-record-v1"
+SCHEMA = "simllm-matched-seam-frontier-record-v2"
+LEGACY_SCHEMA = "simllm-matched-seam-frontier-record-v1"
 
 
 def _matplotlib() -> Any:
@@ -59,7 +60,7 @@ def _scored_row(record: dict[str, Any], row_id: str) -> dict[str, Any]:
 def prepare_plot_data(record: dict[str, Any]) -> dict[str, Any]:
     """Project the strict record into renderer-independent plot data."""
 
-    if record.get("schema") != SCHEMA:
+    if record.get("schema") not in {SCHEMA, LEGACY_SCHEMA}:
         raise ValueError(f"unexpected record schema {record.get('schema')!r}")
     families = record["families"]
     external = families["external_curves"]
@@ -104,7 +105,7 @@ def prepare_plot_data(record: dict[str, Any]) -> dict[str, Any]:
         },
         {
             "id": "simllm-ideal",
-            "label": "Our contention off (ideal), MEASURED-EXTERNAL",
+            "label": "Our unpriced network (zero service), MEASURED-EXTERNAL",
             "evidence_class": "MEASURED-EXTERNAL",
             "color": "#1d6f42",
             "marker": "o",
@@ -125,7 +126,7 @@ def prepare_plot_data(record: dict[str, Any]) -> dict[str, Any]:
         {
             "id": "simllm-packet",
             "label": (
-                "Our contention on (packet), "
+                "Our packet-priced network, "
                 "MEASURED-EXTERNAL + SIM-DERIVED"
             ),
             "evidence_class": "MEASURED-EXTERNAL + SIM-DERIVED",
@@ -154,7 +155,10 @@ def prepare_plot_data(record: dict[str, Any]) -> dict[str, Any]:
     high_row = max(r_rows, key=lambda row: _fraction(row["quotient"]))
     frozen_band = json.loads(r_rows[0]["expected"])
 
-    maximum = families["M"]["maximum_quotient"]
+    maximum = families["M"].get(
+        "maximum_packet_priced_to_unpriced_network_quotient",
+        families["M"].get("maximum_quotient"),
+    )
     maximum_fraction = _fraction(maximum)
     maximum_rows = [
         row for row in families["M"]["rows"] if _fraction(row["quotient"]) == maximum_fraction
@@ -177,23 +181,24 @@ def prepare_plot_data(record: dict[str, Any]) -> dict[str, Any]:
     m2 = _scored_row(record, "M-2")
     maximum_display = str(m2["observed"]).split("=", 1)[1]
     mechanism_label = (
-        "Unpriced receiver-side serialization\n"
-        "under fan-in: several senders deliver\n"
-        "into one receiver at full rate at once,\n"
-        "exceeding the receiver's ingress bandwidth.\n"
-        f"This workload: packet / ideal = {maximum_display}.\n"
-        f"Ideal: {arrow_ideal['evidence_class']}.\n"
-        f"Packet: {arrow_packet['evidence_class']}."
+        "Their planner class prices no network cost.\n"
+        "Our unpriced-network arm charges zero network service.\n"
+        "This workload: packet-priced / unpriced-network\n"
+        f"= {maximum_display}.\n"
+        f"Unpriced: {arrow_ideal['evidence_class']}.\n"
+        f"Packet-priced: {arrow_packet['evidence_class']}."
     )
 
     f209 = next(row for row in families["F"]["bracket_rows"] if row["id"] == "F-2-09")
     caption = (
         "Shared timing base: their aggregate and disaggregated series and our "
-        "contention-off series all price the same imported MEASURED-EXTERNAL "
+        "unpriced-network series all price the same imported MEASURED-EXTERNAL "
         "operation database, so their curve differences are composition rather "
-        "than kernel timing; our contention-on series keeps that base and adds "
-        "SIM-DERIVED packet redistribution. The arrow reports receiver-side "
-        f"serialization under fan-in at this workload, packet / ideal = {maximum_display}. "
+        "than kernel timing; our packet-priced series keeps that base and adds "
+        "SIM-DERIVED network service. The arrow compares that complete network "
+        f"charge with zero network service at this workload, ratio {maximum_display}. "
+        "The optional LogGOPSim-priced third arm did not run, so this figure does "
+        "not isolate receiver-side serialization. "
         "The separate eight-into-one fan-in envelope from frontier_ladder_v1 and "
         "loggopsim_acceptance_v1 is a different schedule regime and is not plotted "
         f"on these curves. F-2-09 remains a published rounded-axis refutation at "
@@ -282,7 +287,7 @@ def render(
         2,
         width_ratios=(1.78, 1.0),
         height_ratios=(3.0, 1.12),
-        left=0.09,
+        left=0.125,
         right=0.985,
         top=0.82,
         bottom=0.205,
@@ -353,7 +358,7 @@ def render(
     zoom_axis.minorticks_off()
     zoom_axis.grid(True, color="#d7dce0", linewidth=0.5, alpha=0.72)
     zoom_axis.set_title(
-        f"(b) Mechanism zoom, external row {mechanism['selected_row']}",
+        f"(b) Network-pricing zoom, external row {mechanism['selected_row']}",
         loc="left",
         fontsize=8.0,
         pad=5,
@@ -481,7 +486,7 @@ def render(
         handlelength=3.1,
     )
     figure.text(
-        0.09,
+        0.125,
         0.025,
         textwrap.fill(plot["caption"], width=122),
         ha="left",
