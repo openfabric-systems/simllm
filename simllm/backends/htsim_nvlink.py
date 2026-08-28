@@ -85,11 +85,13 @@ class NvlinkTransfer:
     payload_bytes: int
     operation: NvlinkOperation = NvlinkOperation.PEER_WRITE
     released_at_ps: int = 0
+    topology_endpoint_count: int = 4
 
     def __post_init__(self) -> None:
         _require_text("extent_id", self.extent_id)
-        _require_endpoint("source", self.source)
-        _require_endpoint("destination", self.destination)
+        _require_positive_int("topology_endpoint_count", self.topology_endpoint_count)
+        _require_endpoint("source", self.source, self.topology_endpoint_count)
+        _require_endpoint("destination", self.destination, self.topology_endpoint_count)
         if self.source == self.destination:
             raise ValueError("NVLink source and destination must differ")
         _require_positive_int("payload_bytes", self.payload_bytes)
@@ -124,8 +126,8 @@ class NvlinkPacket:
         for name in ("extent_id", "attempt_id"):
             _require_text(name, getattr(self, name))
         _require_nonnegative_int("sequence", self.sequence)
-        _require_endpoint("source", self.source)
-        _require_endpoint("destination", self.destination)
+        _require_nonnegative_int("source", self.source)
+        _require_nonnegative_int("destination", self.destination)
         if self.source == self.destination:
             raise ValueError("NVLink packet source and destination must differ")
         _require_enum("direction", self.direction, NvlinkPacketDirection)
@@ -1294,7 +1296,9 @@ def _require_nonnegative_int(name: str, value: object) -> None:
         raise ValueError(f"{name} must be non-negative")
 
 
-def _require_endpoint(name: str, value: object) -> None:
+def _require_endpoint(name: str, value: object, endpoint_count: int = 4) -> None:
     _require_nonnegative_int(name, value)
-    if int(value) > 3:
-        raise ValueError(f"{name} must identify one of four A100 endpoints")
+    if int(value) >= endpoint_count:
+        raise ValueError(
+            f"{name} must identify one of {endpoint_count} declared endpoints"
+        )
