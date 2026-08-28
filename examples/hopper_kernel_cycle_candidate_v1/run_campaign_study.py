@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compile the COMP-72 partial campaign without mutating its predecessor."""
+"""Compile the COMP-78 partial campaign without mutating its predecessors."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from simllm.calibration.canonical import canonical_loads, sha256_bytes
 from simllm.calibration.kernel_cycle_lut import validate_kernel_cycle_lut
 
 STUDY_DIR = Path(__file__).resolve().parent
-INPUT_PATH = STUDY_DIR / "campaign_evidence.json"
+INPUT_PATH = STUDY_DIR / "campaign_evidence_comp78.json"
 FREEZE_PATH = STUDY_DIR / "expectations.json"
 PREDECESSOR_PATH = STUDY_DIR / "candidate-record.json"
 PREDECESSOR_SHA256 = "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52"
@@ -90,9 +90,7 @@ def _repeat_service_ps(repeat: dict[str, Any], paths: dict[str, Path]) -> int:
             if service["implementation_suffix"] == repeat["implementation_suffix"]
         ]
         if len(matches) != 1:
-            raise ValueError(
-                f"{repeat['implementation_suffix']}: expected one recovered service"
-            )
+            raise ValueError(f"{repeat['implementation_suffix']}: expected one recovered service")
         return int(matches[0]["measured_service_ps"])
     row = _csv_row(
         paths[str(repeat["value_source"])],
@@ -108,18 +106,12 @@ def _repeat_service_ps(repeat: dict[str, Any], paths: dict[str, Path]) -> int:
 
 def _entry_by_suffix(record: dict[str, Any], suffix: str) -> list[dict[str, Any]]:
     return [
-        entry
-        for entry in record["entries"]
-        if str(entry["implementation_id"]).endswith(suffix)
+        entry for entry in record["entries"] if str(entry["implementation_id"]).endswith(suffix)
     ]
 
 
 def _published_point(entries: list[dict[str, Any]]) -> int:
-    measured = [
-        entry
-        for entry in entries
-        if entry["evidence"]["service_class"] == "MEASURED"
-    ]
+    measured = [entry for entry in entries if entry["evidence"]["service_class"] == "MEASURED"]
     if len(measured) != 1:
         raise ValueError("each repeated key must select one measured physical entry")
     return int(measured[0]["measured_service_ps"])
@@ -157,10 +149,7 @@ def _build_successor(
         entries = _entry_by_suffix(successor, suffix)
         if len(entries) != 2:
             raise ValueError(f"{suffix}: expected measured and declared entries")
-        source_digests = {
-            str(definitions[name]["sha256"])
-            for name in repeat["source_names"]
-        }
+        source_digests = {str(definitions[name]["sha256"]) for name in repeat["source_names"]}
         for entry in entries:
             entry["evidence"]["source_sha256s"] = sorted(
                 set(entry["evidence"]["source_sha256s"]) | source_digests
@@ -249,8 +238,9 @@ def _score_campaign(
         "core61": evidence["core61"],
         "task_movement": {
             "comp72": "OPEN",
+            "comp78": "OPEN_EXACT_REGISTERED_REMAINDER",
             "comp74_repeat_inputs": "RETAINED_FOR_ALL_FOUR_PRICED_KEYS",
-            "core61": "OPEN_TIME_GATED",
+            "core61": evidence["core61"]["status"],
             "remainder_owner": "COMP-78",
         },
     }
@@ -266,9 +256,7 @@ def compile_campaign(evidence_root: Path, output_dir: Path) -> dict[str, Any]:
     validated_predecessor = validate_kernel_cycle_lut(predecessor_bytes)
     predecessor = canonical_loads(validated_predecessor.canonical)
     definitions, paths = _verify_sources(evidence, evidence_root)
-    successor_value, observations = _build_successor(
-        predecessor, evidence, definitions, paths
-    )
+    successor_value, observations = _build_successor(predecessor, evidence, definitions, paths)
     successor = validate_kernel_cycle_lut(successor_value)
 
     output_dir.mkdir(parents=True, exist_ok=True)

@@ -1,0 +1,134 @@
+{
+  "acceptance_status": "candidate",
+  "campaign_evidence_sha256": "07ff17bec8233ba3d2cac010815c0fd15b21e9aad396a7471908913bbc6fcf32",
+  "freeze_sha256": "9c92756d2deab0a1cf18509b3b5f96770c7a18c96fb4eb14feb1f58af45a20fa",
+  "lookup_record_sha256": "58d169865109a5eaca3e69978a48080c25a6bb48ee6607d32e82ed8487d17fdd",
+  "predecessor_lookup_record_sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+  "schema": "simllm-hopper-kernel-cycle-campaign-result-v1",
+  "score": {
+    "component_overlay_ledger": {
+      "lookup_entries": {
+        "deepseek_v3": {
+          "DISCLOSED": 8
+        },
+        "granite": {
+          "DISCLOSED": 12
+        }
+      },
+      "measured_unpriced_mtp": {
+        "DISCLOSED": 1
+      }
+    },
+    "core61": {
+      "attempts": [
+        {
+          "analysis_status": 1,
+          "digest_manifest_source_name": "comp78-core61-base-digest",
+          "job_id": 200120,
+          "role": "base",
+          "slurm_state": "COMPLETED",
+          "verdict": "BLOCKED_COMPACT_ANALYSIS"
+        },
+        {
+          "digest_manifest_source_name": "comp78-core61-decode-200123-digest",
+          "failure": "CUDA_OUT_OF_MEMORY_896_MIB_DURING_65536_TOKEN_STARTUP_PROFILE",
+          "job_id": 200123,
+          "profile_status": 1,
+          "role": "decode",
+          "slurm_state": "COMPLETED",
+          "verdict": "BLOCKED_NSYS_MODEL_CAPTURE"
+        },
+        {
+          "digest_manifest_source_name": "comp78-core61-decode-200128-digest",
+          "failure": "CUDA_OUT_OF_MEMORY_896_MIB_DURING_65536_TOKEN_STARTUP_PROFILE",
+          "job_id": 200128,
+          "profile_status": 1,
+          "role": "decode_exact_RETRY_AFTER_CACHE_WARMING",
+          "slurm_state": "COMPLETED",
+          "verdict": "BLOCKED_NSYS_MODEL_CAPTURE"
+        }
+      ],
+      "earliest_submit_time": "2026-08-28T06:30:00+02:00",
+      "evidence_class": "ABSENT",
+      "linearity_verdict": "UNAVAILABLE_WITHOUT_MEASURED_DECODE_SERVICE",
+      "measured_service_ps": null,
+      "preregistered_prediction_ps": 3751359511,
+      "registered_commands_changed": false,
+      "signed_residual_ps": null,
+      "status": "BLOCKED_EXACT_DECODE_STARTUP_OOM"
+    },
+    "granite": {
+      "blocker": "Pinned real framework targets are staged, but the landed run-cell contract cannot prove deliberately fragmented KV placement, emit the required routed-expert sidecar, perform two clean code-object harvests, or mark a cell digest-complete",
+      "completed_cell_count": 0,
+      "completed_prefix_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "first_incomplete_cell": "sglang-decode-cuda-graph-te1-pi1-da1-ex1-b1-kv1311-deliberately-fragmented",
+      "registered_cell_count": 1212
+    },
+    "lookup_service_ledger": {
+      "deepseek_v3": {
+        "DECLARED": 4,
+        "MEASURED": 4
+      },
+      "granite": {
+        "MEASURED": 12
+      }
+    },
+    "mtp": {
+      "evidence_class": "MEASURED",
+      "lookup_pricing": "FORBIDDEN_BY_FREEZE",
+      "measured_service_ps": 2033951000
+    },
+    "priced_repeat_observations": [
+      {
+        "distribution_propagation": "DEFERRED_TO_COMP-74",
+        "implementation_suffix": "ep32-prefill-r16-l1024-t16384",
+        "independent_repeat_ps": 91249600000,
+        "published_point_ps": 89393440000,
+        "retained_independent_observations": 2,
+        "signed_repeat_minus_point_ps": 1856160000
+      },
+      {
+        "distribution_propagation": "DEFERRED_TO_COMP-74",
+        "implementation_suffix": "ep32-prefill-r4-l4096-t16384",
+        "independent_repeat_ps": 104294464000,
+        "published_point_ps": 104598911000,
+        "retained_independent_observations": 2,
+        "signed_repeat_minus_point_ps": -304447000
+      },
+      {
+        "distribution_propagation": "DEFERRED_TO_COMP-74",
+        "implementation_suffix": "ep32-prefill-r8-l2048-t16384",
+        "independent_repeat_ps": 94656736000,
+        "published_point_ps": 93134208000,
+        "retained_independent_observations": 2,
+        "signed_repeat_minus_point_ps": 1522528000
+      },
+      {
+        "distribution_propagation": "DEFERRED_TO_COMP-74",
+        "implementation_suffix": "ep72-decode-b32-c2000",
+        "independent_repeat_ps": 1883392000,
+        "published_point_ps": 1875680000,
+        "retained_independent_observations": 2,
+        "signed_repeat_minus_point_ps": 7712000
+      }
+    ],
+    "requested_physical_cell_ledger": {
+      "deepseek_v3": {
+        "ABSENT": 0,
+        "MEASURED": 5
+      },
+      "granite_registered_campaign": {
+        "ABSENT": 1212,
+        "MEASURED": 0
+      }
+    },
+    "task_movement": {
+      "comp72": "OPEN",
+      "comp74_repeat_inputs": "RETAINED_FOR_ALL_FOUR_PRICED_KEYS",
+      "comp78": "OPEN_EXACT_REGISTERED_REMAINDER",
+      "core61": "BLOCKED_EXACT_DECODE_STARTUP_OOM",
+      "remainder_owner": "COMP-78"
+    },
+    "verdict": "PARTIAL_CAMPAIGN_RECOMPILED"
+  }
+}
