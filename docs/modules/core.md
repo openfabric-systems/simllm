@@ -1095,6 +1095,16 @@ opt-in release-aware packet policy and leaves every core default unchanged.
   open with a frozen 3.751359511 ms prediction for the held-out eight-layer,
   batch-32, remote-KV-2000 cell. That measurement joins COMP-72's resumable
   Merlin remainder; COMP-76 is unchanged and CORE-63 remains reserved.
+  The [COMP-78 registered execution](../../examples/deployment_curve_v1/core61_depth_comp78_result.md)
+  passed the time gate and retained exact base job `200120`, decode job
+  `200123`, and unchanged cache-warmed decode retry `200128`. The base capture
+  failed its compact analyzer, and both decode attempts failed before the
+  scored boundary on the same 896 MiB allocation during the 65,536-token
+  startup profile. The measured service and signed `measured - predicted`
+  residual are therefore unavailable, not zero, and depth linearity has no
+  verdict. The frozen five-percent comparison is unscored, TRAF-66's
+  finite-overlap term remains separate, and CORE-61 stays open on a
+  digest-complete registered decode output.
 
 - CORE-48 (Precision; P1; M): give the cross-node coarse RNIC path a
   destination-ingress serializer. Semantic sends serialize per source RNIC and

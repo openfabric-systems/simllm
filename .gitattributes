@@ -341,3 +341,7 @@ examples/frontier_comparison_v1/figures/*.pdf -text -diff
 examples/frontier_comparison_v1/figures/*.png -text -diff
 tests/test_frontier_comparison_study.py text eol=lf
 tests/test_model_extraction_qwen3_32b.py text eol=lf
+notes/2026-08-28-comp78-worker-sizing.md text eol=lf
+offline/calibration/kernel_cycle_framework_target.py text eol=lf
+tests/test_kernel_cycle_framework_target.py text eol=lf
+tests/test_hopper_comp78_successor.py text eol=lf

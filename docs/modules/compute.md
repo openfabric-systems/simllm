@@ -2788,6 +2788,21 @@ Granite arm's absent repetitions.
   `d868a4f3...` immutable. Acceptance requires the complete Granite prefix,
   both digest-complete CORE-61 outputs, the signed depth residual, all retained
   source and output digests, and only then literal COMP-72 closure.
+  The [COMP-78 execution record](../../examples/hopper_kernel_cycle_candidate_v1/COMP78_RESULTS.md)
+  retains exact CORE-61 base job `200120` and decode attempts `200123` and
+  `200128` without overwriting an attempt or changing a registered command.
+  Both decode attempts failed before the scored boundary on the same 896 MiB
+  startup allocation, so the measured service, signed residual and linearity
+  verdict remain absent. Pinned real vLLM and SGLang target executables are
+  staged, but the landed cell driver cannot prove fragmented KV placement or
+  emit the required routing, two-clean-harvest and digest-completion outputs.
+  The Granite prefix therefore remains 0 of 1,212, byte-identical to the empty
+  prefix, at the same first incomplete cell. Candidate successor
+  `58d169865109a5eaca3e69978a48080c25a6bb48ee6607d32e82ed8487d17fdd`
+  retains that partial evidence while `ff46f6d8...` and `d868a4f3...` remain
+  immutable. Literal acceptance is unmet, so COMP-72, COMP-78 and CORE-61 stay
+  open. COMP-79 is already allocated below and was not reassigned; the exact
+  remainder remains in COMP-78 pending an available integrator-assigned ID.
 - COMP-79 (Completeness; P1; M): extend key-local repeat-derived distribution
   propagation to DeepSeek candidate keys that still have only one independent
   seed, beginning with the separately measured EP72 simulated-MTP mode. Freeze
