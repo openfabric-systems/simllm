@@ -208,6 +208,26 @@ def test_tx_packetizes_write_at_the_declared_boundary(candidate):
     assert len({packet.attempt_id for packet in packets}) == 3
 
 
+def test_topology_endpoint_count_is_default_off_and_explicitly_extensible(candidate):
+    with pytest.raises(ValueError, match="one of 4 declared endpoints"):
+        NvlinkTransfer(extent_id="default-nv4", source=0, destination=4, payload_bytes=256)
+
+    transfer = NvlinkTransfer(
+        extent_id="declared-mesh",
+        source=15,
+        destination=16,
+        payload_bytes=256,
+        topology_endpoint_count=17,
+    )
+    result = NvlinkDomainService(candidate).serve([transfer], analytic_result=None)
+
+    assert isinstance(result, NvlinkDomainResult)
+    assert result.logical_bytes == 256
+    assert {(packet.source, packet.destination) for packet in result.packets} == {
+        (15, 16)
+    }
+
+
 def test_tx_makes_peer_read_request_and_response_direction_explicit(candidate):
     packets = NvlinkTx(candidate.tx).packetize(
         NvlinkTransfer(

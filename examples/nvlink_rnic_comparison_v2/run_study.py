@@ -716,6 +716,7 @@ def run(run_dir: Path, adapter: Path) -> dict[str, object]:
                     destination=int(row["destination"]),
                     payload_bytes=int(row["payload_bytes"]),
                     released_at_ps=int(row["released_at_ps"]),
+                    topology_endpoint_count=destination + 1,
                 )
                 for row in flow_specs
             ]
