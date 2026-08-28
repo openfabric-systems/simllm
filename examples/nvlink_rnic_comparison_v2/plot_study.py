@@ -156,7 +156,8 @@ def render_cdf(
         grouped[(int(row["size_bytes"]), int(row["degree"]), row["transport"])].append(
             row
         )
-    figure, axes = plt.subplots(4, 2, figsize=(8.3, 10.5))
+    figure_height = 11.3 if mesh else 10.5
+    figure, axes = plt.subplots(4, 2, figsize=(8.3, figure_height))
     flat = list(axes.flat)
     sizes = frozen["workload"]["flow_sizes_bytes"]
     for axis, size_bytes in zip(flat, sizes, strict=False):
@@ -244,8 +245,8 @@ def render_cdf(
         left=0.085,
         right=0.985,
         top=0.95,
-        bottom=0.112 if mesh else 0.098,
-        hspace=0.53,
+        bottom=0.145 if mesh else 0.098,
+        hspace=0.58 if mesh else 0.53,
         wspace=0.27,
     )
     paths = _save(figure, out_dir, stem)
@@ -265,7 +266,7 @@ def render_tail(run_dir: Path, out_dir: Path, frozen: dict[str, Any]) -> list[Pa
     sizes = frozen["workload"]["flow_sizes_bytes"]
     degrees = frozen["workload"]["degrees"]
     x = list(range(len(degrees)))
-    figure, axes = plt.subplots(4, 2, figsize=(8.3, 10.4))
+    figure, axes = plt.subplots(4, 2, figsize=(8.3, 11.7))
     flat = list(axes.flat)
     for axis, size_bytes in zip(flat, sizes, strict=False):
         _style(axis, SIZE_LABELS[size_bytes], "FCT (us, log)")
@@ -333,8 +334,8 @@ def render_tail(run_dir: Path, out_dir: Path, frozen: dict[str, Any]) -> list[Pa
         left=0.09,
         right=0.985,
         top=0.95,
-        bottom=0.112,
-        hspace=0.53,
+        bottom=0.145,
+        hspace=0.62,
         wspace=0.27,
     )
     paths = _save(figure, out_dir, frozen["plot_contract"]["tail_stem"])
@@ -353,7 +354,7 @@ def render_fairness(run_dir: Path, out_dir: Path, frozen: dict[str, Any]) -> lis
     sizes = frozen["workload"]["flow_sizes_bytes"]
     degrees = frozen["workload"]["degrees"]
     x = list(range(len(degrees)))
-    figure, axes = plt.subplots(4, 2, figsize=(8.3, 10.4))
+    figure, axes = plt.subplots(4, 2, figsize=(8.3, 11.7))
     flat = list(axes.flat)
     for axis, size_bytes in zip(flat, sizes, strict=False):
         _style(axis, SIZE_LABELS[size_bytes], "Jain fairness")
@@ -403,8 +404,8 @@ def render_fairness(run_dir: Path, out_dir: Path, frozen: dict[str, Any]) -> lis
         left=0.09,
         right=0.985,
         top=0.95,
-        bottom=0.112,
-        hspace=0.53,
+        bottom=0.145,
+        hspace=0.72,
         wspace=0.27,
     )
     paths = _save(figure, out_dir, frozen["plot_contract"]["fairness_stem"])

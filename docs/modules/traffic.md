@@ -1029,6 +1029,23 @@ the normalized nearest-rank p50 ratio is `(601S/160)/(9S/4) = 601/360 =
 fair-share entity per ordered pair, the htsim fluid null reference, and the
 incast extension to degrees 4, 8 and 16.
 
+The [TRAF-72 result](../../examples/nvlink_rnic_comparison_v2/RESULTS.md)
+confirms the mapping-deficit verdict. At degree 3 and 512 KiB the corrected
+rnic-nn p50 is 18.120617 us, left of the regenerated NVLink value 18.145397
+us, and the legacy-to-corrected ratio is 1.66683 against the frozen 1.669444
+prediction. The fluid arm agrees with its independent continuous-service
+oracle to 0 ps in all 42 cells. Its stronger location hypothesis is honestly
+refuted in 13 of 252 comparisons because an indivisible packet slot can
+complete a selected 256 B or 1 KiB flow before equal continuous fluid shares
+finish. The mesh tail hypothesis is also honestly refuted: both fair-share
+references beat NVLink in all 36 frozen small-flow p99 and worst-flow
+comparisons, but none of the 12 relative advantages grows monotonically with
+degree. The fairness hypothesis passes 11 of 24 clauses; in particular, 256 B
+packet-slot discreteness makes both references less fair than NVLink through
+degree 16. All 126 capacity and byte-ledger cells, 12 fatal guards and 16
+TRAF-71 preservation locks pass, so TRAF-72 closes while its three behavioral
+refutations remain part of the result.
+
 NVLink hardware incast identification is long-flow only. Sender launches on
 the real node serialize through sequential PCIe writes, so nanosecond-scale
 true synchronous small-flow co-arrival cannot be constructed. Simulated
@@ -1040,26 +1057,6 @@ route to those higher degrees.
 ## Open tasks
 
 ### Precision
-
-- TRAF-72 (Precision; P0; M): correct the active-path fair-share entity mapping
-  exposed by the TRAF-71 degree-3 long-flow audit, add the pinned htsim
-  `rnic-nn-fluid` null reference, and extend the incast comparison through the
-  declared simulated-mesh degrees 4, 8 and 16. Preserve the merged TRAF-71
-  study byte for byte. The corrected mapping keeps one active transfer per
-  ordered source-destination class, queues later transfers in that class,
-  caps each source at the 100 GB/s ordered-pair rate, and shares the measured
-  207.101921876 GB/s receiver plateau. Freeze the maintainer's hypotheses
-  before implementation and any new simulation: fluid has no tail beyond its
-  exact capacity bound and sits at or left of both packet transports; at mesh
-  degrees rnic-nn and fluid increasingly improve 256 B through 4 KiB p99,
-  worst-flow FCT, and concurrent-flow Jain fairness over the NVLink credit
-  domain. Publish honest refutations without changing the bars. Acceptance:
-  nine frozen seeds; pointwise CDF min-max bands; p50, p99, worst-flow FCT and
-  Jain fairness for every rung, degree and transport; physical and simulated
-  evidence classes kept separate; the mesh and small-flow hardware caveats on
-  every relevant figure; a direct degree-3 before-and-after panel; exact byte,
-  capacity and fluid-oracle ledgers; POSIX-rendered paths; final PDF and PNG
-  visual inspection; and green ruff plus full pytest.
 
 - TRAF-20 (Precision; P2; M): qualify the delivered `loggopsim-ideal`
   fast level for schedule-shape studies that do not need per-flow transport

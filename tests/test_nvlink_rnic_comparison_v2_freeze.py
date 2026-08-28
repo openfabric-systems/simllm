@@ -124,7 +124,7 @@ def test_legacy_study_is_fully_byte_locked():
         assert _sha256(path) == artifact["sha256"]
 
 
-def test_freeze_is_portable_lf_and_contains_no_result_artifact():
+def test_freeze_is_portable_lf_and_remains_expectations_only():
     frozen = _load()
     report = (STUDY / "expectations.md").read_text(encoding="utf-8")
 
@@ -140,5 +140,3 @@ def test_freeze_is_portable_lf_and_contains_no_result_artifact():
         ROOT / "tests" / "test_nvlink_rnic_comparison_v2_freeze.py",
     ):
         assert b"\r" not in path.read_bytes()
-    assert not (STUDY / "results.json").exists()
-    assert not (STUDY / "RESULTS.md").exists()
