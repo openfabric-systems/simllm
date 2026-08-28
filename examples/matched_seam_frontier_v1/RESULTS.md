@@ -216,6 +216,10 @@ unclipped.
   scored-value trace.
 - [results.csv](results.csv), the LF-only fatal-guard and family ledger.
 
+The two-panel [publication PDF](figures/matched-seam-frontier-publication.pdf)
+and [PNG](figures/matched-seam-frontier-publication.png) label the external
+series as AIConfigurator 0.11.0.
+
 ## First published run, retained void evidence
 
 The statements and numbers in this section reproduce the first publication for
