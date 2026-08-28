@@ -1,0 +1,754 @@
+{
+  "comparison": {
+    "acceptance_high": 0.15,
+    "acceptance_low": -0.15,
+    "cell_verdict": "PASS only when aggregate and every per-flow median signed relative error are inside the frozen band and all fatal guards pass",
+    "miss_attribution_order": [
+      {
+        "parameter": "pass_through_switch_identity",
+        "when": "the qualified direct NV4 topology or unchanged pass-through identity fails; the run is void rather than scored"
+      },
+      {
+        "parameter": "packetization",
+        "when": "the two size errors at one degree differ by more than 0.05 and the larger flow is closer"
+      },
+      {
+        "parameter": "credit_round",
+        "when": "the hardware-minus-simulation completion residual is equal across sizes within 1000000 ps"
+      },
+      {
+        "parameter": "rx_ingress_plateau",
+        "when": "degree 3 misses without a packetization or credit signature"
+      },
+      {
+        "parameter": "tx_egress_plateau",
+        "when": "degree 1 or 2 misses without a packetization or credit signature"
+      }
+    ],
+    "physical_justification": "ten percentage points cover the frozen worst launch-skew fraction; five more cover guarded run-to-run endpoint variation without changing a module parameter after observation",
+    "signed_relative_error_formula": "(simulation - hardware) / hardware"
+  },
+  "fatal_guards": {
+    "fatal_semantics": "one violated or undecidable guard voids the run and leaves TRAF-73 open",
+    "inherited": {
+      "ids": [
+        "FG01_DESTINATION_INTEGRITY_AND_ORDER",
+        "FG02_QUALIFIED_NV4_PATH",
+        "FG03_COUNTER_AVAILABILITY_AND_MONOTONICITY",
+        "FG04_RAW_DATA_CONSISTENCY",
+        "FG05_REPLAY_RECOVERY_AND_LINK_ERRORS",
+        "FG06_PHYSICAL_RATE_CEILINGS",
+        "FG07_THROTTLE_AND_EXCLUSIVITY",
+        "FG08_APPLIED_SWEEP_CONTROLS",
+        "FG09_OBSERVATION_HYPOTHESIS_SEPARATION",
+        "FG10_COMPLETION_AND_DRAIN"
+      ],
+      "source_path": "examples/a100_nvlink_packet_v2/expectations.json",
+      "source_sha256": "f0ab026e054873a56614af63ab3a7ae3219dc0b045423808cb41522910fa6da6"
+    },
+    "study_specific": [
+      {
+        "fatal_when": "the frozen sequential launch-skew budget exceeds ten percent of the minimum per-flow hardware completion",
+        "id": "FG11_LAUNCH_SKEW_NEGLIGIBLE"
+      },
+      {
+        "fatal_when": "any degree, size, repetition or source completion is missing or duplicated",
+        "id": "FG12_COMPLETE_REPETITION_MATRIX"
+      },
+      {
+        "fatal_when": "any merged or scored artifact digest changes",
+        "id": "FG13_PRESERVATION_LOCK"
+      }
+    ]
+  },
+  "hardware_arm": {
+    "allocation": "one exclusive short cell, submitted once and paced",
+    "degrees": [
+      1,
+      2,
+      3
+    ],
+    "flow_size_encoding": "256-byte producer payload times size_bytes/256 messages per flow",
+    "flow_sizes_bytes": [
+      262144,
+      524288
+    ],
+    "launch_skew": {
+      "negligible_fraction_high": 0.1,
+      "per_additional_sender_budget_ps": 5000000,
+      "post_run_fatal_guard": "(degree-1)*5000000 / minimum per-flow hardware completion must be no larger than 0.10",
+      "prior_one_mib_completion_ps": 416768014,
+      "rows": [
+        {
+          "degree": 1,
+          "maximum_launch_skew_fraction": 0.0,
+          "maximum_launch_skew_ps": 0,
+          "pre_run_negligible": true,
+          "prior_scaled_completion_ps": 104192003,
+          "size_bytes": 262144
+        },
+        {
+          "degree": 2,
+          "maximum_launch_skew_fraction": 0.04798832785660143,
+          "maximum_launch_skew_ps": 5000000,
+          "pre_run_negligible": true,
+          "prior_scaled_completion_ps": 104192003,
+          "size_bytes": 262144
+        },
+        {
+          "degree": 3,
+          "maximum_launch_skew_fraction": 0.09597665571320287,
+          "maximum_launch_skew_ps": 10000000,
+          "pre_run_negligible": true,
+          "prior_scaled_completion_ps": 104192003,
+          "size_bytes": 262144
+        },
+        {
+          "degree": 1,
+          "maximum_launch_skew_fraction": 0.0,
+          "maximum_launch_skew_ps": 0,
+          "pre_run_negligible": true,
+          "prior_scaled_completion_ps": 208384007,
+          "size_bytes": 524288
+        },
+        {
+          "degree": 2,
+          "maximum_launch_skew_fraction": 0.023994163813156735,
+          "maximum_launch_skew_ps": 5000000,
+          "pre_run_negligible": true,
+          "prior_scaled_completion_ps": 208384007,
+          "size_bytes": 524288
+        },
+        {
+          "degree": 3,
+          "maximum_launch_skew_fraction": 0.04798832762631347,
+          "maximum_launch_skew_ps": 10000000,
+          "pre_run_negligible": true,
+          "prior_scaled_completion_ps": 208384007,
+          "size_bytes": 524288
+        }
+      ],
+      "scaling_rule": "scale the accepted one-source 1 MiB completion linearly by bytes; fixed producer work makes this conservative for the smaller flow",
+      "source": "accepted TRAF-70 isolated CORNER_NVINC_033 persistent peer-write row"
+    },
+    "node_class": "one four-A100-SXM4-80GB NV4 node",
+    "partition": "a100-hourly",
+    "producer": "persistent_sm_peer_write",
+    "producer_path": "examples/a100_nvlink_packet_v2/nvlink_packet_lane.cu",
+    "producer_payload_bytes": 256,
+    "producer_sha256": "78769f96498a3f88c0156978089fdf10b5a9f128241fd32107b3d7366c7338cd",
+    "producer_sha_header_path": "examples/a100_nvlink_packet_v2/sha256.h",
+    "producer_sha_header_sha256": "27c4917aeca7204666466401fb375cebe8a53adb13414765ca3b2ef40889ee25",
+    "receiver": 0,
+    "repetitions_per_cell": 7,
+    "required_observables": [
+      "per-flow receiver completion time",
+      "per-flow receiver payload goodput",
+      "aggregate receiver payload goodput",
+      "TRAF-70 destination checksum and ordering ledger",
+      "TRAF-70 per-link data and raw counters",
+      "TRAF-70 replay, recovery, CRC and ECC deltas",
+      "TRAF-70 clock, throttle, topology and competing-process records"
+    ],
+    "senders_by_degree": {
+      "1": [
+        1
+      ],
+      "2": [
+        1,
+        2
+      ],
+      "3": [
+        1,
+        2,
+        3
+      ]
+    }
+  },
+  "physical_sanity": {
+    "ceiling": "one millisecond per flow for this upper-rung short cell",
+    "floor": "max(one flow's wire bytes / 100 GB/s ordered-pair raw capacity, all flow wire bytes / 207.101921876 GB/s RX ingress)",
+    "scaling_checks": [
+      "doubling 256 KiB to 512 KiB approximately doubles serialization service",
+      "degree 2 cannot exceed twice the degree-1 aggregate",
+      "degree 3 cannot exceed the measured RX ingress plateau after packet overhead"
+    ]
+  },
+  "preservation_lock": {
+    "artifact_count": 59,
+    "artifacts": [
+      {
+        "bytes": 10679,
+        "path": "examples/a100_nvlink_packet_v1/candidate-profile.json",
+        "sha256": "d33ef5b2c6fa87cc97e1e7b45a43a841a5da45f5462311e3981fbc903c56deb2"
+      },
+      {
+        "bytes": 4152,
+        "path": "examples/a100_nvlink_packet_v2/RESULTS.md",
+        "sha256": "b93915e2229f9e826d3990cb675baf0bd3161daffba8ab66bdddb0934e0718b4"
+      },
+      {
+        "bytes": 8903,
+        "path": "examples/a100_nvlink_packet_v2/RESUME.md",
+        "sha256": "66df984bfc4f573431a4d82018b2e81deb8c78b1f6c809357060974ba71e16b4"
+      },
+      {
+        "bytes": 38200,
+        "path": "examples/a100_nvlink_packet_v2/build_expectations.py",
+        "sha256": "513eee2c70e64fff622ed546883281a1021a800b72340a06476da26f2b1f2c83"
+      },
+      {
+        "bytes": 728,
+        "path": "examples/a100_nvlink_packet_v2/build_local.sh",
+        "sha256": "8e5775b7fc72dc582e15f19cc48732584395b23845da7ddf58dcc62115321a8b"
+      },
+      {
+        "bytes": 17476,
+        "path": "examples/a100_nvlink_packet_v2/case_matrix.py",
+        "sha256": "401df236cc08ab699e0a1e1d68078caf8f7852473496b6c38042f64d63c46dc7"
+      },
+      {
+        "bytes": 191694,
+        "path": "examples/a100_nvlink_packet_v2/expectations.json",
+        "sha256": "f0ab026e054873a56614af63ab3a7ae3219dc0b045423808cb41522910fa6da6"
+      },
+      {
+        "bytes": 34887,
+        "path": "examples/a100_nvlink_packet_v2/expectations.md",
+        "sha256": "8ae7778a802ea626b17f0220b7de4cd865f303c84d45b8cb8e1d3a774eefc1c2"
+      },
+      {
+        "bytes": 86534,
+        "path": "examples/a100_nvlink_packet_v2/hardware-score.json",
+        "sha256": "d08ee9032bc87fd9fbef99ec6027a8250f7c20cfc3d365f39c55ffd9b54a9b3f"
+      },
+      {
+        "bytes": 29019,
+        "path": "examples/a100_nvlink_packet_v2/local-validation.json",
+        "sha256": "b9196f7b01c3d325175891a743b024c81ff542c94e267d483235eff2fb192bc5"
+      },
+      {
+        "bytes": 61782,
+        "path": "examples/a100_nvlink_packet_v2/nvlink_packet_lane.cu",
+        "sha256": "78769f96498a3f88c0156978089fdf10b5a9f128241fd32107b3d7366c7338cd"
+      },
+      {
+        "bytes": 10376,
+        "path": "examples/a100_nvlink_packet_v2/publish_score.py",
+        "sha256": "0945e06cd3915fbaf8122984bc11a8afabe652d3def88cfc8ed989e7517e2082"
+      },
+      {
+        "bytes": 483,
+        "path": "examples/a100_nvlink_packet_v2/run_local.sh",
+        "sha256": "5a8f7f26032cb7d63c95645bdc3f8469975faaad5f9e933c7ce99596dc60412f"
+      },
+      {
+        "bytes": 3819,
+        "path": "examples/a100_nvlink_packet_v2/run_merlin_cell.sbatch",
+        "sha256": "79f65fe1306b4c2554afb489ed8f78e560e30b2ba9507b1c1a1d51df8144d1b7"
+      },
+      {
+        "bytes": 27422,
+        "path": "examples/a100_nvlink_packet_v2/run_study.py",
+        "sha256": "a733290d358db0e8f28224fbadb96a597cfb74b6c17261dd28238284be7d8000"
+      },
+      {
+        "bytes": 64244,
+        "path": "examples/a100_nvlink_packet_v2/score_hardware.py",
+        "sha256": "4f422c4ae7ed338fdb0d67c1bf2860ac78ff7a8bff7ee9a07adefaefa753eb55"
+      },
+      {
+        "bytes": 5343,
+        "path": "examples/a100_nvlink_packet_v2/sha256.h",
+        "sha256": "27c4917aeca7204666466401fb375cebe8a53adb13414765ca3b2ef40889ee25"
+      },
+      {
+        "bytes": 4645,
+        "path": "examples/a100_nvlink_packet_v2/summarize_local.py",
+        "sha256": "63f666155297fd6c785edaf044dd8a35ea4cadc561302dc5c7696862548858b1"
+      },
+      {
+        "bytes": 6376,
+        "path": "examples/nvlink_flow_dynamics_v1/RESULTS.md",
+        "sha256": "2897bacb313fa3f2e8c2f11d11016432043d9f1ff5e591172c9183291f412255"
+      },
+      {
+        "bytes": 18730,
+        "path": "examples/nvlink_flow_dynamics_v1/build_expectations.py",
+        "sha256": "d5551a1576cf3f1ac831a6199771f25c8402cf79246e606a2368a599aac53919"
+      },
+      {
+        "bytes": 21344,
+        "path": "examples/nvlink_flow_dynamics_v1/expectations.json",
+        "sha256": "6e6e8f0ed7c79572f1ef893f7f7869d8a4e854200bdee514b4338b87955e1261"
+      },
+      {
+        "bytes": 10528,
+        "path": "examples/nvlink_flow_dynamics_v1/expectations.md",
+        "sha256": "68a343638abce8f4e9d197d1ed9fd57df6c2a8de37583797b03b12d0bacec8cd"
+      },
+      {
+        "bytes": 74562,
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-fct-cdf.pdf",
+        "sha256": "85bbaec757c0f3fdadc807fd1738238d53e99e8bf7e6a75c88f2e8a7c1618fd1"
+      },
+      {
+        "bytes": 266371,
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-fct-cdf.png",
+        "sha256": "85fe0389be7269c4770e8734c02da4aa83eba1c80987c9f0631435c6ee8d6411"
+      },
+      {
+        "bytes": 18371,
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-flow-dynamics.pdf",
+        "sha256": "ae771a01e1f20afec23912aaf56bcf086544e3ba8754419a8324f1699b194c5d"
+      },
+      {
+        "bytes": 236345,
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-flow-dynamics.png",
+        "sha256": "cf1f34bc4a1c9dfcbc3cafd51e8c4452f4d234bd70c313df57448e6ccf0a7a5e"
+      },
+      {
+        "bytes": 26856,
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-incast-degree-1.pdf",
+        "sha256": "0603e085fbb065b30775ee27b827b06165964e06b36000a05d9c2eecf5463a6b"
+      },
+      {
+        "bytes": 201109,
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-incast-degree-1.png",
+        "sha256": "44066be1db4f75c28885505449ee6b2e3fb3126ed6b018237f1a0979e8a2d325"
+      },
+      {
+        "bytes": 35843,
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-incast-degree-2.pdf",
+        "sha256": "b95394d911c13bbdc42f90507a56197fa945daa5a15d9b1f3d9b3c5598462866"
+      },
+      {
+        "bytes": 205951,
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-incast-degree-2.png",
+        "sha256": "15de61f42f54b65280a00dbe462cbf659f4bb6a385f61fb2a0a6ee4c647801c0"
+      },
+      {
+        "bytes": 42384,
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-incast-degree-3.pdf",
+        "sha256": "1b872235faab51dd37edda79e076a2205da71b1ce9297b6b7b8b1fa29271c2ac"
+      },
+      {
+        "bytes": 207429,
+        "path": "examples/nvlink_flow_dynamics_v1/figures/nvlink-incast-degree-3.png",
+        "sha256": "32cf9ea4e1131228ee81a4d7c7d5321ceacecde07d13cd7f2dd7b3c45b3f0767"
+      },
+      {
+        "bytes": 13121,
+        "path": "examples/nvlink_flow_dynamics_v1/plot_study.py",
+        "sha256": "a4ef45521de447576c7a102d7b18f40fad501e60c6136940e99de2c2ae195773"
+      },
+      {
+        "bytes": 11801,
+        "path": "examples/nvlink_flow_dynamics_v1/publish_study.py",
+        "sha256": "6ad529d86310d870cf780235dd45b9bf0a61f1deb0e4783d77717ecf693f4742"
+      },
+      {
+        "bytes": 20787,
+        "path": "examples/nvlink_flow_dynamics_v1/results.json",
+        "sha256": "c9fb0752149c73f78faa60411ae2eea6a593a23ee65380121ae0decda2cb4004"
+      },
+      {
+        "bytes": 30310,
+        "path": "examples/nvlink_flow_dynamics_v1/run_study.py",
+        "sha256": "aa3871cd24e661f175a7ad80cb8d8a00ad0f56fdada90b91695fa13167fef477"
+      },
+      {
+        "bytes": 1065,
+        "path": "examples/nvlink_rnic_comparison_v2/CMakeLists.txt",
+        "sha256": "55cbd6cb2062074bbc25662e18a88c5812f325b53b7268d64dcf91b87e161e9b"
+      },
+      {
+        "bytes": 30020,
+        "path": "examples/nvlink_rnic_comparison_v2/RESULTS.md",
+        "sha256": "d0a2f9ced4ed0b12910a4b287162bb57c09f86a18fdcee2f18466bfe3494369a"
+      },
+      {
+        "bytes": 24525,
+        "path": "examples/nvlink_rnic_comparison_v2/build_expectations.py",
+        "sha256": "138092913eb35922a92b38c21f0022b329217f669fe9aa8512749df2c48191ff"
+      },
+      {
+        "bytes": 36356,
+        "path": "examples/nvlink_rnic_comparison_v2/expectations.json",
+        "sha256": "9724d405c400d5e38582fd869f24866f31fc6e0907d4b1b558b620eb411324bb"
+      },
+      {
+        "bytes": 6330,
+        "path": "examples/nvlink_rnic_comparison_v2/expectations.md",
+        "sha256": "1464e23bd4f5a0e7f06849498e6ddcce73371d61914496e03f17ece2bedc8431"
+      },
+      {
+        "bytes": 15044,
+        "path": "examples/nvlink_rnic_comparison_v2/fairness.csv",
+        "sha256": "f49c700cf2c6ab1a7788293e5bf630a19c45c5c5de987dc3bc2de0c490a55635"
+      },
+      {
+        "bytes": 29125,
+        "path": "examples/nvlink_rnic_comparison_v2/figures/nvlink-rnic-fluid-fairness.pdf",
+        "sha256": "a71f7d1961208e549e0b59b1844817f9c7396159e5bd85438ab740b276f52d7e"
+      },
+      {
+        "bytes": 253300,
+        "path": "examples/nvlink_rnic_comparison_v2/figures/nvlink-rnic-fluid-fairness.png",
+        "sha256": "583b83084d74d8500ed0898d1ba0e76fce6d2da64c3b078b72c963da1621f9cc"
+      },
+      {
+        "bytes": 895223,
+        "path": "examples/nvlink_rnic_comparison_v2/figures/nvlink-rnic-fluid-fct-cdf-mesh.pdf",
+        "sha256": "b9375a62d7e09f04d73f433bcb1f085eb0b2fa441aabba850a954e38c7885c2c"
+      },
+      {
+        "bytes": 432979,
+        "path": "examples/nvlink_rnic_comparison_v2/figures/nvlink-rnic-fluid-fct-cdf-mesh.png",
+        "sha256": "8b33380775ae79d2cf164865f4789e264ccb5ff338244f5514334000c11793c2"
+      },
+      {
+        "bytes": 228475,
+        "path": "examples/nvlink_rnic_comparison_v2/figures/nvlink-rnic-fluid-fct-cdf-physical.pdf",
+        "sha256": "ab67079e9bc06cde5234adb100c8960bd054ad1d42e887f77e84f23c59c0d285"
+      },
+      {
+        "bytes": 392596,
+        "path": "examples/nvlink_rnic_comparison_v2/figures/nvlink-rnic-fluid-fct-cdf-physical.png",
+        "sha256": "39ae7b4128f6bc03211a88a71b2599fec838e8c04800b411576b4fd6f304528b"
+      },
+      {
+        "bytes": 36765,
+        "path": "examples/nvlink_rnic_comparison_v2/figures/nvlink-rnic-fluid-tail.pdf",
+        "sha256": "50eab79dd0fab3a393c7a18ebbc2f12c309d50c25496e868f2605756bde16da0"
+      },
+      {
+        "bytes": 325618,
+        "path": "examples/nvlink_rnic_comparison_v2/figures/nvlink-rnic-fluid-tail.png",
+        "sha256": "82f00c1cb8f4ac48d03ea7d9b02718234eba116def3be208a5b5fea830227a8a"
+      },
+      {
+        "bytes": 21422,
+        "path": "examples/nvlink_rnic_comparison_v2/figures/nvlink-rnic-mapping-audit-degree-3.pdf",
+        "sha256": "71310dd1535096d65fb29ccca5df90b8b16a50f09e38ab112897f243df163bd7"
+      },
+      {
+        "bytes": 204716,
+        "path": "examples/nvlink_rnic_comparison_v2/figures/nvlink-rnic-mapping-audit-degree-3.png",
+        "sha256": "c522090b482201cda410825cd53d96eee0134988cb924a35d0c3907570943313"
+      },
+      {
+        "bytes": 17377,
+        "path": "examples/nvlink_rnic_comparison_v2/plot_study.py",
+        "sha256": "cad8e11f59006380c768210a6c716347b83c09ed11e49c324a1f2aa49150e774"
+      },
+      {
+        "bytes": 19476,
+        "path": "examples/nvlink_rnic_comparison_v2/publish_study.py",
+        "sha256": "a7f63715dbcb08eabd1e4d9d556bbb79c142e3a1b200ec4178702311356633de"
+      },
+      {
+        "bytes": 156249,
+        "path": "examples/nvlink_rnic_comparison_v2/results.json",
+        "sha256": "5a9c9d9f461a2d145d0bdab6ae3b28606452a040da7bc105a01d5d32de918bea"
+      },
+      {
+        "bytes": 24363,
+        "path": "examples/nvlink_rnic_comparison_v2/rnic_transport_schedule.cpp",
+        "sha256": "dfb3cd97b38c66bc1f7a8257e7714005f927a50d502cd18515761c4813677de2"
+      },
+      {
+        "bytes": 36757,
+        "path": "examples/nvlink_rnic_comparison_v2/run_study.py",
+        "sha256": "314074c94be2abdc5433855315c832e33f10273a28a7a1de34053fc6281dc760"
+      },
+      {
+        "bytes": 24951,
+        "path": "examples/nvlink_rnic_comparison_v2/tail-metrics.csv",
+        "sha256": "25d5f7a36fb6ebae42d4ed19b3a021d6b13fc5e01eec6305908f6324d2da2c8d"
+      },
+      {
+        "bytes": 54368,
+        "path": "simllm/backends/htsim_nvlink.py",
+        "sha256": "0f16f44d0c6c74a1113ac0df7b9d6250aaa1c1ef20b8edd1d0f7e7449c76440c"
+      }
+    ],
+    "artifacts_sha256": "dea2439d208a29101a561ec98f6318133c6c3b587dea33b01f59f4e1d3220a59",
+    "rule": "every listed merged study, corrected capture and scored runtime artifact remains byte-identical"
+  },
+  "publication": {
+    "figure_axes": {
+      "series": "measured hardware and scored simulation, one panel per flow size",
+      "x": "incast degree",
+      "y": "aggregate receiver payload goodput in GB/s"
+    },
+    "formats": [
+      "pdf",
+      "png"
+    ],
+    "required_columns": [
+      "hardware per-flow completion and goodput",
+      "hardware aggregate goodput",
+      "simulation per-flow completion",
+      "simulation aggregate goodput",
+      "signed relative errors",
+      "cell verdict",
+      "responsible parameter on a miss"
+    ],
+    "table_keys": [
+      "degree",
+      "size_bytes"
+    ]
+  },
+  "schema": "simllm-nvlink-incast-validation-expectations-v1",
+  "scope_limits": {
+    "flow_scope": "long flows only",
+    "hardware_degrees": [
+      1,
+      2,
+      3
+    ],
+    "higher_degree_statement": "agreement at degrees 1 to 3 supports but does not prove the simulation-only degree 4, 8 and 16 extrapolation",
+    "simulation_only_degrees": [
+      4,
+      8,
+      16
+    ],
+    "small_flow_statement": "true-sync small-flow incast is not constructible with sequential sender launch writes and remains a model prediction"
+  },
+  "simulation_arm": {
+    "flow_policy": "release_aware_round_robin",
+    "implementation": "simllm-htsim-nvlink-domain-v1",
+    "model_path": "simllm/backends/htsim_nvlink.py",
+    "model_sha256": "0f16f44d0c6c74a1113ac0df7b9d6250aaa1c1ef20b8edd1d0f7e7449c76440c",
+    "parameter_snapshot": {
+      "rx": {
+        "buffer_capacity_bytes": 1048576,
+        "credit_return_latency_ps": 200000,
+        "delivery_order": "per_extent",
+        "ingress_rate_bytes_per_second": 207101921876,
+        "reassembly_policy": "extent_sequence"
+      },
+      "switch": {
+        "mode": "pass_through"
+      },
+      "tx": {
+        "bond_policy": "earliest_available_packet_striping",
+        "credit_unit_bytes": 272,
+        "credits_per_destination": 256,
+        "endpoint_egress_rate_bytes_per_second": 160795737454,
+        "header_bytes": 16,
+        "links_per_peer": 4,
+        "max_payload_bytes": 256,
+        "per_link_rate_bytes_per_second": 25000000000
+      }
+    },
+    "predictions": [
+      {
+        "aggregate_acceptance": {
+          "hardware_high_gbps": 110.47319557195262,
+          "hardware_low_gbps": 81.6541010749215
+        },
+        "aggregate_payload_gbps": 93.90221623615972,
+        "binding_parameter": "tx_egress_plateau",
+        "cell_id": "d1-s262144",
+        "completion_acceptance_by_source": [
+          {
+            "hardware_high_ps": 3284318,
+            "hardware_low_ps": 2427539
+          }
+        ],
+        "completion_ps_by_source": [
+          2791670
+        ],
+        "degree": 1,
+        "makespan_ps": 2791670,
+        "max_rx_buffer_occupancy_bytes": 20672,
+        "packet_count_per_flow": 1024,
+        "physical_ceiling_ps": 1000000000,
+        "physical_floor_ps": 2785280,
+        "size_bytes": 262144,
+        "switch_mode": "pass_through",
+        "wire_bytes_per_flow": 278528
+      },
+      {
+        "aggregate_acceptance": {
+          "hardware_high_gbps": 220.6206369303245,
+          "hardware_low_gbps": 163.06742729632683
+        },
+        "aggregate_payload_gbps": 187.52754139077584,
+        "binding_parameter": "tx_egress_plateau",
+        "cell_id": "d2-s262144",
+        "completion_acceptance_by_source": [
+          {
+            "hardware_high_ps": 3287622,
+            "hardware_low_ps": 2429980
+          },
+          {
+            "hardware_high_ps": 3289168,
+            "hardware_low_ps": 2431123
+          }
+        ],
+        "completion_ps_by_source": [
+          2794478,
+          2795792
+        ],
+        "degree": 2,
+        "makespan_ps": 2795792,
+        "max_rx_buffer_occupancy_bytes": 41344,
+        "packet_count_per_flow": 1024,
+        "physical_ceiling_ps": 1000000000,
+        "physical_floor_ps": 2785280,
+        "size_bytes": 262144,
+        "switch_mode": "pass_through",
+        "wire_bytes_per_flow": 278528
+      },
+      {
+        "aggregate_acceptance": {
+          "hardware_high_gbps": 228.5897123467837,
+          "hardware_low_gbps": 168.9576134737097
+        },
+        "aggregate_payload_gbps": 194.30125549476614,
+        "binding_parameter": "rx_ingress_plateau",
+        "cell_id": "d3-s262144",
+        "completion_acceptance_by_source": [
+          {
+            "hardware_high_ps": 4758659,
+            "hardware_low_ps": 3517269
+          },
+          {
+            "hardware_high_ps": 4760205,
+            "hardware_low_ps": 3518412
+          },
+          {
+            "hardware_high_ps": 4761751,
+            "hardware_low_ps": 3519554
+          }
+        ],
+        "completion_ps_by_source": [
+          4044860,
+          4046174,
+          4047488
+        ],
+        "degree": 3,
+        "makespan_ps": 4047488,
+        "max_rx_buffer_occupancy_bytes": 301648,
+        "packet_count_per_flow": 1024,
+        "physical_ceiling_ps": 1000000000,
+        "physical_floor_ps": 4034652,
+        "size_bytes": 262144,
+        "switch_mode": "pass_through",
+        "wire_bytes_per_flow": 278528
+      },
+      {
+        "aggregate_acceptance": {
+          "hardware_high_gbps": 110.59977438648471,
+          "hardware_low_gbps": 81.74765932914087
+        },
+        "aggregate_payload_gbps": 94.009808228512,
+        "binding_parameter": "tx_egress_plateau",
+        "cell_id": "d1-s524288",
+        "completion_acceptance_by_source": [
+          {
+            "hardware_high_ps": 6561118,
+            "hardware_low_ps": 4849521
+          }
+        ],
+        "completion_ps_by_source": [
+          5576950
+        ],
+        "degree": 1,
+        "makespan_ps": 5576950,
+        "max_rx_buffer_occupancy_bytes": 20672,
+        "packet_count_per_flow": 2048,
+        "physical_ceiling_ps": 1000000000,
+        "physical_floor_ps": 5570560,
+        "size_bytes": 524288,
+        "switch_mode": "pass_through",
+        "wire_bytes_per_flow": 557056
+      },
+      {
+        "aggregate_acceptance": {
+          "hardware_high_gbps": 221.03617791159328,
+          "hardware_low_gbps": 163.374566282482
+        },
+        "aggregate_payload_gbps": 187.8807512248543,
+        "binding_parameter": "tx_egress_plateau",
+        "cell_id": "d2-s524288",
+        "completion_acceptance_by_source": [
+          {
+            "hardware_high_ps": 6564422,
+            "hardware_low_ps": 4851963
+          },
+          {
+            "hardware_high_ps": 6565968,
+            "hardware_low_ps": 4853106
+          }
+        ],
+        "completion_ps_by_source": [
+          5579758,
+          5581072
+        ],
+        "degree": 2,
+        "makespan_ps": 5581072,
+        "max_rx_buffer_occupancy_bytes": 41344,
+        "packet_count_per_flow": 2048,
+        "physical_ceiling_ps": 1000000000,
+        "physical_floor_ps": 5570560,
+        "size_bytes": 524288,
+        "switch_mode": "pass_through",
+        "wire_bytes_per_flow": 557056
+      },
+      {
+        "aggregate_acceptance": {
+          "hardware_high_gbps": 228.89736035966394,
+          "hardware_low_gbps": 169.18500548322987
+        },
+        "aggregate_payload_gbps": 194.56275630571434,
+        "binding_parameter": "rx_ingress_plateau",
+        "cell_id": "d3-s524288",
+        "completion_acceptance_by_source": [
+          {
+            "hardware_high_ps": 9507610,
+            "hardware_low_ps": 7027363
+          },
+          {
+            "hardware_high_ps": 9509156,
+            "hardware_low_ps": 7028506
+          },
+          {
+            "hardware_high_ps": 9510702,
+            "hardware_low_ps": 7029648
+          }
+        ],
+        "completion_ps_by_source": [
+          8081468,
+          8082782,
+          8084096
+        ],
+        "degree": 3,
+        "makespan_ps": 8084096,
+        "max_rx_buffer_occupancy_bytes": 560864,
+        "packet_count_per_flow": 2048,
+        "physical_ceiling_ps": 1000000000,
+        "physical_floor_ps": 8069303,
+        "size_bytes": 524288,
+        "switch_mode": "pass_through",
+        "wire_bytes_per_flow": 557056
+      }
+    ],
+    "profile_evidence_class": "parameter_specific_evidence_see_traf70_score",
+    "profile_path": "examples/a100_nvlink_packet_v1/candidate-profile.json",
+    "profile_sha256": "d33ef5b2c6fa87cc97e1e7b45a43a841a5da45f5462311e3981fbc903c56deb2",
+    "profile_status": "scored_mixed_parameter_evidence",
+    "release_ps": 0
+  },
+  "study": {
+    "chronology": "these bytes and all predictions precede the first TRAF-73 hardware cell",
+    "date": "2026-08-28",
+    "expectations_commit_rule": "the first commit containing these exact bytes is the final pre-run freeze",
+    "status": "expectations_only",
+    "task_id": "TRAF-73",
+    "title": "NV4 long-flow incast hardware validation"
+  }
+}

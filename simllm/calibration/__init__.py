@@ -14,6 +14,9 @@ __all__ = [
     "KERNEL_CYCLE_INPUT_SCHEMA",
     "KERNEL_CYCLE_LUT_SCHEMA",
     "KERNEL_CYCLE_PRICING_PROVENANCE_SCHEMA",
+    "LOCAL_SHARD_REQUEST_SCHEMA",
+    "LOCAL_SHARD_RESULT_SCHEMA",
+    "LOCAL_SHARD_RUN_SCHEMA",
     "BatchServicePoint",
     "CalibrationCompiler",
     "CalibrationValidationError",
@@ -32,6 +35,10 @@ __all__ = [
     "ExternalSourceIdentity",
     "HardwareCollector",
     "KernelCycleLookupBinding",
+    "LocalShardCaptureError",
+    "LocalShardCaptureRequest",
+    "LocalShardCaptureResult",
+    "LocalShardCaptureRun",
     "ModelKernelInventory",
     "OfflineKernelSimulator",
     "RootKind",
@@ -49,11 +56,64 @@ __all__ = [
     "interpolate_batch_service_ps",
     "resolve_registry_root",
     "resolve_suite_root",
+    "run_local_shard_capture",
+    "synthetic_input_sha256",
+    "synthetic_token_rows",
     "validate_kernel_cycle_lut",
+    "validate_local_shard_request",
+    "validate_local_shard_result",
     "validate_path",
 ]
 
 _EXPORTS = {
+    "LOCAL_SHARD_REQUEST_SCHEMA": (
+        "simllm.calibration.local_shard",
+        "LOCAL_SHARD_REQUEST_SCHEMA",
+    ),
+    "LOCAL_SHARD_RESULT_SCHEMA": (
+        "simllm.calibration.local_shard",
+        "LOCAL_SHARD_RESULT_SCHEMA",
+    ),
+    "LOCAL_SHARD_RUN_SCHEMA": (
+        "simllm.calibration.local_shard",
+        "LOCAL_SHARD_RUN_SCHEMA",
+    ),
+    "LocalShardCaptureError": (
+        "simllm.calibration.local_shard",
+        "LocalShardCaptureError",
+    ),
+    "LocalShardCaptureRequest": (
+        "simllm.calibration.local_shard",
+        "LocalShardCaptureRequest",
+    ),
+    "LocalShardCaptureResult": (
+        "simllm.calibration.local_shard",
+        "LocalShardCaptureResult",
+    ),
+    "LocalShardCaptureRun": (
+        "simllm.calibration.local_shard",
+        "LocalShardCaptureRun",
+    ),
+    "run_local_shard_capture": (
+        "simllm.calibration.local_shard",
+        "run_local_shard_capture",
+    ),
+    "synthetic_input_sha256": (
+        "simllm.calibration.local_shard",
+        "synthetic_input_sha256",
+    ),
+    "synthetic_token_rows": (
+        "simllm.calibration.local_shard",
+        "synthetic_token_rows",
+    ),
+    "validate_local_shard_request": (
+        "simllm.calibration.local_shard",
+        "validate_local_shard_request",
+    ),
+    "validate_local_shard_result": (
+        "simllm.calibration.local_shard",
+        "validate_local_shard_result",
+    ),
     "CalibrationCompiler": (
         "simllm.calibration.protocols",
         "CalibrationCompiler",

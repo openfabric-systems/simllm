@@ -1411,6 +1411,19 @@ deterministic device model. The model records typed shape and implementation
 selection, exact source provenance and a support envelope; optional Accel-Sim
 use is isolated to qualified A100 gaps and is absent from online execution.
 
+The local-shard collector supplies the executable offline `run` boundary. Its
+content-addressed request separates logical tensor, pipeline, data and expert
+parallel sizes from one physical shard coordinate, carries the exact model
+revision and dispatch signature, and generates deterministic synthetic token
+rows. An external framework target owns compilation and execution. Its
+candidate result is accepted only when the model, framework, physical shard,
+device ISA and synthetic-input hash agree exactly and every relative sample
+blob matches its recorded size and SHA-256. Distributed collectives and network
+service are explicit exclusions. The
+[contract study](../../examples/local_shard_kernel_collector_v1/RESULTS.md)
+passes all four cells over the frozen tensor-parallel and batch grid; it is
+nonphysical conformance evidence and installs no device constant.
+
 The retained kernel-cycle candidate now binds into the live disaggregated
 session through `ProfileTableProvider`, rather than through a second provider
 type or timing authority. Exact selection retains the record SHA-256, candidate
@@ -2686,6 +2699,13 @@ remaining donor-extrapolation precision gap.
   closed on unknown fields, duplicate keys, nonfinite values, unsafe archives,
   hash mismatch, incomplete bindings, split leakage or physical-floor
   violation.
+  The local `run` slice is delivered through the strict local-shard request and
+  candidate-result contract. Its nonphysical conformance study passes all four
+  frozen tensor-parallel and batch cells with repeat-stable kernel order,
+  content identities and verified sample-blob closure. This does not close the
+  task: concrete CUDA and ROCm doctor backends, the remaining compiler and
+  package surfaces, authenticated data-only submission and target-specific
+  silicon evidence remain under this entry and COMP-1.
 - COMP-51 (Completeness; P1; M): add the official Accel-Sim framework unchanged
   as an optional offline submodule and close its reproducible dependency
   envelope at `third_party/accel-sim-framework`. Pin upstream commit

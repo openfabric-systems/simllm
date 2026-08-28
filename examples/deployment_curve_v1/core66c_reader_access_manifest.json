@@ -1,0 +1,63 @@
+{
+  "access_tranches": [
+    {
+      "access_ledger": "<wave-runs>/core66c/reader/access-registry-core66.jsonl",
+      "access_ledger_bytes": 480,
+      "access_ledger_sha256": "b5a5e8bf68f44c8eed66532b7fa9f8e028a6d436e773400b0df092deb4a80e1e",
+      "forbidden_ledger": "<wave-runs>/core66c/reader/forbidden-registry-core66.jsonl",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "selector": "markdown-task:CORE-66"
+    },
+    {
+      "access_ledger": "<wave-runs>/core66c/reader/access-remainder-title.jsonl",
+      "access_ledger_bytes": 570,
+      "access_ledger_sha256": "b1435a7ced38933cc25891490051b73b4d30a86fb50a206052d4ed217a908d66",
+      "forbidden_ledger": "<wave-runs>/core66c/reader/forbidden-remainder-title.jsonl",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "selector": "markdown-section:# CORE-66 EP72 physical capture remainder"
+    },
+    {
+      "access_ledger": "<wave-runs>/core66c/reader/access-remainder-ranks.jsonl",
+      "access_ledger_bytes": 538,
+      "access_ledger_sha256": "30d04eff70479edc347c2b3b0d12cf057a57138837bb8763f218faa46ba95f6e",
+      "forbidden_ledger": "<wave-runs>/core66c/reader/forbidden-remainder-ranks.jsonl",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "selector": "markdown-section:## Required rank coverage"
+    },
+    {
+      "access_ledger": "<wave-runs>/core66c/reader/access-remainder-command.jsonl",
+      "access_ledger_bytes": 535,
+      "access_ledger_sha256": "28048f3a4e6618231171986efdfb2abe214efa1820b4b11e69525229850c7ccd",
+      "forbidden_ledger": "<wave-runs>/core66c/reader/forbidden-remainder-command.jsonl",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "selector": "markdown-section:## Kernel-trace command"
+    },
+    {
+      "access_ledger": "<wave-runs>/core66c/reader/access-remainder-evidence.jsonl",
+      "access_ledger_bytes": 529,
+      "access_ledger_sha256": "b000bc92c90dcced6105ef4035fa36e70bdee92fdaf48e79760e8a6d09d292ff",
+      "forbidden_ledger": "<wave-runs>/core66c/reader/forbidden-remainder-evidence.jsonl",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "selector": "markdown-section:## Required evidence"
+    },
+    {
+      "access_ledger": "<wave-runs>/core66c/reader/access-registry-core66-postedit.jsonl",
+      "access_ledger_bytes": 480,
+      "access_ledger_sha256": "24c27c34f6ba27f320d33933f6e24272f5726a05c0fb999b75e11e4873971288",
+      "disposition": "post-edit registry verification",
+      "forbidden_ledger": "<wave-runs>/core66c/reader/forbidden-registry-core66-postedit.jsonl",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "selector": "markdown-task:CORE-66"
+    }
+  ],
+  "all_reader_forbidden_ledgers_empty": true,
+  "reader_access_event_count": 12,
+  "schema": "simllm-deployment-curve-core66c-reader-access-manifest-v1",
+  "task": "CORE-66"
+}

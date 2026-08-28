@@ -1,0 +1,101 @@
+{
+  "achieved_capture_configuration": null,
+  "access": {
+    "forbidden_access_incident_count": 4,
+    "forbidden_access_ledger_empty": false,
+    "held_out_mtp_numeric_value_exposed_in_worker_output": false,
+    "held_out_mtp_numeric_value_read_by_pre_reader_test_processes": "cannot be certified false",
+    "reader_forbidden_ledgers_empty": true,
+    "whole_file_stream_performed_by_core66_reader": false
+  },
+  "calibration_only": {
+    "downward_correction_published_alone": false,
+    "missing_requirements": [
+      "DeepEP dispatch and combine launches with rank, peers, payload bytes and durations",
+      "rank-preserving per-kernel and per-step HBM read and write bytes"
+    ],
+    "signed_movement_tokens_per_second_per_node": null,
+    "status": "NULL_MISSING_BOTH_CORRECTION_DIRECTIONS"
+  },
+  "declared_deviation_ledger": [
+    {
+      "difference": "expert-parallel ranks",
+      "expected_signed_effect": "fewer peers bias dispatch and combine service downward",
+      "feasible": 12,
+      "registered": 72
+    },
+    {
+      "difference": "nodes and GPUs per node",
+      "expected_signed_effect": "fewer total nodes bias aggregate communication service downward, while four rather than eight GPUs per node raises the cross-node peer fraction",
+      "feasible": "3 nodes by 4 GPUs",
+      "registered": "9 nodes by 8 GPUs"
+    },
+    {
+      "difference": "unique routed experts and physical slots",
+      "expected_signed_effect": "the smaller expert population increases uniform-routing locality; omission of the redundant-slot cohort has indeterminate routing and occupancy effects",
+      "feasible": "48 unique experts in 48 slots",
+      "registered": "256 unique experts in 288 slots"
+    },
+    {
+      "difference": "transformer depth",
+      "expected_signed_effect": "four layers reduce raw step service; only separately identified per-layer services could use the frozen multipliers",
+      "feasible": 4,
+      "registered": 61
+    },
+    {
+      "difference": "weight materialization",
+      "expected_signed_effect": "dummy weights preserve tensor shapes and byte demand but do not provide production routing statistics",
+      "feasible": "dummy weights",
+      "registered": "pre-staged local model, no download"
+    }
+  ],
+  "feasible_capture_freeze": {
+    "attention_parallelism": "data-parallel",
+    "backend_fallback_permitted": false,
+    "batch_per_rank": 32,
+    "captured_layer_count": 4,
+    "deepep_enabled": true,
+    "expert_parallel_width": 12,
+    "gpus_per_node": 4,
+    "kv_length_per_rank": 2000,
+    "logical_experts_per_rank": 4,
+    "measured_decode_iterations": 1,
+    "mtp_enabled": false,
+    "node_count": 3,
+    "routed_expert_total": 48,
+    "sglang_commit": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
+    "weights": "dummy-only"
+  },
+  "hardware": {
+    "feasible_cell_submission_count": 0,
+    "feasible_cell_status": "NOT_SUBMITTED_PROTOCOL_VOID_BEFORE_ALLOCATION",
+    "registered_ep72_status": "BLOCKED_IMPOSSIBLE_ON_PROJECT_CLUSTER",
+    "shared_gh200_gpu_hours_consumed": 0
+  },
+  "identity_and_physics": {
+    "deep_ep_combine_launches": null,
+    "deep_ep_dispatch_launches": null,
+    "hbm_read_write_bytes": null,
+    "physical_identity_binding_count": 0,
+    "physical_identity_bindings": null,
+    "routing_assignments_and_local_slots": null,
+    "status": "UNAVAILABLE_NO_CAPTURE"
+  },
+  "preservation": {
+    "inherited_core65_minimum_checked_count": 154,
+    "prior_artifacts_intentionally_modified": false
+  },
+  "protocol": {
+    "first_commit": "f1b5caaf4c881b015e053e9e397e5ec73dcff47d",
+    "parameters_fitted": false,
+    "scored_run_performed": false,
+    "status": "PROTOCOL_VOID_PRE_READER_ACCESS"
+  },
+  "scale_checks": {
+    "assignment_scale_1_over_9": "UNAVAILABLE_NO_ROUTING_CAPTURE",
+    "count_and_weight_scale_1_over_64": "UNAVAILABLE_NO_HBM_OR_ROUTING_CAPTURE"
+  },
+  "schema": "simllm-deployment-curve-core66-capture-result-v1",
+  "status": "PROTOCOL_VOID_NO_HARDWARE_SUBMISSION",
+  "task": "CORE-66"
+}

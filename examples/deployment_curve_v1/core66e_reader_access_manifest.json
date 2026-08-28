@@ -1,0 +1,51 @@
+{
+  "access_tranches": [
+    {
+      "access_ledger": "<wave-runs>/core66c/ep4-retry/reader/access-core65-candidates.jsonl",
+      "access_ledger_bytes": 533,
+      "access_ledger_sha256": "83eaed9153bfe9d1cb77a835e1a936d4b0d00be9ac97264b9242c2202adcf87f",
+      "disposition": "bounded selector unavailable; no value returned",
+      "forbidden_ledger": "<wave-runs>/core66c/ep4-retry/reader/forbidden-core65-candidates.jsonl",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "selector": "/candidate_verdicts",
+      "status": "REJECTED_WHOLE_FILE_GUARD"
+    },
+    {
+      "access_ledger": "<wave-runs>/core66c/ep4-retry/reader/access-core65-physical-binding.jsonl",
+      "access_ledger_bytes": 481,
+      "access_ledger_sha256": "91d7008e9645304242096202b2fafd2f0cfeb7e1049af64c604d07a7487ec34d",
+      "forbidden_ledger": "<wave-runs>/core66c/ep4-retry/reader/forbidden-core65-physical-binding.jsonl",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "selector": "/physical_binding",
+      "status": "PASS"
+    },
+    {
+      "access_ledger": "<wave-runs>/core66c/ep4-retry/reader/access-core66-task-before.jsonl",
+      "access_ledger_bytes": 480,
+      "access_ledger_sha256": "3b826b6c9e2fe1e3d2f69954a3f64566ca46c44920c5bc2a68b4c42904acda10",
+      "forbidden_ledger": "<wave-runs>/core66c/ep4-retry/reader/forbidden-core66-task-before.jsonl",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "selector": "markdown-task:CORE-66",
+      "status": "PASS"
+    },
+    {
+      "access_ledger": "<wave-runs>/core66c/ep4-retry/reader/access-core66-task-after.jsonl",
+      "access_ledger_bytes": 480,
+      "access_ledger_sha256": "7d4b1cd7e93de1f64ad6336d6f57033d39e46cfef3fa3d435b77c14e1e03c427",
+      "disposition": "post-edit registry verification",
+      "forbidden_ledger": "<wave-runs>/core66c/ep4-retry/reader/forbidden-core66-task-after.jsonl",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "selector": "markdown-task:CORE-66",
+      "status": "PASS"
+    }
+  ],
+  "all_reader_forbidden_ledgers_empty": true,
+  "reader_access_event_count": 8,
+  "reader_rejected_access_count": 1,
+  "schema": "simllm-deployment-curve-core66e-reader-access-manifest-v1",
+  "task": "CORE-66"
+}
