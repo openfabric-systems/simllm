@@ -32,15 +32,21 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
         if row["family_d_simulated_messages_per_layer"] == 0
     ]
 
-    dense_label = "Dense fallback: half all-gather + reduce-scatter"
-    sparse_label = "Sparse routed: FP8 dispatch + BF16 combine"
-    packet_dense_label = "Dense packet: same half all-gather + reduce-scatter"
-    ratio_label = "Dense packet / dense external, identical half traffic"
+    dense_label = "Dense SM90 fallback\nBF16 all-gather + reduce-scatter"
+    sparse_label = "Sparse routed payload\nFP8 dispatch + BF16 combine"
+    packet_dense_label = (
+        "Dense packet model\nsame BF16 all-gather + reduce-scatter"
+    )
+    ratio_label = (
+        "Dense packet / external, identical half traffic\n"
+        "BF16 all-gather + reduce-scatter"
+    )
     caption = (
-        "Family D compares identical dense half-precision all-gather plus "
-        "reduce-scatter bytes. Family S compares that dense fallback with sparse "
-        "routed FP8 dispatch plus BF16 combine. Every point samples one layer of "
-        "65; D at EP 256 extrapolates from the measured full EP 128 population."
+        "Family D compares identical dense half all-gather plus reduce-scatter "
+        "bytes, with BF16 half-precision elements. Family S compares that dense "
+        "fallback with sparse routed FP8 dispatch plus BF16 combine. Every point "
+        "samples one layer of 65; D at EP 256 extrapolates from the measured full "
+        "EP 128 population."
     )
 
     plt.rcParams.update(
@@ -55,7 +61,7 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
             "axes.linewidth": 0.8,
         }
     )
-    figure, (left, middle, right) = plt.subplots(1, 3, figsize=(7.5, 3.25))
+    figure, (left, middle, right) = plt.subplots(1, 3, figsize=(11.25, 4.0))
     blue = "#2F6B9A"
     orange = "#D56A2C"
     green = "#2D7D63"
@@ -84,6 +90,7 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
     left.set_xscale("log", base=2)
     left.set_xticks(widths)
     left.xaxis.set_major_formatter(ScalarFormatter())
+    left.set_ylim(9.0, 67.0)
     left.grid(axis="y", color="#D8D8D8", linewidth=0.6)
     left.legend(
         frameon=True,
@@ -134,13 +141,14 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
     middle.set_yscale("log")
     middle.set_xticks(widths)
     middle.xaxis.set_major_formatter(ScalarFormatter())
+    middle.set_ylim(0.03, 100.0)
     middle.grid(axis="y", color="#D8D8D8", linewidth=0.6)
     middle.legend(
         frameon=True,
         facecolor="white",
         edgecolor="none",
         framealpha=0.94,
-        loc="upper left",
+        loc="lower right",
     )
 
     right.plot(
@@ -191,6 +199,7 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
     right.set_xscale("log", base=2)
     right.set_xticks(widths)
     right.xaxis.set_major_formatter(ScalarFormatter())
+    right.set_ylim(-0.03, 1.3)
     right.grid(axis="y", color="#D8D8D8", linewidth=0.6)
     right.legend(
         frameon=True,
@@ -210,7 +219,7 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
         color="#333333",
         wrap=True,
     )
-    figure.tight_layout(rect=(0, 0.12, 1, 1), w_pad=1.7)
+    figure.tight_layout(rect=(0, 0.12, 1, 1), w_pad=2.4)
     output_dir.mkdir(parents=True, exist_ok=True)
     png = output_dir / "minimax_ep_scaling.png"
     pdf = output_dir / "minimax_ep_scaling.pdf"

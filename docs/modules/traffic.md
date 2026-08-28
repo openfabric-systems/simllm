@@ -1046,21 +1046,22 @@ degree 16. All 126 capacity and byte-ledger cells, 12 fatal guards and 16
 TRAF-71 preservation locks pass, so TRAF-72 closes while its three behavioral
 refutations remain part of the result.
 
-The MiniMax expert-parallel packet arm can opt into a study-only uniform token
-count on every expert-parallel rank, then classify the resulting dispatch and
-combine pairs through the existing placement mapper at eight GPUs per node.
-The
+The MiniMax expert-parallel packet arm routes a study-only balanced population
+as whole token-expert assignments, emits messages only to realized
+destinations, and declares FP8 dispatch separately from BF16 combine. The
 [MiniMax scaling result](../../examples/minimax_ep_scaling_v1/RESULTS.md)
-keeps the faithful EP 256 ledger of 8,486,400 directed messages and
-3,258,777,600 bytes visible while simulating one receiver per node with all
-senders after a full-population dispatch exceeded the frozen wall budget. The
-scored receiver sees 248 simultaneous cross-node senders for 54.648960
-microseconds in both phases. N3 passes, while N1 and N2 are honestly refuted:
-the packet-to-AIConfigurator ratios fall from 0.864340 at EP 8 to 0.274261 at
-EP 256 because the two arms move different logical byte quantities. The
-ordinary isolated-engine default is unchanged. TRAF-26 retains independently
-routed production peer workloads, and TRAF-73 owns the hardware precision of
-this routed packet arm.
+publishes the original run as void, then compares identical dense BF16
+all-gather plus reduce-scatter traffic through the external NCCL table and the
+packet simulator. The corrected packet-to-external ratios are 0.025905,
+0.353015, 0.802618 and 1.187022 at expert-parallel widths 8, 32, 128 and 256;
+the first three refute the frozen 1.0 lower bound, while EP 256 uses the frozen
+extrapolation from a measured full EP 128 population. The unscored sparse arm
+simulates every realized message at every width. At EP 256 it realizes 29.78125
+cross-node senders per receiver against an analytical 29.576912 and carries
+97,920 dispatch plus 195,840 combine bytes per rank. The isolated-engine
+default is unchanged. TRAF-74 owns observed routing geometry, TRAF-75 owns
+supported-path directional precision, TRAF-73 owns hardware transport
+calibration, and TRAF-26 owns complete production peer workloads.
 
 NVLink hardware incast identification is long-flow only. Sender launches on
 the real node serialize through sequential PCIe writes, so nanosecond-scale
@@ -1074,24 +1075,24 @@ route to those higher degrees.
 
 ### Precision
 
-- TRAF-73 (Precision; P1; L): replace the MiniMax scaling study's uniform
-  routed-payload surrogate and borrowed 32 MiB switch-wide buffer with
-  independently observed multi-node expert dispatch and combine evidence.
-  The current active study path reproduces exact routed bytes, placement,
-  synchronized fan-in and rnic-cn queue service, but it has no H200 hardware
-  capture, samples one receiver per node at EP 256, assumes uniform routing,
-  and selects the switch buffer from another physical RNIC runtime. Capture
-  source and destination ranks, routed bytes, phase release and completion
-  times, receiver ingress occupancy, path choices and buffer high-water marks
-  for at least two routing concentrations and two expert-parallel widths.
+- TRAF-73 (Precision; P1; L): replace the MiniMax scaling study's borrowed
+  32 MiB switch-wide buffer and uncalibrated rnic-cn transport service with
+  independently observed multi-node phase timing, queueing and buffering
+  evidence. The corrected study path supplies full realized populations,
+  explicit routing geometry and directional byte widths to the transport, but
+  it has no H200 hardware capture and still selects its switch buffer from
+  another physical RNIC runtime. Capture phase release and completion times,
+  receiver ingress occupancy, path choices, queue waits and buffer high-water
+  marks for at least two routing concentrations and two expert-parallel widths.
   Freeze the sweep and expected directions before capture. Acceptance reports
-  the current surrogate's before error, fits no scored holdout, reproduces
+  the transport surrogate's before error, fits no scored holdout, reproduces
   phase makespan and receiver occupancy inside frozen quantitative bands, and
   demonstrates an end-to-end TTFT or TPOT change through the supported metric
-  chain. The explicit uniform and receiver-subset modes remain selectable and
-  reproduce this result exactly when hardware calibration is disabled.
-  TRAF-26 supplies independently routed peer workloads; COMP-88 separately
-  owns the donor NCCL extrapolation, which is not equivalent traffic.
+  chain. The explicit uncalibrated transport mode remains selectable and
+  reproduces the corrected result exactly when hardware calibration is
+  disabled. TRAF-74 owns observed assignment geometry, TRAF-75 owns
+  directional precision selection, TRAF-26 supplies complete peer workloads,
+  and COMP-88 separately owns the donor NCCL extrapolation.
 - TRAF-74 (Precision; P1; L): replace the MiniMax full-population packet
   arm's deterministic balanced assignment surrogate with independently
   observed per-rank expert assignments. The corrected surrogate routes whole

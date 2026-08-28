@@ -1,0 +1,35 @@
+{
+  "caption": "Family D compares identical dense half all-gather plus reduce-scatter bytes, with BF16 half-precision elements. Family S compares that dense fallback with sparse routed FP8 dispatch plus BF16 combine. Every point samples one layer of 65; D at EP 256 extrapolates from the measured full EP 128 population.",
+  "series": [
+    {
+      "label": "Dense SM90 fallback\nBF16 all-gather + reduce-scatter",
+      "panel": "family-s-strategy-steps",
+      "strategy": "dense SM90 general fallback",
+      "traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements"
+    },
+    {
+      "label": "Sparse routed payload\nFP8 dispatch + BF16 combine",
+      "panel": "family-s-strategy-steps",
+      "strategy": "sparse routed expert payload",
+      "traffic_definition": "top-k token assignments routed only to realized expert-owner ranks, with FP8 dispatch and BF16 combine"
+    },
+    {
+      "label": "Dense SM90 fallback\nBF16 all-gather + reduce-scatter",
+      "panel": "family-d-identical-traffic",
+      "strategy": "dense SM90 general fallback",
+      "traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements"
+    },
+    {
+      "label": "Dense packet model\nsame BF16 all-gather + reduce-scatter",
+      "panel": "family-d-identical-traffic",
+      "strategy": "dense SM90 general fallback",
+      "traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements"
+    },
+    {
+      "label": "Dense packet / external, identical half traffic\nBF16 all-gather + reduce-scatter",
+      "panel": "family-d-contention-ratio",
+      "strategy": "same dense strategy in numerator and denominator",
+      "traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements"
+    }
+  ]
+}

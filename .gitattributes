@@ -224,6 +224,7 @@ examples/minimax_ep_scaling_v1/*.py text eol=lf
 examples/minimax_ep_scaling_v1/*.csv text eol=lf
 examples/minimax_ep_scaling_v1/figures/*.pdf -text -diff
 examples/minimax_ep_scaling_v1/figures/*.png -text -diff
+examples/minimax_ep_scaling_v1/figures/*.json text eol=lf
 simllm/calibration/external_nccl.py text eol=lf
 simllm/calibration/external_pass.py text eol=lf
 tests/test_external_nccl.py text eol=lf

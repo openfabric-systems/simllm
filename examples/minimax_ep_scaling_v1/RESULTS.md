@@ -1,190 +1,232 @@
 # MiniMax-M2.5 expert-parallel scaling result
 
-The frozen study is nonvoid with honest refutations. All four external
-dispatch cells are bit-equal, all four composed decode quotients are exactly
-1.0, all seven fatal guards hold, and the wall-time family passes. The network
-family passes only its fan-in measurement. Its deciding widest ratio is
-`0.2742607736975033`, below the frozen `1.25` floor and opposite the frozen
-non-decreasing direction.
+The first run is VOID against FG-4. Its prose explained that the external and
+packet arms moved different traffic, but its result tables, CSV and figure
+footer did not. Its implemented guard inspected two constants and a fixed
+string instead of the generated artifacts, so FG-4 was never earned. The
+deeper correction is that the first freeze claimed both arms price the same
+dispatch and combine collective, and they do not. The external arm prices a
+dense half-precision all-gather plus reduce-scatter whose volume grows as
+tokens times hidden size times expert-parallel width. The packet arm priced a
+sparse routed payload whose logical volume is independent of width.
+
+Both are real strategies. The dense path is TensorRT-LLM's documented general
+fallback, and the external source deliberately selects it for SM90 while
+retaining separate sparse branches for SM100 and DeepEP. The published
+`0.2742607736975033` is therefore a strategy comparison, not evidence of an
+omitted mechanism. This study does not know which strategy a real deployment
+selects. Every first-run number remains visible below as void evidence.
 
 ## What ran
 
-`minimax_ep_scaling_v1` ran the pinned AIConfigurator software development kit
-(SDK), the imported operation and NCCL databases, and the rnic-cn packet
-backend twice in fresh processes at expert-parallel widths 8, 32, 128 and
-256. Each packet point represents 65 serial layer executions. Widths 8, 32
-and 128 simulate every directed rank pair for one layer. Width 256 simulates
-one receiver at GPU-local index zero on each of 32 nodes, retains every one of
-the 256 senders, and represents the faithful full-step ledger without claiming
-to simulate its omitted receiver destinations. Bulk evidence is retained at
-`${SIMLLM_MINIMAX_T1_BULK_ROOT}/attempt-0002`; the portable result is in
+The corrected `minimax_ep_scaling_v1` study ran two fresh evaluations at
+expert-parallel widths 8, 32, 128 and 256. Family D priced the identical dense
+BF16 all-gather plus reduce-scatter through the external NCCL table and the
+packet simulator with the same bytes, ranks and placement. EP 8, 32 and 128
+used measured full populations; EP 256 used the frozen FG-10 extrapolation
+from the full EP 128 anchor. Family S ran full realized sparse populations at
+every width with FP8 dispatch and BF16 combine. Bulk evidence is retained at
+`${SIMLLM_MINIMAX_FIX_BULK_ROOT}/attempt-0002`; the portable rows are in
 [record.json](record.json) and [results.csv](results.csv).
-
-## Physical sanity before the verdicts
-
-Before reading the EP 256 packet result, four decode candidates times top-8
-routing times hidden size 3072, divided across 256 destinations at one FP8 byte
-per element, gives exactly 384 bytes per directed rank pair. One rank sends
-and receives `2 * 255 * 384 = 195,840` bytes across dispatch plus combine. At
-50 GB/s, no full-rank realization can beat `195,840 / 50e9 = 3.9168`
-microseconds per layer. Across 65 layer equivalents, the per-rank floor is
-254.592 microseconds. The sampled packet arm measures 54.648960 microseconds
-for each phase, or 109.297920 microseconds per layer and 7.1043648 ms across
-65 executions. It is 27.9049 times the serialization floor, so the result does
-not imply impossible link service. The excess is where control, propagation,
-path sharing, receiver fan-in and queues enter.
-
-Before reading either widest step, the routed expert weights alone provide an
-independent memory floor. One gated expert has
-`3 * 3072 * 1536 = 14,155,776` FP8 bytes. Eight active experts across 65
-layer equivalents carry at least 7,361,003,520 weight bytes, even under perfect
-reuse across the four speculative candidates. At 4.8 TB/s high-bandwidth
-memory, that is a 1.5335424 ms floor before attention, router, logits or
-communication. The 16.737840 ms SimLLM step and the 61.028924 ms
-AIConfigurator step both remain above it.
-
-Before interpreting throughput, the widest AIConfigurator step permits
-16.3857 decode steps per second, while the packet-priced step permits 59.7449.
-With Multi-Token Prediction (MTP) nextn 3, their absolute ceilings are 65.5427
-and 238.9795 candidate tokens per second per request before acceptance losses.
-Neither number is an impossible tens-of-thousands-of-tokens result. This check
-rules out a gross time-unit error; it does not validate either timing model
-against an H200 deployment.
 
 ## What came out
 
-The result refutes the proposed omission-cost interpretation. AIConfigurator
-prices a half-precision NCCL all-gather plus reduce-scatter over a buffer
-proportional to `tokens * hidden * E`. SimLLM prices uniform routed FP8 expert
-payload proportional to `tokens * topk * hidden`, with placement, paths,
-queues and receiver fan-in. These are different traffic abstractions. At EP
-256, AIConfigurator assigns 51.39544921875 ms to dispatch, while the sampled
-routed packet arm assigns 7.1043648 ms. Replacing the former with the latter
-on the same 9.633475239976931 ms non-dispatch timing base lowers the step from
-61.028924458726934 ms to 16.73784003997693 ms. The run therefore cannot claim
-that the omitted receiver mechanism adds at least a quarter-step. It shows
-instead that the donor's much larger buffer abstraction dominates the
-comparison.
+Family D passes only 1 of 4 frozen comparisons. The packet-to-external ratios
+on identical dense traffic are `0.02590463307406155`, `0.3530150565741419`,
+`0.8026183885459625` and `1.187022158460092`. The frozen lower bound is
+1.0 at every width. EP 8, 32 and 128 therefore refute the expectation: the
+external NCCL extrapolation is conservative relative to the direct packet
+construction at those widths. The EP 256 extrapolated point passes and shows
+the packet cost crossing above the external estimate as cross-node load grows.
+No band was widened.
 
-The scored families remain separate:
+| EP | D-external strategy and traffic | D-packet strategy and traffic | External ms | Packet ms | Packet / external | Population | Outcome |
+|---:|---|---|---:|---:|---:|---|---|
+| 8 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | dense SM90 fallback, identical BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | 1.92205 | 0.04979 | 0.02590463307406155 | measured full rank and message population, 112 messages per layer | REFUTED |
+| 32 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | dense SM90 fallback, identical BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | 19.82220267857143 | 6.997536 | 0.3530150565741419 | measured full rank and message population, 1,984 messages per layer | REFUTED |
+| 128 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | dense SM90 fallback, identical BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | 36.77934174107143 | 29.519776 | 0.8026183885459625 | measured full rank and message population, 32,512 messages per layer | REFUTED |
+| 256 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | dense SM90 fallback, identical BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | 51.39544921875 | 61.00753706666667 | 1.187022158460092 | FG-10 extrapolation from measured full EP 128 population by `31 / 15` cross-node bytes per rank | PASS |
 
-| Family | Result | Verdict |
-|---|---:|---|
-| E | 4 / 4 | PASS: every dispatch value is bit-equal to the frozen live SDK oracle. |
-| C | 4 / 4 | PASS: every composed decode quotient is exactly 1.0 inside `[0.98, 1.02]`. |
-| N | 1 / 3 | REFUTED: N1 and N2 fail; N3 measures the required fan-in. |
-| W | 1 / 1 | PASS: both fresh arms, scoring and figure rendering completed in 298.814700 seconds, below 3,600 seconds. |
+Family E remains 4 of 4 bit-equal. Family C remains 4 of 4 at quotient 1.0,
+but it is an end-to-end parity check that reuses the dispatch code Family E
+validates, not independent confirmation of E. Family W passes in
+907.220454105176 seconds. Family S is published and unscored. All fatal guards
+FG-1 through FG-10 hold, so the corrected run is nonvoid.
 
-All fatal guards FG-1 through FG-7 pass. A fatal guard is not part of the
-behavioral denominator.
+## What it changes for the project
 
-## Family E: external dispatch parity
+The original MiniMax result is now published as void, and its omission-cost
+interpretation is withdrawn. The corrected equal-traffic comparison refutes
+the claim that packet contention must add cost at every width: against this
+packet construction, the external NCCL extrapolation is conservative through
+EP 128 and becomes lower only at the EP 256 extrapolated point.
 
-| EP | Frozen dispatch ms | Frozen hex | Local hex | Outcome |
-|---:|---:|---|---|---|
-| 8 | 1.92205 | `0x1.ec0b780346dc6p+0` | `0x1.ec0b780346dc6p+0` | PASS |
-| 32 | 19.82220267857143 | `0x1.3d27bdfef25dcp+4` | `0x1.3d27bdfef25dcp+4` | PASS |
-| 128 | 36.77934174107143 | `0x1.263c1785d279dp+5` | `0x1.263c1785d279dp+5` | PASS |
-| 256 | 51.39544921875 | `0x1.9b29e147ae148p+5` | `0x1.9b29e147ae148p+5` | PASS |
+No task closes and no milestone advances. TRAF-74 explicitly owns replacing
+the deterministic balanced routing geometry with observed per-rank
+assignments. TRAF-75 explicitly owns propagating dispatch and combine
+precision from supported framework configuration. TRAF-73 is narrowed to
+hardware transport calibration, including queue service, phase makespan,
+buffering and receiver occupancy. TRAF-26 continues to own complete production
+peer workloads, and COMP-88 continues to own independent calibration of the
+external NCCL extrapolation.
 
-The NCCL collection identity is H200 SXM, NCCL collection 2.26.2, with source
-rows that declare version 2.29.2. Its content-addressed slice is
-`e432db694195110aa39c1e1eccf1accda012e69ef68e95210d049809bb93f015`
-and its compressed payload SHA-256 is
-`12ed4c1dc12b3d9f0f04ffecf025d0dea5599946fa36944bcb60117035d70efb`.
-The record preserves NCCL as the source identity of both dispatch operations.
+## What it does not change
 
-## Family C: external pass composition
+The run does not determine which communication strategy a MiniMax deployment
+uses, does not validate either timing model against H200 hardware, and does not
+turn Family S into a precision claim. It does not make Family C independent
+evidence for Family E. It does not close TRAF-26, TRAF-73, TRAF-74, TRAF-75 or
+COMP-88, and it does not change accepted default traffic timestamps, the
+imported operation artifact or the prior Qwen parity result.
 
-| EP | Live SDK step ms | Local composed step ms | Quotient | Outcome |
-|---:|---:|---:|---:|---|
-| 8 | 13.984132942232176 | 13.984132942232176 | 1.0 | PASS |
-| 32 | 27.51711787974335 | 27.51711787974335 | 1.0 | PASS |
-| 128 | 44.86945704576469 | 44.86945704576469 | 1.0 | PASS |
-| 256 | 61.028924458726934 | 61.028924458726934 | 1.0 | PASS |
+## Physical sanity before detailed interpretation
 
-The generic composer retains the merged Qwen3-32B-FP8 behavior. The
-post-refactor parity replay at
-`${SIMLLM_MINIMAX_T1_BULK_ROOT}/qwen-parity-after-generic/attempt-0002`
-is nonvoid with I1 25/25, I2 26/26, I2S 13/13, P1 4/4 and W 1/1, with no
-unit-in-the-last-place finding.
+At EP 256, one dense half buffer is
+`4 tokens * 3072 hidden * 256 ranks * 2 bytes = 6,291,456 bytes`. The two
+direct collective phases put 12,189,696 bytes per rank on the fabric. At
+50 GB/s, no packet realization can beat 243.79392 microseconds per layer, or
+15.8466048 ms across 65 layers. The measured-anchor extrapolation is
+61.00753706666667 ms, 3.8499 times that floor. The external estimate is
+51.39544921875 ms, 3.2433 times the same floor. Both are physically possible;
+the floor alone does not identify which overhead model is right.
 
-## Family N: routed packet pricing
+The corrected sparse EP 256 arm sends 97,920 FP8 dispatch bytes and returns
+195,840 BF16 combine bytes per rank, for 293,760 bytes total. Of those,
+286,524 bytes cross the fabric. Its 50 GB/s serialization floor is
+5.73048 microseconds per layer, or 0.3724812 ms across 65 layers. The measured
+packet dispatch-plus-combine value is 7.4813024 ms, 20.0850 times the floor.
+This remains physically possible and leaves room for propagation, packet
+service, path sharing and queueing.
 
-| EP | Packet sampling | AIConfigurator step ms | Packet dispatch plus combine ms | SimLLM step ms | SimLLM / AIConfigurator | Outcome |
-|---:|---|---:|---:|---:|---:|---|
-| 8 | one full-peer layer of 65 | 13.984132942232176 | 0.0249600 | 12.087042942232175 | 0.8643398194341548 | N1 sequence cell |
-| 32 | one full-peer layer of 65 | 27.51711787974335 | 4.0350336 | 11.72994880117192 | 0.4262782480503487 | N1 decreases |
-| 128 | one full-peer layer of 65 | 44.86945704576469 | 5.5890432 | 13.679158504693262 | 0.3048657016451342 | N1 decreases |
-| 256 | one receiver per node, every sender, one layer of 65 | 61.028924458726934 | 7.1043648 | 16.73784003997693 | 0.2742607736975033 | N1 and N2 refuted |
+An independent memory bound reaches the same broad conclusion. One gated
+expert carries `3 * 3072 * 1536 = 14,155,776` FP8 weight bytes. Eight active
+experts over 65 layers require at least 7,361,003,520 bytes, or 1.5335424 ms
+at 4.8 TB/s before attention, routing, logits or communication. The corrected
+dense external step is 61.028924458726934 ms and the sparse packet-composed
+step is 17.114777639976932 ms, both above that floor.
 
-N1 required a non-decreasing ratio. The measured sequence is strictly
-decreasing: 0.864340, 0.426278, 0.304866 and 0.274261. N1 is refuted.
+For end-to-end plausibility, those two steps imply 16.3857 and 58.4290 decode
+steps per second per request. Even treating each Multi-Token Prediction step
+as four candidates gives ceilings of 65.5427 and 233.7162 candidate tokens per
+second before acceptance losses. Neither implies an impossible
+tens-of-thousands-of-tokens rate. These bounds rule out gross byte, time and
+unit defects; they do not validate either model against a deployment.
 
-N2 required the widest ratio to be at least 1.25. The measured value is
-0.2742607736975033. N2 is refuted without changing the band.
+## First-run void evidence
 
-N3 passes. At EP 256, both dispatch and combine measure 54.648960 microseconds
-of receiver ingress occupancy and 248 simultaneous cross-node senders at the
-selected receiver. Seven same-node peers remain on the analytic NVLink leg,
-so the logical receiver has all 255 possible peer senders while the htsim
-measurement correctly reports only the 248 fabric senders.
+Every row below remains void. It cannot be scored because FG-4 failed, the
+strategies differ, the sparse geometry was all-pairs fluidized, combine was
+incorrectly FP8, and the EP 256 cell simulated only one eighth of receiver
+destinations without a full-population anchor.
 
-The faithful EP 256 ledger remains 130,560 directed messages and 50,135,040
-bytes per layer, hence 8,486,400 messages and 3,258,777,600 bytes across 65
-executions. The scored EP 256 sample executes 16,320 messages per layer, one
-eighth of the receiver destinations, while retaining all sources and all 32
-nodes. A prior full-population probe reached the packet backend but timed out
-after 900 seconds in dispatch alone, before producing a completion row. It is
-retained at `${SIMLLM_MINIMAX_T1_BULK_ROOT}/runner-probe-006` and contributes
-no scored value.
+| EP | External strategy and traffic | Packet strategy and traffic | External step ms | Packet communication ms | Packet step ms | Packet / external | Population |
+|---:|---|---|---:|---:|---:|---:|---|
+| 8 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse all-pairs fluidized FP8 dispatch and FP8 combine over `tokens * topk * hidden` | 13.984132942232176 | 0.02496 | 12.087042942232175 | 0.8643398194341548 | full all-pairs fluidized population, 112 messages per layer |
+| 32 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse all-pairs fluidized FP8 dispatch and FP8 combine over `tokens * topk * hidden` | 27.51711787974335 | 4.0350336 | 11.72994880117192 | 0.4262782480503487 | full all-pairs fluidized population, 1,984 messages per layer |
+| 128 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse all-pairs fluidized FP8 dispatch and FP8 combine over `tokens * topk * hidden` | 44.86945704576469 | 5.5890432 | 13.679158504693262 | 0.3048657016451342 | full all-pairs fluidized population, 32,512 messages per layer |
+| 256 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse all-pairs fluidized FP8 dispatch and FP8 combine over `tokens * topk * hidden` | 61.028924458726934 | 7.1043648 | 16.73784003997693 | 0.2742607736975033 | 16,320 of 130,560 messages per layer, one eighth and unanchored |
 
-## Determinism, chronology and artifacts
+The old 248-sender EP 256 fan-in was `248 / 29.57691192626953 = 8.3849`
+times the realizable analytical expectation. Its published headline ratio is
+retained solely as void strategy-comparison evidence.
 
-Both fresh evaluation payloads have the same SHA-256,
-`31c092cf2e1264c55820b58a2d942c428c2c33f5414026952357ccadb725c461`.
-The study ran from commit `df47c6532c71312d36eb96ed528f6ebd772e5952`.
-The immutable expectation commit `61b66c4` and exact-oracle configuration
-commit `5a29bb0` both precede the implementation and run commit. The tracked
-expectations SHA-256 is
-`9b355278c779c7834d18eaf3b19d16929f7b1800926e0ba1ba271f14a5d613ed`.
+The invalid EP 256 sample reported 54.648960 microseconds of ingress occupancy
+in each direction, 248 fabric senders and 255 logical senders after including
+seven same-node peers. Its represented ledger was 130,560 messages and
+50,135,040 bytes per layer, hence 8,486,400 messages and 3,258,777,600 bytes
+over 65 layers, but it executed only 16,320 messages per layer. Those values
+remain findings about the void construction, not scored evidence.
+
+## Family S: published strategy comparison, unscored
+
+Family S compares the external dense SM90 fallback with the corrected sparse
+routed expert payload. It does not know which strategy a real deployment
+selects.
+
+| EP | S-dense strategy and traffic | S-sparse strategy and traffic | Dense step ms | Sparse packet communication ms | Sparse step ms | Sparse / dense | Population |
+|---:|---|---|---:|---:|---:|---:|---|
+| 8 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse realized top-k routing, FP8 dispatch plus BF16 combine over `tokens * topk * hidden` | 13.984132942232176 | 0.037375 | 12.099457942232176 | 0.8652276113373988 | full rank and realized-message population, 112 messages per layer |
+| 32 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse realized top-k routing, FP8 dispatch plus BF16 combine over `tokens * topk * hidden` | 27.51711787974335 | 4.4170048 | 12.11192000117192 | 0.4401594692476161 | full rank and realized-message population, 1,340 messages per layer |
+| 128 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse realized top-k routing, FP8 dispatch plus BF16 combine over `tokens * topk * hidden` | 44.86945704576469 | 5.6296448 | 13.719760104693265 | 0.30577058444678235 | full rank and realized-message population, 7,444 messages per layer |
+| 256 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | sparse realized top-k routing, FP8 dispatch plus BF16 combine over `tokens * topk * hidden` | 61.028924458726934 | 7.4813024 | 17.114777639976932 | 0.28043714995422264 | full rank and realized-message population, 15,640 messages per layer |
+
+The sparse-to-dense ratios remain a strategy comparison only. They do not
+identify an omitted mechanism or establish which path runs in production.
+
+## Routing geometry and directional precision
+
+The balanced surrogate routes whole token-expert assignments only to
+destinations they reach. It never manufactures fractional bytes to every peer.
+The analytical expectation uses independent assignment landing; realized
+counts come from the deterministic full population.
+
+| EP | Expected distinct destinations per source | Realized distinct destinations per source | Expected cross-node senders per receiver | Realized cross-node senders per receiver | Maximum realized |
+|---:|---:|---:|---:|---:|---:|
+| 8 | 7.000000 | 7.000000 | 0.000000 | 0.000000 | 0 |
+| 32 | 21.191406 | 20.937500 | 16.406250 | 16.437500 | 24 |
+| 128 | 28.895523 | 29.078125 | 27.302856 | 27.578125 | 32 |
+| 256 | 30.411744 | 30.546875 | 29.576912 | 29.781250 | 32 |
+
+At EP 256 the expected destination count is exactly
+`255 * (1 - (31 / 32)^4) = 30.411744117736816`, and the expected cross-node
+sender count is
+`248 * (1 - (31 / 32)^4) = 29.57691192626953`. The realized cross-node
+fan-in is 29.78125, only 0.69 percent above expectation and far below the FG-8
+ceiling of 1.2 times expectation.
+
+Dispatch and combine precision are declared separately. The represented sparse
+implementation quantizes dispatch to FP8 at one byte per element. Its ordinary
+combine return is BF16 at two bytes per element; low-precision combine is a
+separate mode and is disabled here.
+
+| EP | FP8 dispatch bytes per rank | BF16 combine bytes per rank | Total bytes per rank |
+|---:|---:|---:|---:|
+| 8 | 86,016 | 172,032 | 258,048 |
+| 32 | 95,232 | 190,464 | 285,696 |
+| 128 | 97,536 | 195,072 | 292,608 |
+| 256 | 97,920 | 195,840 | 293,760 |
+
+## External parity, determinism and guards
+
+Family E reproduces all four frozen external dispatch cells bit-for-bit:
+
+| EP | Frozen dispatch ms | Frozen hex | Local hex |
+|---:|---:|---|---|
+| 8 | 1.92205 | `0x1.ec0b780346dc6p+0` | `0x1.ec0b780346dc6p+0` |
+| 32 | 19.82220267857143 | `0x1.3d27bdfef25dcp+4` | `0x1.3d27bdfef25dcp+4` |
+| 128 | 36.77934174107143 | `0x1.263c1785d279dp+5` | `0x1.263c1785d279dp+5` |
+| 256 | 51.39544921875 | `0x1.9b29e147ae148p+5` | `0x1.9b29e147ae148p+5` |
+
+Both fresh evaluation payloads have SHA-256
+`ed5c4be84e3c243255ec45be1b224a8a08e5479d98ee1f7848e1c9831de95882`.
+The corrected run commit is
+`7eff88a4efa68c4d2ad8233201d18e43b97d8d77`. The first freeze
+`61b66c4`, exact-oracle commit `5a29bb0`, and corrected freeze `4d1e41c`
+all precede implementation and execution. The two expectation files retain
+SHA-256 values
+`9b355278c779c7834d18eaf3b19d16929f7b1800926e0ba1ba271f14a5d613ed`
+and
+`b237945a945e1b1500ab299cf81faf20e704541f6c3e591b1cf90c418b5bb116`.
+
+FG-4 inspected four record rows, four CSV rows, five figure series, the figure
+caption and extracted PDF text. FG-8 validated realized routing geometry,
+FG-9 validated directional precision, and FG-10 validated every scored
+population or anchor. FG-1 through FG-3 and FG-5 through FG-7 also pass. The
+failed rendering-only `attempt-0001` remains append-only evidence and was not
+scored; `attempt-0002` is the nonvoid corrected run.
 
 The tracked artifact hashes are:
 
 | Artifact | SHA-256 |
 |---|---|
-| `record.json` | `6f980eaea513bb532723e5a0cd66740002a5f7d4b3c78317c95c745aa0921f68` |
-| `results.csv` | `b806306e2b2bc9ff81f4a0895fbc5694845e423fd37171d32c45ff98a5250467` |
-| `figures/minimax_ep_scaling.png` | `e7c2b72fa85bf4cd9bf1169e6371bb164382e39016c0613d3e8029d9c81ebf85` |
-| `figures/minimax_ep_scaling.pdf` | `3efe36eda7d08706176e6169162827e8cfcb7e15e9d3d3d913df46ffaebd01f1` |
+| `record.json` | `90db51794ec9ee07025dc7ae6ff3704cdaf57cfdfdfff43d355e38bdd9eeb587` |
+| `results.csv` | `cdce8558413031f39564a1c63a3ec5e394aef88e2cce6717cbc75a58b124ccdb` |
+| `figures/minimax_ep_scaling.png` | `deedf3b85aa8077566a40ed38b16d1ca42c85957839223b9a945fa9d6ebd91da` |
+| `figures/minimax_ep_scaling.pdf` | `238ffa5132890dd5304005e667a29f3aa4339578052ab078fb937f59a356e7cf` |
+| `figures/minimax_ep_scaling.metadata.json` | `024b2789720a9afd87451bbfad2361a226d8f6a6c093b8e24b3e7909a56ed372` |
 
-The publication figure is available as
+The corrected comparison and contention-ratio panel are available as
 [PNG](figures/minimax_ep_scaling.png) and
-[PDF](figures/minimax_ep_scaling.pdf). Visual inspection confirmed that both
-panels, all dispatch-share annotations, the exact Qwen reference and the
-distinct receiver-subset marker are legible without clipping.
-
-## What it changes for the project
-
-The model-configured external pass composer and MiniMax-M2.5 MoEDispatch
-resolver are now literal offline capabilities, and COMP-87 is not their owner.
-The frozen E and C matched seam is established at all four widths. The study's
-network claim does not advance: N1 and N2 are refuted because the two tools
-price different traffic quantities. COMP-88 opens for independent H200 NCCL
-rank and message-size calibration of the donor extrapolation. TRAF-73 opens
-for hardware-identified routed expert traffic, switch buffering and receiver
-occupancy. TRAF-26 remains open for independently routed production peer
-workloads rather than this study's uniform per-rank surrogate. No existing
-milestone advances to a hardware-valid MiniMax scaling claim.
-
-## What it does not change
-
-This result does not validate either stack against hardware, does not claim
-the external measured compute rows are wrong, and does not present the two
-traffic abstractions as equivalent. It does not simulate all EP 256 receiver
-destinations, does not close TRAF-26, and does not place the external pass on
-the supported `ExecutionGraph` through `CompletionEvent`, `StepResult`, time
-to first token (TTFT) and time per output token (TPOT) chain owned by COMP-86.
-It does not dispatch the WideEP MoE, MLA BMM, Mamba2, MLA or generation-MLA
-families owned by COMP-87. The Qwen parity result, imported operation artifact
-and all accepted default traffic timestamps remain unchanged.
+[PDF](figures/minimax_ep_scaling.pdf). Visual inspection confirmed that every
+series, point, extrapolation marker, bound, label and footer is legible without
+clipping or overlap.

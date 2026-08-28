@@ -16,10 +16,11 @@ ROOT = Path(__file__).resolve().parents[1]
 STUDY = ROOT / "examples/minimax_ep_scaling_v1"
 RECORD = STUDY / "record.json"
 RESULTS_CSV = STUDY / "results.csv"
-RECORD_SHA256 = "6f980eaea513bb532723e5a0cd66740002a5f7d4b3c78317c95c745aa0921f68"
-RESULTS_CSV_SHA256 = "b806306e2b2bc9ff81f4a0895fbc5694845e423fd37171d32c45ff98a5250467"
-PNG_SHA256 = "e7c2b72fa85bf4cd9bf1169e6371bb164382e39016c0613d3e8029d9c81ebf85"
-PDF_SHA256 = "3efe36eda7d08706176e6169162827e8cfcb7e15e9d3d3d913df46ffaebd01f1"
+RECORD_SHA256 = "90db51794ec9ee07025dc7ae6ff3704cdaf57cfdfdfff43d355e38bdd9eeb587"
+RESULTS_CSV_SHA256 = "cdce8558413031f39564a1c63a3ec5e394aef88e2cce6717cbc75a58b124ccdb"
+PNG_SHA256 = "deedf3b85aa8077566a40ed38b16d1ca42c85957839223b9a945fa9d6ebd91da"
+PDF_SHA256 = "238ffa5132890dd5304005e667a29f3aa4339578052ab078fb937f59a356e7cf"
+METADATA_SHA256 = "024b2789720a9afd87451bbfad2361a226d8f6a6c093b8e24b3e7909a56ed372"
 WIDTHS = (8, 32, 128, 256)
 FIRST_FREEZE_SHA256 = "9b355278c779c7834d18eaf3b19d16929f7b1800926e0ba1ba271f14a5d613ed"
 CORRECTED_FREEZE_SHA256 = "b237945a945e1b1500ab299cf81faf20e704541f6c3e591b1cf90c418b5bb116"
@@ -108,29 +109,64 @@ def test_tracked_minimax_record_is_locked_and_nonvoid() -> None:
     assert _sha256(RESULTS_CSV) == RESULTS_CSV_SHA256
     assert _sha256(STUDY / "figures/minimax_ep_scaling.png") == PNG_SHA256
     assert _sha256(STUDY / "figures/minimax_ep_scaling.pdf") == PDF_SHA256
+    assert (
+        _sha256(STUDY / "figures/minimax_ep_scaling.metadata.json")
+        == METADATA_SHA256
+    )
     assert b"\r" not in RECORD.read_bytes()
     assert b"\r" not in RESULTS_CSV.read_bytes()
 
     record = _record()
-    assert record["schema"] == "simllm-minimax-ep-scaling-record-v1"
+    assert record["schema"] == "simllm-minimax-ep-scaling-record-v2"
     assert record["run_state"] == "nonvoid"
     assert record["attempt"] == "attempt-0002"
-    assert record["run_commit"] == "df47c6532c71312d36eb96ed528f6ebd772e5952"
-    assert record["freeze_commits"] == ["61b66c4", "5a29bb0"]
+    assert record["run_commit"] == "7eff88a4efa68c4d2ad8233201d18e43b97d8d77"
+    assert record["freeze_commits"] == ["61b66c4", "5a29bb0", "4d1e41c"]
     assert all(record["fatal_guards"].values())
     assert record["fresh_evaluations"] == {
         "bit_equal": True,
         "count": 2,
-        "first_sha256": "31c092cf2e1264c55820b58a2d942c428c2c33f5414026952357ccadb725c461",
-        "second_sha256": "31c092cf2e1264c55820b58a2d942c428c2c33f5414026952357ccadb725c461",
+        "first_sha256": "ed5c4be84e3c243255ec45be1b224a8a08e5479d98ee1f7848e1c9831de95882",
+        "second_sha256": "ed5c4be84e3c243255ec45be1b224a8a08e5479d98ee1f7848e1c9831de95882",
     }
 
     families = record["family_tallies"]
     assert {
-        name: (entry["passed"], entry["denominator"])
-        for name, entry in families.items()
-    } == {"E": (4, 4), "C": (4, 4), "N": (1, 3), "W": (1, 1)}
-    assert families["W"]["elapsed_seconds"] == 298.81469979602844
+        name: (families[name]["passed"], families[name]["denominator"])
+        for name in ("E", "C", "D", "W")
+    } == {"E": (4, 4), "C": (4, 4), "D": (1, 4), "W": (1, 1)}
+    assert families["S"]["scored"] is False
+    assert families["W"]["elapsed_seconds"] == 907.220454105176
+    assert record["artifact_disclosure_inspection"] == {
+        "csv_rows_inspected": 4,
+        "figure_caption_inspected": True,
+        "figure_series_inspected": 5,
+        "pdf_text_inspected": True,
+        "record_rows_inspected": 4,
+    }
+
+    report = (STUDY / "RESULTS.md").read_text(encoding="utf-8")
+    opening = report[:2_000]
+    for term in (
+        "VOID against FG-4",
+        "0.2742607736975033",
+        "strategy comparison",
+        "does not know which strategy",
+    ):
+        assert term in opening
+    for first_run_value in (
+        "0.8643398194341548",
+        "0.4262782480503487",
+        "0.3048657016451342",
+        "0.2742607736975033",
+        "0.02496",
+        "4.0350336",
+        "5.5890432",
+        "7.1043648",
+        "16,320 of 130,560",
+        "3,258,777,600",
+    ):
+        assert first_run_value in report
 
 
 def test_frozen_dispatch_and_composition_cells_are_locked() -> None:
@@ -156,54 +192,100 @@ def test_frozen_dispatch_and_composition_cells_are_locked() -> None:
         1.0,
     ]
     assert all(cell["passed"] for cell in families["C"]["cells"])
+    assert families["C"]["interpretation"] == (
+        "end-to-end parity reusing the dispatch code validated by E"
+    )
 
 
-def test_network_refutations_and_fanin_are_locked() -> None:
+def test_corrected_dense_refutations_and_sparse_geometry_are_locked() -> None:
     record = _record()
     rows = record["rows"]
     assert [row["expert_parallel"] for row in rows] == list(WIDTHS)
-    assert [row["ratio"] for row in rows] == [
+    assert [row["family_d_ratio"] for row in rows] == [
+        0.02590463307406155,
+        0.3530150565741419,
+        0.8026183885459625,
+        1.187022158460092,
+    ]
+    assert [row["family_d_packet_ms"] for row in rows] == [
+        0.04979,
+        6.997536,
+        29.519776,
+        61.00753706666667,
+    ]
+    assert [row["family_d_simulated_messages_per_layer"] for row in rows] == [
+        112,
+        1_984,
+        32_512,
+        0,
+    ]
+    assert [row["family_d_represented_messages"] for row in rows] == [
+        7_280,
+        128_960,
+        2_113_280,
+        8_486_400,
+    ]
+    assert [cell["passed"] for cell in record["family_tallies"]["D"]["cells"]] == [
+        False,
+        False,
+        False,
+        True,
+    ]
+    assert rows[-1]["family_d_extrapolation"]["cross_node_bytes_per_rank_factor"] == (
+        31 / 15
+    )
+
+    assert [row["family_s_simulated_messages_per_layer"] for row in rows] == [
+        112,
+        1_340,
+        7_444,
+        15_640,
+    ]
+    assert all(
+        row["family_s_population_status"]
+        == "full rank and realized-message population"
+        for row in rows
+    )
+    assert [row["family_s_payload_bytes_per_rank"] for row in rows] == [
+        258_048.0,
+        285_696.0,
+        292_608.0,
+        293_760.0,
+    ]
+    widest_geometry = rows[-1]["family_s_routing_geometry"]
+    assert widest_geometry == {
+        "expected_cross_node_senders_per_receiver": 29.57691192626953,
+        "expected_distinct_destinations_per_source": 30.411744117736816,
+        "maximum_cross_node_senders_per_receiver": 32,
+        "realized_cross_node_senders_per_receiver": 29.78125,
+        "realized_distinct_destinations_per_source": 30.546875,
+    }
+    assert [row["void_first_run_ratio"] for row in rows] == [
         0.8643398194341548,
         0.4262782480503487,
         0.3048657016451342,
         0.2742607736975033,
     ]
-    assert [row["packet_dispatch_combine_ms"] for row in rows] == [
-        0.02496,
-        4.0350336,
-        5.5890432,
-        7.1043648,
-    ]
-    assert [row["peer_subset"] for row in rows] == [False, False, False, True]
-    assert rows[-1]["simulated_message_fraction"] == 0.125
-    assert rows[-1]["simulated_messages_per_sampled_layer"] == 16_320
-    assert rows[-1]["represented_messages"] == 8_486_400
-    assert rows[-1]["represented_bytes"] == 3_258_777_600
-
-    bands = record["family_tallies"]["N"]["bands"]
-    assert bands["N1"]["passed"] is False
-    assert bands["N2"] == {
-        "actual": 0.2742607736975033,
-        "lower": 1.25,
-        "passed": False,
-        "rule": "widest ratio is at least 1.25",
-    }
-    assert record["n3"]["maximum_receiver_ingress_occupancy_ps"] == 54_648_960
-    assert record["n3"]["maximum_simultaneous_senders_per_receiver"] == 248
-    assert all(phase["sender_count"] == 248 for phase in record["n3"]["phases"])
+    assert all(row["void_first_run_status"] == "VOID against FG-4" for row in rows)
 
 
 def test_physical_ledger_and_portable_paths_are_locked() -> None:
     record = _record()
     assert record["physical_sanity"] == {
-        "dispatch_plus_combine_bytes_per_rank": 195_840,
-        "full_rank_serialization_floor_microseconds": 3.9168000000000003,
+        "dense_dispatch_plus_combine_fabric_bytes_per_rank": 12_189_696,
+        "dense_dispatch_plus_combine_wire_bytes_per_rank": 12_533_760,
+        "dense_half_buffer_bytes_per_rank": 6_291_456,
+        "dense_serialization_floor_microseconds_per_layer": 243.79391999999999,
         "link_bytes_per_second": 50_000_000_000,
-        "routed_fp8_payload_per_rank_pair_bytes": 384,
+        "sparse_combine_bytes_per_rank": 195_840.0,
+        "sparse_dispatch_bytes_per_rank": 97_920.0,
+        "sparse_dispatch_plus_combine_bytes_per_rank": 293_760.0,
+        "sparse_dispatch_plus_combine_fabric_bytes_per_rank": 286_524.0,
+        "sparse_serialization_floor_microseconds_per_layer": 5.73048,
         "widest_expert_parallel": 256,
     }
     assert record["bulk_evidence"] == (
-        "${SIMLLM_MINIMAX_T1_BULK_ROOT}/attempt-0002"
+        "${SIMLLM_MINIMAX_FIX_BULK_ROOT}/attempt-0002"
     )
     text = RECORD.read_text(encoding="utf-8")
     slash = chr(47)
@@ -218,7 +300,14 @@ def test_physical_ledger_and_portable_paths_are_locked() -> None:
         rows = list(csv.DictReader(handle))
     assert len(rows) == 4
     assert [int(row["expert_parallel"]) for row in rows] == list(WIDTHS)
-    assert rows[-1]["sample_label"].startswith("sampled layer and peers:")
+    assert all(
+        row["family_d_external_traffic_definition"]
+        == row["family_d_packet_traffic_definition"]
+        for row in rows
+    )
+    assert all(row["family_d_external_strategy"] for row in rows)
+    assert all(row["family_s_sparse_strategy"] for row in rows)
+    assert all(row["void_first_run_status"] == "VOID against FG-4" for row in rows)
 
 
 def test_runner_validates_tracked_record_without_pythonpath(tmp_path: Path) -> None:
