@@ -1216,7 +1216,19 @@ correction direction can be priced. CORE-66 remains open.
   aarch64. The fail-fast result is registered in
   `core66_ep4_env_retry_result.json`. CORE-66 remains open on a compatible
   cu129, CPython 3.11, ARM aarch64 DeepEP build and hardware capable of the
-  registered EP72 cell; no further submission is authorized by this result.
+  registered EP72 cell; no further submission is authorized by that result.
+  The distinct fallback freeze in `core66_ep4_fallback_expectations.json` then
+  disabled DeepEP and selected SGLang's standard `none` mixture-of-experts
+  backend so non-DeepEP kernel identities and memory bytes could still be
+  captured. Job `200961` allocated four GPUs under `gpu_general`, verified the
+  recovered CUDA 12.9 profiler and Python environment, then failed closed
+  before profiling because importing pinned SGLang required the absent
+  `orjson` module. Zero of 37 rows bound; timing, counters and routing did not
+  run; and movement remains null. The final fallback result is registered in
+  `core66_ep4_fallback_result.json`. CORE-66 remains open on a runnable pinned
+  SGLang dependency set for the CUDA 12.9, CPython 3.11, ARM environment, a
+  compatible DeepEP build and hardware capable of the registered EP72 cell.
+  No further submission is authorized by this result.
 
 - CORE-53 (Precision; P1; M): replace the first disaggregated session slice's
   roofline bootstrap with the accepted COMP-64 kernel-cycle lookup record.

@@ -153,12 +153,12 @@ def test_ep4_fallback_access_and_incidental_exposure_are_frozen() -> None:
     disclosure = _load("core66f_disclosure_ledger.json")
 
     assert access["all_reader_forbidden_ledgers_empty"] is True
-    assert access["reader_access_event_count"] == 12
-    assert len(access["access_tranches"]) == 6
+    assert access["reader_access_event_count"] == 14
+    assert len(access["access_tranches"]) == 7
     assert all(row["forbidden_ledger_bytes"] == 0 for row in access["access_tranches"])
     assert disclosure["fatal_held_out_use_occurred"] is False
-    assert disclosure["incidental_exposure_count"] == 2
-    assert len(disclosure["incidental_exposures"]) == 2
+    assert disclosure["incidental_exposure_count"] == 4
+    assert len(disclosure["incidental_exposures"]) == 4
     assert all(not row["arithmetic_use"] for row in disclosure["incidental_exposures"])
     assert all(not row["comparison_use"] for row in disclosure["incidental_exposures"])
     assert all(not row["fitting_use"] for row in disclosure["incidental_exposures"])

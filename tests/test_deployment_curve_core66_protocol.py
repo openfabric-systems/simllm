@@ -29,6 +29,9 @@ EP4_ENV_RETRY_RESULT_PATH = (
 EP4_FALLBACK_EXPECTATIONS_PATH = (
     ROOT / "examples/deployment_curve_v1/core66_ep4_fallback_expectations.json"
 )
+EP4_FALLBACK_RESULT_PATH = (
+    ROOT / "examples/deployment_curve_v1/core66_ep4_fallback_result.json"
+)
 
 
 def _load_reader() -> ModuleType:
@@ -321,6 +324,37 @@ def test_ep4_fallback_freeze_is_distinct_and_forces_null_movement() -> None:
         "output": 1,
         "step": 1,
     }
+
+
+def test_ep4_fallback_result_stops_at_missing_orjson() -> None:
+    result = json.loads(EP4_FALLBACK_RESULT_PATH.read_text(encoding="utf-8"))
+
+    assert result["status"] == (
+        "FAILED_CLOSED_PREFLIGHT_MISSING_ORJSON_NO_PHYSICAL_CAPTURE"
+    )
+    assert result["achieved_capture_configuration"] is None
+    assert result["hardware"]["allocated_job_id"] == 200961
+    assert result["hardware"]["allocated_gpu_count"] == 4
+    assert result["hardware"]["partition"] == "gh-hourly"
+    assert result["hardware"]["qos"] == "gpu_general"
+    assert result["hardware"]["submission_count"] == 1
+    assert result["environment_preflight"]["failure"] == {
+        "exception": "ModuleNotFoundError",
+        "missing_module": "orjson",
+        "source_import_path": "sglang.srt.utils.common",
+    }
+    assert result["environment_preflight"]["profiler_call_count"] == 0
+    identity = result["identity_and_physics"]
+    assert identity["physical_identity_binding_count"] == 0
+    assert identity["physical_identity_binding_target"] == 37
+    assert identity["hbm_counter_permission"] == "NOT_REACHED"
+    assert identity["hbm_read_write_bytes"] is None
+    assert identity["routing_assignment_record_count"] == 0
+    calibration = result["calibration_only"]
+    assert calibration["signed_movement_tokens_per_second_per_node"] is None
+    assert calibration["downward_correction_published_alone"] is False
+    assert calibration["service_multipliers_applied"] is False
+    assert result["project_disposition"]["next_authorized_action"] is None
 
 
 def test_ep4_result_preserves_failed_capture_and_null_movement() -> None:

@@ -53,10 +53,20 @@
       "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "selector": "markdown-task:CORE-66",
       "status": "PASS"
+    },
+    {
+      "access_ledger": "<wave-runs>/core66c/ep4-fallback/reader/access-core66-task-after.jsonl",
+      "access_ledger_bytes": 480,
+      "access_ledger_sha256": "0b24284e570a1f2f0e62c7119edddec8c75d95767474960aefe34c5ff68f2dac",
+      "disposition": "post-result registry verification",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "selector": "markdown-task:CORE-66",
+      "status": "PASS"
     }
   ],
   "all_reader_forbidden_ledgers_empty": true,
-  "reader_access_event_count": 12,
+  "reader_access_event_count": 14,
   "schema": "simllm-deployment-curve-core66f-reader-access-manifest-v1",
   "task": "CORE-66"
 }
