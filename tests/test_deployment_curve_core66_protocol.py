@@ -20,6 +20,9 @@ EP4_EXPECTATIONS_PATH = (
 EP4_RESULT_PATH = (
     ROOT / "examples/deployment_curve_v1/core66_ep4_capture_result.json"
 )
+EP4_ENV_RETRY_EXPECTATIONS_PATH = (
+    ROOT / "examples/deployment_curve_v1/core66_ep4_env_retry_expectations.json"
+)
 
 
 def _load_reader() -> ModuleType:
@@ -314,3 +317,44 @@ def test_ep4_result_preserves_failed_capture_and_null_movement() -> None:
     assert movement["service_multipliers_applied"] is False
     assert movement["downward_correction_published_alone"] is False
     assert result["protocol"]["fatal_held_out_use_occurred"] is False
+
+
+def test_ep4_environment_retry_reuses_core61_and_keeps_cell_unchanged() -> None:
+    expectations = json.loads(
+        EP4_ENV_RETRY_EXPECTATIONS_PATH.read_text(encoding="utf-8")
+    )
+
+    assert expectations["status"] == "EXPECTATIONS_ONLY"
+    reference = expectations["capture_reference"]
+    assert reference["cell_changes_permitted"] is False
+    assert reference["deviation_ledger_changes_permitted"] is False
+    assert reference["ep4_expectations_sha256"] == (
+        "8202f70f578408fd3aaa985bc7fa3ab3a88726019d8cbef896ae0d049f781d35"
+    )
+    provenance = expectations["environment_provenance"]
+    assert provenance["core61_decode_job"] == 200138
+    assert provenance["core61_decode_job_state"] == "COMPLETED"
+    assert provenance["core61_merged_script_sha256"] == (
+        provenance["core61_remote_script_sha256"]
+    )
+    environment = expectations["environment_selection"]
+    assert environment["module_commands"] == [
+        "module purge",
+        "module load gcc/12.3.0",
+        "module load cuda/12.9.1",
+    ]
+    assert environment["path_prefix"] == "${SIMLLM_CORE66E_GH200_VENV}/bin"
+    assert environment["interpreter"] == (
+        "${SIMLLM_CORE66E_GH200_VENV}/bin/python"
+    )
+    assert environment["python_version"] == "3.11.11"
+    assert environment["interpreter_machine"] == "aarch64"
+    assert environment["torch_version"] == "2.13.0+cu129"
+    assert environment["torch_cuda_version"] == "12.9"
+    preflight = expectations["fail_fast_preflight"]
+    assert preflight["status"] == "FROZEN_FAIL_CLOSED"
+    assert len(preflight["required_before_profiler"]) == 10
+    assert expectations["retry_submission"]["submission_limit"] == 1
+    assert expectations["comparison_gate"][
+        "never_publish_downward_correction_alone"
+    ]
