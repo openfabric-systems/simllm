@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import hashlib
 import importlib.util
 import io
@@ -90,6 +91,10 @@ def _csv_header() -> bytes:
     return (",".join(_reader().EXPECTED_HEADER) + "\n").encode()
 
 
+def _legacy_csv_header() -> bytes:
+    return (",".join(_reader().LEGACY_HEADER) + "\r\n").encode()
+
+
 def _csv_row(
     *,
     pool: str,
@@ -115,9 +120,22 @@ def _csv_row(
         "32",
     ]
     output = io.StringIO(newline="")
-    import csv
-
     csv.writer(output, lineterminator="\n").writerow(values)
+    return output.getvalue().encode()
+
+
+def _legacy_csv_row(*, pool: str, shape: int, name: str) -> bytes:
+    current = dict(
+        zip(
+            _reader().EXPECTED_HEADER,
+            next(csv.reader([_csv_row(pool=pool, shape=shape, name=name).decode()])),
+            strict=True,
+        )
+    )
+    output = io.StringIO(newline="")
+    csv.writer(output, lineterminator="\r\n").writerow(
+        [current[field] for field in _reader().LEGACY_HEADER]
+    )
     return output.getvalue().encode()
 
 
@@ -203,6 +221,19 @@ def test_csv_reader_accepts_unselected_schema_columns() -> None:
 
     rows, _ = _reader().extract_standard_decode_kernels(io.BytesIO(payload))
 
+    assert [row["name"] for row in rows] == ["fused_moe_kernel"]
+
+
+def test_csv_reader_accepts_exact_logged_legacy_schema() -> None:
+    payload = _legacy_csv_header() + _legacy_csv_row(
+        pool="decode",
+        shape=32,
+        name="fused_moe_kernel",
+    )
+
+    rows, consumed = _reader().extract_standard_decode_kernels(io.BytesIO(payload))
+
+    assert consumed == len(payload)
     assert [row["name"] for row in rows] == ["fused_moe_kernel"]
 
 

@@ -26,6 +26,9 @@ KERNEL_SUMMARY_LABEL = f"$SIMLLM_KERNELPROBE_ROOT/{KERNEL_SUMMARY_RELATIVE.as_po
 KERNEL_SUMMARY_SELECTOR = (
     "/rows[pool=decode,shape=32,device=0,is_collective=False]"
 )
+LEGACY_KERNEL_SUMMARY_SELECTOR = (
+    "/rows[pool=decode,shape=32,is_collective=False]"
+)
 KERNEL_SUMMARY_SHA256_FROM_PUBLISHED_CATALOG = (
     "c4d8ece981478ce57ebca95f7f2f168865713b66e87ed21a1d3f76976e834b7c"
 )
@@ -46,6 +49,9 @@ EXPECTED_HEADER = (
     "share_of_step_compute",
     "graph_record_count",
     "record_count",
+)
+LEGACY_HEADER = tuple(
+    field for field in EXPECTED_HEADER if field not in {"device", "collective_kind"}
 )
 CAPTURED_KERNEL_FIELDS = (
     "first_launch_order",
@@ -110,17 +116,25 @@ def extract_standard_decode_kernels(
     header_raw = stream.readline()
     consumed += len(header_raw)
     header = tuple(_csv_values(header_raw))
-    if header[:3] != EXPECTED_HEADER[:3] or not set(EXPECTED_HEADER) <= set(header):
+    legacy_schema = header == LEGACY_HEADER
+    current_schema = (
+        header[:3] == EXPECTED_HEADER[:3]
+        and set(EXPECTED_HEADER) <= set(header)
+    )
+    if not legacy_schema and not current_schema:
         raise KernelSummaryHeaderError(header)
     selected: list[dict[str, str]] = []
     saw_selected_shape = False
     for raw in stream:
         consumed += len(raw)
-        prefix = raw.split(b",", 3)
-        if len(prefix) != 4:
+        prefix = raw.split(b",", 2 if legacy_schema else 3)
+        expected_prefix_width = 3 if legacy_schema else 4
+        if len(prefix) != expected_prefix_width:
             raise ValueError("kernel summary row lacks routing fields")
-        pool, shape, device = prefix[:3]
-        if (pool, shape, device) != (b"decode", b"32", b"0"):
+        pool, shape = prefix[:2]
+        if (pool, shape) != (b"decode", b"32"):
+            continue
+        if not legacy_schema and prefix[2] != b"0":
             continue
         saw_selected_shape = True
         values = _csv_values(raw)
@@ -177,7 +191,7 @@ def read_standard_decode_kernels(
         "record_sha256_from_published_catalog": (
             KERNEL_SUMMARY_SHA256_FROM_PUBLISHED_CATALOG
         ),
-        "selector": KERNEL_SUMMARY_SELECTOR,
+        "selector": LEGACY_KERNEL_SUMMARY_SELECTOR,
         "fields": list(CAPTURED_KERNEL_FIELDS),
         "whole_record_loaded": False,
         "held_out_numeric_value_accessed": False,
@@ -195,6 +209,7 @@ def read_standard_decode_kernels(
             {
                 "bytes_consumed": consumed,
                 "selected_row_count": len(rows),
+                "single_device_legacy_schema": True,
                 "status": "PASS",
             }
         )
