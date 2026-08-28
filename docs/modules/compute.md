@@ -2718,12 +2718,20 @@ Granite arm's absent repetitions.
   CORE-61 adds a companion held-out eight-layer capture under the same freeze,
   forbidden before `2026-08-28T06:30` in `Europe/Zurich`. Its exact base
   submission is `ssh merlin sbatch -M gmerlin7 --partition=gh-hourly --time=00:25:00 --job-name=gh-core61-d8-base --export=ALL,MODEL=deepseek-ai/DeepSeek-V3,MODEL_KEY=deepseek-v3,SHAPE_SET=deepseek,REVISION=e815299b0bcbac849fa540c768ef21845365c9eb,REDUCED_LAYERS=8,GPU_MEMORY_UTILIZATION=0.88,MODE=graph,DEEPSEEK_SUITE=base,MAX_MODEL_LEN=8192,MAX_NUM_BATCHED_TOKENS=16384,RUN_WALL=0 $SIMLLM_MERLIN_STAGE_ROOT/gh200lane/run_vllm_capture.sbatch`.
-  Its exact batch-32, remote-KV-2000 decode submission is
-  `ssh merlin sbatch -M gmerlin7 --partition=gh-hourly --time=00:20:00 --job-name=gh-core61-d8-decode --export=ALL,MODEL=deepseek-ai/DeepSeek-V3,MODEL_KEY=deepseek-v3,SHAPE_SET=deepseek,REVISION=e815299b0bcbac849fa540c768ef21845365c9eb,REDUCED_LAYERS=8,GPU_MEMORY_UTILIZATION=0.88,MODE=graph,DEEPSEEK_SUITE=decode,MAX_MODEL_LEN=8192,MAX_NUM_BATCHED_TOKENS=65536,MAX_NUM_SEQS=64,RUN_WALL=0 $SIMLLM_MERLIN_STAGE_ROOT/gh200lane/run_vllm_capture.sbatch`.
+  Its original batch-32, remote-KV-2000 decode submission is superseded only
+  for CORE-61 by the pre-scoring
+  [retry supplement](../../examples/deployment_curve_v1/core61_depth_retry_expectations.md).
+  The amended command uses a 4,096-token startup cap and a task-owned exact-KV
+  alignment harness; the eight-layer, batch-32, remote-KV-2000 measurement,
+  3,751,359,511 ps prediction, signed residual and five-percent rule are
+  unchanged. No depth-8 cell had scored when the supplement was committed.
   Submit base then decode, retain every digest-complete output below the
   CORE-61 external run root, and stop cleanly on SSH loss. The preregistered
-  eight-layer prediction is 3,751,359,511 ps; its measurement and signed
-  residual remain absent while Merlin is unavailable.
+  eight-layer prediction is 3,751,359,511 ps. The later
+  [CORE-61 retry](../../examples/deployment_curve_v1/core61_depth_retry_result.md)
+  measures 3,629,568,000 ps and retains a signed `measured - predicted`
+  residual of -121,791,511 ps, or -3.355537 percent over measured service.
+  This passes the unchanged five-percent rule and completes the depth arm.
   Acceptance requires all registered Granite cells plus the exact DeepSeek
   physical cells, retained source and output digests, and a resumable campaign
   record whose completed-cell prefix survives interruption byte for byte.
@@ -2744,7 +2752,9 @@ Granite arm's absent repetitions.
   `d868a4f35d633032daa238168d00f42c2ab47fc569db649b19b907008072e107`;
   the `ff46f6d8...` predecessor remains immutable. This does not meet the
   literal acceptance above, so COMP-72 stays open and COMP-78 owns the exact
-  remainder.
+  remainder. The later CORE-61 retry satisfies that depth sub-arm with base
+  job `200137` and exact decode job `200138`; COMP-72 now stays open on the
+  still-empty Granite prefix and final successor work, not on depth linearity.
 - COMP-73 (Completeness; P1; L): produce the key-compatible target record that
   makes the CORE-53 frozen disaggregated session grid total. The accepted
   retained fixture is A100, vLLM 0.26, tensor parallel one and partial decode
@@ -2791,18 +2801,28 @@ Granite arm's absent repetitions.
   The [COMP-78 execution record](../../examples/hopper_kernel_cycle_candidate_v1/COMP78_RESULTS.md)
   retains exact CORE-61 base job `200120` and decode attempts `200123` and
   `200128` without overwriting an attempt or changing a registered command.
-  Both decode attempts failed before the scored boundary on the same 896 MiB
-  startup allocation, so the measured service, signed residual and linearity
-  verdict remain absent. Pinned real vLLM and SGLang target executables are
+  Both decode attempts failed before the scored boundary in the same
+  65,536-token startup profile. The pinned logs refine their final allocations:
+  job `200123` requested 896 MiB for a BF16 hidden-state output, while warm
+  retry `200128` requested 3 GiB for a BF16 FlashInfer DeepGEMM output. The
+  measured service, signed residual and linearity verdict remain absent. Pinned
+  real vLLM and SGLang target executables are
   staged, but the landed cell driver cannot prove fragmented KV placement or
   emit the required routing, two-clean-harvest and digest-completion outputs.
   The Granite prefix therefore remains 0 of 1,212, byte-identical to the empty
   prefix, at the same first incomplete cell. Candidate successor
   `58d169865109a5eaca3e69978a48080c25a6bb48ee6607d32e82ed8487d17fdd`
   retains that partial evidence while `ff46f6d8...` and `d868a4f3...` remain
-  immutable. Literal acceptance is unmet, so COMP-72, COMP-78 and CORE-61 stay
-  open. COMP-79 is already allocated below and was not reassigned; the exact
-  remainder remains in COMP-78 pending an available integrator-assigned ID.
+  immutable. That execution did not meet literal acceptance at the time.
+  COMP-79 is already allocated below and was not reassigned. The later
+  pre-scoring-amended
+  [CORE-61 retry](../../examples/deployment_curve_v1/core61_depth_retry_result.md)
+  retains base job `200137` and exact decode job `200138`. The measured decode
+  service is 3,629,568,000 ps and the signed residual is -121,791,511 ps, or
+  -3.355537 percent, so the five-percent depth rule passes and CORE-61 closes.
+  Both task-owned attempt trees are digest complete. COMP-72 and COMP-78 remain
+  open on the 0-of-1,212 Granite prefix and final successor only. CORE-63 is
+  not registered, and COMP-79 remains unchanged.
 - COMP-79 (Completeness; P1; M): extend key-local repeat-derived distribution
   propagation to DeepSeek candidate keys that still have only one independent
   seed, beginning with the separately measured EP72 simulated-MTP mode. Freeze

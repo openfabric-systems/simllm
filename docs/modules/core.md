@@ -1005,7 +1005,7 @@ node. Standard decode binds the exact EP72 candidate key but predicts
 8,949.759685 tokens per second per node, 59.834128 percent below the published
 calibration value. No decode-side mechanism or in-run adjustment is claimed.
 CORE-54 remains open on the refuted prefill score, the COMP-72 MTP cell,
-COMP-76 decode repetition, CORE-61 depth validity and COMP-74 distributions.
+COMP-76 decode repetition and COMP-74 distributions.
 
 The [third scored CORE-54 run](../../examples/deployment_curve_v1/RESULTS_RUN3.md)
 fits the calibration-clean overlap-exposure fraction to its perfect-overlap
@@ -1043,6 +1043,16 @@ closes with both transition identities exact, every CDF rung and incast ceiling
 passing, and the separate sender fan-out row honestly refuted. It selects an
 opt-in release-aware packet policy and leaves every core default unchanged.
 
+The [CORE-61 depth-8 retry](../../examples/deployment_curve_v1/core61_depth_retry_result.md)
+measures 3,629,568,000 ps at the frozen eight-layer, batch-32,
+remote-KV-2000 boundary. Its signed `measured - predicted` residual is
+-121,791,511 ps, or -3.355537 percent over measured service, against the
+unchanged 3,751,359,511 ps prediction. This passes the frozen five-percent
+bar and validates linear depth scaling for this decode family, so CORE-61 is
+complete. The larger decode-family gap therefore lives in expert-parallel
+residency shape or decode-side overlap. TRAF-66's finite-overlap term remains
+separate and unchanged, COMP-76 is untouched, and CORE-63 is not registered.
+
 ## Open tasks
 
 ### Precision
@@ -1073,38 +1083,6 @@ opt-in release-aware packet policy and leaves every core default unchanged.
   differ only in the declared opaque fields, and unchanged accepted
   `pd_session_v1` compact cells. The void run remains void and cannot be
   retrospectively rescored.
-
-- CORE-61 (Precision; P1; M): validate whether the measured four-layer EP72
-  standard-decode basis may be extrapolated linearly to DeepSeek-V3's declared
-  61-layer depth. Freeze at least two measured depths and the exact batch-32,
-  remote-KV-2000 shape before comparison; retain the candidate key, per-layer
-  work inventory and every fixed component separately. Acceptance requires a
-  held-out depth prediction within 5 percent of its measured service and a
-  signed residual ledger that distinguishes depth scaling from the finite
-  compute/communication overlap owned by TRAF-66. The published 22,282
-  tokens-per-second calibration value is comparison evidence only and may not
-  tune the depth rule. COMP-76 owns independent repetition of the four-layer
-  basis, while COMP-72 owns the missing MTP cell.
-  The [CORE-61 local derivation](../../examples/deployment_curve_v1/core61_depth_result.md)
-  separates the retained step into 489 ps fixed plus 1,875,679,511 ps
-  repeatable across four layers. Its corrected 61-layer declaration is
-  28.604113032 ms, only 6.96825 ns below the 28.604120000 ms linear rule, so
-  the fixed-component hypothesis has the expected sign but a materially null
-  magnitude. The result remains a `DECLARED` derivation from one `MEASURED`
-  service decomposition with `DISCLOSED` component attribution. CORE-61 stays
-  open with a frozen 3.751359511 ms prediction for the held-out eight-layer,
-  batch-32, remote-KV-2000 cell. That measurement joins COMP-72's resumable
-  Merlin remainder; COMP-76 is unchanged and CORE-63 remains reserved.
-  The [COMP-78 registered execution](../../examples/deployment_curve_v1/core61_depth_comp78_result.md)
-  passed the time gate and retained exact base job `200120`, decode job
-  `200123`, and unchanged cache-warmed decode retry `200128`. The base capture
-  failed its compact analyzer, and both decode attempts failed before the
-  scored boundary on the same 896 MiB allocation during the 65,536-token
-  startup profile. The measured service and signed `measured - predicted`
-  residual are therefore unavailable, not zero, and depth linearity has no
-  verdict. The frozen five-percent comparison is unscored, TRAF-66's
-  finite-overlap term remains separate, and CORE-61 stays open on a
-  digest-complete registered decode output.
 
 - CORE-48 (Precision; P1; M): give the cross-node coarse RNIC path a
   destination-ingress serializer. Semantic sends serialize per source RNIC and
@@ -1462,7 +1440,7 @@ opt-in release-aware packet policy and leaves every core default unchanged.
   byte-locked because its v2 contract has no MTP marker slot. CORE-54 stays
   open on COMP-76's decode calibration reproduction, COMP-74 distribution
   propagation now partially unlocked by two retained observations, COMP-78's
-  Granite campaign arm, CORE-61 depth linearity, SGL-36 and TRAF-64.
+  Granite campaign arm, SGL-36 and TRAF-64.
 - CORE-52 (Completeness; P1; L): run the live 16-prefill plus 40-decode target
   through the same disaggregated session with 448 simulated workers. Retain
   every engine simultaneously, route requests through every declared pool

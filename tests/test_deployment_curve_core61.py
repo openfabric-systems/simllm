@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import io
 import json
@@ -9,6 +10,10 @@ import pytest
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 STUDY_DIR = REPOSITORY_ROOT / "examples/deployment_curve_v1"
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _reader():
@@ -303,15 +308,90 @@ def test_published_access_and_candidate_key_preserve_the_freeze():
     assert key["routing"]["availability"] == "not-captured"
 
 
-def test_registry_records_local_movement_and_exact_merlin_remainder():
+def test_registry_records_closed_depth_arm_and_open_compute_remainder():
     core = (REPOSITORY_ROOT / "docs/modules/core.md").read_text(encoding="utf-8")
     compute = (REPOSITORY_ROOT / "docs/modules/compute.md").read_text(encoding="utf-8")
 
-    assert "- CORE-61 (Precision; P1; M):" in core
-    assert "CORE-61 local derivation" in core
-    assert "CORE-61 stays" in core
-    assert "CORE-63 remains reserved" in core
+    assert "- CORE-61 (Precision; P1; M):" not in core
+    assert "so CORE-61 is\ncomplete" in core
+    assert "CORE-63 is not registered" in core
     assert "REDUCED_LAYERS=8" in compute
     assert "--job-name=gh-core61-d8-base" in compute
-    assert "--job-name=gh-core61-d8-decode" in compute
+    assert "core61_depth_retry_expectations.md" in compute
+    assert "4,096-token startup cap" in compute
     assert "2026-08-28T06:30" in compute
+    assert "0-of-1,212 Granite prefix" in compute
+
+
+def test_retry_freeze_is_pre_scoring_and_preserves_every_scored_input():
+    retry = json.loads(
+        (STUDY_DIR / "core61_depth_retry_expectations.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert retry["status"] == "EXPECTATIONS_ONLY_PRE_SCORING_AMENDMENT"
+    assert retry["amendment"]["scored_values_available_before_amendment"] is False
+    acceptance = retry["acceptance"]
+    assert acceptance["preregistered_prediction_ps"] == 3_751_359_511
+    assert acceptance["held_out_tolerance_percent"] == "5"
+    assert acceptance["signed_residual_rule"].startswith("measured_service_ps -")
+    assert set(retry["preservation"].values()) == {False}
+
+    locks = retry["source_locks"]
+    locked_paths = {
+        "core61_depth_expectations_json_sha256": "core61_depth_expectations.json",
+        "core61_depth_expectations_md_sha256": "core61_depth_expectations.md",
+        "core61_depth_result_json_sha256": "core61_depth_result.json",
+        "core61_depth_result_md_sha256": "core61_depth_result.md",
+        "core61_depth_comp78_result_json_sha256": "core61_depth_comp78_result.json",
+        "core61_depth_comp78_result_md_sha256": "core61_depth_comp78_result.md",
+    }
+    for field, name in locked_paths.items():
+        assert _sha256(STUDY_DIR / name) == locks[field]
+
+
+def test_retry_freeze_diagnoses_both_exact_startup_allocations():
+    retry = json.loads(
+        (STUDY_DIR / "core61_depth_retry_expectations.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    diagnosis = retry["diagnosis"]
+
+    first = diagnosis["job_200123"]
+    assert first["allocation_bytes"] == 65_536 * 7_168 * 2 == 939_524_096
+    assert first["allocation_mib"] == 896
+    warm = diagnosis["job_200128"]
+    assert warm["allocation_bytes"] == 65_536 * 24_576 * 2 == 3_221_225_472
+    assert warm["allocation_gib"] == 3
+    assert first["file_manifest_sha256"].startswith("b7d23c47")
+    assert warm["file_manifest_sha256"].startswith("3345fc82")
+    assert "do not show identical" in diagnosis["merged_summary_correction"]
+
+
+def test_retry_freeze_changes_only_scaffolding_and_retains_exact_shape():
+    retry = json.loads(
+        (STUDY_DIR / "core61_depth_retry_expectations.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    startup = retry["startup_amendment"]
+    assert startup["original_dummy_tokens"] == 65_536
+    assert startup["retry_dummy_tokens"] == 4_096
+    contract = retry["measurement_contract"]
+    assert contract["depth_layers"] == 8
+    assert contract["batch_size"] == 32
+    assert contract["remote_kv_tokens_per_request"] == 2_000
+    assert contract["boundary_label"] == "execute_context_0(0)_generation_32(32)"
+    assert contract["parallelism"] == {
+        "data_parallel": 1,
+        "expert_parallel": 1,
+        "pipeline_parallel": 1,
+        "tensor_parallel": 1,
+    }
+    command = retry["execution"]["decode_command"]
+    assert "STARTUP_MAX_NUM_BATCHED_TOKENS=4096" in command
+    assert "BATCH_SIZE=32" in command
+    assert "REMOTE_KV_TOKENS=2000" in command
