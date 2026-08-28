@@ -1194,6 +1194,14 @@ correction direction can be priced. CORE-66 remains open.
   read/write bytes. Then derive any standard-decode service movement against
   the 22,282 tokens/s/node anchor without fitting a calibration constant. The
   exact cell and command are registered in `core66_hardware_remainder.json`.
+  The residency-matched EP8 remainder is frozen in
+  `core66_ep8_expectations.json`, but its scheduler preflight failed before job
+  creation with `allocation failure: Invalid qos specification`: `gh-hourly`
+  and the `gpu_hourly` definition both admit eight GPUs, while the requesting
+  user association admits only `gpu_general`. Add `gpu_hourly` to that
+  association, then submit the frozen EP8 cell once. The zero-allocation result
+  and its full deviation ledger are registered in
+  `core66_ep8_capture_result.json`.
 
 - CORE-53 (Precision; P1; M): replace the first disaggregated session slice's
   roofline bootstrap with the accepted COMP-64 kernel-cycle lookup record.
