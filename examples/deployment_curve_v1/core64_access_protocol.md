@@ -10,9 +10,9 @@ Exactly three selectors are permitted:
 
 1. The standard-decode calibration, residency decomposition, and frozen scope
    fields in `<repo>/examples/deployment_curve_v1/core63_clean_calibration_result.json`.
-2. `/units[1]/attention_parallelism` in the content-addressed DeepSeek
+2. `units[1] -> attention_parallelism` in the content-addressed DeepSeek
    deployment projection.
-3. `/units[1]/case_projections[0]` in that projection, which is the standard
+3. `units[1] -> case_projections[0]` in that projection, which is the standard
    EP72 decode case.
 
 The projection reader returns immediately after the first decode case. It
@@ -23,7 +23,7 @@ count must be strictly below its source size.
 
 ## Forbidden boundary
 
-The held-out MTP case at `/units[1]/case_projections[1]`, every fifth-run
+The held-out MTP case at `units[1] -> case_projections[1]`, every fifth-run
 artifact, and every MTP anchor value are forbidden. They must not be read,
 decoded, copied, compared, or scored. Whole-file record streams are rejected
 one byte before complete coverage. The forbidden-access ledger is frozen as
