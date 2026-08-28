@@ -1,0 +1,24 @@
+{
+  "comparison": {
+    "performed_after_independent_clean_derivation": true,
+    "reproduced_corrected_step_ps_round_half_up": 26821286365,
+    "reproduced_signed_residual_percent": "-57.164268",
+    "void_post_derivation_numbers_used_as_inputs": false,
+    "void_values_reproduced_exactly": true
+  },
+  "core63": {
+    "acceptance_met": true,
+    "movement": "COMPLETE_CLEAN_REPRODUCTION_ACCEPTED"
+  },
+  "core64": {
+    "attention_mla_shared_expert_locality_preserved": true,
+    "movement": "OPEN_UNCONDITIONAL_ATTENTION_MLA_FAMILY_GAP"
+  },
+  "core65": {
+    "free_on_base_main": true,
+    "reserved": true
+  },
+  "forbidden_access_ledger": [],
+  "schema": "simllm-deployment-curve-core63-clean-registry-movement-v1",
+  "task": "CORE-63"
+}

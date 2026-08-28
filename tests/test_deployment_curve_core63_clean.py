@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from fractions import Fraction
@@ -205,3 +206,44 @@ def test_independent_recompute_uses_only_routed_marker() -> None:
     assert _fraction(result["retained_service_ps"]) == 1400
     assert _fraction(result["routed_service_ps"]) == 600
     assert _fraction(result["step"]["corrected_ps"]) == Fraction(67400, 3)
+
+
+def test_access_ledger_manifest_binds_every_append_only_tranche() -> None:
+    manifest = json.loads(
+        (STUDY_DIR / "core63_clean_access_ledger_manifest.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert manifest["forbidden_access_ledger"] == []
+    assert manifest["total_access_count"] == 20
+    assert manifest["total_event_count"] == 40
+    assert manifest["whole_file_streams"] == 0
+    repository_root = STUDY_DIR.parents[1]
+    for row in manifest["ledgers"]:
+        payload = (repository_root / row["path"]).read_bytes()
+        assert hashlib.sha256(payload).hexdigest() == row["sha256"]
+
+
+def test_registry_movement_closes_only_core63_condition() -> None:
+    movement = json.loads(
+        (STUDY_DIR / "core63_clean_registry_movement.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    core_doc = (STUDY_DIR.parents[1] / "docs/modules/core.md").read_text(
+        encoding="utf-8"
+    )
+    open_tasks = core_doc.split("## Open tasks", 1)[1]
+
+    assert movement["forbidden_access_ledger"] == []
+    assert movement["core63"]["movement"] == (
+        "COMPLETE_CLEAN_REPRODUCTION_ACCEPTED"
+    )
+    assert movement["core64"]["movement"] == (
+        "OPEN_UNCONDITIONAL_ATTENTION_MLA_FAMILY_GAP"
+    )
+    assert movement["core65"] == {"free_on_base_main": True, "reserved": True}
+    assert "- CORE-63 (Precision" not in open_tasks
+    assert "- CORE-64 (Precision" in open_tasks
+    assert "now unconditionally promoted by the clean CORE-63" in open_tasks
