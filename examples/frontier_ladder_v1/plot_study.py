@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -18,7 +18,7 @@ from simllm.deploy import (
 STUDY_DIR = Path(__file__).resolve().parent
 RESULT_SCHEMA = "simllm-frontier-ladder-study-v1"
 PLOT_SCHEMA = "simllm-frontier-ladder-plot-v1"
-FIXED_TIMESTAMP = datetime(2026, 8, 28, tzinfo=UTC)
+FIXED_TIMESTAMP = datetime(2026, 8, 28, tzinfo=timezone.utc)
 
 COLORS = {
     "b100-one-node-intra": "#2563a6",

@@ -332,3 +332,12 @@ examples/nvlink_flow_dynamics_v1/*.csv text eol=lf
 examples/nvlink_flow_dynamics_v1/figures/*.pdf -text -diff
 examples/nvlink_flow_dynamics_v1/figures/*.png -text -diff
 tests/test_nvlink_flow_dynamics_*.py text eol=lf
+examples/frontier_comparison_v1/*.json text eol=lf
+examples/frontier_comparison_v1/*.md text eol=lf
+examples/frontier_comparison_v1/*.py text eol=lf
+examples/frontier_comparison_v1/external/*.txt text eol=lf
+examples/frontier_comparison_v1/external.sha256 text eol=lf
+examples/frontier_comparison_v1/figures/*.pdf -text -diff
+examples/frontier_comparison_v1/figures/*.png -text -diff
+tests/test_frontier_comparison_study.py text eol=lf
+tests/test_model_extraction_qwen3_32b.py text eol=lf
