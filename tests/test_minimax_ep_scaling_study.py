@@ -16,8 +16,8 @@ ROOT = Path(__file__).resolve().parents[1]
 STUDY = ROOT / "examples/minimax_ep_scaling_v1"
 RECORD = STUDY / "record.json"
 RESULTS_CSV = STUDY / "results.csv"
-RECORD_SHA256 = "90db51794ec9ee07025dc7ae6ff3704cdaf57cfdfdfff43d355e38bdd9eeb587"
-RESULTS_CSV_SHA256 = "cdce8558413031f39564a1c63a3ec5e394aef88e2cce6717cbc75a58b124ccdb"
+RECORD_SHA256 = "d99b615cbcf36c60b12e806266f5d4281db3964b39a7134b8a94a12ca9f59cc9"
+RESULTS_CSV_SHA256 = "dd2b0c9be299338636a91b0a958f172687a2a3ef6ccc77788ed0776933905ab8"
 PNG_SHA256 = "deedf3b85aa8077566a40ed38b16d1ca42c85957839223b9a945fa9d6ebd91da"
 PDF_SHA256 = "238ffa5132890dd5304005e667a29f3aa4339578052ab078fb937f59a356e7cf"
 METADATA_SHA256 = "024b2789720a9afd87451bbfad2361a226d8f6a6c093b8e24b3e7909a56ed372"
@@ -207,6 +207,12 @@ def test_corrected_dense_refutations_and_sparse_geometry_are_locked() -> None:
         0.8026183885459625,
         1.187022158460092,
     ]
+    assert [row["family_d_contention_comparison"] for row in rows] == [
+        False,
+        True,
+        True,
+        True,
+    ]
     assert [row["family_d_packet_ms"] for row in rows] == [
         0.04979,
         6.997536,
@@ -306,6 +312,12 @@ def test_physical_ledger_and_portable_paths_are_locked() -> None:
         for row in rows
     )
     assert all(row["family_d_external_strategy"] for row in rows)
+    assert [row["family_d_contention_comparison"] for row in rows] == [
+        "False",
+        "True",
+        "True",
+        "True",
+    ]
     assert all(row["family_s_sparse_strategy"] for row in rows)
     assert all(row["void_first_run_status"] == "VOID against FG-4" for row in rows)
 

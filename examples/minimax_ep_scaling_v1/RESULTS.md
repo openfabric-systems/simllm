@@ -34,18 +34,44 @@ every width with FP8 dispatch and BF16 combine. Bulk evidence is retained at
 Family D passes only 1 of 4 frozen comparisons. The packet-to-external ratios
 on identical dense traffic are `0.02590463307406155`, `0.3530150565741419`,
 `0.8026183885459625` and `1.187022158460092`. The frozen lower bound is
-1.0 at every width. EP 8, 32 and 128 therefore refute the expectation: the
-external NCCL extrapolation is conservative relative to the direct packet
-construction at those widths. The EP 256 extrapolated point passes and shows
-the packet cost crossing above the external estimate as cross-node load grows.
-No band was widened.
+1.0 at every width. EP 8, 32 and 128 retain their frozen REFUTED outcomes,
+while the EP 256 extrapolated point retains its PASS outcome. No band was
+widened.
 
-| EP | D-external strategy and traffic | D-packet strategy and traffic | External ms | Packet ms | Packet / external | Population | Outcome |
-|---:|---|---|---:|---:|---:|---|---|
-| 8 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | dense SM90 fallback, identical BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | 1.92205 | 0.04979 | 0.02590463307406155 | measured full rank and message population, 112 messages per layer | REFUTED |
-| 32 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | dense SM90 fallback, identical BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | 19.82220267857143 | 6.997536 | 0.3530150565741419 | measured full rank and message population, 1,984 messages per layer | REFUTED |
-| 128 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | dense SM90 fallback, identical BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | 36.77934174107143 | 29.519776 | 0.8026183885459625 | measured full rank and message population, 32,512 messages per layer | REFUTED |
-| 256 | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | dense SM90 fallback, identical BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | 51.39544921875 | 61.00753706666667 | 1.187022158460092 | FG-10 extrapolation from measured full EP 128 population by `31 / 15` cross-node bytes per rank | PASS |
+### Family D interpretation limit
+
+At eight GPUs per node, every EP 8 rank is intra-node. The study's routing
+geometry records both expected and realized cross-node senders per receiver
+as exactly `0.000000` at that width. The packet arm therefore prices
+essentially no cross-fabric traffic, while the external arm reports a measured
+NCCL collective that contains the intra-node NVLink transfer and fixed
+collective overheads such as kernel launch, synchronization and algorithm
+selection. The EP 8 ratio `0.02590463307406155`, from external `1.92205 ms`
+against packet `0.04979 ms`, measures transport coverage and fixed-overhead
+modelling missing from our arm. It is not a contention comparison and is not
+evidence of an external omission. The same limit applies to any width whose
+realized cross-node fan-in is zero. The derived
+`family_d_contention_comparison` marking below is true only when that fan-in
+is nonzero.
+
+The full Family D rise, `0.0259`, `0.3530`, `0.8026` and `1.1870` across EP 8,
+32, 128 and 256, is two effects meeting. At narrow widths our arm omits fixed
+collective overheads present in the external measurement. At wide widths the
+external extrapolation omits contention that our arm prices. The crossover
+near EP 200 is where the second effect outgrows the first. Neither stack is
+uniformly better across this sweep.
+
+The repository already carries NVLink domain modelling merged from
+`nvlink_flow_dynamics_v1` and `nvlink_rnic_comparison_v1`. This study's packet
+arm did not use that domain for its intra-node legs. TRAF-76 owns binding that
+landed model into the packet arm and pricing the fixed collective overheads.
+
+| EP | Contention comparison? | D-external strategy and traffic | D-packet strategy and traffic | External ms | Packet ms | Packet / external | Population | Outcome |
+|---:|---|---|---|---:|---:|---:|---|---|
+| 8 | NO: realized cross-node fan-in is `0.000000` | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | dense SM90 fallback, identical BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | 1.92205 | 0.04979 | 0.02590463307406155 | measured full rank and message population, 112 messages per layer | REFUTED |
+| 32 | YES | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | dense SM90 fallback, identical BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | 19.82220267857143 | 6.997536 | 0.3530150565741419 | measured full rank and message population, 1,984 messages per layer | REFUTED |
+| 128 | YES | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | dense SM90 fallback, identical BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | 36.77934174107143 | 29.519776 | 0.8026183885459625 | measured full rank and message population, 32,512 messages per layer | REFUTED |
+| 256 | YES | dense SM90 fallback, BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | dense SM90 fallback, identical BF16 all-gather plus reduce-scatter over `tokens * hidden * EP` | 51.39544921875 | 61.00753706666667 | 1.187022158460092 | FG-10 extrapolation from measured full EP 128 population by `31 / 15` cross-node bytes per rank | PASS |
 
 Family E remains 4 of 4 bit-equal. Family C remains 4 of 4 at quotient 1.0,
 but it is an end-to-end parity check that reuses the dispatch code Family E
@@ -56,13 +82,17 @@ FG-1 through FG-10 hold, so the corrected run is nonvoid.
 ## What it changes for the project
 
 The original MiniMax result is now published as void, and its omission-cost
-interpretation is withdrawn. The corrected equal-traffic comparison refutes
-the claim that packet contention must add cost at every width: against this
-packet construction, the external NCCL extrapolation is conservative through
-EP 128 and becomes lower only at the EP 256 extrapolated point.
+interpretation is withdrawn. The corrected equal-traffic comparison retains
+its published outcomes, but EP 8 no longer carries a contention
+interpretation. The rising ratios instead expose missing transport coverage
+and fixed collective overheads in our arm at narrow widths meeting omitted
+contention in the external extrapolation at wide widths.
 
-No task closes and no milestone advances. TRAF-74 explicitly owns replacing
-the deterministic balanced routing geometry with observed per-rank
+No existing task changes status and no milestone advances. TRAF-76 is
+registered to own intra-node collective transport and fixed collective
+overhead pricing in the packet arm, including binding the landed NVLink domain
+into intra-node legs. TRAF-74 owns replacing the deterministic balanced routing
+geometry with observed per-rank
 assignments. TRAF-75 explicitly owns propagating dispatch and combine
 precision from supported framework configuration. TRAF-73 is narrowed to
 hardware transport calibration, including queue service, phase makespan,
@@ -75,9 +105,9 @@ external NCCL extrapolation.
 The run does not determine which communication strategy a MiniMax deployment
 uses, does not validate either timing model against H200 hardware, and does not
 turn Family S into a precision claim. It does not make Family C independent
-evidence for Family E. It does not close TRAF-26, TRAF-73, TRAF-74, TRAF-75 or
-COMP-88, and it does not change accepted default traffic timestamps, the
-imported operation artifact or the prior Qwen parity result.
+evidence for Family E. It does not close TRAF-26, TRAF-73, TRAF-74, TRAF-75,
+TRAF-76 or COMP-88, and it does not change accepted default traffic timestamps,
+the imported operation artifact or the prior Qwen parity result.
 
 ## Physical sanity before detailed interpretation
 
@@ -219,8 +249,8 @@ The tracked artifact hashes are:
 
 | Artifact | SHA-256 |
 |---|---|
-| `record.json` | `90db51794ec9ee07025dc7ae6ff3704cdaf57cfdfdfff43d355e38bdd9eeb587` |
-| `results.csv` | `cdce8558413031f39564a1c63a3ec5e394aef88e2cce6717cbc75a58b124ccdb` |
+| `record.json` | `d99b615cbcf36c60b12e806266f5d4281db3964b39a7134b8a94a12ca9f59cc9` |
+| `results.csv` | `dd2b0c9be299338636a91b0a958f172687a2a3ef6ccc77788ed0776933905ab8` |
 | `figures/minimax_ep_scaling.png` | `deedf3b85aa8077566a40ed38b16d1ca42c85957839223b9a945fa9d6ebd91da` |
 | `figures/minimax_ep_scaling.pdf` | `238ffa5132890dd5304005e667a29f3aa4339578052ab078fb937f59a356e7cf` |
 | `figures/minimax_ep_scaling.metadata.json` | `024b2789720a9afd87451bbfad2361a226d8f6a6c093b8e24b3e7909a56ed372` |

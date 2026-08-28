@@ -1046,6 +1046,10 @@ degree 16. All 126 capacity and byte-ledger cells, 12 fatal guards and 16
 TRAF-71 preservation locks pass, so TRAF-72 closes while its three behavioral
 refutations remain part of the result.
 
+**Expert-parallel collectives are priced over both intra-node accelerator
+transport and cross-node fabric, with fixed launch, synchronization and
+algorithm-selection overheads carried once in the common metric chain.**
+
 The MiniMax expert-parallel packet arm routes a study-only balanced population
 as whole token-expert assignments, emits messages only to realized
 destinations, and declares FP8 dispatch separately from BF16 combine. The
@@ -1054,12 +1058,21 @@ publishes the original run as void, then compares identical dense BF16
 all-gather plus reduce-scatter traffic through the external NCCL table and the
 packet simulator. The corrected packet-to-external ratios are 0.025905,
 0.353015, 0.802618 and 1.187022 at expert-parallel widths 8, 32, 128 and 256;
-the first three refute the frozen 1.0 lower bound, while EP 256 uses the frozen
-extrapolation from a measured full EP 128 population. The unscored sparse arm
+the first three retain their frozen refutations, while EP 256 uses the frozen
+extrapolation from a measured full EP 128 population. EP 8 has exactly zero
+expected and realized cross-node senders per receiver, so its ratio measures
+the packet arm's missing intra-node transport coverage and fixed collective
+overheads rather than contention. The ratio rise is those omissions at narrow
+widths meeting contention omitted by the external extrapolation at wide
+widths; neither stack is uniformly better, and the crossover near EP 200 is
+where the latter effect outgrows the former. The unscored sparse arm
 simulates every realized message at every width. At EP 256 it realizes 29.78125
 cross-node senders per receiver against an analytical 29.576912 and carries
 97,920 dispatch plus 195,840 combine bytes per rank. The isolated-engine
-default is unchanged. TRAF-74 owns observed routing geometry, TRAF-75 owns
+default is unchanged. The landed NVLink domain from `nvlink_flow_dynamics_v1`
+and `nvlink_rnic_comparison_v1` supplies the intra-node transport authority;
+TRAF-76 owns its packet-arm binding and the fixed collective overheads.
+TRAF-74 owns observed routing geometry, TRAF-75 owns
 supported-path directional precision, TRAF-73 owns hardware transport
 calibration, and TRAF-26 owns complete production peer workloads.
 
@@ -1113,6 +1126,23 @@ route to those higher degrees.
   bypass, then demonstrates the expected byte and TTFT or TPOT changes through
   the supported metric chain. This entry owns combine-precision selection;
   TRAF-74 owns destination geometry and TRAF-73 owns transport calibration.
+- TRAF-76 (Precision; P1; L): price intra-node collective transport and fixed
+  collective overheads in the MiniMax packet arm, including binding the landed
+  NVLink domain into every intra-node leg. The current arm presents zero
+  cross-node fan-in as almost zero packet cost at EP 8 while the external NCCL
+  measurement includes NVLink transfer, kernel launch, synchronization and
+  algorithm selection, so that row measures missing coverage rather than
+  contention. Replace that absent-cost surrogate with one transport authority
+  and named, nonduplicated fixed terms calibrated from independent collective
+  traces. Freeze zero-fan-in and nonzero-fan-in widths over at least two payload
+  sizes before implementation, report the before and after phase-completion
+  errors, and reproduce held-out completion within the larger of 10 percent or
+  two GPU cycles. The explicit bypass preserves every accepted timestamp, byte
+  count, completion order and random draw exactly. Acceptance also demonstrates
+  the expected TTFT or TPOT change through the supported metric chain. TRAF-73
+  owns cross-node transport calibration, TRAF-74 owns destination geometry,
+  TRAF-75 owns directional precision selection, and COMP-88 owns independent
+  calibration of the external NCCL extrapolation.
 - TRAF-20 (Precision; P2; M): qualify the delivered `loggopsim-ideal`
   fast level for schedule-shape studies that do not need per-flow transport
   behavior. The
