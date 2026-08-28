@@ -1015,9 +1015,51 @@ merged flow-dynamics files remain byte-identical, both final figure pairs pass
 visual inspection, the two frozen scientific misses E3 and E5 remain visible,
 and TRAF-71 closes.
 
+TRAF-72 supersedes TRAF-71's degree-3 interpretation without editing that
+merged study. The pre-run audit finds no capacity-value deficit: the legacy
+rnic-nn receiver received 100.000, 200.000 and 207.101921876 GB/s at degrees
+1, 2 and 3, so degree 3 divided exactly the same 207.101921876 GB/s aggregate
+that limits the NVLink composition. Its 1.000000 raw capacity ratio cannot
+explain the reported `30.203976 / 18.145397 = 1.664553` p50 ratio. The deficit
+is instead the mapped fair-share entity. TRAF-71 admitted each overlapping
+transfer as an independent max-min flow while the NVLink side queued extents
+within an ordered-pair source class. On the frozen release interval `3S/4`,
+the normalized nearest-rank p50 ratio is `(601S/160)/(9S/4) = 601/360 =
+1.669444`, within 0.3 percent of the observation. TRAF-72 freezes one active
+fair-share entity per ordered pair, the htsim fluid null reference, and the
+incast extension to degrees 4, 8 and 16.
+
+NVLink hardware incast identification is long-flow only. Sender launches on
+the real node serialize through sequential PCIe writes, so nanosecond-scale
+true synchronous small-flow co-arrival cannot be constructed. Simulated
+small-flow incast is a model prediction with no direct hardware check. Degrees
+4, 8 and 16 are a declared simulated mesh extrapolation with no hardware
+counterpart on an NV4 node; an NVSwitch-class configuration is the physical
+route to those higher degrees.
+
 ## Open tasks
 
 ### Precision
+
+- TRAF-72 (Precision; P0; M): correct the active-path fair-share entity mapping
+  exposed by the TRAF-71 degree-3 long-flow audit, add the pinned htsim
+  `rnic-nn-fluid` null reference, and extend the incast comparison through the
+  declared simulated-mesh degrees 4, 8 and 16. Preserve the merged TRAF-71
+  study byte for byte. The corrected mapping keeps one active transfer per
+  ordered source-destination class, queues later transfers in that class,
+  caps each source at the 100 GB/s ordered-pair rate, and shares the measured
+  207.101921876 GB/s receiver plateau. Freeze the maintainer's hypotheses
+  before implementation and any new simulation: fluid has no tail beyond its
+  exact capacity bound and sits at or left of both packet transports; at mesh
+  degrees rnic-nn and fluid increasingly improve 256 B through 4 KiB p99,
+  worst-flow FCT, and concurrent-flow Jain fairness over the NVLink credit
+  domain. Publish honest refutations without changing the bars. Acceptance:
+  nine frozen seeds; pointwise CDF min-max bands; p50, p99, worst-flow FCT and
+  Jain fairness for every rung, degree and transport; physical and simulated
+  evidence classes kept separate; the mesh and small-flow hardware caveats on
+  every relevant figure; a direct degree-3 before-and-after panel; exact byte,
+  capacity and fluid-oracle ledgers; POSIX-rendered paths; final PDF and PNG
+  visual inspection; and green ruff plus full pytest.
 
 - TRAF-20 (Precision; P2; M): qualify the delivered `loggopsim-ideal`
   fast level for schedule-shape studies that do not need per-flow transport
