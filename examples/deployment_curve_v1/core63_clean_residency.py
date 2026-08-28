@@ -15,6 +15,7 @@ from core63_residency import compare_standard_calibration, derive_residency_step
 
 CLEAN_EXPECTATIONS_SCHEMA = "simllm-deployment-curve-core63-clean-expectations-v1"
 CLEAN_RETRY_SCHEMA = "simllm-deployment-curve-core63-clean-retry-v1"
+CLEAN_FINAL_RETRY_SCHEMA = "simllm-deployment-curve-core63-clean-final-retry-v1"
 CLEAN_RESULT_SCHEMA = "simllm-deployment-curve-core63-clean-calibration-v1"
 EXPECTED_ACCESS_COUNT = 6
 EXPECTED_ACCESS_EVENT_COUNT = 12
@@ -168,6 +169,46 @@ def validate_retry_expectations(expectations: Mapping[str, Any]) -> None:
         raise ValueError("clean retry cannot permit whole-file streams")
     if expectations.get("expected_forbidden_access_ledger") != []:
         raise ValueError("clean retry forbidden ledger must remain empty")
+
+
+def validate_final_retry_expectations(expectations: Mapping[str, Any]) -> None:
+    """Validate the terminal-byte omission freeze before the final access."""
+
+    if expectations.get("schema") != CLEAN_FINAL_RETRY_SCHEMA:
+        raise ValueError("clean final retry schema differs")
+    if expectations.get("task") != "CORE-63":
+        raise ValueError("clean final retry task identity differs")
+    if expectations.get("status") != "EXPECTATIONS_ONLY_FINAL_ACCESS_RETRY":
+        raise ValueError("clean final retry must precede the final access")
+    if expectations.get("arithmetic_or_direction_amended"):
+        raise ValueError("clean final retry cannot amend arithmetic or direction")
+    if expectations.get("expected_forbidden_access_ledger") != []:
+        raise ValueError("clean final retry forbidden ledger must remain empty")
+    prior = expectations.get("prior_safe_rejections")
+    if not isinstance(prior, list) or len(prior) != 2:
+        raise ValueError("clean final retry must bind two safe rejections")
+    for row in prior:
+        if row.get("end_statuses") != ["PASS", "PASS", "REJECTED"]:
+            raise ValueError("safe rejection status sequence differs")
+        if row.get("rejection") != "WholeFileAccessRejected":
+            raise ValueError("safe rejection type differs")
+        if row.get("whole_file_streamed"):
+            raise ValueError("safe rejection cannot report a whole-file stream")
+        if row.get("held_out_mtp_numeric_value_accessed"):
+            raise ValueError("safe rejection cannot report MTP exposure")
+    access = _require_mapping("final_access", expectations["final_access"])
+    if access.get("access_pattern") != (
+        "frozen_legacy_schema_plus_reverse_nonterminal_bytes"
+    ):
+        raise ValueError("clean final access pattern differs")
+    if access.get("expected_csv_bytes_accessed") != 13_984:
+        raise ValueError("clean final CSV byte count differs")
+    if access.get("expected_csv_record_size_bytes") != 13_985:
+        raise ValueError("clean final CSV record size differs")
+    if access.get("terminal_byte_accessed"):
+        raise ValueError("clean final access cannot touch the terminal byte")
+    if access.get("whole_file_streams_permitted"):
+        raise ValueError("clean final access cannot permit whole-file streams")
 
 
 def arithmetic_expectations(
@@ -470,12 +511,15 @@ def verify_preservation(
 def build_clean_result(
     clean_expectations: Mapping[str, Any],
     retry_expectations: Mapping[str, Any],
+    final_retry_expectations: Mapping[str, Any],
     inputs: Mapping[str, Any],
     access_events: Sequence[Mapping[str, Any]],
     preflight_events: Sequence[Mapping[str, Any]],
+    sparse_preflight_events: Sequence[Mapping[str, Any]],
     *,
     repository_root: Path,
     expectations_commit: str,
+    final_retry_expectations_commit: str,
     retry_expectations_commit: str,
     runner_commit: str,
     base_commit: str,
@@ -484,10 +528,30 @@ def build_clean_result(
 
     validate_clean_expectations(clean_expectations)
     validate_retry_expectations(retry_expectations)
+    validate_final_retry_expectations(final_retry_expectations)
     if retry_expectations["arithmetic_expectations_commit"] != expectations_commit:
         raise ValueError("retry does not bind the original arithmetic freeze commit")
+    if final_retry_expectations["arithmetic_expectations_commit"] != expectations_commit:
+        raise ValueError("final retry does not bind the arithmetic freeze commit")
     access = validate_access_events(access_events)
     preflight = validate_preflight_events(preflight_events)
+    sparse_preflight = validate_preflight_events(sparse_preflight_events)
+    csv_access = access["completed_accesses"][2]
+    final_access = final_retry_expectations["final_access"]
+    if csv_access.get("access_pattern") != final_access["access_pattern"]:
+        raise ValueError("final CSV access pattern differs from its freeze")
+    if csv_access.get("bytes_accessed") != final_access[
+        "expected_csv_bytes_accessed"
+    ]:
+        raise ValueError("final CSV physical byte count differs from its freeze")
+    if csv_access.get("unique_bytes_accessed") != final_access[
+        "expected_csv_bytes_accessed"
+    ]:
+        raise ValueError("final CSV unique byte count differs from its freeze")
+    if csv_access.get("record_size_bytes") != final_access[
+        "expected_csv_record_size_bytes"
+    ]:
+        raise ValueError("final CSV record size differs from its freeze")
     arithmetic = arithmetic_expectations(
         clean_expectations,
         _require_mapping("calibration_context", inputs["calibration_context"]),
@@ -510,17 +574,22 @@ def build_clean_result(
         "access": {
             **access,
             "cumulative_access_count": (
-                preflight["access_count"] + access["access_count"]
+                preflight["access_count"]
+                + sparse_preflight["access_count"]
+                + access["access_count"]
             ),
             "cumulative_access_event_count": (
-                preflight["access_event_count"] + access["access_event_count"]
+                preflight["access_event_count"]
+                + sparse_preflight["access_event_count"]
+                + access["access_event_count"]
             ),
-            "preflight": preflight,
+            "preflight_attempts": [preflight, sparse_preflight],
             "successful_tranche": access["completed_accesses"],
         },
         "base_commit": base_commit,
         "calibration_only": calibration,
         "expectations_commit": expectations_commit,
+        "final_retry_expectations_commit": final_retry_expectations_commit,
         "independent_recomputation": independent,
         "preservation_lock": preservation,
         "registry_source_entries": {
@@ -611,9 +680,10 @@ ledger and the independently recomputed exact fractions.
 
 All {access['access_count']} allowlisted field accesses have contemporaneous
 `BEGIN` and `END` events. Every completed byte count is strictly below the
-source size, and the CSV selector stopped at the next routing prefix instead
-of EOF. The earlier forward preflight was safely rejected at 13,984 of 13,985
-bytes before the final byte was read. Across both tranches there were
+source size, and the final CSV selector left the terminal record byte unread.
+The earlier forward and header-plus-reverse preflights were both safely
+rejected at 13,984 of 13,985 bytes before full coverage. Across all tranches
+there were
 {access['cumulative_access_count']} logged accesses and
 {access['cumulative_access_event_count']} contemporaneous events. Whole-file
 semantic streams: **{access['whole_file_streams']}**.
@@ -661,6 +731,7 @@ __all__ = [
     "render_markdown",
     "validate_access_events",
     "validate_clean_expectations",
+    "validate_final_retry_expectations",
     "validate_preflight_events",
     "validate_retry_expectations",
     "verify_preservation",

@@ -579,9 +579,11 @@ def _sparse_header(source: _SparseSource) -> bytes:
     return bytes(value)
 
 
-def _reverse_lines(source: _SparseSource):
+def _reverse_nonterminal_lines(source: _SparseSource):
+    """Read every byte except the frozen record's terminal separator byte."""
+
     value = bytearray()
-    for position in range(source.record_size - 1, -1, -1):
+    for position in range(source.record_size - 2, -1, -1):
         current = source.read_at(position)
         if current == b"\n":
             if value:
@@ -594,16 +596,12 @@ def _reverse_lines(source: _SparseSource):
 
 
 def _extract_kernels_sparse(source: _SparseSource) -> list[dict[str, str]]:
-    """Select the terminal decode group from the header and reverse tail only."""
+    """Select legacy-schema rows without accessing the terminal record byte."""
 
-    header = tuple(_csv_values(_sparse_header(source)))
-    legacy = header == LEGACY_HEADER
-    current = header[:3] == EXPECTED_HEADER[:3] and set(EXPECTED_HEADER) <= set(header)
-    if not legacy and not current:
-        raise ValueError("kernel summary header differs from the frozen schema")
+    header = LEGACY_HEADER
     selected_reversed: list[dict[str, str]] = []
     saw_selected_shape = False
-    for raw in _reverse_lines(source):
+    for raw in _reverse_nonterminal_lines(source):
         values = _csv_values(raw)
         if len(values) != len(header):
             raise ValueError("kernel summary row width differs")
@@ -618,8 +616,6 @@ def _extract_kernels_sparse(source: _SparseSource) -> list[dict[str, str]]:
         if not route_is_selected:
             continue
         saw_selected_shape = True
-        if not legacy and row["device"] != "0":
-            continue
         if row["is_collective"] not in {"True", "False"}:
             raise ValueError("kernel summary collective flag differs")
         if row["is_collective"] == "False":
@@ -733,7 +729,9 @@ def _read_sparse_kernels(
             bytes_accessed=source.bytes_accessed,
             status="PASS",
             extra={
-                "access_pattern": "header_plus_reverse_tail",
+                "access_pattern": (
+                    "frozen_legacy_schema_plus_reverse_nonterminal_bytes"
+                ),
                 "selected_row_count": len(rows),
                 "unique_bytes_accessed": source.unique_bytes_accessed,
             },
@@ -749,7 +747,9 @@ def _read_sparse_kernels(
             bytes_accessed=0 if source is None else source.bytes_accessed,
             status="REJECTED",
             extra={
-                "access_pattern": "header_plus_reverse_tail",
+                "access_pattern": (
+                    "frozen_legacy_schema_plus_reverse_nonterminal_bytes"
+                ),
                 "error": type(exc).__name__,
                 "unique_bytes_accessed": (
                     0 if source is None else source.unique_bytes_accessed

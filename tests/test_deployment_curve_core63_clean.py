@@ -16,6 +16,7 @@ from core63_clean_residency import (
     independent_recompute,
     validate_access_events,
     validate_clean_expectations,
+    validate_final_retry_expectations,
     validate_preflight_events,
     validate_retry_expectations,
 )
@@ -52,6 +53,26 @@ def test_committed_retry_and_preflight_validate() -> None:
     assert result["end_statuses"] == ["PASS", "PASS", "REJECTED"]
     assert result["forbidden_access_ledger"] == []
     assert result["rejected_before_final_byte"] is True
+
+
+def test_committed_final_retry_and_sparse_preflight_validate() -> None:
+    final_retry = json.loads(
+        (STUDY_DIR / "core63_clean_final_retry_expectations.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    events = [
+        json.loads(line)
+        for line in (STUDY_DIR / "core63_clean_access_ledger_retry.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    ]
+
+    validate_final_retry_expectations(final_retry)
+    result = validate_preflight_events(events)
+
+    assert result["end_statuses"] == ["PASS", "PASS", "REJECTED"]
+    assert result["whole_file_streams"] == 0
 
 
 def test_access_validation_requires_partial_contemporaneous_pairs() -> None:

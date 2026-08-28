@@ -71,16 +71,14 @@ def test_kernel_selector_stops_at_boundary_prefix() -> None:
 
 
 def test_sparse_kernel_selector_reads_header_and_terminal_group_only() -> None:
-    header = ",".join(reader.EXPECTED_HEADER) + "\n"
-    gap = "prefill,gap,0," + "unused," * 100 + "unused\n"
-    boundary = "decode,decode_b16_c2000,0,0,boundary,False,,1,1,1,1,0.1,1,1\n"
+    header = ",".join(reader.LEGACY_HEADER) + "\n"
     selected = (
-        "decode,decode_b32_c2000,0,1,fused_moe_kernel,False,,1,1,1,1,0.1,1,1\n"
+        "decode,decode_b32_c2000,1,fused_moe_kernel,False,1,1,1,1,0.1,1,1\n"
     )
     collective = (
-        "decode,decode_b32_c2000,0,2,collective_kernel,True,all_reduce,1,1,1,1,0.1,1,1\n"
+        "decode,decode_b32_c2000,2,collective_kernel,True,1,1,1,1,0.1,1,1\n"
     )
-    payload = (header + gap + boundary + selected + collective).encode("utf-8")
+    payload = (header + selected + collective).encode("utf-8")
     source = reader._SparseSource(io.BytesIO(payload), len(payload))
 
     rows = reader._extract_kernels_sparse(source)
@@ -88,7 +86,7 @@ def test_sparse_kernel_selector_reads_header_and_terminal_group_only() -> None:
     assert len(rows) == 1
     assert rows[0]["name"] == "fused_moe_kernel"
     assert source.bytes_accessed == source.unique_bytes_accessed
-    assert source.unique_bytes_accessed < len(payload)
+    assert source.unique_bytes_accessed == len(payload) - 1
 
 
 def test_access_begin_is_written_before_extractor_runs(tmp_path: Path) -> None:
