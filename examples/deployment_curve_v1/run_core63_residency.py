@@ -53,6 +53,23 @@ PROTOCOL_INCIDENTS = (
         "logged_contemporaneously": False,
         "protocol_violation": True,
     },
+    {
+        "classification": "literal_whole_file_byte_stream",
+        "record": (
+            "$SIMLLM_KERNELPROBE_ROOT/gh200lane/"
+            "capture-198891-deepseek-v3-tp1-graph-decode/analysis/"
+            "kernel-summary.csv"
+        ),
+        "access_path": "committed field-addressed streaming reader",
+        "bytes_consumed": 13_985,
+        "cataloged_record_bytes": 13_985,
+        "full_byte_stream_consumed": True,
+        "whole_record_materialized": False,
+        "unselected_payload_fields_decoded": False,
+        "held_out_numeric_value_exposed": False,
+        "logged_contemporaneously": True,
+        "protocol_violation": True,
+    },
 )
 
 
@@ -151,8 +168,11 @@ value and a retained historical record was inspected without a contemporaneous
 access row. A later broad registry inspection re-exposed that held-out value.
 None of those values entered the residency arithmetic and no MTP comparison or
 score was performed, but the literal no-read and every-access-logged rules
-cannot be restored after exposure. The incident ledger in the JSON publication
-records this without reproducing the held-out number.
+cannot be restored after exposure. The CSV selector also required streaming
+all 13,985 cataloged bytes. It never materialized the whole record or decoded
+unselected payload fields, but that still fails the literal no-whole-file-read
+clause. The incident ledger in the JSON publication records these failures
+without reproducing the held-out number.
 
 All {result['preservation_lock']['checked_count']} preservation-lock artifacts
 remain byte-identical. No prior scored artifact changed, no model weights were

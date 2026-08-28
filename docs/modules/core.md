@@ -1053,26 +1053,54 @@ complete. The larger decode-family gap therefore lives in expert-parallel
 residency shape or decode-side overlap. TRAF-66's finite-overlap term remains
 separate and unchanged, COMP-76 is untouched, and CORE-63 is registered below.
 
+The [CORE-63 expert-residency finding](../../examples/deployment_curve_v1/core63_calibration_result.md)
+derives the exact EP72 scale from 256 tokens per node, top-8 routing, four
+resident physical slots and 288 total slots. One rank therefore expects
+256/9 assignments against 256 assignments in the TP1 batch-32 capture, so
+only the recorded routed `fused_moe_kernel` service receives the exact 1/9
+scale. Retained service is 1,744,159,511 ps, routed service is 131,520,000 ps
+and the 489 ps fixed term stays once, producing a corrected 61-layer step of
+26,821,286,365 ps. The calibration-only prediction rises from 8,949.76 to
+9,544.657796 tokens/s/node but remains -57.164268 percent below the published
+22,282 anchor, an honest undercorrection. Current decode pricing contains no
+communication term, so overlap is not yet a binding composition.
+
+The numerical finding is protocol void and cannot close CORE-63. Before the
+committed reader and freeze, an ambient range inspection exposed a forbidden
+held-out MTP number and a retained historical record was inspected without a
+contemporaneous access row; a later broad registry inspection re-exposed the
+held-out number. The field-addressed CSV selector also streamed all 13,985
+cataloged bytes, which fails the literal no-whole-file-read clause even though
+it materialized no whole record and decoded no unselected payload. None of the
+held-out values entered the arithmetic and no MTP score or comparison was
+performed, but literal clean exposure is impossible in this worktree. All 93
+preservation locks pass. CORE-63 remains open for a clean repetition, and
+CORE-64 is registered for the exact standard-decode residual conditional on
+that clean promotion.
+
 ## Open tasks
 
 ### Precision
 
-- CORE-63 (Precision; P0; M): test the decode expert-residency mechanism at
-  the calibration-only standard-decode boundary. Freeze the expected signed
-  direction before retained component access, read only the TP1 batch-32
-  four-layer decode decomposition through a committed field-addressed reader,
-  and derive the EP72 per-rank routed assignment scale from the disclosed
-  256-token node batch, top-8 routing, 288 physical slots and four resident
-  slots per rank under an explicit uniform-routing assumption. Apply that
-  architecture-only scale to routed-expert GEMM service while retaining
-  attention, MLA, routing overhead, the shared expert and the CORE-61 per-step
-  fixed term. Publish the corrected 61-layer step, the signed movement against
-  the 22,282 tokens/s/node calibration anchor, an empty MTP access ledger and
-  the full preservation-lock verdict with zero fitted constants. State that
-  decode overlap is deferred because current decode pricing has no
-  communication term. Close only if those clauses hold literally; publish any
-  overcorrection or undercorrection and use reserved CORE-64 only for the exact
-  remaining residual.
+- CORE-63 (Precision; P0; M): repeat the decode expert-residency derivation in
+  a genuinely exposure-free worker. Commit the exact field-addressed reader
+  and 256/9-versus-256 assignment arithmetic before any target record access,
+  permit only the standard-decode calibration anchor after the corrected step
+  exists, and keep the held-out MTP value unread. Acceptance requires the full
+  append-only access ledger, zero unlogged record inspection, exact component
+  reconstruction, all 93 preservation locks, zero fitted constants and an
+  honest comparison to the existing protocol-void finding. The current
+  worktree's 26,821,286,365 ps step and -57.164268 percent residual are a
+  finding only and cannot close this task.
+
+- CORE-64 (Precision; P0; M): resolve the exact -57.164268 percent
+  standard-decode undercorrection that remains after the architecture-only
+  expert-residency scale, conditional on a clean CORE-63 repetition promoting
+  that residual. Identify component-backed EP72 residency-shape physics without
+  fitting a calibration constant, preserve attention, MLA and shared-expert
+  locality explicitly, and publish the signed movement from 9,544.657796
+  tokens/s/node against the 22,282 calibration anchor. Decode-side overlap
+  remains out of scope until a real decode communication service term exists.
 
 - CORE-53 (Precision; P1; M): replace the first disaggregated session slice's
   roofline bootstrap with the accepted COMP-64 kernel-cycle lookup record.

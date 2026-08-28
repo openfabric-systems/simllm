@@ -389,11 +389,49 @@ def test_preservation_manifest_covers_and_matches_all_93_artifacts() -> None:
         assert hashlib.sha256(path.read_bytes()).hexdigest() == expected
 
 
-def test_core63_registered_and_core64_remains_free() -> None:
+def test_core63_and_exact_core64_residual_are_registered_open() -> None:
     core = (REPOSITORY_ROOT / "docs/modules/core.md").read_text(encoding="utf-8")
     ledger = (REPOSITORY_ROOT / "docs/task-ledger.json").read_text(encoding="utf-8")
 
     assert core.count("- CORE-63 (") == 1
     assert "CORE-63" not in ledger
-    assert "- CORE-64 (" not in core
+    assert core.count("- CORE-64 (") == 1
     assert "CORE-64" not in ledger
+
+
+def test_published_result_is_honest_calibration_only_undercorrection() -> None:
+    result = json.loads(
+        (STUDY_DIR / "core63_calibration_result.json").read_text(encoding="utf-8")
+    )
+
+    assert result["status"] == "PROTOCOL_VOID_CALIBRATION_ONLY_UNDERCORRECTION"
+    assert result["residency_derivation"]["step"]["residency_corrected_ps"][
+        "published_ps_round_half_up"
+    ] == 26_821_286_365
+    corrected = result["calibration_only"]["residency_corrected"]
+    assert corrected["prediction_tokens_per_second_per_node"] == "9544.657796"
+    assert corrected["signed_residual_percent"] == "-57.164268"
+    assert corrected["classification"] == "UNDERCORRECTION"
+    assert result["access"]["successful_tranche_count"] == 2
+    assert result["access"]["cumulative_reader_access_count"] == 11
+    assert result["access"]["reader_held_out_access_ledger"] == []
+    assert result["access"]["literal_clean_protocol"] is False
+    incidents = result["access"]["protocol_incident_ledger"]
+    assert len(incidents) == 4
+    whole_stream = next(
+        row for row in incidents if row["classification"] == "literal_whole_file_byte_stream"
+    )
+    assert whole_stream["bytes_consumed"] == whole_stream["cataloged_record_bytes"]
+    assert whole_stream["whole_record_materialized"] is False
+    assert result["preservation_lock"]["status"] == "PASS"
+    assert result["registry"] == {
+        "core63": "OPEN_PROTOCOL_VOID_REQUIRES_CLEAN_REPETITION",
+        "core64": "OPEN_ON_EXACT_STANDARD_DECODE_UNDERCORRECTION_RESIDUAL",
+    }
+
+
+def test_core63_publication_uses_lf_and_no_em_dash() -> None:
+    for name in ("core63_calibration_result.json", "core63_calibration_result.md"):
+        payload = (STUDY_DIR / name).read_bytes()
+        assert b"\r" not in payload
+        assert "\N{EM DASH}".encode() not in payload
