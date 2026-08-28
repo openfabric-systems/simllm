@@ -1,0 +1,37 @@
+{
+  "arithmetic_expectations_commit": "9aac882518db0558245279e06031d6b9c0522474",
+  "arithmetic_or_direction_amended": false,
+  "expected_forbidden_access_ledger": [],
+  "forbidden_access_ledger_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+  "prior_registry_preflight": {
+    "access_count": 4,
+    "end_statuses": [
+      "PASS",
+      "PASS",
+      "PASS",
+      "REJECTED"
+    ],
+    "event_count": 8,
+    "held_out_mtp_numeric_value_accessed": false,
+    "ledger_path": "examples/deployment_curve_v1/core63_clean_access_ledger_final.jsonl",
+    "ledger_sha256": "8d7f2f526a98d634c6b736ce5ff6cfc61ce8bf10201b5bf87991e00836eff968",
+    "rejection": "WholeFileAccessRejected",
+    "values_persisted_or_printed": false,
+    "whole_file_streamed": false
+  },
+  "registry_selector_correction": {
+    "after": "CORE-63",
+    "arithmetic_input": false,
+    "before": "| CORE-63 |",
+    "matching_rule": "first line containing the exact ASCII task identifier"
+  },
+  "retry_access": {
+    "expected_access_count": 6,
+    "expected_event_count": 12,
+    "whole_file_streams_permitted": false
+  },
+  "schema": "simllm-deployment-curve-core63-clean-registry-retry-v1",
+  "status": "EXPECTATIONS_ONLY_REGISTRY_SELECTOR_RETRY",
+  "supersedes_final_attempt_wording_only": true,
+  "task": "CORE-63"
+}

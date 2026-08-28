@@ -81,8 +81,10 @@ def test_published_result_closes_only_the_literal_depth_registry():
 
     assert "- CORE-61 (" not in core
     assert "so CORE-61 is\ncomplete" in core
-    assert "CORE-63 is not registered" in core
+    assert "- CORE-63 (Precision; P0; M):" not in core
+    assert "so CORE-63 is complete" in core
     assert "CORE-61" in ledger["closed"]
+    assert "CORE-63" in ledger["closed"]
     assert "COMP-72 and COMP-78 remain\n  open on the 0-of-1,212 Granite" in compute
     assert "COMP-76 remains untouched" in (
         STUDY_DIR / "core61_depth_retry_result.md"

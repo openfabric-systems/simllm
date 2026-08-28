@@ -314,7 +314,8 @@ def test_registry_records_closed_depth_arm_and_open_compute_remainder():
 
     assert "- CORE-61 (Precision; P1; M):" not in core
     assert "so CORE-61 is\ncomplete" in core
-    assert "CORE-63 is not registered" in core
+    assert "- CORE-63 (Precision; P0; M):" not in core
+    assert "so CORE-63 is complete" in core
     assert "REDUCED_LAYERS=8" in compute
     assert "--job-name=gh-core61-d8-base" in compute
     assert "core61_depth_retry_expectations.md" in compute

@@ -1,0 +1,53 @@
+{
+  "forbidden_access_ledger": [],
+  "held_out_mtp_numeric_values_accessed_or_compared": false,
+  "ledgers": [
+    {
+      "access_count": 3,
+      "event_count": 6,
+      "path": "examples/deployment_curve_v1/core63_clean_access_ledger.jsonl",
+      "sha256": "8ed7f22dd05bd3158ad2cb76aa7267e29564fb2b3bdc997b189638619618203e",
+      "status": "SAFE_PREFLIGHT_REJECTION"
+    },
+    {
+      "access_count": 3,
+      "event_count": 6,
+      "path": "examples/deployment_curve_v1/core63_clean_access_ledger_retry.jsonl",
+      "sha256": "8fc067cd148b3b06eb02dcfd1d0ecc5713333e4cf80a7fb1d2562bccbcab651e",
+      "status": "SAFE_PREFLIGHT_REJECTION"
+    },
+    {
+      "access_count": 4,
+      "event_count": 8,
+      "path": "examples/deployment_curve_v1/core63_clean_access_ledger_final.jsonl",
+      "sha256": "8d7f2f526a98d634c6b736ce5ff6cfc61ce8bf10201b5bf87991e00836eff968",
+      "status": "SAFE_REGISTRY_SELECTOR_REJECTION"
+    },
+    {
+      "access_count": 6,
+      "event_count": 12,
+      "path": "examples/deployment_curve_v1/core63_clean_access_ledger_success.jsonl",
+      "sha256": "551e3b9250f4a4afd4bc466c9b6259578b4c86930ac7a5107773ad798111a65d",
+      "status": "PASS_CLEAN_REPRODUCTION_UNDERCORRECTION"
+    },
+    {
+      "access_count": 2,
+      "event_count": 4,
+      "path": "examples/deployment_curve_v1/core63_clean_registry_resolution_access_ledger.jsonl",
+      "sha256": "45faed56adb6c4ebf01ade141d0b3ec43fd3a6128e3ac40f1485bc34e925799d",
+      "status": "PASS_LITERAL_REGISTRY_RESOLUTION"
+    },
+    {
+      "access_count": 2,
+      "event_count": 4,
+      "path": "examples/deployment_curve_v1/core63_clean_registry_block_access_ledger.jsonl",
+      "sha256": "2b2d810af7baa68b2b232dccb0423ce3ce4716e5708f48d5dbae6dbdae870e39",
+      "status": "PASS_LITERAL_REGISTRY_BLOCK_RESOLUTION"
+    }
+  ],
+  "schema": "simllm-deployment-curve-core63-clean-access-manifest-v1",
+  "task": "CORE-63",
+  "total_access_count": 20,
+  "total_event_count": 40,
+  "whole_file_streams": 0
+}

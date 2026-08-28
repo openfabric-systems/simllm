@@ -1,0 +1,95 @@
+{
+  "access_freeze": {
+    "expected_access_count": 6,
+    "expected_access_event_count": 12,
+    "expected_forbidden_access_ledger": [],
+    "held_out_mtp_numeric_values_accessed_or_compared": false,
+    "whole_file_streams_permitted": false
+  },
+  "architecture_arithmetic": {
+    "assignment_formula": "256 * 8 * 4 / 288",
+    "capture_assignments": 256,
+    "disclosed_batch_per_node": 256,
+    "physical_expert_slots": 288,
+    "resident_physical_slots_per_rank": 4,
+    "routed_assignment_scale": {
+      "denominator": 9,
+      "numerator": 1
+    },
+    "top_k": 8,
+    "uniform_routing_assumption": true
+  },
+  "component_rule": {
+    "case_insensitive_kernel_name_markers": [
+      "fused_moe_kernel"
+    ],
+    "fixed_term_kept_once": true,
+    "nonmatching_noncollective_scale": {
+      "denominator": 1,
+      "numerator": 1
+    },
+    "parameters_amended_or_refit": false,
+    "zero_free_or_fitted_constants": true
+  },
+  "expected_signed_direction": {
+    "corrected_step": "decrease",
+    "prediction": "increase",
+    "signed_residual": "less_negative_before_any_possible_crossing"
+  },
+  "frozen_sources": [
+    {
+      "git_blob": "70ab2706b7165133afc2457ee327b0f807bc7d3e",
+      "path": "examples/deployment_curve_v1/core63_expectations.json",
+      "role": "frozen_pre_run_standard_decode_context",
+      "selector": "/calibration_context"
+    },
+    {
+      "git_blob": "1da7499d11505a7defc6bb287310e1d4a4c79ba8",
+      "path": "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json",
+      "role": "retained_measured_component_decomposition",
+      "selector": "/entries[7]"
+    },
+    {
+      "catalog_bytes": 13985,
+      "catalog_sha256": "c4d8ece981478ce57ebca95f7f2f168865713b66e87ed21a1d3f76976e834b7c",
+      "path": "<kernelprobe-root>/gh200lane/capture-198891-deepseek-v3-tp1-graph-decode/analysis/kernel-summary.csv",
+      "role": "retained_standard_decode_kernel_decomposition",
+      "selector": "/rows[pool=decode,shape=decode_b32_c2000,device=0,is_collective=False]"
+    },
+    {
+      "git_blob": "323a3aee968df3e9c6364749df197474a533d533",
+      "path": "docs/modules/core.md",
+      "role": "literal_registry_entries"
+    },
+    {
+      "git_blob": "297ac1e5f8d57e54afd4e2d5af28e7a50615f574",
+      "path": "examples/deployment_curve_v1/core63_calibration_result.md",
+      "role": "merged_void_protocol_findings_only",
+      "selector": "/section[heading=Protocol, access and preservation]"
+    }
+  ],
+  "preservation_freeze": {
+    "expected_lock_count": 93,
+    "manifest_git_blob": "ac4f970e674b8b5af58fc8d972f52f4c55ce516a",
+    "manifest_path": "examples/deployment_curve_v1/core63_preservation_lock.sha256",
+    "manifest_sha256": "3586ddd96cfad09d8b7c8015eda6641ba5f4180a1f55c5b9f34e06cd29eb445d",
+    "minimum_lock_count": 93,
+    "prior_artifacts_mutated": false
+  },
+  "registry_intent": {
+    "core63": "move exactly as far as literal acceptance allows",
+    "core64": "promote conditional registration only if clean reproduction stands",
+    "reserved_id_to_verify_free_on_main": "CORE-65"
+  },
+  "schema": "simllm-deployment-curve-core63-clean-expectations-v1",
+  "scope_locks": {
+    "download_model_weights": false,
+    "fetch_web_pages": false,
+    "modify_deploy_parallel_work": false,
+    "modify_nvcompare_parallel_work": false,
+    "perform_fifth_run_scoring": false,
+    "read_or_compare_held_out_mtp_value": false
+  },
+  "status": "EXPECTATIONS_ONLY",
+  "task": "CORE-63"
+}
