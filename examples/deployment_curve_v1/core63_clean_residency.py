@@ -16,6 +16,9 @@ from core63_residency import compare_standard_calibration, derive_residency_step
 CLEAN_EXPECTATIONS_SCHEMA = "simllm-deployment-curve-core63-clean-expectations-v1"
 CLEAN_RETRY_SCHEMA = "simllm-deployment-curve-core63-clean-retry-v1"
 CLEAN_FINAL_RETRY_SCHEMA = "simllm-deployment-curve-core63-clean-final-retry-v1"
+CLEAN_REGISTRY_RETRY_SCHEMA = (
+    "simllm-deployment-curve-core63-clean-registry-retry-v1"
+)
 CLEAN_RESULT_SCHEMA = "simllm-deployment-curve-core63-clean-calibration-v1"
 EXPECTED_ACCESS_COUNT = 6
 EXPECTED_ACCESS_EVENT_COUNT = 12
@@ -211,6 +214,38 @@ def validate_final_retry_expectations(expectations: Mapping[str, Any]) -> None:
         raise ValueError("clean final access cannot permit whole-file streams")
 
 
+def validate_registry_retry_expectations(expectations: Mapping[str, Any]) -> None:
+    """Validate the syntax-only registry selector correction."""
+
+    if expectations.get("schema") != CLEAN_REGISTRY_RETRY_SCHEMA:
+        raise ValueError("clean registry retry schema differs")
+    if expectations.get("task") != "CORE-63":
+        raise ValueError("clean registry retry task identity differs")
+    if expectations.get("status") != "EXPECTATIONS_ONLY_REGISTRY_SELECTOR_RETRY":
+        raise ValueError("clean registry retry must precede source access")
+    if expectations.get("arithmetic_or_direction_amended"):
+        raise ValueError("registry retry cannot amend arithmetic or direction")
+    if expectations.get("expected_forbidden_access_ledger") != []:
+        raise ValueError("registry retry forbidden ledger must remain empty")
+    correction = _require_mapping(
+        "registry_selector_correction",
+        expectations["registry_selector_correction"],
+    )
+    if correction.get("before") != "| CORE-63 |":
+        raise ValueError("registry retry prior selector differs")
+    if correction.get("after") != "CORE-63":
+        raise ValueError("registry retry corrected selector differs")
+    if correction.get("arithmetic_input"):
+        raise ValueError("registry text cannot become an arithmetic input")
+    retry = _require_mapping("retry_access", expectations["retry_access"])
+    if retry.get("expected_access_count") != EXPECTED_ACCESS_COUNT:
+        raise ValueError("registry retry access count differs")
+    if retry.get("expected_event_count") != EXPECTED_ACCESS_EVENT_COUNT:
+        raise ValueError("registry retry event count differs")
+    if retry.get("whole_file_streams_permitted"):
+        raise ValueError("registry retry cannot permit whole-file streams")
+
+
 def arithmetic_expectations(
     clean_expectations: Mapping[str, Any],
     calibration_context: Mapping[str, Any],
@@ -347,6 +382,53 @@ def validate_preflight_events(
     return {
         "access_count": 3,
         "access_event_count": 6,
+        "end_statuses": statuses,
+        "forbidden_access_ledger": [],
+        "held_out_mtp_numeric_values_accessed_or_compared": False,
+        "rejected_before_final_byte": True,
+        "rejection": "WholeFileAccessRejected",
+        "whole_file_streams": 0,
+    }
+
+
+def validate_registry_preflight_events(
+    events: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Validate three clean source passes followed by a registry rejection."""
+
+    if len(events) != 8:
+        raise ValueError("registry preflight must contain four begin/end pairs")
+    statuses = []
+    for index, event in enumerate(events, start=1):
+        if event.get("event_index") != index:
+            raise ValueError("registry preflight event indices differ")
+        if event.get("schema") != ACCESS_SCHEMA:
+            raise ValueError("registry preflight access schema differs")
+        if event.get("held_out_mtp_value_accessed") is not False:
+            raise ValueError("registry preflight reports held-out MTP exposure")
+        if event.get("whole_file_streamed") is not False:
+            raise ValueError("registry preflight reports a whole-file stream")
+    for access_number in range(1, 5):
+        begin = events[2 * (access_number - 1)]
+        end = events[2 * (access_number - 1) + 1]
+        if begin.get("event") != "BEGIN" or begin.get("bytes_accessed") != 0:
+            raise ValueError("registry preflight begin was not contemporaneous")
+        if end.get("event") != "END":
+            raise ValueError("registry preflight end is missing")
+        consumed = end.get("bytes_accessed")
+        size = end.get("record_size_bytes")
+        if type(consumed) is not int or type(size) is not int:
+            raise TypeError("registry preflight byte accounting must use integers")
+        if not 0 < consumed < size:
+            raise ValueError("registry preflight reached a whole-file stream")
+        statuses.append(end.get("status"))
+    if statuses != ["PASS", "PASS", "PASS", "REJECTED"]:
+        raise ValueError("registry preflight status sequence differs")
+    if events[-1].get("error") != "WholeFileAccessRejected":
+        raise ValueError("registry preflight rejection type differs")
+    return {
+        "access_count": 4,
+        "access_event_count": 8,
         "end_statuses": statuses,
         "forbidden_access_ledger": [],
         "held_out_mtp_numeric_values_accessed_or_compared": False,
@@ -512,14 +594,17 @@ def build_clean_result(
     clean_expectations: Mapping[str, Any],
     retry_expectations: Mapping[str, Any],
     final_retry_expectations: Mapping[str, Any],
+    registry_retry_expectations: Mapping[str, Any],
     inputs: Mapping[str, Any],
     access_events: Sequence[Mapping[str, Any]],
     preflight_events: Sequence[Mapping[str, Any]],
     sparse_preflight_events: Sequence[Mapping[str, Any]],
+    registry_preflight_events: Sequence[Mapping[str, Any]],
     *,
     repository_root: Path,
     expectations_commit: str,
     final_retry_expectations_commit: str,
+    registry_retry_expectations_commit: str,
     retry_expectations_commit: str,
     runner_commit: str,
     base_commit: str,
@@ -529,13 +614,21 @@ def build_clean_result(
     validate_clean_expectations(clean_expectations)
     validate_retry_expectations(retry_expectations)
     validate_final_retry_expectations(final_retry_expectations)
+    validate_registry_retry_expectations(registry_retry_expectations)
     if retry_expectations["arithmetic_expectations_commit"] != expectations_commit:
         raise ValueError("retry does not bind the original arithmetic freeze commit")
     if final_retry_expectations["arithmetic_expectations_commit"] != expectations_commit:
         raise ValueError("final retry does not bind the arithmetic freeze commit")
+    if registry_retry_expectations[
+        "arithmetic_expectations_commit"
+    ] != expectations_commit:
+        raise ValueError("registry retry does not bind the arithmetic freeze commit")
     access = validate_access_events(access_events)
     preflight = validate_preflight_events(preflight_events)
     sparse_preflight = validate_preflight_events(sparse_preflight_events)
+    registry_preflight = validate_registry_preflight_events(
+        registry_preflight_events
+    )
     csv_access = access["completed_accesses"][2]
     final_access = final_retry_expectations["final_access"]
     if csv_access.get("access_pattern") != final_access["access_pattern"]:
@@ -576,14 +669,20 @@ def build_clean_result(
             "cumulative_access_count": (
                 preflight["access_count"]
                 + sparse_preflight["access_count"]
+                + registry_preflight["access_count"]
                 + access["access_count"]
             ),
             "cumulative_access_event_count": (
                 preflight["access_event_count"]
                 + sparse_preflight["access_event_count"]
+                + registry_preflight["access_event_count"]
                 + access["access_event_count"]
             ),
-            "preflight_attempts": [preflight, sparse_preflight],
+            "preflight_attempts": [
+                preflight,
+                sparse_preflight,
+                registry_preflight,
+            ],
             "successful_tranche": access["completed_accesses"],
         },
         "base_commit": base_commit,
@@ -592,6 +691,7 @@ def build_clean_result(
         "final_retry_expectations_commit": final_retry_expectations_commit,
         "independent_recomputation": independent,
         "preservation_lock": preservation,
+        "registry_retry_expectations_commit": registry_retry_expectations_commit,
         "registry_source_entries": {
             "core63_verbatim": inputs["core63_entry"],
             "core64_verbatim": inputs["core64_entry"],
@@ -682,8 +782,9 @@ All {access['access_count']} allowlisted field accesses have contemporaneous
 `BEGIN` and `END` events. Every completed byte count is strictly below the
 source size, and the final CSV selector left the terminal record byte unread.
 The earlier forward and header-plus-reverse preflights were both safely
-rejected at 13,984 of 13,985 bytes before full coverage. Across all tranches
-there were
+rejected at 13,984 of 13,985 bytes before full coverage. A third preflight
+passed the terminal-byte CSV selector and then rejected an over-specific
+registry spelling before EOF. Across all tranches there were
 {access['cumulative_access_count']} logged accesses and
 {access['cumulative_access_event_count']} contemporaneous events. Whole-file
 semantic streams: **{access['whole_file_streams']}**.
@@ -733,6 +834,8 @@ __all__ = [
     "validate_clean_expectations",
     "validate_final_retry_expectations",
     "validate_preflight_events",
+    "validate_registry_preflight_events",
+    "validate_registry_retry_expectations",
     "validate_retry_expectations",
     "verify_preservation",
     "write_new_json",

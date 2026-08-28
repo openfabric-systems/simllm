@@ -89,6 +89,16 @@ def test_sparse_kernel_selector_reads_header_and_terminal_group_only() -> None:
     assert source.unique_bytes_accessed == len(payload) - 1
 
 
+def test_registry_selector_does_not_assume_table_punctuation() -> None:
+    payload = b"# Core tasks\n\n### CORE-63 residency\n\nLater text\n"
+    source = _source(payload)
+
+    value = reader._extract_task_line(source, "CORE-63")
+
+    assert value == "### CORE-63 residency"
+    assert source.bytes_accessed < len(payload)
+
+
 def test_access_begin_is_written_before_extractor_runs(tmp_path: Path) -> None:
     record = tmp_path / "record.json"
     record.write_text('{"selected":1,"later":2}\n', encoding="utf-8", newline="\n")

@@ -628,7 +628,7 @@ def _extract_kernels_sparse(source: _SparseSource) -> list[dict[str, str]]:
 
 
 def _extract_task_line(source: _PartialSource, task_id: str) -> str:
-    marker = f"| {task_id} |".encode("ascii")
+    marker = task_id.encode("ascii")
     while True:
         raw = _read_line(source)
         if marker in raw:
