@@ -132,6 +132,37 @@ class _PartialSource:
         return value
 
 
+class _SparseSource:
+    """Count sparse random-access bytes and forbid complete file coverage."""
+
+    def __init__(self, stream: BinaryIO, record_size: int) -> None:
+        if record_size <= 1:
+            raise WholeFileAccessRejected("record is too small for a sparse selector")
+        self._stream = stream
+        self.record_size = record_size
+        self._positions: set[int] = set()
+        self.bytes_accessed = 0
+
+    @property
+    def unique_bytes_accessed(self) -> int:
+        return len(self._positions)
+
+    def read_at(self, position: int) -> bytes:
+        if not 0 <= position < self.record_size:
+            raise ValueError("sparse byte position is outside the record")
+        if position not in self._positions and len(self._positions) >= self.record_size - 1:
+            raise WholeFileAccessRejected(
+                "sparse selector would cover every byte in the record"
+            )
+        self._stream.seek(position)
+        value = self._stream.read(1)
+        if not value:
+            raise ValueError("sparse selector could not read the requested byte")
+        self.bytes_accessed += 1
+        self._positions.add(position)
+        return value
+
+
 class _Cursor:
     """One-byte JSON cursor whose accounting includes lookahead bytes."""
 
@@ -539,6 +570,67 @@ def _extract_kernels(source: _PartialSource) -> list[dict[str, str]]:
             selected.append({name: row[name] for name in CAPTURED_KERNEL_FIELDS})
 
 
+def _sparse_header(source: _SparseSource) -> bytes:
+    value = bytearray()
+    position = 0
+    while not value or value[-1:] != b"\n":
+        value.extend(source.read_at(position))
+        position += 1
+    return bytes(value)
+
+
+def _reverse_lines(source: _SparseSource):
+    value = bytearray()
+    for position in range(source.record_size - 1, -1, -1):
+        current = source.read_at(position)
+        if current == b"\n":
+            if value:
+                yield bytes(reversed(value)) + b"\n"
+                value.clear()
+        else:
+            value.extend(current)
+    if value:
+        yield bytes(reversed(value))
+
+
+def _extract_kernels_sparse(source: _SparseSource) -> list[dict[str, str]]:
+    """Select the terminal decode group from the header and reverse tail only."""
+
+    header = tuple(_csv_values(_sparse_header(source)))
+    legacy = header == LEGACY_HEADER
+    current = header[:3] == EXPECTED_HEADER[:3] and set(EXPECTED_HEADER) <= set(header)
+    if not legacy and not current:
+        raise ValueError("kernel summary header differs from the frozen schema")
+    selected_reversed: list[dict[str, str]] = []
+    saw_selected_shape = False
+    for raw in _reverse_lines(source):
+        values = _csv_values(raw)
+        if len(values) != len(header):
+            raise ValueError("kernel summary row width differs")
+        row = dict(zip(header, values, strict=True))
+        route_is_selected = (
+            row["pool"] == "decode" and row["shape"] == KERNEL_SHAPE_LABEL
+        )
+        if saw_selected_shape and not route_is_selected:
+            if not selected_reversed:
+                raise ValueError("selected kernel family contains no retained rows")
+            return list(reversed(selected_reversed))
+        if not route_is_selected:
+            continue
+        saw_selected_shape = True
+        if not legacy and row["device"] != "0":
+            continue
+        if row["is_collective"] not in {"True", "False"}:
+            raise ValueError("kernel summary collective flag differs")
+        if row["is_collective"] == "False":
+            selected_reversed.append(
+                {name: row[name] for name in CAPTURED_KERNEL_FIELDS}
+            )
+    raise WholeFileAccessRejected(
+        "sparse kernel selector did not find a preceding routing boundary"
+    )
+
+
 def _extract_task_line(source: _PartialSource, task_id: str) -> str:
     marker = f"| {task_id} |".encode("ascii")
     while True:
@@ -609,6 +701,64 @@ def _read_allowlisted(
         raise
 
 
+def _read_sparse_kernels(
+    record_path: Path,
+    kernelprobe_root: Path,
+    recorder: AccessRecorder,
+) -> list[dict[str, str]]:
+    expected = kernelprobe_root.resolve() / KERNEL_SUMMARY_RELATIVE
+    if record_path.resolve() != expected.resolve():
+        raise ValueError("clean reader refuses a non-allowlisted kernel summary")
+    record_size = record_path.stat().st_size
+    if record_size != KERNEL_SUMMARY_BYTES:
+        raise ValueError("kernel summary size differs from its frozen catalog entry")
+    classification = "retained_standard_decode_kernel_decomposition"
+    access_id = recorder.begin(
+        classification=classification,
+        record=KERNEL_SUMMARY_LABEL,
+        selector=KERNEL_SUMMARY_SELECTOR,
+        record_size_bytes=record_size,
+    )
+    source: _SparseSource | None = None
+    try:
+        with record_path.open("rb", buffering=0) as stream:
+            source = _SparseSource(stream, record_size)
+            rows = _extract_kernels_sparse(source)
+        recorder.finish(
+            access_id,
+            classification=classification,
+            record=KERNEL_SUMMARY_LABEL,
+            selector=KERNEL_SUMMARY_SELECTOR,
+            record_size_bytes=record_size,
+            bytes_accessed=source.bytes_accessed,
+            status="PASS",
+            extra={
+                "access_pattern": "header_plus_reverse_tail",
+                "selected_row_count": len(rows),
+                "unique_bytes_accessed": source.unique_bytes_accessed,
+            },
+        )
+        return rows
+    except Exception as exc:
+        recorder.finish(
+            access_id,
+            classification=classification,
+            record=KERNEL_SUMMARY_LABEL,
+            selector=KERNEL_SUMMARY_SELECTOR,
+            record_size_bytes=record_size,
+            bytes_accessed=0 if source is None else source.bytes_accessed,
+            status="REJECTED",
+            extra={
+                "access_pattern": "header_plus_reverse_tail",
+                "error": type(exc).__name__,
+                "unique_bytes_accessed": (
+                    0 if source is None else source.unique_bytes_accessed
+                ),
+            },
+        )
+        raise
+
+
 def read_clean_inputs(
     *,
     kernelprobe_root: Path,
@@ -636,16 +786,10 @@ def read_clean_inputs(
         extractor=_extract_candidate,
     )
     kernel_path = kernelprobe_root.resolve() / KERNEL_SUMMARY_RELATIVE
-    if kernel_path.stat().st_size != KERNEL_SUMMARY_BYTES:
-        raise ValueError("kernel summary size differs from its frozen catalog entry")
-    kernel_rows = _read_allowlisted(
+    kernel_rows = _read_sparse_kernels(
         kernel_path,
-        kernel_path,
-        classification="retained_standard_decode_kernel_decomposition",
-        label=KERNEL_SUMMARY_LABEL,
-        selector=KERNEL_SUMMARY_SELECTOR,
+        kernelprobe_root,
         recorder=recorder,
-        extractor=_extract_kernels,
     )
     core63_entry = _read_allowlisted(
         CORE_REGISTRY,

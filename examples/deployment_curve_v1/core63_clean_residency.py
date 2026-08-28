@@ -14,6 +14,7 @@ from core63_clean_field_reader import ACCESS_SCHEMA
 from core63_residency import compare_standard_calibration, derive_residency_step
 
 CLEAN_EXPECTATIONS_SCHEMA = "simllm-deployment-curve-core63-clean-expectations-v1"
+CLEAN_RETRY_SCHEMA = "simllm-deployment-curve-core63-clean-retry-v1"
 CLEAN_RESULT_SCHEMA = "simllm-deployment-curve-core63-clean-calibration-v1"
 EXPECTED_ACCESS_COUNT = 6
 EXPECTED_ACCESS_EVENT_COUNT = 12
@@ -134,6 +135,41 @@ def validate_clean_expectations(expectations: Mapping[str, Any]) -> None:
         raise ValueError("all clean scope locks must remain false")
 
 
+def validate_retry_expectations(expectations: Mapping[str, Any]) -> None:
+    """Validate the access-only retry freeze after the safe preflight rejection."""
+
+    if expectations.get("schema") != CLEAN_RETRY_SCHEMA:
+        raise ValueError("clean retry schema differs")
+    if expectations.get("task") != "CORE-63":
+        raise ValueError("clean retry task identity differs")
+    if expectations.get("status") != "EXPECTATIONS_ONLY_ACCESS_RETRY":
+        raise ValueError("clean retry must be frozen before the next access")
+    if expectations.get("arithmetic_or_direction_amended"):
+        raise ValueError("clean retry cannot amend arithmetic or direction")
+    prior = _require_mapping("prior_preflight", expectations["prior_preflight"])
+    if prior.get("event_count") != 6:
+        raise ValueError("preflight event count differs")
+    if prior.get("end_statuses") != ["PASS", "PASS", "REJECTED"]:
+        raise ValueError("preflight status sequence differs")
+    if prior.get("rejection") != "WholeFileAccessRejected":
+        raise ValueError("preflight rejection type differs")
+    if prior.get("whole_file_streamed"):
+        raise ValueError("preflight cannot report a whole-file stream")
+    if prior.get("held_out_mtp_numeric_value_accessed"):
+        raise ValueError("preflight cannot report held-out MTP exposure")
+    retry = _require_mapping("retry_access", expectations["retry_access"])
+    if retry.get("access_pattern") != "header_plus_reverse_tail":
+        raise ValueError("clean retry access pattern differs")
+    if retry.get("expected_access_count") != EXPECTED_ACCESS_COUNT:
+        raise ValueError("clean retry access count differs")
+    if retry.get("expected_event_count") != EXPECTED_ACCESS_EVENT_COUNT:
+        raise ValueError("clean retry event count differs")
+    if retry.get("whole_file_streams_permitted"):
+        raise ValueError("clean retry cannot permit whole-file streams")
+    if expectations.get("expected_forbidden_access_ledger") != []:
+        raise ValueError("clean retry forbidden ledger must remain empty")
+
+
 def arithmetic_expectations(
     clean_expectations: Mapping[str, Any],
     calibration_context: Mapping[str, Any],
@@ -227,6 +263,54 @@ def validate_access_events(
         "contemporaneous_begin_before_open": True,
         "forbidden_access_ledger": [],
         "held_out_mtp_numeric_values_accessed_or_compared": False,
+        "whole_file_streams": 0,
+    }
+
+
+def validate_preflight_events(
+    events: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Validate the logged safe rejection without treating it as input evidence."""
+
+    if len(events) != 6:
+        raise ValueError("preflight must contain three begin/end pairs")
+    statuses = []
+    for index, event in enumerate(events, start=1):
+        if event.get("event_index") != index:
+            raise ValueError("preflight event indices are not contiguous")
+        if event.get("schema") != ACCESS_SCHEMA:
+            raise ValueError("preflight access schema differs")
+        if event.get("held_out_mtp_value_accessed") is not False:
+            raise ValueError("preflight reports held-out MTP exposure")
+        if event.get("whole_file_streamed") is not False:
+            raise ValueError("preflight reports a whole-file stream")
+    for access_number in range(1, 4):
+        begin = events[2 * (access_number - 1)]
+        end = events[2 * (access_number - 1) + 1]
+        if begin.get("event") != "BEGIN" or begin.get("bytes_accessed") != 0:
+            raise ValueError("preflight begin event was not contemporaneous")
+        if end.get("event") != "END":
+            raise ValueError("preflight end event is missing")
+        consumed = end.get("bytes_accessed")
+        size = end.get("record_size_bytes")
+        if type(consumed) is not int or type(size) is not int:
+            raise TypeError("preflight byte accounting must use integers")
+        if not 0 < consumed < size:
+            raise ValueError("preflight selector reached a whole-file stream")
+        statuses.append(end.get("status"))
+    if statuses != ["PASS", "PASS", "REJECTED"]:
+        raise ValueError("preflight status sequence differs")
+    final = events[-1]
+    if final.get("error") != "WholeFileAccessRejected":
+        raise ValueError("preflight did not reject the whole-file selector")
+    return {
+        "access_count": 3,
+        "access_event_count": 6,
+        "end_statuses": statuses,
+        "forbidden_access_ledger": [],
+        "held_out_mtp_numeric_values_accessed_or_compared": False,
+        "rejected_before_final_byte": True,
+        "rejection": "WholeFileAccessRejected",
         "whole_file_streams": 0,
     }
 
@@ -385,18 +469,25 @@ def verify_preservation(
 
 def build_clean_result(
     clean_expectations: Mapping[str, Any],
+    retry_expectations: Mapping[str, Any],
     inputs: Mapping[str, Any],
     access_events: Sequence[Mapping[str, Any]],
+    preflight_events: Sequence[Mapping[str, Any]],
     *,
     repository_root: Path,
     expectations_commit: str,
+    retry_expectations_commit: str,
     runner_commit: str,
     base_commit: str,
 ) -> dict[str, Any]:
     """Build the clean candidate evidence from in-memory selected fields."""
 
     validate_clean_expectations(clean_expectations)
+    validate_retry_expectations(retry_expectations)
+    if retry_expectations["arithmetic_expectations_commit"] != expectations_commit:
+        raise ValueError("retry does not bind the original arithmetic freeze commit")
     access = validate_access_events(access_events)
+    preflight = validate_preflight_events(preflight_events)
     arithmetic = arithmetic_expectations(
         clean_expectations,
         _require_mapping("calibration_context", inputs["calibration_context"]),
@@ -416,7 +507,17 @@ def build_clean_result(
         raise ValueError("clean prediction direction differs from the freeze")
     preservation = verify_preservation(clean_expectations, repository_root)
     return {
-        "access": access,
+        "access": {
+            **access,
+            "cumulative_access_count": (
+                preflight["access_count"] + access["access_count"]
+            ),
+            "cumulative_access_event_count": (
+                preflight["access_event_count"] + access["access_event_count"]
+            ),
+            "preflight": preflight,
+            "successful_tranche": access["completed_accesses"],
+        },
         "base_commit": base_commit,
         "calibration_only": calibration,
         "expectations_commit": expectations_commit,
@@ -428,6 +529,7 @@ def build_clean_result(
         },
         "residency_derivation": derivation,
         "runner_commit": runner_commit,
+        "retry_expectations_commit": retry_expectations_commit,
         "schema": CLEAN_RESULT_SCHEMA,
         "scope": {
             "calibration_only": True,
@@ -510,7 +612,11 @@ ledger and the independently recomputed exact fractions.
 All {access['access_count']} allowlisted field accesses have contemporaneous
 `BEGIN` and `END` events. Every completed byte count is strictly below the
 source size, and the CSV selector stopped at the next routing prefix instead
-of EOF. Whole-file semantic streams: **{access['whole_file_streams']}**.
+of EOF. The earlier forward preflight was safely rejected at 13,984 of 13,985
+bytes before the final byte was read. Across both tranches there were
+{access['cumulative_access_count']} logged accesses and
+{access['cumulative_access_event_count']} contemporaneous events. Whole-file
+semantic streams: **{access['whole_file_streams']}**.
 
 All {preservation['checked_count']} inherited preservation artifacts are
 byte-identical. Hash verification decoded no artifact values. The void
@@ -555,6 +661,8 @@ __all__ = [
     "render_markdown",
     "validate_access_events",
     "validate_clean_expectations",
+    "validate_preflight_events",
+    "validate_retry_expectations",
     "verify_preservation",
     "write_new_json",
     "write_new_text",

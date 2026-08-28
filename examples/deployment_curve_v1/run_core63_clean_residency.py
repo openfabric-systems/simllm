@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -19,7 +20,9 @@ from core63_clean_residency import (
 STUDY_DIR = Path(__file__).resolve().parent
 REPOSITORY_ROOT = STUDY_DIR.parents[1]
 EXPECTATIONS_PATH = STUDY_DIR / "core63_clean_expectations.json"
-ACCESS_LEDGER_PATH = STUDY_DIR / "core63_clean_access_ledger.jsonl"
+RETRY_EXPECTATIONS_PATH = STUDY_DIR / "core63_clean_retry_expectations.json"
+PREFLIGHT_ACCESS_LEDGER_PATH = STUDY_DIR / "core63_clean_access_ledger.jsonl"
+ACCESS_LEDGER_PATH = STUDY_DIR / "core63_clean_access_ledger_retry.jsonl"
 FORBIDDEN_LEDGER_PATH = STUDY_DIR / "core63_clean_forbidden_access_ledger.json"
 RESULT_JSON_PATH = STUDY_DIR / "core63_clean_calibration_result.json"
 RESULT_MARKDOWN_PATH = STUDY_DIR / "core63_clean_calibration_result.md"
@@ -58,6 +61,7 @@ def main() -> int:
     parser.add_argument("--expectations-commit", required=True)
     parser.add_argument("--kernelprobe-root", required=True, type=Path)
     parser.add_argument("--run-dir", required=True, type=Path)
+    parser.add_argument("--retry-expectations-commit", required=True)
     parser.add_argument("--runner-commit", required=True)
     args = parser.parse_args()
 
@@ -68,7 +72,6 @@ def main() -> int:
     _require_under(args.run_dir, args.bulk_root)
     for output in (
         ACCESS_LEDGER_PATH,
-        FORBIDDEN_LEDGER_PATH,
         RESULT_JSON_PATH,
         RESULT_MARKDOWN_PATH,
         CLASSIFICATION_PATH,
@@ -77,7 +80,20 @@ def main() -> int:
             raise FileExistsError(f"refusing to overwrite {output}")
 
     clean_expectations = _load_json(EXPECTATIONS_PATH)
-    write_new_json(FORBIDDEN_LEDGER_PATH, [])
+    retry_expectations = _load_json(RETRY_EXPECTATIONS_PATH)
+    forbidden_payload = FORBIDDEN_LEDGER_PATH.read_bytes()
+    if json.loads(forbidden_payload) != []:
+        raise ValueError("forbidden-access ledger is not empty")
+    if hashlib.sha256(forbidden_payload).hexdigest() != retry_expectations[
+        "forbidden_access_ledger_sha256"
+    ]:
+        raise ValueError("forbidden-access ledger identity differs")
+    preflight_payload = PREFLIGHT_ACCESS_LEDGER_PATH.read_bytes()
+    if hashlib.sha256(preflight_payload).hexdigest() != retry_expectations[
+        "prior_preflight"
+    ]["ledger_sha256"]:
+        raise ValueError("preflight access ledger identity differs")
+    preflight_events = _load_jsonl(PREFLIGHT_ACCESS_LEDGER_PATH)
     inputs = read_clean_inputs(
         kernelprobe_root=args.kernelprobe_root,
         access_ledger=ACCESS_LEDGER_PATH,
@@ -85,10 +101,13 @@ def main() -> int:
     access_events = _load_jsonl(ACCESS_LEDGER_PATH)
     result = build_clean_result(
         clean_expectations,
+        retry_expectations,
         inputs,
         access_events,
+        preflight_events,
         repository_root=REPOSITORY_ROOT,
         expectations_commit=args.expectations_commit,
+        retry_expectations_commit=args.retry_expectations_commit,
         runner_commit=args.runner_commit,
         base_commit=args.base_commit,
     )
@@ -107,7 +126,14 @@ def main() -> int:
     write_new_text(RESULT_MARKDOWN_PATH, rendered_markdown)
     write_new_text(CLASSIFICATION_PATH, rendered_classification)
 
-    write_new_text(args.run_dir / "access-ledger.jsonl", ACCESS_LEDGER_PATH.read_text())
+    write_new_text(
+        args.run_dir / "access-ledger.jsonl",
+        ACCESS_LEDGER_PATH.read_text(encoding="utf-8"),
+    )
+    write_new_text(
+        args.run_dir / "preflight-access-ledger.jsonl",
+        PREFLIGHT_ACCESS_LEDGER_PATH.read_text(encoding="utf-8"),
+    )
     write_new_text(args.run_dir / "calibration-result.json", rendered_json)
     write_new_text(args.run_dir / "calibration-result.md", rendered_markdown)
     write_new_text(args.run_dir / "component-classification.json", rendered_classification)
