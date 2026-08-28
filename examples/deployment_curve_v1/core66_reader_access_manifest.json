@@ -1,0 +1,44 @@
+{
+  "access_tranches": [
+    {
+      "access_ledger": "<wave-runs>/core66/reader/access-01.jsonl",
+      "access_ledger_bytes": 514,
+      "access_ledger_sha256": "7023ee1b2ac2e228d94be85f14dbc302a4dfee9c955c9a2fde0789df0bf86c6f",
+      "disposition": "allowlisted current-worktree path was unavailable before the CORE-65 import",
+      "forbidden_ledger": "<wave-runs>/core66/reader/forbidden-01.jsonl",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "access_ledger": "<wave-runs>/core66/reader/access-02.jsonl",
+      "access_ledger_bytes": 483,
+      "access_ledger_sha256": "d849998a93d7a6be7206089f7a15bc59ac1059180f274563814dd85382f27a7e",
+      "disposition": "bounded first-line access to the local CORE-65 descendant",
+      "forbidden_ledger": "<wave-runs>/core66/reader/forbidden-02.jsonl",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "access_ledger": "<wave-runs>/core66/reader/access-03.jsonl",
+      "access_ledger_bytes": 570,
+      "access_ledger_sha256": "b1435a7ced38933cc25891490051b73b4d30a86fb50a206052d4ed217a908d66",
+      "disposition": "bounded title section access to the local CORE-65 descendant",
+      "forbidden_ledger": "<wave-runs>/core66/reader/forbidden-03.jsonl",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "access_ledger": "<wave-runs>/core66/reader/access-04.jsonl",
+      "access_ledger_bytes": 1602,
+      "access_ledger_sha256": "ff6c99c07a4c37334f725b0b0dc3c1c92c8b306d2b4a8bb5d71dae93df63e000",
+      "disposition": "three bounded heading sections followed through reader-returned next-heading fields",
+      "forbidden_ledger": "<wave-runs>/core66/reader/forbidden-04.jsonl",
+      "forbidden_ledger_bytes": 0,
+      "forbidden_ledger_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "all_reader_forbidden_ledgers_empty": true,
+  "reader_access_event_count": 10,
+  "schema": "simllm-deployment-curve-core66-reader-access-manifest-v1",
+  "task": "CORE-66"
+}
