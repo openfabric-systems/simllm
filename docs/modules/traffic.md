@@ -1046,6 +1046,22 @@ degree 16. All 126 capacity and byte-ledger cells, 12 fatal guards and 16
 TRAF-71 preservation locks pass, so TRAF-72 closes while its three behavioral
 refutations remain part of the result.
 
+The MiniMax expert-parallel packet arm can opt into a study-only uniform token
+count on every expert-parallel rank, then classify the resulting dispatch and
+combine pairs through the existing placement mapper at eight GPUs per node.
+The
+[MiniMax scaling result](../../examples/minimax_ep_scaling_v1/RESULTS.md)
+keeps the faithful EP 256 ledger of 8,486,400 directed messages and
+3,258,777,600 bytes visible while simulating one receiver per node with all
+senders after a full-population dispatch exceeded the frozen wall budget. The
+scored receiver sees 248 simultaneous cross-node senders for 54.648960
+microseconds in both phases. N3 passes, while N1 and N2 are honestly refuted:
+the packet-to-AIConfigurator ratios fall from 0.864340 at EP 8 to 0.274261 at
+EP 256 because the two arms move different logical byte quantities. The
+ordinary isolated-engine default is unchanged. TRAF-26 retains independently
+routed production peer workloads, and TRAF-73 owns the hardware precision of
+this routed packet arm.
+
 NVLink hardware incast identification is long-flow only. Sender launches on
 the real node serialize through sequential PCIe writes, so nanosecond-scale
 true synchronous small-flow co-arrival cannot be constructed. Simulated
@@ -1058,6 +1074,24 @@ route to those higher degrees.
 
 ### Precision
 
+- TRAF-73 (Precision; P1; L): replace the MiniMax scaling study's uniform
+  routed-payload surrogate and borrowed 32 MiB switch-wide buffer with
+  independently observed multi-node expert dispatch and combine evidence.
+  The current active study path reproduces exact routed bytes, placement,
+  synchronized fan-in and rnic-cn queue service, but it has no H200 hardware
+  capture, samples one receiver per node at EP 256, assumes uniform routing,
+  and selects the switch buffer from another physical RNIC runtime. Capture
+  source and destination ranks, routed bytes, phase release and completion
+  times, receiver ingress occupancy, path choices and buffer high-water marks
+  for at least two routing concentrations and two expert-parallel widths.
+  Freeze the sweep and expected directions before capture. Acceptance reports
+  the current surrogate's before error, fits no scored holdout, reproduces
+  phase makespan and receiver occupancy inside frozen quantitative bands, and
+  demonstrates an end-to-end TTFT or TPOT change through the supported metric
+  chain. The explicit uniform and receiver-subset modes remain selectable and
+  reproduce this result exactly when hardware calibration is disabled.
+  TRAF-26 supplies independently routed peer workloads; COMP-88 separately
+  owns the donor NCCL extrapolation, which is not equivalent traffic.
 - TRAF-20 (Precision; P2; M): qualify the delivered `loggopsim-ideal`
   fast level for schedule-shape studies that do not need per-flow transport
   behavior. The
@@ -1826,10 +1860,12 @@ route to those higher degrees.
   carry an explicit captured workload or a reproducible independently sampled
   workload, and its routing must be independently observed or sampled.
   Replaying one engine's routing table on every peer is forbidden because it
-  manufactures correlated hot-expert incast. Acceptance compares group bytes,
-  peak egress, incast fan-in, TTFT and TPOT against a multi-engine capture,
-  while selecting the isolated mode preserves every accepted TRAF-25 byte,
-  timestamp and completion order exactly.
+  manufactures correlated hot-expert incast. The MiniMax study's explicit
+  uniform token count per rank is a controlled symmetric surrogate, not an
+  independently routed workload, so it does not close this entry. Acceptance
+  compares group bytes, peak egress, incast fan-in, TTFT and TPOT against a
+  multi-engine capture, while selecting the isolated mode preserves every
+  accepted TRAF-25 byte, timestamp and completion order exactly.
 
 - TRAF-15 (Completeness; P2; M): project arbitrary legal forward, non-monotone
   and general non-contiguous or fan-in DAGs through the step sink. The current

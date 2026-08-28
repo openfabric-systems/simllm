@@ -1813,10 +1813,24 @@ review-addendum rows to `25dc6b5` and the concurrent two-point supplement to
 `a679b0e`; the latter includes one bit-equal value and one structured miss on
 both sides. The artifact carries the exact Apache 2.0 bytes, both preserved
 NVIDIA copyright lines and file-local conversion notices backed by an
-exhaustive `MODIFIED` ledger. COMP-82 through COMP-87 own every extension
-beyond this exact identity and offline composition surface. COMP-87
-specifically owns the imported but undispatched WideEP MoE, MLA BMM, Mamba2,
-MLA and generation-MLA operation families.
+exhaustive `MODIFIED` ledger.
+
+The model-configured external pass composer preserves those four Qwen totals
+bit for bit and adds the 62-layer MiniMax-M2.5 mixture-of-experts pass with
+explicit MTP nextn 3. Its content-addressed H200 NCCL collection resolves the
+source tool's measured rank-2, rank-4 and rank-8 rows, message-size
+interpolation and declared above-rank-8 extrapolation while retaining NCCL as
+the operation source. The
+[MiniMax expert-parallel study](../../examples/minimax_ep_scaling_v1/RESULTS.md)
+is nonvoid: E passes 4 of 4 bit-equal dispatch cells and C passes 4 of 4
+decode quotients at exactly 1.0. Its packet comparison refutes both frozen
+growth bands because the donor's half-precision `tokens * hidden * E` buffer
+and the routed FP8 expert payload are different traffic abstractions. COMP-82
+through COMP-86 retain their listed identity, surface and live-chain gaps.
+COMP-87 specifically owns the imported but undispatched WideEP MoE, MLA BMM,
+Mamba2, MLA and generation-MLA operation families; it does not own the generic
+composer or MiniMax MoEDispatch, which are literal here. COMP-88 owns the
+remaining donor-extrapolation precision gap.
 
 ## Open tasks
 
@@ -1833,6 +1847,21 @@ MLA and generation-MLA operation families.
   requires both frameworks to agree, the same mathematical pair to carry the
   same FLOP coefficient in decode and prefill, exact family conservation, and
   a successor frontier comparison that names the new inventory hashes.
+- COMP-88 (Precision; P1; L): replace the MiniMax external dispatch
+  extrapolation above eight ranks with independently measured H200 NCCL
+  all-gather and reduce-scatter evidence at the message sizes and widths the
+  supported pass selects. The active surrogate uses measured rank-2, rank-4
+  and rank-8 rows, fixes `effective_ranks = min(E, 8)`, then applies a 50 GB/s
+  above-rank-8 bandwidth tier. It contributes 51.39544921875 ms to the EP 256
+  decode step and therefore dominates a reported metric. Freeze the rank and
+  message-size grid before capture, record topology and launch mode, and fit
+  only from training cells. Acceptance reports the surrogate's before error
+  and the new model's held-out median and p95 error, keeps source identity on
+  every term, reproduces the four MiniMax pass cells through the selected
+  calibration, and preserves every Qwen parity byte plus the current
+  extrapolation exactly when the measured arm is disabled. TRAF-73 separately
+  owns routed expert traffic and receiver-side packet calibration; the two
+  abstractions are never fitted to each other.
 - COMP-1 (Precision; P1; L): complete production compute calibration.
   This task is the numerical capstone for every selected target: it owns
   target-silicon compute and memory anchors, per-device fit inputs, untouched

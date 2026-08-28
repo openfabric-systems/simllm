@@ -228,6 +228,7 @@ simllm/calibration/external_nccl.py text eol=lf
 simllm/calibration/external_pass.py text eol=lf
 tests/test_external_nccl.py text eol=lf
 tests/test_external_pass.py text eol=lf
+tests/test_minimax_ep_scaling_study.py text eol=lf
 tests/test_nvlink_rnic_comparison_*.py text eol=lf
 examples/sglang_decode_shape_v1/expectations.json text eol=lf
 examples/sglang_decode_shape_v1/RESULTS.md text eol=lf

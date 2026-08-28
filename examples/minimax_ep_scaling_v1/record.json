@@ -1,0 +1,364 @@
+{
+  "attempt": "attempt-0002",
+  "binary_identities": {
+    "external_python": {
+      "environment": "SIMLLM_EXTERNAL_AIC_VENV",
+      "name": "python"
+    },
+    "htsim_rnic": {
+      "name": "htsim_rnic",
+      "sha256": "cfb5014a663791f7619fe33309114a74e82878de860c14fc8a723713501f027d"
+    },
+    "txt2bin": {
+      "name": "txt2bin.prebuilt",
+      "sha256": "f3745f34ad86febe9c9eebef10aee5fae00b8865cb29943344fb75b0f142495b"
+    }
+  },
+  "bulk_evidence": "${SIMLLM_MINIMAX_T1_BULK_ROOT}/attempt-0002",
+  "configuration_sha256": "35d41edca370038a8d50623b38dd9a2e5b82e692faa6d8093669437d8ea11392",
+  "evidence_classes": {
+    "compute_and_external_dispatch": "MEASURED-EXTERNAL",
+    "packet_dispatch_and_combine": "SIM-DERIVED"
+  },
+  "expectations_sha256": "9b355278c779c7834d18eaf3b19d16929f7b1800926e0ba1ba271f14a5d613ed",
+  "family_tallies": {
+    "C": {
+      "cells": [
+        {
+          "expert_parallel": 8,
+          "lower": 0.98,
+          "passed": true,
+          "quotient": 1.0,
+          "upper": 1.02
+        },
+        {
+          "expert_parallel": 32,
+          "lower": 0.98,
+          "passed": true,
+          "quotient": 1.0,
+          "upper": 1.02
+        },
+        {
+          "expert_parallel": 128,
+          "lower": 0.98,
+          "passed": true,
+          "quotient": 1.0,
+          "upper": 1.02
+        },
+        {
+          "expert_parallel": 256,
+          "lower": 0.98,
+          "passed": true,
+          "quotient": 1.0,
+          "upper": 1.02
+        }
+      ],
+      "denominator": 4,
+      "passed": 4
+    },
+    "E": {
+      "cells": [
+        {
+          "actual_hex": "0x1.ec0b780346dc6p+0",
+          "expected_hex": "0x1.ec0b780346dc6p+0",
+          "expert_parallel": 8,
+          "passed": true
+        },
+        {
+          "actual_hex": "0x1.3d27bdfef25dcp+4",
+          "expected_hex": "0x1.3d27bdfef25dcp+4",
+          "expert_parallel": 32,
+          "passed": true
+        },
+        {
+          "actual_hex": "0x1.263c1785d279dp+5",
+          "expected_hex": "0x1.263c1785d279dp+5",
+          "expert_parallel": 128,
+          "passed": true
+        },
+        {
+          "actual_hex": "0x1.9b29e147ae148p+5",
+          "expected_hex": "0x1.9b29e147ae148p+5",
+          "expert_parallel": 256,
+          "passed": true
+        }
+      ],
+      "denominator": 4,
+      "passed": 4
+    },
+    "N": {
+      "bands": {
+        "N1": {
+          "passed": false,
+          "ratios": [
+            0.8643398194341548,
+            0.4262782480503487,
+            0.3048657016451342,
+            0.2742607736975033
+          ],
+          "rule": "ratios are non-decreasing with expert-parallel width"
+        },
+        "N2": {
+          "actual": 0.2742607736975033,
+          "lower": 1.25,
+          "passed": false,
+          "rule": "widest ratio is at least 1.25"
+        },
+        "N3": {
+          "expert_parallel": 256,
+          "maximum_receiver_ingress_occupancy_ps": 54648960,
+          "maximum_simultaneous_senders_per_receiver": 248,
+          "passed": true,
+          "phases": [
+            {
+              "ingress_occupancy_ps": 54648960,
+              "maximum_simultaneous_senders": 248,
+              "phase": "dispatch",
+              "receiver": 0,
+              "sender_count": 248
+            },
+            {
+              "ingress_occupancy_ps": 54648960,
+              "maximum_simultaneous_senders": 248,
+              "phase": "combine",
+              "receiver": 0,
+              "sender_count": 248
+            }
+          ]
+        }
+      },
+      "denominator": 3,
+      "passed": 1
+    },
+    "W": {
+      "denominator": 1,
+      "elapsed_seconds": 298.81469979602844,
+      "passed": 1,
+      "upper_seconds": 3600.0
+    }
+  },
+  "fatal_guards": {
+    "FG-1": true,
+    "FG-2": true,
+    "FG-3": true,
+    "FG-4": true,
+    "FG-5": true,
+    "FG-6": true,
+    "FG-7": true
+  },
+  "figures": {
+    "pdf": "figures/minimax_ep_scaling.pdf",
+    "png": "figures/minimax_ep_scaling.png"
+  },
+  "freeze_commits": [
+    "61b66c4",
+    "5a29bb0"
+  ],
+  "fresh_evaluations": {
+    "bit_equal": true,
+    "count": 2,
+    "first_sha256": "31c092cf2e1264c55820b58a2d942c428c2c33f5414026952357ccadb725c461",
+    "second_sha256": "31c092cf2e1264c55820b58a2d942c428c2c33f5414026952357ccadb725c461"
+  },
+  "machine": {
+    "architecture": "x86_64",
+    "cpu_count": 32,
+    "python": "3.10.18",
+    "system": "Linux"
+  },
+  "n3": {
+    "expert_parallel": 256,
+    "maximum_receiver_ingress_occupancy_ps": 54648960,
+    "maximum_simultaneous_senders_per_receiver": 248,
+    "passed": true,
+    "phases": [
+      {
+        "ingress_occupancy_ps": 54648960,
+        "maximum_simultaneous_senders": 248,
+        "phase": "dispatch",
+        "receiver": 0,
+        "sender_count": 248
+      },
+      {
+        "ingress_occupancy_ps": 54648960,
+        "maximum_simultaneous_senders": 248,
+        "phase": "combine",
+        "receiver": 0,
+        "sender_count": 248
+      }
+    ]
+  },
+  "operating_point": {
+    "attention_data_parallel_equals_expert_parallel": true,
+    "generation_stride": 32,
+    "gpus_per_node": 8,
+    "input_length": 256,
+    "link_rate_bits_per_second": 400000000000,
+    "local_batch_per_attention_dp_rank": 1,
+    "moe_tensor_parallel": 1,
+    "output_length": 2,
+    "packet_profile": "rnic-cn",
+    "pipeline_parallel": 1,
+    "ring_cam_wire_capacity_bytes": 2097152,
+    "switch_shared_buffer_bytes": 33554432,
+    "tensor_parallel": 1,
+    "total_gpu_budget": 256,
+    "workload_distribution": "power_law"
+  },
+  "physical_sanity": {
+    "dispatch_plus_combine_bytes_per_rank": 195840,
+    "full_rank_serialization_floor_microseconds": 3.9168000000000003,
+    "link_bytes_per_second": 50000000000,
+    "routed_fp8_payload_per_rank_pair_bytes": 384,
+    "widest_expert_parallel": 256
+  },
+  "qwen_reference_ratio": 1.042715399805,
+  "rows": [
+    {
+      "aiconfigurator_dispatch_ms": 1.92205,
+      "aiconfigurator_step_ms": 13.984132942232176,
+      "c_passed": true,
+      "composer_quotient": 1.0,
+      "composer_step_ms": 13.984132942232176,
+      "dispatch_share": 0.13744506062262868,
+      "e_passed": true,
+      "expert_parallel": 8,
+      "fabric_messages_per_sampled_layer": 0,
+      "nvlink_messages_per_sampled_layer": 112,
+      "packet_dispatch_combine_ms": 0.02496,
+      "peer_subset": false,
+      "ratio": 0.8643398194341548,
+      "represented_bytes": 89456640,
+      "represented_messages": 7280,
+      "sample_label": "sampled layer: full peer population, one layer of 65",
+      "sampled": true,
+      "simllm_step_ms": 12.087042942232175,
+      "simulated_message_fraction": 1.0,
+      "simulated_messages_per_sampled_layer": 112
+    },
+    {
+      "aiconfigurator_dispatch_ms": 19.82220267857143,
+      "aiconfigurator_step_ms": 27.51711787974335,
+      "c_passed": true,
+      "composer_quotient": 1.0,
+      "composer_step_ms": 27.51711787974335,
+      "dispatch_share": 0.7203589694676378,
+      "e_passed": true,
+      "expert_parallel": 32,
+      "fabric_messages_per_sampled_layer": 1536,
+      "nvlink_messages_per_sampled_layer": 448,
+      "packet_dispatch_combine_ms": 4.0350336,
+      "peer_subset": false,
+      "ratio": 0.4262782480503487,
+      "represented_bytes": 396165120,
+      "represented_messages": 128960,
+      "sample_label": "sampled layer: full peer population, one layer of 65",
+      "sampled": true,
+      "simllm_step_ms": 11.72994880117192,
+      "simulated_message_fraction": 1.0,
+      "simulated_messages_per_sampled_layer": 1984
+    },
+    {
+      "aiconfigurator_dispatch_ms": 36.77934174107143,
+      "aiconfigurator_step_ms": 44.86945704576469,
+      "c_passed": true,
+      "composer_quotient": 1.0,
+      "composer_step_ms": 44.86945704576469,
+      "dispatch_share": 0.8196966079522261,
+      "e_passed": true,
+      "expert_parallel": 128,
+      "fabric_messages_per_sampled_layer": 30720,
+      "nvlink_messages_per_sampled_layer": 1792,
+      "packet_dispatch_combine_ms": 5.5890432,
+      "peer_subset": false,
+      "ratio": 0.3048657016451342,
+      "represented_bytes": 1622999040,
+      "represented_messages": 2113280,
+      "sample_label": "sampled layer: full peer population, one layer of 65",
+      "sampled": true,
+      "simllm_step_ms": 13.679158504693262,
+      "simulated_message_fraction": 1.0,
+      "simulated_messages_per_sampled_layer": 32512
+    },
+    {
+      "aiconfigurator_dispatch_ms": 51.39544921875,
+      "aiconfigurator_step_ms": 61.028924458726934,
+      "c_passed": true,
+      "composer_quotient": 1.0,
+      "composer_step_ms": 61.028924458726934,
+      "dispatch_share": 0.8421490248203223,
+      "e_passed": true,
+      "expert_parallel": 256,
+      "fabric_messages_per_sampled_layer": 15872,
+      "nvlink_messages_per_sampled_layer": 448,
+      "packet_dispatch_combine_ms": 7.1043648,
+      "peer_subset": true,
+      "ratio": 0.2742607736975033,
+      "represented_bytes": 3258777600,
+      "represented_messages": 8486400,
+      "sample_label": "sampled layer and peers: one receiver per node with full sender fan-in, one layer of 65",
+      "sampled": true,
+      "simllm_step_ms": 16.73784003997693,
+      "simulated_message_fraction": 0.125,
+      "simulated_messages_per_sampled_layer": 16320
+    }
+  ],
+  "run_commit": "df47c6532c71312d36eb96ed528f6ebd772e5952",
+  "run_state": "nonvoid",
+  "sampling": {
+    "full_population_max_width": 128,
+    "label_full": "sampled layer: full peer population, one layer of 65",
+    "label_receiver_subset": "sampled layer and peers: one receiver per node with full sender fan-in, one layer of 65",
+    "peer_population": "full through EP 128; at EP 256 sample one receiver per 8-GPU node with all 256 sources retained",
+    "receiver_stride_at_widest": 8,
+    "represented_layer_executions": 65,
+    "rule": "simulate layer 0 and multiply the serial dispatch-plus-combine layer makespan by 65; widths through EP 128 retain every directed pair, while EP 256 retains every source and one receiver at GPU-local index zero per node",
+    "sampled": true,
+    "sampled_layers": [
+      0
+    ]
+  },
+  "schema": "simllm-minimax-ep-scaling-record-v1",
+  "source_artifacts": {
+    "nccl_database": {
+      "collection_version": "2.26.2",
+      "identity": {
+        "aiconfigurator_core_version": "0.11.0",
+        "aiconfigurator_version": "0.11.0",
+        "backend": "nccl",
+        "data_slice_sha256": "e432db694195110aa39c1e1eccf1accda012e69ef68e95210d049809bb93f015",
+        "database_mode": "SILICON",
+        "database_version": "2.26.2",
+        "estimator_surface": "python",
+        "shared_layer": false,
+        "system": "h200_sxm",
+        "tool": "NVIDIA AIConfigurator"
+      },
+      "payload_sha256": "12ed4c1dc12b3d9f0f04ffecf025d0dea5599946fa36944bcb60117035d70efb",
+      "row_versions": [
+        "2.29.2"
+      ]
+    },
+    "operation_database": {
+      "identity": {
+        "aiconfigurator_core_version": "0.11.0",
+        "aiconfigurator_version": "0.11.0",
+        "backend": "trtllm",
+        "data_slice_sha256": "85e72f990f00ea457de522d0b773e678f5e067740689912df5646f6296273284",
+        "database_mode": "SILICON",
+        "database_version": "1.3.0rc10",
+        "estimator_surface": "python",
+        "shared_layer": false,
+        "system": "h200_sxm",
+        "tool": "NVIDIA AIConfigurator"
+      },
+      "payload_sha256": "0f606718c5e413e898d9ad33a3d7e803e532d5d5bd8a1c29929e7f8b2458e8ef"
+    }
+  },
+  "study": "MiniMax-M2.5 expert-parallel scaling",
+  "traffic_model_disclosure": {
+    "AIConfigurator": "half-precision NCCL all-gather plus reduce-scatter over tokens times hidden times expert width elements",
+    "SimLLM": "uniform routed FP8 expert payload over every directed rank pair, with placement, routing, queues and receiver fan-in",
+    "comparison_rule": "replace the AIConfigurator dispatch surrogate with the SimLLM packet duration on the same non-dispatch timing base; the traffic abstractions are not equivalent"
+  }
+}
