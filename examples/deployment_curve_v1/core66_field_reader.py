@@ -18,6 +18,8 @@ from typing import BinaryIO
 SCHEMA = "simllm-deployment-curve-core66-access-v1"
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 ALLOWED_RECORDS = {
+    "core65-expectations": Path("examples/deployment_curve_v1/core65_expectations.json"),
+    "core65-result": Path("examples/deployment_curve_v1/core65_physical_binding_result.json"),
     "hardware-remainder": Path("examples/deployment_curve_v1/core66_hardware_remainder.md"),
     "registry": Path("docs/modules/core.md"),
 }

@@ -38,4 +38,3 @@ resume may only continue the same allocation and must not resubmit the cell.
 The repository-facing evidence should remain below 20 MiB. Local or campaign
 bulk may use up to 20 GiB for short-lived profiler traces. No checkpoint or
 model-weight shard is copied, downloaded or retained.
-

@@ -38,6 +38,7 @@
     "model": {
       "expert_parallel_width": 12,
       "logical_experts_per_rank": 4,
+      "physical_expert_slots_per_rank": 4,
       "routed_expert_total": 48,
       "weights": "dummy-only"
     },
@@ -72,8 +73,14 @@
     {
       "difference": "routed expert total",
       "feasible": 48,
-      "registered": 288,
-      "signed_effect_expected_before_comparison": "negative remote-traffic bias under uniform routing because the local-resident share rises from 4/288 to 4/48; grouped-kernel occupancy effect is indeterminate"
+      "registered": 256,
+      "signed_effect_expected_before_comparison": "negative remote-traffic bias under uniform routing because the unique expert population falls from 256 to 48; grouped-kernel occupancy effect is indeterminate"
+    },
+    {
+      "difference": "physical expert-slot population and redundancy",
+      "feasible": "48 slots, all holding unique logical experts",
+      "registered": "288 slots for 256 unique experts; ranks 0-39 have four unique experts and ranks 40-71 have three unique experts plus one redundant slot",
+      "signed_effect_expected_before_comparison": "the feasible capture omits the registered redundant-slot cohort; routing locality and duplicate-residency effects are indeterminate and cannot be extrapolated as EP72 service"
     },
     {
       "difference": "captured transformer depth",
@@ -88,6 +95,12 @@
       "signed_effect_expected_before_comparison": "negative communication-service bias from fewer cross-node participants and less fabric contention"
     },
     {
+      "difference": "GPUs per node",
+      "feasible": 4,
+      "registered": 8,
+      "signed_effect_expected_before_comparison": "a larger fraction of peers are cross-node in the feasible topology, which can increase per-byte fabric service even while the lower total peer and node counts bias aggregate communication service downward"
+    },
+    {
       "difference": "expert residency per rank",
       "feasible": 4,
       "registered": 4,
@@ -98,6 +111,12 @@
       "feasible": "none accepted",
       "registered": "DeepEP",
       "signed_effect_expected_before_comparison": "any fallback invalidates DeepEP pricing and forces null signed movement"
+    },
+    {
+      "difference": "weight materialization",
+      "feasible": "dummy weights",
+      "registered": "pre-staged local DeepSeek-V3 model with downloads forbidden",
+      "signed_effect_expected_before_comparison": "tensor shapes and weight-read byte demand should be preserved, but routed IDs from dummy activations are not production routing statistics"
     }
   ],
   "expected_direction_freeze": {
@@ -107,6 +126,11 @@
       "no_direction_selected_before_counters": true
     },
     "deep_ep_services_absent_from_vllm": "adding nonzero dispatch and combine service increases modeled step service and moves predicted throughput downward",
+    "layer_type_composition": {
+      "dense_only_direction": "decrease",
+      "moe_only_direction": "increase",
+      "net_direction": "indeterminate until both physical services are bound"
+    },
     "joint_publication_rule": "publish movement only when both DeepEP service and the rank-preserving HBM byte correction are priced"
   },
   "forbidden": {
@@ -133,6 +157,8 @@
       "END after bounded selector completion"
     ],
     "allowed_records": {
+      "core65-expectations": "examples/deployment_curve_v1/core65_expectations.json",
+      "core65-result": "examples/deployment_curve_v1/core65_physical_binding_result.json",
       "hardware-remainder": "examples/deployment_curve_v1/core66_hardware_remainder.md",
       "registry": "docs/modules/core.md"
     },
@@ -150,7 +176,14 @@
   },
   "registered_capture_disposition": {
     "reason": "72 ranks over nine nodes are unavailable on the three-node, twelve-GPU GH200 partition",
+    "registered_unique_routed_experts": 256,
+    "registered_expert_slots": 288,
     "status": "BLOCKED_IMPOSSIBLE_ON_PROJECT_CLUSTER"
+  },
+  "scale_checks": {
+    "assignment_compute_candidate": "1/9",
+    "count_and_resident_weight_candidate": "1/64",
+    "routing_evidence_required": "per layer, rank, routed expert ID, assignment count and local physical slot ID"
   },
   "schema": "simllm-deployment-curve-core66-reader-protocol-v1",
   "service_multiplier_freeze": {
@@ -162,4 +195,3 @@
   },
   "task": "CORE-66"
 }
-

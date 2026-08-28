@@ -144,6 +144,7 @@ def test_protocol_freezes_feasible_cell_and_publication_gate() -> None:
     }
     assert capture["model"]["expert_parallel_width"] == 12
     assert capture["model"]["logical_experts_per_rank"] == 4
+    assert capture["model"]["physical_expert_slots_per_rank"] == 4
     assert capture["model"]["routed_expert_total"] == 48
     assert capture["decode"]["requests_per_rank"] == 32
     assert capture["decode"]["kv_length_per_rank"] == 2000
@@ -151,6 +152,23 @@ def test_protocol_freezes_feasible_cell_and_publication_gate() -> None:
     assert capture["decode"]["measured_iterations"] == 1
     assert protocol["comparison_gate"]["never_publish_downward_correction_alone"] is True
     assert protocol["reader"]["forbidden_access_ledger_expected"] == []
+    assert protocol["registered_capture_disposition"]["registered_unique_routed_experts"] == 256
+    assert protocol["registered_capture_disposition"]["registered_expert_slots"] == 288
+    assert protocol["expected_direction_freeze"]["layer_type_composition"] == {
+        "dense_only_direction": "decrease",
+        "moe_only_direction": "increase",
+        "net_direction": "indeterminate until both physical services are bound",
+    }
+    assert protocol["scale_checks"] == {
+        "assignment_compute_candidate": "1/9",
+        "count_and_resident_weight_candidate": "1/64",
+        "routing_evidence_required": (
+            "per layer, rank, routed expert ID, assignment count and local physical slot ID"
+        ),
+    }
+    assert protocol["reader"]["allowed_records"]["core65-result"].endswith(
+        "core65_physical_binding_result.json"
+    )
     assert protocol["service_multiplier_freeze"] == {
         "common": "61/4",
         "dense": 1,
