@@ -1101,8 +1101,8 @@ plus 195,840 combine bytes per rank. The isolated-engine default is unchanged.
 The landed NVLink domain from `nvlink_flow_dynamics_v1` and
 `nvlink_rnic_comparison_v1` supplies the intra-node transport authority;
 TRAF-76 owns its packet-arm binding and the fixed collective overheads.
-TRAF-74 owns observed routing geometry, TRAF-75 owns supported-path directional
-precision, TRAF-73 owns hardware transport calibration, and TRAF-26 owns
+TRAF-78 owns observed routing geometry, TRAF-75 owns supported-path directional
+precision, TRAF-77 owns hardware transport calibration, and TRAF-26 owns
 complete production peer workloads.
 
 NVLink hardware incast identification is long-flow only. Sender launches on
@@ -1151,7 +1151,7 @@ route to those higher degrees.
   ceiling; then run one new short paced cell. TRAF-74 stays open until a
   non-void comparison publishes all six per-cell verdicts.
 
-- TRAF-73 (Precision; P1; L): replace the MiniMax scaling study's borrowed
+- TRAF-77 (Precision; P1; L): replace the MiniMax scaling study's borrowed
   32 MiB switch-wide buffer and uncalibrated rnic-cn transport service with
   independently observed multi-node phase timing, queueing and buffering
   evidence. The corrected study path supplies full realized populations,
@@ -1166,10 +1166,10 @@ route to those higher degrees.
   demonstrates an end-to-end TTFT or TPOT change through the supported metric
   chain. The explicit uncalibrated transport mode remains selectable and
   reproduces the corrected result exactly when hardware calibration is
-  disabled. TRAF-74 owns observed assignment geometry, TRAF-75 owns
+  disabled. TRAF-78 owns observed assignment geometry, TRAF-75 owns
   directional precision selection, TRAF-26 supplies complete peer workloads,
   and COMP-88 separately owns the donor NCCL extrapolation.
-- TRAF-74 (Precision; P1; L): replace the MiniMax full-population packet
+- TRAF-78 (Precision; P1; L): replace the MiniMax full-population packet
   arm's deterministic balanced assignment surrogate with independently
   observed per-rank expert assignments. The corrected surrogate routes whole
   token-expert assignments only to destinations they reach and preserves its
@@ -1188,7 +1188,7 @@ route to those higher degrees.
   combine, an explicitly enabled low-precision combine mode, and the symmetric
   bypass, then demonstrates the expected byte and TTFT or TPOT changes through
   the supported metric chain. This entry owns combine-precision selection;
-  TRAF-74 owns destination geometry and TRAF-73 owns transport calibration.
+  TRAF-78 owns destination geometry and TRAF-77 owns transport calibration.
 - TRAF-76 (Precision; P1; L): price intra-node collective transport and fixed
   collective overheads in the MiniMax packet arm, including binding the landed
   NVLink domain into every intra-node leg. The current arm presents zero
@@ -1202,8 +1202,8 @@ route to those higher degrees.
   errors, and reproduce held-out completion within the larger of 10 percent or
   two GPU cycles. The explicit bypass preserves every accepted timestamp, byte
   count, completion order and random draw exactly. Acceptance also demonstrates
-  the expected TTFT or TPOT change through the supported metric chain. TRAF-73
-  owns cross-node transport calibration, TRAF-74 owns destination geometry,
+  the expected TTFT or TPOT change through the supported metric chain. TRAF-77
+  owns cross-node transport calibration, TRAF-78 owns destination geometry,
   TRAF-75 owns directional precision selection, and COMP-88 owns independent
   calibration of the external NCCL extrapolation.
 - TRAF-20 (Precision; P2; M): qualify the delivered `loggopsim-ideal`

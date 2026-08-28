@@ -1877,7 +1877,7 @@ remaining donor-extrapolation precision gap.
   and the new model's held-out median and p95 error, keeps source identity on
   every term, reproduces the four MiniMax pass cells through the selected
   calibration, and preserves every Qwen parity byte plus the current
-  extrapolation exactly when the measured arm is disabled. TRAF-73 separately
+  extrapolation exactly when the measured arm is disabled. TRAF-77 separately
   owns routed expert traffic and receiver-side packet calibration; the two
   abstractions are never fitted to each other.
 - COMP-1 (Precision; P1; L): complete production compute calibration.

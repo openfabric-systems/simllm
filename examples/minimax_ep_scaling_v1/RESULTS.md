@@ -101,10 +101,10 @@ an opaque external NCCL-table cost model and a direct packet Clos cost model.
 No existing task changes status and no milestone advances. TRAF-76 is
 registered to own intra-node collective transport and fixed collective
 overhead pricing in the packet arm, including binding the landed NVLink domain
-into intra-node legs. TRAF-74 owns replacing the deterministic balanced routing
+into intra-node legs. TRAF-78 owns replacing the deterministic balanced routing
 geometry with observed per-rank
 assignments. TRAF-75 explicitly owns propagating dispatch and combine
-precision from supported framework configuration. TRAF-73 is narrowed to
+precision from supported framework configuration. TRAF-77 is narrowed to
 hardware transport calibration, including queue service, phase makespan,
 buffering and receiver occupancy. TRAF-26 continues to own complete production
 peer workloads, and COMP-88 continues to own independent calibration of the
@@ -115,7 +115,7 @@ external NCCL extrapolation.
 The run does not isolate contention, determine which communication strategy a
 MiniMax deployment uses, validate either timing model against H200 hardware,
 or turn Family S into a precision claim. It does not make Family C independent
-evidence for Family E. It does not close TRAF-26, TRAF-73, TRAF-74, TRAF-75,
+evidence for Family E. It does not close TRAF-26, TRAF-77, TRAF-78, TRAF-75,
 TRAF-76 or COMP-88, and it does not change accepted default traffic timestamps,
 the imported operation artifact or the prior Qwen parity result.
 
