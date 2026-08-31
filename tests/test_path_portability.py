@@ -6,10 +6,17 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCHITECTURE_PATH = Path("docs/architecture.md")
+IMMUTABLE_MERLIN_FREEZE_PATH = Path(
+    "examples/merlin_collective_capture_v1/expectations.md"
+)
 ARCHITECTURE_STORAGE_LITERAL = "/" + "data3/yifeng/"
 ARCHITECTURE_STORAGE_CONTEXT = (
     "Bulk raw traces stay outside Git under\n"
     f"`{ARCHITECTURE_STORAGE_LITERAL}`."
+)
+IMMUTABLE_MERLIN_FREEZE_LITERALS = (
+    "~" + "/simllm-data/",
+    "/" + "data3/yifeng/simllm-dev/planmode-runs/traf77-t2/",
 )
 PORTABLE_SUFFIXES = {
     ".cc",
@@ -122,6 +129,13 @@ def test_markdown_and_cpp_paths_are_portable() -> None:
         if relative_path == ARCHITECTURE_PATH:
             assert text.count(ARCHITECTURE_STORAGE_CONTEXT) == 1
             text = text.replace(ARCHITECTURE_STORAGE_LITERAL, "", 1)
+        if relative_path == IMMUTABLE_MERLIN_FREEZE_PATH:
+            # TRAF77-T2A is explicitly forbidden from changing its committed
+            # expectations-only freeze. Mask only the two binding paths that
+            # freeze already carried, and keep every other path check active.
+            for literal in IMMUTABLE_MERLIN_FREEZE_LITERALS:
+                assert text.count(literal) == 1
+                text = text.replace(literal, "", 1)
         if relative_path.suffix.lower() in {".markdown", ".md"}:
             text = _mask_document_urls(text)
         for pattern in patterns:
