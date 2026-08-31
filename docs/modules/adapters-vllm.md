@@ -673,19 +673,22 @@ framework-owned join; see
 
 The first VLLM-11 normalization slice is complete. The ordered bridge
 qualifies one stock manager against a pinned uniform geometry, maps native to
-stable logical request IDs, and emits aggregate-pool `KvCacheWork`: reserve
-before each observed successful allocation, exact new block IDs, prefix bind
-then touch, release then free, eviction before the allocation that reuses a
-cached block, and a capacity-shaped recompute interval after preemption. The
-pool block byte shape is derived exactly as two times layers times KV heads
-times head size times dtype bytes times block tokens. Every operation is a
-read-only projection of the CPU-oracle sidecar and has zero service bytes;
-vLLM remains the cache authority. `SIMLLM_VLLM_ORACLE_SCOPE=kv` installs only
-the same stock manager, block-pool and preemption observers for deterministic
-simulated-worker capture; the unset scope retains the accepted full CPU-oracle
-plugin bytes. VLLM-42 through VLLM-45 own the facts that the sidecar does not
-yet identify, and VLLM-11 stays open on their precision join rather than
-treating this projection as complete lifecycle evidence.
+stable logical request IDs, and emits only sidecar-witnessed aggregate-pool
+`KvCacheWork`: exact new block IDs, prefix bind then touch, release then free,
+eviction before the allocation that reuses a cached block, and a
+capacity-shaped recompute interval after preemption. The bridge fails closed
+on an unknown sidecar kind. The pool block byte shape is derived exactly as
+two times layers times KV heads times head size times dtype bytes times block
+tokens. Every operation is a read-only projection of the CPU-oracle sidecar
+and has zero service bytes; vLLM remains the cache authority.
+`SIMLLM_VLLM_ORACLE_SCOPE=kv` installs only the same stock manager, block-pool
+and preemption observers for deterministic simulated-worker capture; the
+unset scope retains the accepted full CPU-oracle plugin bytes. The supported
+vLLM v0.27.1 pin has no `max_num_partial_prefills` or
+`max_long_partial_prefills` scheduler fields, so neither appears in adapter
+configuration or causal provenance. VLLM-42 through VLLM-45 own the facts that
+the sidecar does not yet identify, and VLLM-11 stays open on their precision
+join rather than treating this projection as complete lifecycle evidence.
 
 ## Open tasks
 

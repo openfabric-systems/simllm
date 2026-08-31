@@ -1065,7 +1065,7 @@ def test_chunked_prefill_then_decode_translation():
 
 
 def test_mixed_batch_translation_and_bookkeeping():
-    translator = StepTranslator()
+    translator = StepTranslator(emit_sampled_request_ids=True)
     output = FakeSchedulerOutput(
         scheduled_new_reqs=[
             FakeNewRequest("new", prompt(300)),
@@ -1103,6 +1103,27 @@ def test_mixed_batch_translation_and_bookkeeping():
     # The two prefills plus the decoding request are still tracked; finished
     # ids never entered the table.
     assert len(translator) == 3
+
+
+def test_exported_step_translator_defaults_sampled_identities_off():
+    output = FakeSchedulerOutput(
+        scheduled_new_reqs=[FakeNewRequest("sampled", prompt(2))],
+        num_scheduled_tokens={"sampled": 2},
+    )
+
+    default_step = translate_scheduler_output(
+        StepTranslator(), output, step_index=0, virtual_time_ps=0
+    )
+    opted_in_step = translate_scheduler_output(
+        StepTranslator(emit_sampled_request_ids=True),
+        output,
+        step_index=0,
+        virtual_time_ps=0,
+    )
+
+    assert default_step.record.num_sampled == 1
+    assert default_step.record.sampled_request_ids is None
+    assert opted_in_step.record.sampled_request_ids == ["sampled"]
 
 
 def test_finished_requests_are_forgotten():
@@ -2052,7 +2073,7 @@ def test_framework_observations_cannot_be_silently_sent_to_a_legacy_sink():
 # Record export
 
 def test_step_records_dump_is_json_round_trippable(tmp_path):
-    translator = StepTranslator()
+    translator = StepTranslator(emit_sampled_request_ids=True)
     records = []
     admit = FakeSchedulerOutput(
         scheduled_new_reqs=[FakeNewRequest("r0", prompt(16), num_computed_tokens=8)],

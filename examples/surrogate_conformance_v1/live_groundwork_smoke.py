@@ -13,11 +13,12 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-EXPECTED_VLLM_VERSION = "0.26.0"
+EXPECTED_VLLM_VERSION = "0.27.1"
 EXPECTED_SCHEDULER_SHA256 = (
-    "2ed2a550b6558b2495eda845a97ae38bcf0225027b9e25fbf00fc3880c1d3941"
+    "c67bda2886b52865ddafabaae7d797c359e930752f374421a33e537d94a5f45a"
 )
 REQUEST_IDS = ("smoke-r0", "smoke-r1")
+PRESSURE_REQUEST_IDS = ("pressure-r0", "pressure-r1", "pressure-r2")
 PROMPT_TOKEN_IDS = tuple(range(32, 64))
 NUM_GPU_BLOCKS = 8
 BLOCK_TOKENS = 16
@@ -129,6 +130,29 @@ def _run_requests(
             llm.llm_engine.step()
 
 
+def _run_allocation_pressure(llm: Any, sampling_params: Any) -> None:
+    for index, request_id in enumerate(PRESSURE_REQUEST_IDS):
+        prompt_start = 256 + index * len(PROMPT_TOKEN_IDS)
+        assigned = llm.llm_engine.add_request(
+            request_id,
+            {
+                "prompt_token_ids": list(
+                    range(prompt_start, prompt_start + len(PROMPT_TOKEN_IDS))
+                )
+            },
+            sampling_params(
+                temperature=0.0,
+                max_tokens=31,
+                min_tokens=1,
+                detokenize=False,
+            ),
+        )
+        if assigned != request_id:
+            raise RuntimeError("vLLM changed an explicit pressure request identity")
+    while llm.llm_engine.has_unfinished_requests():
+        llm.llm_engine.step()
+
+
 def _sampled_summary(records: list[Any]) -> dict[str, object]:
     from simllm.core import step_record_to_json
 
@@ -200,12 +224,22 @@ def _kv_summary(output_dir: Path, worker: Any) -> dict[str, object]:
     payload = vllm_kv_projection_to_json(projection)
     _write_json(output_dir / "kv_projection.json", payload)
     actions = [row["action"] for row in payload["operations"]]
-    required = {"reserve", "allocate", "release", "free", "bind-prefix", "touch"}
+    required = {
+        "allocate",
+        "bind-prefix",
+        "free",
+        "recompute",
+        "release",
+        "touch",
+    }
     missing = sorted(required - set(actions))
     if missing:
         raise RuntimeError(f"KV smoke did not reach required operations: {missing}")
+    if "reserve" in actions:
+        raise RuntimeError("KV bridge emitted an unwitnessed reserve operation")
     return {
         "action_counts": dict(sorted(Counter(actions).items())),
+        "allocation_failure_preemptions": actions.count("recompute"),
         "pool": payload["pool"],
         "source_event_count": payload["source_event_count"],
         "worked_example": payload["operations"][:4],
@@ -264,13 +298,15 @@ def _run_smoke(args: argparse.Namespace) -> dict[str, object]:
         if worker is None:
             raise RuntimeError("pinned engine did not construct SimWorker")
         if args.piece == "kv":
-            mark_oracle_capture_start(REQUEST_IDS)
+            mark_oracle_capture_start((*REQUEST_IDS, *PRESSURE_REQUEST_IDS))
         _run_requests(
             llm,
             SamplingParams,
             sequential=args.piece == "kv",
             max_tokens=2 if args.piece == "kv" else 1,
         )
+        if args.piece == "kv":
+            _run_allocation_pressure(llm, SamplingParams)
 
         if args.piece == "sampled":
             summary = _sampled_summary(worker.step_records)

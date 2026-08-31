@@ -534,7 +534,7 @@ class StepTranslator:
     its own: preemption resets it.
     """
 
-    def __init__(self, *, emit_sampled_request_ids: bool = True) -> None:
+    def __init__(self, *, emit_sampled_request_ids: bool = False) -> None:
         if not isinstance(emit_sampled_request_ids, bool):
             raise TypeError("emit_sampled_request_ids must be a boolean")
         self._emit_sampled_request_ids = emit_sampled_request_ids

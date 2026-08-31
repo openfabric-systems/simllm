@@ -255,7 +255,12 @@ def _observe_eviction(
 
 
 def _observe_preemption(
-    original: Callable[..., Any], scheduler: Any, request: Any, timestamp: float
+    original: Callable[..., Any],
+    scheduler: Any,
+    request: Any,
+    timestamp: float,
+    *,
+    drop_stale_output: bool = False,
 ) -> Any:
     request_id = str(request.request_id)
     try:
@@ -264,7 +269,12 @@ def _observe_preemption(
         )
     except KeyError:
         block_ids = []
-    result = original(scheduler, request, timestamp)
+    result = original(
+        scheduler,
+        request,
+        timestamp,
+        drop_stale_output=drop_stale_output,
+    )
     _emit(
         "preemption",
         block_ids=block_ids,

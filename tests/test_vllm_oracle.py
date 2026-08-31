@@ -149,6 +149,55 @@ def test_vllm_final_counter_is_scheduler_owned(monkeypatch, tmp_path):
     ]
 
 
+def test_vllm_preemption_observer_forwards_0271_drop_stale_output(
+    monkeypatch, tmp_path
+):
+    path = configure_sidecar(monkeypatch, tmp_path)
+    cache = manager()
+    cache.get_blocks = lambda _request_id: FakeBlocks([5, 6])
+    scheduler = SimpleNamespace(kv_cache_manager=cache)
+    request = SimpleNamespace(request_id="pressure-r0")
+    calls = []
+
+    def preempt(
+        observed_scheduler,
+        observed_request,
+        timestamp,
+        *,
+        drop_stale_output=False,
+    ):
+        calls.append(
+            (
+                observed_scheduler,
+                observed_request,
+                timestamp,
+                drop_stale_output,
+            )
+        )
+        return "preempted"
+
+    returned = oracle._observe_preemption(
+        preempt,
+        scheduler,
+        request,
+        1.25,
+        drop_stale_output=True,
+    )
+
+    assert returned == "preempted"
+    assert calls == [(scheduler, request, 1.25, True)]
+    assert rows(path) == [
+        {
+            "block_ids": [5, 6],
+            "kind": "preemption",
+            "reason": "scheduler-recompute",
+            "request_id": "pressure-r0",
+            "schema": ORACLE_OBSERVATION_SCHEMA,
+            "token_count": 64,
+        }
+    ]
+
+
 def test_vllm_worker_qualification_records_zero_cuda_allocation_delta(
     monkeypatch, tmp_path
 ):

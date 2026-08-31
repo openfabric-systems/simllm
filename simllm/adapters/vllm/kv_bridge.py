@@ -28,6 +28,20 @@ VllmKvOperation: TypeAlias = tuple[str, KvCacheWork]
 _EVENT_KINDS = frozenset(
     {"allocation", "eviction", "prefix-hit", "preemption", "release"}
 )
+_KNOWN_NON_EVENT_KINDS = frozenset(
+    {
+        "capture-start",
+        "dispatch-path-qualified",
+        "dispatch-qualified",
+        "kv-manager-qualified",
+        "plugin-active",
+        "request-final-counters",
+        "request-mapping",
+        "submission-group-start",
+        "worker-qualified",
+    }
+)
+_KNOWN_KINDS = _EVENT_KINDS | _KNOWN_NON_EVENT_KINDS
 
 
 def _positive_int(name: str, value: object) -> int:
@@ -227,6 +241,12 @@ def normalize_vllm_kv_events(
                 f"sidecar row {row_index} has unsupported schema "
                 f"{row.get('schema')!r}"
             )
+        kind = row.get("kind")
+        if kind not in _KNOWN_KINDS:
+            raise ValueError(
+                f"sidecar row {row_index} has unknown event kind {kind!r}; "
+                "update the KV normalization bridge before replaying this sidecar"
+            )
 
     managers = [
         (index, row)
@@ -341,14 +361,6 @@ def normalize_vllm_kv_events(
                 raise ValueError(f"sidecar row {row_index} allocation has no block")
             token_start = next_token.get(request_id, 0)
             token_end = token_start + tokens
-            append(
-                row_index,
-                "reserve",
-                KvCacheAction.RESERVE,
-                request_id=request_id,
-                token_start=token_start,
-                token_end=token_end,
-            )
             append(
                 row_index,
                 "allocate",

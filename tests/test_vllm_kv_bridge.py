@@ -104,7 +104,6 @@ def test_bridge_emits_ordered_identity_and_capacity_projection():
         KvCacheAction.BIND_PREFIX,
         KvCacheAction.TOUCH,
         KvCacheAction.EVICT,
-        KvCacheAction.RESERVE,
         KvCacheAction.ALLOCATE,
         KvCacheAction.RELEASE,
         KvCacheAction.FREE,
@@ -115,7 +114,6 @@ def test_bridge_emits_ordered_identity_and_capacity_projection():
         "vllm-kv-000002-bind-prefix",
         "vllm-kv-000002-touch",
         "vllm-kv-000003-evict",
-        "vllm-kv-000004-reserve",
         "vllm-kv-000004-allocate",
         "vllm-kv-000005-release",
         "vllm-kv-000005-free",
@@ -128,14 +126,12 @@ def test_bridge_emits_ordered_identity_and_capacity_projection():
         (0, 16),
         (0, 16),
         (16, 48),
-        (16, 48),
         (0, 48),
         (0, 48),
         (0, 32),
     ]
-    assert works[3].block_ids == ()
-    assert works[4].block_ids == ("2", "3")
-    assert works[5].block_ids == ("3", "2", "0")
+    assert works[3].block_ids == ("2", "3")
+    assert works[4].block_ids == ("3", "2", "0")
     assert all(work.pool_id == "vllm:kv:rank0" for work in works)
     assert all(work.request_id == "request-a" for work in works if work.request_id)
     assert all(work.dtype == "bfloat16" for work in works)
@@ -230,4 +226,15 @@ def test_bridge_requires_one_stock_manager_qualification():
         normalize_vllm_kv_events(rows[1:], _geometry())
     rows.insert(1, dict(rows[0]))
     with pytest.raises(ValueError, match="exactly one"):
+        normalize_vllm_kv_events(rows, _geometry())
+
+
+def test_bridge_fails_closed_on_unknown_sidecar_event_kind():
+    rows = _full_sidecar()
+    rows.insert(2, _row("future-capacity-decision", request_id="engine-r0"))
+
+    with pytest.raises(
+        ValueError,
+        match="unknown event kind 'future-capacity-decision'",
+    ):
         normalize_vllm_kv_events(rows, _geometry())
