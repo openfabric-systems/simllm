@@ -73,6 +73,7 @@ def _config(
     blocks: int = 16,
     reserve: SurrogateReserveMode = SurrogateReserveMode.NONE,
     watermark: float = 0.0,
+    prefix_caching: bool = True,
 ) -> SurrogateLoopConfig:
     return SurrogateLoopConfig(
         resolved_max_num_scheduled_tokens=budget,
@@ -85,6 +86,7 @@ def _config(
         num_kv_blocks=blocks,
         reserve_mode=reserve,
         watermark=watermark,
+        enable_prefix_caching=prefix_caching,
     )
 
 
@@ -168,6 +170,7 @@ def test_registered_loop_stamp_and_causal_tuple_are_explicit() -> None:
         ("resolved_max_num_scheduled_tokens", 7),
         ("max_num_seqs", 3),
         ("enable_chunked_prefill", False),
+        ("enable_prefix_caching", True),
         ("long_prefill_token_threshold", 5),
         ("max_model_len", 96),
         ("queue_policy", "priority"),
@@ -193,6 +196,8 @@ def test_registered_loop_stamp_and_causal_tuple_are_explicit() -> None:
 def test_registered_loop_refuses_an_unregistered_block_or_stamp() -> None:
     with pytest.raises(ValueError, match="scheduler_block_size must be 16"):
         replace(_config(), scheduler_block_size=32)
+    with pytest.raises(TypeError, match="enable_prefix_caching must be a boolean"):
+        replace(_config(), enable_prefix_caching=1)
 
     with pytest.raises(ValueError, match="ESTIMATE-LOOP"):
         SurrogateServingLoop(
@@ -477,6 +482,34 @@ def test_f4_reverse_freeing_and_lazy_lru_eviction_order() -> None:
         KvCacheAction.WRITE,
         KvCacheAction.RELEASE,
     ]
+
+
+@pytest.mark.parametrize(
+    ("prefix_caching", "expected_free_blocks"),
+    [
+        (True, (1, 2, 3)),
+        (False, (2, 3, 1)),
+    ],
+)
+def test_0271_cache_disabled_release_appends_for_locality(
+    prefix_caching: bool,
+    expected_free_blocks: tuple[int, ...],
+) -> None:
+    loop = SurrogateServingLoop(
+        _config(
+            budget=4,
+            max_num_seqs=1,
+            blocks=4,
+            prefix_caching=prefix_caching,
+        ),
+        (_request("short", 1),),
+        _pool(4),
+        _stamp(),
+    )
+
+    loop.step(step_sink=_fixed_pricer())
+
+    assert loop.free_block_ids == expected_free_blocks
 
 
 def test_f4_content_miss_does_not_alias_equal_length_prompts() -> None:

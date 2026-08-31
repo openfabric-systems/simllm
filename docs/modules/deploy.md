@@ -82,9 +82,9 @@ backend, allocating a GPU or importing a serving framework.
   join between planning evidence and the promoted run.
 - `SurrogateServingLoop` is the framework-free continuous-batching estimator.
   Its immutable causal tuple fixes the scheduled-token budget, sequence cap,
-  chunked-prefill mode, long-prefill threshold, model length, queue policy,
-  16-token scheduler block geometry, block count, reservation mode and
-  watermark. Ordered `SurrogateRequest` rows enter through
+  chunked-prefill mode, prefix-cache enablement, long-prefill threshold, model
+  length, queue policy, 16-token scheduler block geometry, block count,
+  reservation mode and watermark. Ordered `SurrogateRequest` rows enter through
   `RequestAdmissionGate`. The loop owns scheduling, preemption, recompute and
   prefix-cache decisions, emits complete `StepRecord` rows plus ordered
   `KvCacheWork`, and advances one virtual clock only to the `StepResult`
@@ -131,16 +131,21 @@ machine. Structural placement rendering, SGLang-side candidate construction,
 parallel scanning and promoted simulation remain explicit optional
 integrations under DEPLOY-2, DEPLOY-3, DEPLOY-7 and DEPLOY-8.
 
-The single-engine `ESTIMATE-LOOP` path implements the pinned synchronous
-continuous-batching rules over virtual arrivals: running-before-waiting budget
-subtraction, FCFS and native priority queues, sequence admission limits,
-chunked and threshold-limited prefill, recompute preemption, full-extent prefix
-hashing, lazy least-recently-used eviction, full-input reservation and
-watermark headroom. Its records carry explicit sampled identities, one-time
-cached counts, post-step contexts, same-step preemptions and next-step finished
-identities. Multi-pool sessions, additional priority-policy modes, selectable
-prefix salts and interpreter pins, and wall-timed arrivals are separate opt-in
-extensions under DEPLOY-14 through DEPLOY-17.
+The single-engine `ESTIMATE-LOOP` path implements the pinned vLLM v0.27.1
+synchronous continuous-batching rules over virtual arrivals:
+running-before-waiting budget subtraction, FCFS and native priority queues,
+sequence admission limits, chunked and threshold-limited prefill, recompute
+preemption, full-extent prefix hashing, lazy least-recently-used eviction,
+full-input reservation and watermark headroom. When prefix caching is off,
+released hashless blocks append to the free queue for locality; the enabled
+path retains its hashless-prepend and cached-tail ordering. The supported pin
+has no `max_num_partial_prefills` or `max_long_partial_prefills` fields, so
+neither is a surrogate input or provenance field. Records carry explicit
+sampled identities, one-time cached counts, post-step contexts, same-step
+preemptions and next-step finished identities. Multi-pool sessions, additional
+priority-policy modes, selectable prefix salts and interpreter pins, and
+wall-timed arrivals are separate opt-in extensions under DEPLOY-14 through
+DEPLOY-17.
 
 The nonvoid
 [frontier comparison](../../examples/frontier_comparison_v1/RESULTS.md) binds

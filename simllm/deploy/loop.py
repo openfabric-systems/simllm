@@ -7,7 +7,7 @@ existing :class:`~simllm.core.StepRecord` and
 each decision, and the loop advances its one virtual clock to that
 ``StepResult`` exactly as the live adapter does.
 
-Source references in this module are relative to the pinned vLLM 0.26.0
+Source references in this module are relative to the pinned vLLM 0.27.1
 package. They are the implementation evidence frozen by the P3 source audit.
 """
 
@@ -183,6 +183,7 @@ class SurrogateLoopConfig:
     num_kv_blocks: int
     reserve_mode: SurrogateReserveMode
     watermark: float
+    enable_prefix_caching: bool = True
 
     def __post_init__(self) -> None:
         _integer(
@@ -220,6 +221,8 @@ class SurrogateLoopConfig:
             raise TypeError("config.watermark must be a finite number")
         if not math.isfinite(float(self.watermark)) or self.watermark < 0:
             raise ValueError("config.watermark must be finite and nonnegative")
+        if not isinstance(self.enable_prefix_caching, bool):
+            raise TypeError("config.enable_prefix_caching must be a boolean")
 
     @property
     def watermark_blocks(self) -> int:
@@ -241,6 +244,7 @@ class SurrogateLoopConfig:
             ),
             ("max_num_seqs", self.max_num_seqs),
             ("enable_chunked_prefill", self.enable_chunked_prefill),
+            ("enable_prefix_caching", self.enable_prefix_caching),
             ("long_prefill_token_threshold", self.long_prefill_token_threshold),
             ("max_model_len", self.max_model_len),
             ("queue_policy", self.queue_policy.value),
@@ -552,6 +556,8 @@ class _KvBlockPool:
         ``v1/core/single_type_kv_cache_manager.py:703-751``.
         """
 
+        if not self.config.enable_prefix_caching:
+            return [], 0
         max_hit_length = request.num_tokens - 1
         max_blocks = max_hit_length // self.config.scheduler_block_size
         hits: list[int] = []
@@ -719,19 +725,25 @@ class _KvBlockPool:
                 token_end=capacity_end,
             )
 
-        # vLLM installs hashes for all complete extents covered by this schedule
-        # in ``allocate_slots`` (``kv_cache_manager.py:493-502`` and
-        # ``single_type_kv_cache_manager.py:421-453``).
-        hashes = self._hashes(request)
-        full_blocks = target_tokens // self.config.scheduler_block_size
-        for index in range(full_blocks):
-            block = self.blocks[request.block_ids[index]]
-            block_hash = hashes[index]
-            if block.block_hash is None:
-                block.block_hash = block_hash
-                self.prefix_blocks.setdefault(block_hash, []).append(block.block_id)
-            elif block.block_hash != block_hash:
-                raise RuntimeError("request block hash changed while still referenced")
+        if self.config.enable_prefix_caching:
+            # vLLM installs hashes for all complete extents covered by this
+            # schedule in ``allocate_slots``
+            # (``kv_cache_manager.py:493-502`` and
+            # ``single_type_kv_cache_manager.py:421-453``).
+            hashes = self._hashes(request)
+            full_blocks = target_tokens // self.config.scheduler_block_size
+            for index in range(full_blocks):
+                block = self.blocks[request.block_ids[index]]
+                block_hash = hashes[index]
+                if block.block_hash is None:
+                    block.block_hash = block_hash
+                    self.prefix_blocks.setdefault(block_hash, []).append(
+                        block.block_id
+                    )
+                elif block.block_hash != block_hash:
+                    raise RuntimeError(
+                        "request block hash changed while still referenced"
+                    )
         write_start = prefix_tokens if prefix_blocks else request.computed_tokens
         if target_tokens > write_start:
             # This zero-byte marker makes full extents reusable by the shared KV
@@ -772,8 +784,9 @@ class _KvBlockPool:
             token_end=capacity_tokens,
             cause=cause,
         )
-        unhashed: list[int] = []
-        hashed: list[int] = []
+        prepend_blocks: list[int] = []
+        append_blocks: list[int] = []
+        freed_blocks: list[int] = []
         for block_id in ordered:
             block = self.blocks[block_id]
             if request.request_id not in block.owners:
@@ -781,19 +794,25 @@ class _KvBlockPool:
             block.owners.remove(request.request_id)
             if block.ref_count == 0:
                 if block.block_hash is None:
-                    unhashed.append(block_id)
+                    freed_blocks.append(block_id)
+                if block.block_hash is None and self.config.enable_prefix_caching:
+                    prepend_blocks.append(block_id)
                 else:
-                    hashed.append(block_id)
-        self.free_queue = deque((*unhashed, *self.free_queue))
-        self.free_queue.extend(hashed)
-        if unhashed:
+                    append_blocks.append(block_id)
+        # vLLM 0.27.1 appends every block when caching is disabled so the next
+        # allocation keeps locality. With caching enabled, never-cacheable
+        # hashless blocks retain the prior prepend behavior and cached blocks
+        # remain at the least-recently-used tail.
+        self.free_queue = deque((*prepend_blocks, *self.free_queue))
+        self.free_queue.extend(append_blocks)
+        if freed_blocks:
             append(
                 "free",
                 KvCacheAction.FREE,
                 request_id=request.request_id,
-                block_ids=tuple(str(block_id) for block_id in unhashed),
+                block_ids=tuple(str(block_id) for block_id in freed_blocks),
                 token_start=0,
-                token_end=len(unhashed) * self.config.scheduler_block_size,
+                token_end=len(freed_blocks) * self.config.scheduler_block_size,
                 cause=cause,
             )
         request.block_ids.clear()
