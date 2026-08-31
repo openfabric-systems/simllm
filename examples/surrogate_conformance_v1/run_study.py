@@ -2300,6 +2300,41 @@ def _render_results(
             f"| `{change['id']}` | {change['finding_class']} | "
             f"{change['correction']} |"
         )
+    mutation_guard = next(
+        row
+        for row in record["guards"]
+        if row["cell_id"] == "end-to-end-mutation-controls"
+    )
+    kv_mutation = mutation_guard["actual"]["kv_mutation"]
+    lines.extend(
+        [
+            "",
+            "### Evaluated mutation control",
+            "",
+            (
+                "The KV control is re-pointed to the corrected passing row "
+                f"`{kv_mutation['source_cell']}`. Its baseline has "
+                f"{kv_mutation['baseline_mismatch_count']} mismatches and is "
+                f"{kv_mutation['baseline_status']}; after one KV action mutation "
+                f"it has {kv_mutation['mutant_mismatch_count']} mismatch and is "
+                f"{kv_mutation['mutant_status']}. The asserted PASS-to-FAIL "
+                f"transition is {kv_mutation['pass_to_fail']}. The independent "
+                "record and pricing mutations were also detected."
+            ),
+            "",
+            "### Frozen F6 accounting result",
+            "",
+            (
+                "F6 is scored without relaxation and fails all three rows. The "
+                "two prefix-free rows have identical priced StepResult values but "
+                "the surrogate carries RESERVE and WRITE accounting absent from "
+                "the live sidecar. The cache-enabled row has those differences, "
+                "the existing step-index mismatch, and FREE-accounting divergence. "
+                "VLLM-42 through VLLM-44 own the missing native service, content "
+                "state and pre-decision observations; none is dropped from F6."
+            ),
+        ]
+    )
     free_observations = [
         (row["cell_id"], row["actual"]["free_projection_observation"])
         for row in record["checks"]

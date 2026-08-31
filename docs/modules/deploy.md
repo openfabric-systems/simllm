@@ -149,14 +149,24 @@ DEPLOY-17.
 
 The nonvoid
 [surrogate conformance study](../../examples/surrogate_conformance_v1/RESULTS.md)
-passes the frozen budget, chunk-boundary and admission surfaces exactly: F1 is
-4 of 4, F2 is 8 of 8 and F5 is 4 of 4. It does not certify the loop. F3 is 0
-of 4, F4 is 0 of 3, F6 is 2 of 3, F7 is 0 of 5 and W is 0 of 1. The wall-time
-median is 74,259,205 ns for the surrogate versus 178,323,150 ns for the live
-vLLM loop, a ratio of 0.416430536 against the frozen maximum of 0.01. All 78
-fatal guards hold. DEPLOY-18 through DEPLOY-21 own the four exposed gaps; the
-current estimator claim is therefore limited to the passing frozen surfaces
-and is not a faithful-stand-in certification.
+has a corrected, nonvoid post-specified scoring record. F1 is 4 of 4, F2 is 8
+of 8, F3 is 4 of 4, F5 is 4 of 4 and F7 is 5 of 5. F4 is 0 of 3, F6 is 0 of
+3 and W is 0 of 1, so the loop is not certified. Adversarial review traced the
+original F3 failures to the oracle recording allocation order before the
+pinned engine freed each manager group in reverse. The corrected capture makes
+every F3 row exact and closes DEPLOY-18, withdrawing the phantom surrogate
+allocator defect. Cache-enabled F7 omits only FREE because VLLM-43 records
+that the bridge cannot distinguish reclaimable cached blocks from discarded
+content; its 4, 4 and 6 FREE divergences remain visible as unscored
+observations. DEPLOY-19 owns only the genuine one-step-late finished identities
+in F4. DEPLOY-20 owns the remaining prefix decision-step and exact KV-accounting
+failures in F6, with VLLM-42 through VLLM-44 providing the missing native
+observability. The corrected wall-time median is 77,114,203 ns for the
+surrogate versus 175,782,543 ns for the live vLLM loop, a ratio of 0.438690906
+against the frozen maximum of 0.01; DEPLOY-21 remains open. All 78 fatal guards
+were evaluated and passed, including a KV control that starts from a passing F3
+row and changes it to a failing row. The qualified estimator claim is limited
+to F1, F2, F3, F5 and F7.
 
 The nonvoid
 [frontier comparison](../../examples/frontier_comparison_v1/RESULTS.md) binds
@@ -208,40 +218,34 @@ their breadth and silicon-precision scopes.
   successor run, retain the current refutation unchanged, and require every
   matched configuration to remain selected throughout its declared rounding
   interval without weakening any quotient band.
-- DEPLOY-18 (Precision; P1; M): replace the surrogate cache allocator's
-  lifetime-insensitive block-number ordering with lifecycle identity that
-  remains equivalent to the pinned vLLM pool under one stable block bijection.
-  The current path passes every scheduling and conservation guard but remaps
-  live blocks across recycled lifetimes, producing 8 exact mismatches in each
-  of the four F3 rows and the two F3-derived F7 rows. Identify allocation,
-  release, free-list position and reuse epoch from the ordered native and
-  surrogate KV streams. Acceptance requires every F3 and F7 block identity to
-  compare exactly with zero mismatch under the frozen bijection, while F1,
-  F2 and F5 remain byte-identical.
-- DEPLOY-19 (Precision; P1; M): reconcile the surrogate prefix-cache decision
-  and lifecycle stream with the pinned live scheduler. The current path emits
-  finished identities one decision step later and reports only a 16-token,
-  one-block write where the frozen live oracle reports 32 or 64 tokens over
-  two or four blocks; together with block identity this leaves all three F4
-  rows and all three F4-derived F7 rows failed. Use the retained native
-  `SchedulerOutput`, prefix-hit counts and KV sidecar rows as the observables.
-  Acceptance requires F4 3 of 3 and its F7 rows 3 of 3 with exact hit tokens,
-  last-token recompute, finish step, eviction order, token intervals and block
-  counts, without changing the exact F1, F2 or F5 results.
-- DEPLOY-20 (Precision; P1; M): preserve native decision-step identity when
-  surrogate prefix records enter the shared pricing chain. The current
-  prefix-cache F6 cell produces the same 984,000 ps request latency and the
-  same request metrics as the live replay, but labels the second priced row
-  step 2 instead of step 1, leaving F6 at 2 of 3. Acceptance requires all
-  three frozen F6 rows to match `StepResult`, time to first token, time per
-  output token and KV accounting exactly through the identical lowerer and
-  device runtime, with record, KV and pricing mutation controls still firing.
+- DEPLOY-19 (Precision; P1; M): emit prefix-request finished identities in the
+  same decision step as the pinned scheduler. The corrected record withdraws
+  the former block-lifecycle attribution: every cache-enabled F7 row passes on
+  the authoritative alphabet, while the bridge's 4, 4 and 6 FREE divergences
+  are unscored observations owned by VLLM-43. The genuine surrogate finding is
+  that finished identities arrive one decision step late in all three F4
+  cells, visible in both the normalized record and retained native comparison.
+  Acceptance requires exact finish-step identity on all three cells without
+  changing F1, F2, F3, F5 or the authoritative F7 rows. Full F4 closure also
+  requires VLLM-43 to make the cache-enabled FREE projection authoritative.
+- DEPLOY-20 (Precision; P1; M): preserve native decision-step identity and
+  identical KV accounting when records enter the shared pricing chain. Frozen
+  F6 is honestly 0 of 3: all rows expose surrogate RESERVE and WRITE accounting
+  absent from the live sidecar, while the prefix cell also labels its second
+  priced row step 2 instead of step 1 and differs in FREE accounting. Keep the
+  clause exact. Use VLLM-42 through VLLM-44 to observe the native service,
+  content state and pre-decision reserve identity rather than dropping any
+  compared field. Acceptance requires all three frozen F6 rows to match
+  `StepResult`, time to first token, time per output token and KV accounting
+  exactly through the identical lowerer and device runtime, with record, KV
+  and pricing mutation controls still firing.
 - DEPLOY-21 (Precision; P1; M): reduce the framework-free surrogate's steady
-  loop cost from the measured 74,259,205 ns median on the frozen 128-request
-  workload. The live vLLM median is 178,323,150 ns, so the observed ratio is
-  0.416430536 rather than the frozen maximum 0.01. Profile only the steady
-  loop, keep construction and capture outside the timed region, and replace
-  the identified Python hot paths without changing any decision, KV,
+  loop cost from the corrected 77,114,203 ns median on the frozen 128-request
+  workload. The live vLLM median is 175,782,543 ns, so the corrected ratio is
+  0.438690906 rather than the frozen maximum 0.01. The first publication's
+  0.416430536 miss remains preserved and reaches the same verdict. Profile only
+  the steady loop, keep construction and capture outside the timed region, and
+  replace the identified Python hot paths without changing any decision, KV,
   timestamp or metric byte. Acceptance is a median surrogate-to-live ratio at
   or below 0.01 over seven runs on the same disclosed machine and pin, with
   every exact passing family still byte-identical.
