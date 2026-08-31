@@ -18,9 +18,18 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
     widths = [row["expert_parallel"] for row in rows]
     external_steps = [row["aiconfigurator_step_ms"] for row in rows]
     sparse_steps = [row["family_s_packet_step_ms"] for row in rows]
+    superseded_sparse_steps = [
+        row["family_s_superseded_packet_step_ms"] for row in rows
+    ]
     dense_external = [row["family_d_external_ms"] for row in rows]
     dense_packet = [row["family_d_packet_ms"] for row in rows]
+    superseded_dense_packet = [
+        row["family_d_superseded_packet_ms"] for row in rows
+    ]
     cost_model_ratios = [row["family_d_ratio"] for row in rows]
+    superseded_cost_model_ratios = [
+        row["family_d_superseded_ratio"] for row in rows
+    ]
     dense_scored_indices = [
         index
         for index, row in enumerate(rows)
@@ -41,22 +50,39 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
     dense_label = (
         "External NCCL cost model\nDense fallback: half all-gather + reduce-scatter"
     )
-    sparse_label = "Sparse routed payload\nFP8 dispatch + BF16 combine"
+    sparse_label = (
+        "Corrected sparse routed payload\n"
+        "FP8 dispatch + BF16 combine + transferred collective floor"
+    )
+    superseded_sparse_label = (
+        "Superseded sparse routed payload\nFP8 dispatch + BF16 combine, floor omitted"
+    )
     packet_dense_label = (
-        "Packet Clos cost model\nDirect all-pairs half all-gather + reduce-scatter"
+        "Corrected packet Clos cost model\n"
+        "Direct all-pairs half traffic + aggregate collective floor"
+    )
+    superseded_packet_dense_label = (
+        "Superseded packet Clos cost model\n"
+        "Direct all-pairs half traffic, floor omitted"
     )
     ratio_label = (
-        "Packet Clos / external NCCL cost model\n"
-        "same requested half-element count"
+        "Corrected packet Clos / external NCCL\n"
+        "same requested half-element count + collective floor"
+    )
+    superseded_ratio_label = (
+        "Superseded packet Clos / external NCCL\n"
+        "same requested count, collective floor omitted"
     )
     caption = (
-        "Family D compares two cost models, not contention isolation: an opaque "
-        "eight-rank NCCL-table measurement scaled by rank versus direct all-pairs "
-        "packet transfers on a Clos. Both request the dense fallback's generic "
-        "half-precision all-gather plus reduce-scatter element count. EP 8 has no "
-        "cross-node contention; EP 256 is a post-specified unscored diagnostic. "
-        "Family S compares the dense fallback with sparse routed FP8 dispatch plus "
-        "BF16 combine."
+        "Family D corrected ratios are "
+        + ", ".join(f"{ratio:.3f}" for ratio in cost_model_ratios)
+        + " at EP 8, 32, 128 and 256; the superseded floor-omitting ratios are "
+        + ", ".join(f"{ratio:.3f}" for ratio in superseded_cost_model_ratios)
+        + ". The corrected packet arm charges aggregate all-gather and "
+        "reduce-scatter floors once outside local/fabric max service. EP 8 has "
+        "no cross-node traffic. EP 256 uses an unscored component-wise diagnostic. "
+        "Family S compares the dense fallback with corrected sparse routed FP8 "
+        "dispatch plus BF16 combine; its floor-omitting series is superseded."
     )
 
     plt.rcParams.update(
@@ -94,6 +120,16 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
         markersize=4.2,
         label=sparse_label,
     )
+    left.plot(
+        widths,
+        superseded_sparse_steps,
+        color="#777777",
+        marker="x",
+        linestyle=(0, (3, 2)),
+        linewidth=1.2,
+        markersize=4.0,
+        label=superseded_sparse_label,
+    )
     left.set_title("Family S strategy steps")
     left.set_xlabel("Expert-parallel width")
     left.set_ylabel("Step time (ms)")
@@ -125,6 +161,16 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
         color=green,
         linewidth=1.8,
         label=packet_dense_label,
+    )
+    middle.plot(
+        widths,
+        superseded_dense_packet,
+        color="#777777",
+        marker="x",
+        linestyle=(0, (3, 2)),
+        linewidth=1.2,
+        markersize=4.0,
+        label=superseded_packet_dense_label,
     )
     middle.scatter(
         [widths[index] for index in dense_scored_indices],
@@ -169,6 +215,16 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
         label=ratio_label,
     )
     right.plot(
+        widths,
+        superseded_cost_model_ratios,
+        color="#777777",
+        marker="x",
+        linestyle=(0, (3, 2)),
+        linewidth=1.2,
+        markersize=4.0,
+        label=superseded_ratio_label,
+    )
+    right.plot(
         [widths[dense_scored_indices[-1]], widths[dense_diagnostic_indices[0]]],
         [
             cost_model_ratios[dense_scored_indices[-1]],
@@ -193,7 +249,7 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
         marker="X",
         s=32,
         zorder=4,
-        label="EP 8: no cross-node contention",
+        label="EP 8: no cross-node traffic",
     )
     right.scatter(
         [widths[index] for index in dense_diagnostic_indices],
@@ -204,7 +260,7 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
         linewidths=1.4,
         s=28,
         zorder=3,
-        label="EP 256: unscored diagnostic",
+        label="EP 256: unscored component diagnostic",
     )
     right.axhline(
         1.0,
@@ -279,6 +335,16 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
                         ],
                     },
                     {
+                        "panel": "family-s-strategy-steps",
+                        "label": superseded_sparse_label,
+                        "strategy": rows[0]["family_s_sparse_strategy"],
+                        "traffic_definition": (
+                            rows[0]["family_s_sparse_traffic_definition"]
+                            + "; superseded omission of intra-node transport and "
+                            "fixed collective overheads"
+                        ),
+                    },
+                    {
                         "panel": "family-d-cost-model-times",
                         "label": dense_label,
                         "strategy": rows[0]["family_d_external_strategy"],
@@ -295,6 +361,16 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
                         ],
                     },
                     {
+                        "panel": "family-d-cost-model-times",
+                        "label": superseded_packet_dense_label,
+                        "strategy": rows[0]["family_d_packet_strategy"],
+                        "traffic_definition": (
+                            rows[0]["family_d_packet_traffic_definition"]
+                            + "; superseded omission of intra-node transport and "
+                            "fixed collective overheads"
+                        ),
+                    },
+                    {
                         "panel": "family-d-cost-model-ratio",
                         "label": ratio_label,
                         "strategy": (
@@ -305,10 +381,21 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
                             "family_d_packet_traffic_definition"
                         ],
                     },
+                    {
+                        "panel": "family-d-cost-model-ratio",
+                        "label": superseded_ratio_label,
+                        "strategy": (
+                            "same requested dense logical element count with the "
+                            "packet collective floor omitted"
+                        ),
+                        "traffic_definition": rows[0][
+                            "family_d_packet_traffic_definition"
+                        ],
+                    },
                 ],
                 "point_annotations": {
-                    "ep8": "not a contention comparison: no cross-node traffic",
-                    "ep256": "unscored post-specified diagnostic",
+                    "ep8": "zero cross-node traffic; corrected floor-bound ratio",
+                    "ep256": "unscored post-specified component-wise diagnostic",
                 },
             },
             sort_keys=True,
