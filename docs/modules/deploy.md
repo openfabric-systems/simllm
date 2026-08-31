@@ -48,8 +48,8 @@ backend, allocating a GPU or importing a serving framework.
   agreement membership for separate or combined role pools.
 - `EstimateStamp` is the strict `simllm-deployment-estimate-v1` evidence
   record. Every stamped result record (`StepEstimate`, `RateMatchReport`)
-  carries the candidate key, estimator class `ESTIMATE`, and a uniquely
-  named source for every consumed duration; the bare exact-arithmetic
+  carries the candidate key, estimator class `ESTIMATE` or `ESTIMATE-LOOP`,
+  and a uniquely named source for every consumed duration; the bare exact-arithmetic
   helpers (`queue_delay_ps`, `queue_occupancy`,
   `decode_capacity_requests_per_second`) return unstamped exact values by
   contract and take no candidate. Roofline work, declared link rates,
@@ -80,6 +80,15 @@ backend, allocating a GPU or importing a serving framework.
 - Promotion renders an accepted candidate through the repository placement,
   execution and simulation contracts. The candidate key remains the stable
   join between planning evidence and the promoted run.
+- `SurrogateServingLoop` is the framework-free continuous-batching estimator.
+  Its immutable causal tuple fixes the scheduled-token budget, sequence cap,
+  chunked-prefill mode, prefix-cache enablement, long-prefill threshold, model
+  length, queue policy, 16-token scheduler block geometry, block count,
+  reservation mode and watermark. Ordered `SurrogateRequest` rows enter through
+  `RequestAdmissionGate`. The loop owns scheduling, preemption, recompute and
+  prefix-cache decisions, emits complete `StepRecord` rows plus ordered
+  `KvCacheWork`, and advances one virtual clock only to the `StepResult`
+  returned by the existing pricing sink.
 
 ## Estimator model class
 
@@ -90,6 +99,13 @@ for closed-form prices. A point says `SIMULATED` only when it consumes tracked
 simulation-derived terms, and its stamp identifies those source records. The
 planning scan itself never becomes a simulation result merely because it
 reuses such evidence.
+
+The continuous-batching engine is registered as estimator model class and
+point class `ESTIMATE-LOOP`. It changes scheduler decisions while delegating
+all duration pricing to the existing compute, locality and network surfaces.
+Its native KV stream uses the same lifecycle vocabulary as the live vLLM
+normalization bridge and enters the shared lowerer, device runtime, lifecycle
+ledger and completion reducer without a framework precision setting.
 
 `PrecisionConfig` continues to own duration-only pricing seams such as compute,
 locality and network service. A deployment estimator may resolve a level at
@@ -114,6 +130,44 @@ times, its 72-point primary pricing takes 0.030626657 seconds and its
 machine. Structural placement rendering, SGLang-side candidate construction,
 parallel scanning and promoted simulation remain explicit optional
 integrations under DEPLOY-2, DEPLOY-3, DEPLOY-7 and DEPLOY-8.
+
+The single-engine `ESTIMATE-LOOP` path implements the pinned vLLM v0.27.1
+synchronous continuous-batching rules over virtual arrivals:
+running-before-waiting budget subtraction, FCFS and native priority queues,
+sequence admission limits, chunked and threshold-limited prefill, recompute
+preemption, full-extent prefix hashing, lazy least-recently-used eviction,
+full-input reservation and watermark headroom. When prefix caching is off,
+released hashless blocks append to the free queue for locality; the enabled
+path retains its hashless-prepend and cached-tail ordering. The supported pin
+has no `max_num_partial_prefills` or `max_long_partial_prefills` fields, so
+neither is a surrogate input or provenance field. Records carry explicit
+sampled identities, one-time cached counts, post-step contexts, same-step
+preemptions and next-step finished identities. Multi-pool sessions, additional
+priority-policy modes, selectable prefix salts and interpreter pins, and
+wall-timed arrivals are separate opt-in extensions under DEPLOY-14 through
+DEPLOY-17.
+
+The nonvoid
+[surrogate conformance study](../../examples/surrogate_conformance_v1/RESULTS.md)
+has a corrected, nonvoid post-specified scoring record. F1 is 4 of 4, F2 is 8
+of 8, F3 is 4 of 4, F5 is 4 of 4 and F7 is 5 of 5. F4 is 0 of 3, F6 is 0 of
+3 and W is 0 of 1, so the loop is not certified. Adversarial review traced the
+original F3 failures to the oracle recording allocation order before the
+pinned engine freed each manager group in reverse. The corrected capture makes
+every F3 row exact and closes DEPLOY-18, withdrawing the phantom surrogate
+allocator defect. Cache-enabled F7 omits only FREE because VLLM-47 records
+that the bridge cannot distinguish reclaimable cached blocks from discarded
+content; its 4, 4 and 6 FREE divergences remain visible as unscored
+observations. DEPLOY-19 owns only the genuine one-step-late finished identities
+in F4. DEPLOY-20 owns the remaining prefix decision-step and exact KV-accounting
+failures in F6, with VLLM-44, VLLM-46 and VLLM-47 providing the missing native
+observability. The published wall-time median is 58,711,515 ns for the
+surrogate versus 139,552,358 ns for the live vLLM loop, a ratio of 0.420713171
+against the frozen maximum of 0.01; the superseded attempt measured
+0.438690906 and reached the same verdict, and DEPLOY-21 remains open. All 78 fatal guards
+were evaluated and passed, including a KV control that starts from a passing F3
+row and changes it to a failing row. The qualified estimator claim is limited
+to F1, F2, F3, F5 and F7.
 
 The nonvoid
 [frontier comparison](../../examples/frontier_comparison_v1/RESULTS.md) binds
@@ -165,6 +219,38 @@ their breadth and silicon-precision scopes.
   successor run, retain the current refutation unchanged, and require every
   matched configuration to remain selected throughout its declared rounding
   interval without weakening any quotient band.
+- DEPLOY-19 (Precision; P1; M): emit prefix-request finished identities in the
+  same decision step as the pinned scheduler. The corrected record withdraws
+  the former block-lifecycle attribution: every cache-enabled F7 row passes on
+  the authoritative alphabet, while the bridge's 4, 4 and 6 FREE divergences
+  are unscored observations owned by VLLM-47. The genuine surrogate finding is
+  that finished identities arrive one decision step late in all three F4
+  cells, visible in both the normalized record and retained native comparison.
+  Acceptance requires exact finish-step identity on all three cells without
+  changing F1, F2, F3, F5 or the authoritative F7 rows. Full F4 closure also
+  requires VLLM-47 to make the cache-enabled FREE projection authoritative.
+- DEPLOY-20 (Precision; P1; M): preserve native decision-step identity and
+  identical KV accounting when records enter the shared pricing chain. Frozen
+  F6 is honestly 0 of 3: all rows expose surrogate RESERVE and WRITE accounting
+  absent from the live sidecar, while the prefix cell also labels its second
+  priced row step 2 instead of step 1 and differs in FREE accounting. Keep the
+  clause exact. Use VLLM-44, VLLM-46 and VLLM-47 to observe the native service,
+  content state and pre-decision reserve identity rather than dropping any
+  compared field. Acceptance requires all three frozen F6 rows to match
+  `StepResult`, time to first token, time per output token and KV accounting
+  exactly through the identical lowerer and device runtime, with record, KV
+  and pricing mutation controls still firing.
+- DEPLOY-21 (Precision; P1; M): reduce the framework-free surrogate's steady
+  loop cost from the published 58,711,515 ns median on the frozen 128-request
+  workload. The live vLLM median is 139,552,358 ns, so the published ratio is
+  0.420713171 rather than the frozen maximum 0.01. The superseded attempts'
+  0.416430536 and 0.438690906 misses remain preserved and reach the same
+  verdict. Profile only
+  the steady loop, keep construction and capture outside the timed region, and
+  replace the identified Python hot paths without changing any decision, KV,
+  timestamp or metric byte. Acceptance is a median surrogate-to-live ratio at
+  or below 0.01 over seven runs on the same disclosed machine and pin, with
+  every exact passing family still byte-identical.
 - DEPLOY-4 (Precision; P1; M): Replace the single input-local decode batch
   surface with content-addressed per-width coverage beyond the frozen 8, 16
   and 72 GPU shapes. Identify every width by measured entry keys and accept
@@ -224,3 +310,25 @@ their breadth and silicon-precision scopes.
   by process interception and estimator-input inspection that no external row
   enters pricing. With no adapter selected, preserve the accepted frontier
   record and figure bytes exactly.
+- DEPLOY-14 (Completeness; P2; L): Add the multi-pool surrogate session slice
+  beneath the existing `pd_session` records and handoff policy. Keep
+  `RequestAdmissionGate` as the sole external-arrival authority and handoff
+  completion as the sole decode-eligibility authority. When multi-pool mode is
+  disabled, preserve every single-engine `ESTIMATE-LOOP` record, timestamp,
+  KV operation, price and request metric exactly.
+- DEPLOY-15 (Completeness; P2; M): Add priority-policy extensions beyond the
+  pinned native FCFS and priority choices behind the scheduler policy seam.
+  Mandatory readiness and capacity checks run before any extension may reorder
+  candidates. Selecting either installed native policy must preserve its
+  waiting order, preemption victim, timestamps and KV lifecycle exactly.
+- DEPLOY-16 (Completeness; P2; M): Add explicit prefix-salt and
+  interpreter-pinning modes to the surrogate cache identity. Record the salt,
+  Python version, pickle protocol and hash implementation in the model input,
+  compare lifecycle decisions under one stable block-ID bijection, and retain
+  the installed salt-free process-local mode exactly when neither option is
+  selected.
+- DEPLOY-17 (Completeness; P2; M): Add optional wall-timed request admission
+  for concurrent serving experiments. Keep virtual-time admission as the exact
+  identity off path, isolate wall time from virtual timestamps and TTFT/TPOT,
+  and accept only the separately frozen adjacent-step boundary rule and
+  aggregate batch-size band for the wall-timed mode.

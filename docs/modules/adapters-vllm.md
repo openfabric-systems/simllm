@@ -73,7 +73,9 @@ the three abstract methods (`_init_executor`, `collective_rpc`,
   The scheduler sets that signal before executor dispatch at
   `vllm/v1/core/sched/scheduler.py:1236-1259`; both refusals are VLLM-8;
 - translates each step into a `simllm.core.StepRecord` (phase, new tokens,
-  prefix-cache hit at admission, context length, and exact `num_sampled`),
+  prefix-cache hit at admission, context length, exact `num_sampled`, and the
+  exact sampled request identities when
+  `SIMLLM_VLLM_SAMPLED_REQUEST_IDS=1`),
   hands it to an injected sink, and accumulates it on `step_records` for the
   offline GOAL emission (VLLM-9). The exact count is the sum of the same
   `produces_token` flags used to fabricate `ModelRunnerOutput` rows, including
@@ -100,6 +102,13 @@ the three abstract methods (`_init_executor`, `collective_rpc`,
   quantization method name), and any geometry field that fell back to its
   Llama-8B-shaped default is warned once and stamped on
   `ModelDims.defaulted_fields`.
+
+When `SIMLLM_VLLM_NATIVE_STEPS` names a path, the adapter appends the native
+ordered request IDs, per-request scheduled tokens, native total, preempted IDs
+and finished IDs beside the independently translated `StepRecord`. This
+capture and exact sampled identities are both default-off, so the accepted
+count-only step streams retain their bytes unless a harness selects the new
+surface.
 
 `model_dims_from_vllm_config` reads the MoE geometry off vLLM's own resolved
 MoE parallel shape rather than off the raw flags. `expert_parallel_geometry`
@@ -677,6 +686,38 @@ objects and observed launches remain absent by design and name VLLM-38 as the
 framework-owned join; see
 [the DeepSeek inventory results](../../examples/model_extraction_deepseek_v3_v1/RESULTS.md).
 
+The first VLLM-11 normalization slice is complete. The ordered bridge
+qualifies one stock manager against a pinned uniform geometry, maps native to
+stable logical request IDs, and emits only sidecar-witnessed aggregate-pool
+`KvCacheWork`: exact new block IDs, prefix bind then touch, release then free,
+eviction before the allocation that reuses a cached block, and a
+capacity-shaped recompute interval after preemption. The bridge fails closed
+on an unknown sidecar kind. The pool block byte shape is derived exactly as
+two times layers times KV heads times head size times dtype bytes times block
+tokens. Every operation is a read-only projection of the CPU-oracle sidecar
+and has zero service bytes; vLLM remains the cache authority.
+`SIMLLM_VLLM_ORACLE_SCOPE=kv` installs only the same stock manager, block-pool
+and preemption observers for deterministic simulated-worker capture; the
+unset scope retains the accepted full CPU-oracle plugin bytes. The supported
+vLLM v0.27.1 pin has no `max_num_partial_prefills` or
+`max_long_partial_prefills` scheduler fields, so neither appears in adapter
+configuration or causal provenance. VLLM-44 through VLLM-47 own the facts that
+the sidecar does not yet identify, and VLLM-11 stays open on their precision
+join rather than treating this projection as complete lifecycle evidence.
+
+The nonvoid
+[surrogate conformance study](../../examples/surrogate_conformance_v1/RESULTS.md)
+runs the pinned vLLM 0.27.1 engine in process and retains each native
+`SchedulerOutput` beside the adapter projection. All native-versus-projection
+guards pass, as do the source hash, causal tuple, token conservation and
+end-to-end mutation guards. The bridge therefore supplies a valid oracle for
+this frozen comparison, but the framework-free surrogate is not certified:
+14 family rows miss, including block-lifetime identity and prefix-cache token
+intervals. The bridge's pre-decision `RESERVE` limitation remains explicitly
+unscored under the governing amendment and remains VLLM-44 work; VLLM-11 and
+VLLM-44 through VLLM-47 neither close nor widen from this result. Certification
+is scoped to this scheduler pin and must be re-earned after every pin bump.
+
 ## Open tasks
 
 ### Precision
@@ -700,17 +741,21 @@ framework-owned join; see
   WQE/NIC, flow-completion and control-delay components. Calibrate only the
   early stages; hold out later stages, and choose the next accuracy task from
   their attributed residuals rather than aggregate error alone.
-- VLLM-11 (Precision; P1; L) (remaining after the CPU-oracle lifecycle
-  slice): the v2 oracle now observes stock-manager prefix lookup, allocation,
-  release, cached-block eviction and scheduler recompute with exact block and
-  request IDs. Its current projection is block IDs plus token counts. Extend
-  that projection for CORE-3 with stable pool identity, token intervals,
-  layer/dtype/bytes, allocation epoch, reference count, cause and correlation
-  ID, prefix bind/touch, reads/writes, swap and transfer. The identifying
-  observables are the owning manager and pool objects, not token-delta
-  reconstruction. Acceptance requires exact event cardinality, identity and
-  cause agreement against those objects, with the current v2 projection and
-  oracle-disabled path preserved byte for byte.
+- VLLM-11 (Precision; P1; L) (remaining after the ordered normalization
+  slice): join the enriched lifecycle stream into the CORE-3 ledger and the
+  live metric chain after VLLM-46, VLLM-47 and VLLM-44 provide per-layer
+  service bytes, native ownership state and native capacity correlations. The
+  landed slice qualifies one uniform manager and projects aggregate pool
+  geometry, token intervals, exact block and request IDs, causes available in
+  the sidecar, prefix bind/touch, release/free, eviction and recompute in
+  source order. It is observation-only and is not sufficient evidence for
+  reference-sensitive lifecycle replay or KV latency. Closure requires exact
+  event cardinality and identity against the owning manager and pool objects,
+  successful transactional `KvLifecycleLedger` consumption, and a signed
+  time to first token (TTFT) or time per output token (TPOT) effect through
+  the supported `StepResult` chain. The first-slice projection and the
+  oracle-disabled path remain byte-identical. Optional swap and transfer stay
+  outside this precision closure under VLLM-45.
 - VLLM-20 (Precision; P1; M): replace the current `ncclAllReduce`-shaped
   compatibility lowering for `all_gather`, `broadcast`, `send`, and `recv`
   with native COMP stack entries when those entries exist. The surrogate is an
@@ -740,8 +785,57 @@ framework-owned join; see
   ratio, and publish the same separate arrival-to-prefill, handoff-to-decode
   and batching-service fields. Do not reopen the common 210 to 220 requests/s
   onset or the validated monotonic direction over 250 to 8,000 requests/s.
+- VLLM-44 (Precision; P1; M): add framework-native correlation and capacity
+  decision identity beyond the sidecar's row ordinal. The first slice gives
+  each projected operation a deterministic source-row ID, leaves
+  `correlation_id` unset, stamps one configured placement epoch, and sees only
+  successful allocations after the capacity decision. Instrument the owning
+  manager and pool objects before every reserve decision and carry the attempt,
+  allocation epoch, outcome and native correlation through allocation,
+  eviction, release and preemption. Acceptance requires a total one-to-one
+  join for successful and refused attempts, including the exact preemption
+  consequence, without changing the first-slice or oracle-disabled bytes.
 
+- VLLM-46 (Precision; P1; L): replace the aggregate metadata-only KV byte
+  shape with native per-layer reads and writes on the metric-live path. The
+  current bridge identifies the whole-pool block size as
+  `2 * layers * kv_heads * head_size * dtype_bytes * block_tokens` and emits
+  zero service bytes. Observe each model-runner layer's exact request, block
+  and token interval, then emit `READ` and `WRITE` with the layer index and
+  exact bytes. Acceptance requires the per-layer sum to equal the pinned
+  aggregate shape exactly, exact cardinality against untouched runner calls,
+  a signed KV-service effect through `StepResult`, time to first token (TTFT)
+  or time per output token (TPOT), and byte-identical metadata-only and
+  oracle-disabled baselines.
+ This task was numbered VLLM-42 on the surrogate-loop branch before
+  integration; it is renumbered here because the queue-onset publication's
+  frozen bytes on main already reserve VLLM-42 for the batching-service
+  residual. The surrogate-loop publication cites the new number in a
+  disclosed registration correction.
+- VLLM-47 (Precision; P1; M): replace the bridge's forced prefix `TOUCH` and
+  release-then-`FREE` projection with native ownership and content state. The
+  current sidecar omits block reference counts and hash residency, so it
+  cannot distinguish `TOUCH` from `RETAIN`, or a reclaimable cached block from
+  content that is discarded. Observe the owning pool object's reference count
+  and hash state before and after each action. Acceptance requires exact
+  reference counts, exact `TOUCH` versus `RETAIN`, `FREE` only for discarded
+  content, and successful `KvLifecycleLedger` consumption for one exclusive
+  prefix, one shared live prefix and one released cached prefix, while the
+  current projection and oracle-disabled artifacts remain byte-identical.
+ This task was numbered VLLM-43 on the surrogate-loop branch before
+  integration. VLLM-43 itself stays permanently reserved and unassigned: the
+  queue-onset freeze pre-registered it for differing onset segments and the
+  run resolved it unused, so its frozen bytes keep the name and no new task
+  may take it.
 ### Completeness
+
+- VLLM-45 (Completeness; P2; L): normalize stock vLLM offload connector swap
+  and transfer events into the same pool and request identity envelope. The
+  first bridge deliberately covers the recompute-only stock scheduler and
+  emits no `SWAP` or `TRANSFER`. Observe source and destination pools, tier,
+  blocks, token interval and exact bytes from the connector objects, reject a
+  partial cross-pool join, and require the connector-disabled bridge,
+  scheduler records and accepted oracle sidecar to remain byte-identical.
 
 - VLLM-38 (Completeness; P2; L): join the published DeepSeek-V3 logical
   inventory to vLLM's physical MLA, routed-expert, shared-expert, dense and
