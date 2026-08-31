@@ -239,7 +239,7 @@
           "submission_groups": [["first"], ["repeat"]],
           "requests": [
             {"request_id": "first", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 17}, "max_output_tokens": 1, "priority": 0},
-            {"request_id": "repeat", "arrived_at_ps": 1, "prompt": {"start": 256, "count": 17}, "max_output_tokens": 1, "priority": 0}
+            {"request_id": "repeat", "arrived_at_ps": 2000000, "prompt": {"start": 256, "count": 17}, "max_output_tokens": 1, "priority": 0}
           ]
         },
         {
@@ -249,7 +249,7 @@
           "submission_groups": [["first"], ["repeat"]],
           "requests": [
             {"request_id": "first", "arrived_at_ps": 0, "prompt_token_ids": [32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,80], "max_output_tokens": 1, "priority": 0},
-            {"request_id": "repeat", "arrived_at_ps": 1, "prompt_token_ids": [32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,81], "max_output_tokens": 1, "priority": 0}
+            {"request_id": "repeat", "arrived_at_ps": 2000000, "prompt_token_ids": [32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,81], "max_output_tokens": 1, "priority": 0}
           ]
         },
         {
@@ -259,8 +259,8 @@
           "submission_groups": [["first"], ["repeat"], ["churn"]],
           "requests": [
             {"request_id": "first", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 49}, "max_output_tokens": 1, "priority": 0},
-            {"request_id": "repeat", "arrived_at_ps": 1, "prompt": {"start": 32, "count": 49}, "max_output_tokens": 1, "priority": 0},
-            {"request_id": "churn", "arrived_at_ps": 2, "prompt": {"start": 1024, "count": 49}, "max_output_tokens": 1, "priority": 0}
+            {"request_id": "repeat", "arrived_at_ps": 2000000, "prompt": {"start": 32, "count": 49}, "max_output_tokens": 1, "priority": 0},
+            {"request_id": "churn", "arrived_at_ps": 4000000, "prompt": {"start": 1024, "count": 49}, "max_output_tokens": 1, "priority": 0}
           ]
         }
       ]
