@@ -105,6 +105,20 @@ def test_f1_surrogate_cell_replays_without_vllm_binaries(monkeypatch) -> None:
     )
 
 
+def test_cache_enabled_f7_omits_only_the_non_authoritative_free_projection() -> None:
+    runner = _load_runner()
+    config = runner.load_config()
+    witnessed = set(config["families"]["F7"]["witnessed_actions"])
+    cells = {cell.cell_id: cell for cell in runner.frozen_cells(config)}
+
+    assert runner._f7_scored_actions(cells["f3-blocks3-seqs2"], witnessed) == (
+        witnessed
+    )
+    assert runner._f7_scored_actions(
+        cells["f4-one-full-prefix-block"], witnessed
+    ) == witnessed - {"free"}
+
+
 @pytest.mark.parametrize("family", ("F1", "F2", "F3", "F4", "F5", "F6", "F7"))
 def test_live_family_record_requires_the_qualified_pin(family: str) -> None:
     try:

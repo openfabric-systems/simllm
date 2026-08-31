@@ -80,6 +80,20 @@ RESULT_SCHEMA = "simllm-surrogate-conformance-record-v1"
 ATTEMPT_SCHEMA = "simllm-surrogate-conformance-attempt-v1"
 EXPECTED_CONFIG_SCHEMA = "simllm-surrogate-conformance-config-v1"
 PS_PER_SECOND = 1_000_000_000_000
+SUPERSEDED_ATTEMPT_ID = "attempt-003"
+SUPERSEDED_RECORD_SHA256 = (
+    "bfd9c185a9d4d87b1daa6244933a9aeaf57b298547a0a5c80c694418b6a9556c"
+)
+SUPERSEDED_FAMILY_TALLIES = {
+    "F1": {"failed": 0, "passed": 4, "total": 4},
+    "F2": {"failed": 0, "passed": 8, "total": 8},
+    "F3": {"failed": 4, "passed": 0, "total": 4},
+    "F4": {"failed": 3, "passed": 0, "total": 3},
+    "F5": {"failed": 0, "passed": 4, "total": 4},
+    "F6": {"failed": 1, "passed": 2, "total": 3},
+    "F7": {"failed": 5, "passed": 0, "total": 5},
+    "W": {"failed": 1, "passed": 0, "total": 1},
+}
 
 
 @dataclass(frozen=True)
@@ -1113,6 +1127,15 @@ def compare_kv_streams(
     return mismatches, mapping
 
 
+def _f7_scored_actions(cell: FrozenCell, witnessed_actions: set[str]) -> set[str]:
+    """Return the authoritative F7 alphabet for this frozen cell."""
+
+    actions = set(witnessed_actions)
+    if bool(cell.engine["prefix_caching"]):
+        actions.discard(KvCacheAction.FREE.value)
+    return actions
+
+
 def _native_projection_guard(live: LiveCellResult) -> list[dict[str, Any]]:
     raw = [
         _native_signature(row)
@@ -1384,6 +1407,13 @@ def _evaluate_f6(
         }
         mismatches = _diff(first, replay, "$.identical-live-replay")
         mismatches.extend(_diff(first, surrogate_priced, "$.surrogate-pricing"))
+        mismatches.extend(
+            _diff(
+                expected["live_kv_accounting"],
+                actual["surrogate_kv_accounting"],
+                "$.kv-accounting",
+            )
+        )
         rows.append(
             _check_row(
                 "F6",
@@ -1557,9 +1587,34 @@ def _evaluate_cells(
     for cell_id in config["families"]["F7"]["source_cells"]:
         live = live_by_id[cell_id]
         surrogate = surrogate_by_id[cell_id]
+        scored_actions = _f7_scored_actions(live.cell, witnessed)
         mismatches, mapping = compare_kv_streams(
-            live.kv_operations, surrogate.kv_operations, witnessed
+            live.kv_operations, surrogate.kv_operations, scored_actions
         )
+        free_observation = None
+        if KvCacheAction.FREE.value not in scored_actions:
+            free_mismatches, _ = compare_kv_streams(
+                live.kv_operations,
+                surrogate.kv_operations,
+                {KvCacheAction.FREE.value},
+            )
+            free_observation = {
+                "attribution": (
+                    "VLLM-43: the bridge cannot distinguish reclaimable cached "
+                    "blocks from discarded content"
+                ),
+                "evidence_class": "recorded-unscored-observation",
+                "live_operation_count": sum(
+                    work.action is KvCacheAction.FREE
+                    for _, work in live.kv_operations
+                ),
+                "mismatch_count": len(free_mismatches),
+                "mismatches": free_mismatches,
+                "surrogate_operation_count": sum(
+                    work.action is KvCacheAction.FREE
+                    for _, work in surrogate.kv_operations
+                ),
+            }
         reserve_count = sum(
             work.action is KvCacheAction.RESERVE
             for _, work in surrogate.kv_operations
@@ -1571,19 +1626,20 @@ def _evaluate_cells(
                 "F7 witnessed KV alphabet under one stable block bijection",
                 mismatches,
                 expected={
-                    "witnessed_actions": sorted(witnessed),
+                    "scored_actions": sorted(scored_actions),
                     "live_operation_count": sum(
-                        work.action.value in witnessed
+                        work.action.value in scored_actions
                         for _, work in live.kv_operations
                     ),
                 },
                 actual={
                     "surrogate_operation_count": sum(
-                        work.action.value in witnessed
+                        work.action.value in scored_actions
                         for _, work in surrogate.kv_operations
                     ),
                     "surrogate_reserve_rows_unscored": reserve_count,
                     "block_bijection": mapping,
+                    "free_projection_observation": free_observation,
                 },
             )
         )
@@ -1767,6 +1823,15 @@ def _mutation_guard(
     live_ops = list(live_by_id[f7_source].kv_operations)
     if not live_ops:
         raise RuntimeError("KV mutation control found no live operations")
+    scored_actions = _f7_scored_actions(
+        live_by_id[f7_source].cell,
+        set(config["families"]["F7"]["witnessed_actions"]),
+    )
+    baseline_mismatches = compare_kv_streams(
+        live_ops,
+        surrogate_by_id[f7_source].kv_operations,
+        scored_actions,
+    )[0]
     operation_id, work = live_ops[0]
     mutated_work = KvCacheWork(
         action=(
@@ -1784,13 +1849,12 @@ def _mutation_guard(
         cause=work.cause,
     )
     live_ops[0] = (operation_id, mutated_work)
-    kv_detected = bool(
-        compare_kv_streams(
-            live_ops,
-            surrogate_by_id[f7_source].kv_operations,
-            set(config["families"]["F7"]["witnessed_actions"]),
-        )[0]
-    )
+    mutant_mismatches = compare_kv_streams(
+        live_ops,
+        surrogate_by_id[f7_source].kv_operations,
+        scored_actions,
+    )[0]
+    kv_pass_to_fail = not baseline_mismatches and bool(mutant_mismatches)
     priced = list(
         _price_records(_decision_records(live_by_id[source].records), config)
     )
@@ -1799,25 +1863,42 @@ def _mutation_guard(
     pricing_detected = bool(_diff(priced, mutated_priced, "$.pricing-mutation"))
     values = {
         "record_mutation_detected": record_detected,
-        "kv_mutation_detected": kv_detected,
+        "kv_mutation": {
+            "source_cell": f7_source,
+            "baseline_status": "PASS" if not baseline_mismatches else "FAIL",
+            "baseline_mismatch_count": len(baseline_mismatches),
+            "mutant_status": "FAIL" if mutant_mismatches else "PASS",
+            "mutant_mismatch_count": len(mutant_mismatches),
+            "pass_to_fail": kv_pass_to_fail,
+        },
         "pricing_mutation_detected": pricing_detected,
     }
-    mismatches = [
-        {
-            "path": f"$.{name}",
-            "expected": True,
-            "actual": value,
-            "reason": "mutation escaped",
-        }
-        for name, value in values.items()
-        if not value
-    ]
+    expected = {
+        "record_mutation_detected": True,
+        "kv_mutation": {
+            "source_cell": f7_source,
+            "baseline_status": "PASS",
+            "baseline_mismatch_count": 0,
+            "mutant_status": "FAIL",
+            "pass_to_fail": True,
+        },
+        "pricing_mutation_detected": True,
+    }
+    comparable_values = {
+        **values,
+        "kv_mutation": {
+            key: value
+            for key, value in values["kv_mutation"].items()
+            if key != "mutant_mismatch_count"
+        },
+    }
+    mismatches = _diff(expected, comparable_values, "$.mutation-controls")
     return _check_row(
         "GUARD",
         "end-to-end-mutation-controls",
         "record, KV, and pricing corruptions must be detected",
         mismatches,
-        expected={name: True for name in values},
+        expected=expected,
         actual=values,
         evidence_class="fatal-guard",
     )
@@ -1995,6 +2076,59 @@ def _family_tallies(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     return result
 
 
+def _scoring_correction() -> dict[str, Any]:
+    return {
+        "classification": "post-specified-scoring-correction",
+        "superseded_attempt_id": SUPERSEDED_ATTEMPT_ID,
+        "superseded_record_sha256": SUPERSEDED_RECORD_SHA256,
+        "superseded_family_tallies": SUPERSEDED_FAMILY_TALLIES,
+        "changes": [
+            {
+                "id": "kv-mutation-control",
+                "finding_class": "BLOCKER",
+                "correction": (
+                    "move the KV mutation to a corrected passing F3 row and "
+                    "require an observed PASS-to-FAIL transition"
+                ),
+            },
+            {
+                "id": "F3-free-order",
+                "finding_class": "MAJOR",
+                "correction": (
+                    "capture each pinned manager group's actual reversed free "
+                    "order instead of its pre-free allocation order"
+                ),
+            },
+            {
+                "id": "F7-free-authority",
+                "finding_class": "MAJOR",
+                "correction": (
+                    "exclude FREE only from cache-enabled F7 scoring because "
+                    "VLLM-43 records that the bridge cannot identify discarded "
+                    "content; retain every FREE divergence as an unscored "
+                    "observation"
+                ),
+            },
+            {
+                "id": "F6-kv-accounting",
+                "finding_class": "MAJOR",
+                "correction": (
+                    "compare live and surrogate KV accounting exactly as the "
+                    "frozen clause requires"
+                ),
+            },
+            {
+                "id": "W-baseline",
+                "finding_class": "UNCHANGED",
+                "correction": (
+                    "retain the frozen complete-loop baseline choice, band, and "
+                    "miss without rescoring"
+                ),
+            },
+        ],
+    }
+
+
 def _evidence_manifest(attempt_dir: Path) -> list[dict[str, Any]]:
     ignored = {
         "portable_record.json",
@@ -2110,6 +2244,92 @@ def _render_results(
                 f"{reserve_detail}."
             ),
             "",
+            (
+                "The W baseline remains the pre-run choice: compare the complete "
+                "framework-free Python surrogate loop with the in-process live "
+                "vLLM scheduler loop on the same workload, excluding construction "
+                "and capture from both timed regions. It is a deployment-value "
+                "class rather than an equal-implementation-cost microbenchmark, "
+                "and its frozen one-hundred-times bar remains missed."
+            ),
+            "",
+            (
+                "The corrected qualified scope is limited to the complete frozen "
+                "families "
+                f"{', '.join(record['certification_scope']['passing_families'])}. "
+                "The families "
+                f"{', '.join(record['certification_scope']['failing_families'])} "
+                "still prevent certification of the loop as a whole."
+            ),
+            "",
+            "## Post-specified scoring corrections",
+            "",
+            (
+                "Adversarial review found one vacuous negative control, one oracle "
+                "capture-order artifact, one non-authoritative F7 projection, and "
+                "one omitted frozen F6 comparison. This corrected record "
+                f"supersedes `{record['scoring_correction']['superseded_attempt_id']}` "
+                "for scoring only. The original portable record remains preserved "
+                "at SHA-256 "
+                f"`{record['scoring_correction']['superseded_record_sha256']}`. "
+                "The frozen expectations, amendment, configuration, study cells, "
+                "and attempt evidence are unchanged."
+            ),
+            "",
+            "| Family | Before | Corrected | Change |",
+            "|---|---:|---:|---:|",
+        ]
+    )
+    before_tallies = record["scoring_correction"]["superseded_family_tallies"]
+    for family, tally in record["family_tallies"].items():
+        before = before_tallies[family]
+        lines.append(
+            f"| {family} | {before['passed']}/{before['total']} | "
+            f"{tally['passed']}/{tally['total']} | "
+            f"{tally['passed'] - before['passed']:+d} passes |"
+        )
+    lines.extend(
+        [
+            "",
+            "| Review finding | Class | Disclosed correction |",
+            "|---|---|---|",
+        ]
+    )
+    for change in record["scoring_correction"]["changes"]:
+        lines.append(
+            f"| `{change['id']}` | {change['finding_class']} | "
+            f"{change['correction']} |"
+        )
+    free_observations = [
+        (row["cell_id"], row["actual"]["free_projection_observation"])
+        for row in record["checks"]
+        if row["family"] == "F7"
+        and row["actual"]["free_projection_observation"] is not None
+    ]
+    lines.extend(
+        [
+            "",
+            "### Cache-enabled FREE observations",
+            "",
+            (
+                "These rows remain recorded but do not decide F7. VLLM-43 "
+                "documents that the bridge projects release as FREE without "
+                "observing whether cached content remains reclaimable."
+            ),
+            "",
+            "| Cell | Live FREE rows | Surrogate FREE rows | Divergences |",
+            "|---|---:|---:|---:|",
+        ]
+    )
+    for cell_id, observation in free_observations:
+        lines.append(
+            f"| `{cell_id}` | {observation['live_operation_count']} | "
+            f"{observation['surrogate_operation_count']} | "
+            f"{observation['mismatch_count']} |"
+        )
+    lines.extend(
+        [
+            "",
             "## Row-level findings",
             "",
             "| Family | Cell | Status | Misses | Clause |",
@@ -2134,7 +2354,8 @@ def _render_results(
             "## Fatal guards",
             "",
             (
-                f"The run is {'VOID' if verdict['void'] else 'nonvoid'}. "
+                f"The run is {'VOID' if verdict['void'] else 'nonvoid'}. All "
+                f"{record['guard_tally']['total']} fatal guards were evaluated: "
                 f"{record['guard_tally']['passed']} fatal guards passed and "
                 f"{record['guard_tally']['failed']} failed. Fatal guards are not "
                 "part of any behavioral denominator."
@@ -2221,6 +2442,17 @@ def run_study(run_root: Path, model: Path, attempt_id: str) -> Path:
         checks.append(wall_row)
         fatal_failed = [row for row in guards if row["status"] == "FAIL"]
         behavioral_failed = [row for row in checks if row["status"] == "FAIL"]
+        family_tallies = _family_tallies(checks)
+        passing_families = [
+            family
+            for family, tally in family_tallies.items()
+            if tally["total"] and not tally["failed"]
+        ]
+        failing_families = [
+            family
+            for family, tally in family_tallies.items()
+            if tally["failed"]
+        ]
         if fatal_failed:
             verdict = {
                 "status": "VOID",
@@ -2236,8 +2468,8 @@ def run_study(run_root: Path, model: Path, attempt_id: str) -> Path:
                 "void": False,
                 "certified": False,
                 "statement": (
-                    f"{len(behavioral_failed)} frozen family rows missed and bound "
-                    "the surrogate envelope"
+                    f"{', '.join(passing_families)} pass their frozen rows; "
+                    f"{', '.join(failing_families)} prevent certification"
                 ),
             }
         else:
@@ -2272,13 +2504,22 @@ def run_study(run_root: Path, model: Path, attempt_id: str) -> Path:
                 "configuration_commit": CONFIG_FREEZE_COMMIT,
                 "run_commit": _git("rev-parse", "HEAD"),
             },
-            "family_tallies": _family_tallies(checks),
+            "family_tallies": family_tallies,
+            "certification_scope": {
+                "passing_families": passing_families,
+                "failing_families": failing_families,
+                "statement": (
+                    "only the complete frozen families listed as passing are "
+                    "qualified; the surrogate loop as a whole is not certified"
+                ),
+            },
             "guard_tally": guard_tally,
             "checks": checks,
             "guards": guards,
             "wall_time": wall_detail,
             "configuration_sha256": _sha256(CONFIG_PATH),
             "machine": _machine(),
+            "scoring_correction": _scoring_correction(),
             "evidence_manifest": _evidence_manifest(attempt_dir),
         }
         record_path = attempt_dir / "portable_record.json"
@@ -2334,6 +2575,7 @@ def publish_attempt(
     *,
     registry_effect: str,
     limits: str,
+    supersedes_record_sha256: str | None = None,
 ) -> None:
     record_path = attempt_dir / "portable_record.json"
     checksum = (attempt_dir / "record.sha256").read_text(encoding="utf-8").split()[0]
@@ -2353,8 +2595,17 @@ def publish_attempt(
             limits=limits,
         ).encode("utf-8"),
     }
-    for path, payload in targets.items():
-        _write_once(path, payload)
+    if supersedes_record_sha256 is not None:
+        prior = publish_dir / "record.json"
+        if not prior.is_file() or _sha256(prior) != supersedes_record_sha256:
+            raise ValueError(
+                "published record does not match the declared superseded hash"
+            )
+        for path, payload in targets.items():
+            path.write_bytes(payload)
+    else:
+        for path, payload in targets.items():
+            _write_once(path, payload)
 
 
 def _default_attempt_id() -> str:
@@ -2375,6 +2626,7 @@ def _parse_args() -> argparse.Namespace:
     publish.add_argument("--publish-dir", type=Path, default=Path(__file__).parent)
     publish.add_argument("--registry-effect", required=True)
     publish.add_argument("--limits", required=True)
+    publish.add_argument("--supersedes-record-sha256")
     return parser.parse_args()
 
 
@@ -2399,6 +2651,7 @@ def main() -> int:
             args.publish_dir,
             registry_effect=args.registry_effect,
             limits=args.limits,
+            supersedes_record_sha256=args.supersedes_record_sha256,
         )
         return 0
     attempt = run_study(args.run_root, args.model, args.attempt_id)

@@ -162,6 +162,21 @@ def _flatten_block_ids(blocks: Any) -> list[int]:
     return result
 
 
+def _flatten_freed_block_ids(blocks: Any) -> list[int]:
+    """Return blocks in the order the pinned managers pass them to the pool."""
+
+    if blocks is None:
+        return []
+    get_ids = getattr(blocks, "get_block_ids", None)
+    values = get_ids() if callable(get_ids) else blocks
+    if values is None:
+        return []
+    result: list[int] = []
+    for group in values:
+        result.extend(int(value) for value in reversed(group))
+    return result
+
+
 def _block_size(manager: Any) -> int:
     groups = manager.kv_cache_config.kv_cache_groups
     sizes = {int(group.kv_cache_spec.block_size) for group in groups}
@@ -224,7 +239,7 @@ def _observe_free(
 ) -> Any:
     request_id = str(request.request_id)
     try:
-        block_ids = _flatten_block_ids(manager.get_blocks(request_id))
+        block_ids = _flatten_freed_block_ids(manager.get_blocks(request_id))
     except KeyError:
         block_ids = []
     result = original(manager, request)

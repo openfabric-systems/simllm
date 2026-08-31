@@ -12,6 +12,7 @@ from simllm.adapters.vllm.oracle import (
     ORACLE_SCOPE_ENV,
     _observe_allocate_slots,
     _observe_eviction,
+    _observe_free,
     _observe_manager_init,
     _observe_prefix_hit,
     _observe_request_finish,
@@ -104,6 +105,32 @@ def test_vllm_kv_hooks_project_actual_results(monkeypatch, tmp_path):
     assert values[1]["token_count"] == 64
     assert values[2]["block_ids"] == [7, 8]
     assert values[2]["token_count"] == 64
+
+
+def test_vllm_free_hook_records_each_manager_group_in_engine_free_order(
+    monkeypatch, tmp_path
+):
+    path = configure_sidecar(monkeypatch, tmp_path)
+    cache = manager()
+    cache.get_blocks = lambda _request_id: FakeBlocks([1, 2], [7, 8, 9])
+    request = SimpleNamespace(request_id="internal-0")
+
+    returned = _observe_free(
+        lambda _manager, _request: "freed",
+        cache,
+        request,
+    )
+
+    assert returned == "freed"
+    assert rows(path) == [
+        {
+            "block_ids": [2, 1, 9, 8, 7],
+            "kind": "release",
+            "request_id": "internal-0",
+            "schema": ORACLE_OBSERVATION_SCHEMA,
+            "token_count": 160,
+        }
+    ]
 
 
 def test_vllm_eviction_hook_records_only_real_eviction(monkeypatch, tmp_path):
