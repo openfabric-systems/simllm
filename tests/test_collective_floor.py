@@ -1,13 +1,26 @@
+import importlib.util
 import json
 from fractions import Fraction
 from pathlib import Path
 
 import pytest
 
-from examples.collective_floor_calibration_v1.bypass_fixture import (
-    PRE_WAVE_COMMIT,
-    produce_bypass_record,
-)
+
+def _load_bypass_fixture():
+    spec = importlib.util.spec_from_file_location(
+        "collective_floor_bypass_fixture",
+        Path(__file__).resolve().parents[1]
+        / "examples/collective_floor_calibration_v1/bypass_fixture.py",
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_bypass_fixture = _load_bypass_fixture()
+PRE_WAVE_COMMIT = _bypass_fixture.PRE_WAVE_COMMIT
+produce_bypass_record = _bypass_fixture.produce_bypass_record
 from simllm.backends import (
     CollectiveFloorTransferError,
     HtsimRequestMetricReducer,
