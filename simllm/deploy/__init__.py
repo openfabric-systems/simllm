@@ -45,6 +45,12 @@ from simllm.deploy.estimator import (
     queue_delay_ps,
     queue_occupancy,
 )
+from simllm.deploy.external_measured import (
+    PICOSECONDS_PER_MILLISECOND,
+    ExternalQwen32BDeploymentBinding,
+    ExternalServiceValue,
+    validate_external_scored_stamp,
+)
 from simllm.deploy.frontier import (
     FRONTIER_RECORD_SCHEMA,
     PLOT_CONTRACT_V3_SCHEMA,
@@ -59,6 +65,7 @@ from simllm.deploy.frontier import (
     pareto_front,
     prepare_plot_v3,
     scan,
+    weak_dominance_pareto,
 )
 from simllm.deploy.ladder import (
     FRONTIER_LADDER_RECORD_SCHEMA,
@@ -81,6 +88,7 @@ __all__ = [
     "FRONTIER_LADDER_RECORD_SCHEMA",
     "FRONTIER_RECORD_SCHEMA",
     "HBM_CAPACITY_EXCEEDED",
+    "PICOSECONDS_PER_MILLISECOND",
     "PICOSECONDS_PER_SECOND",
     "PIPELINE_PARALLEL_UNPRICED",
     "PLOT_CONTRACT_V3_SCHEMA",
@@ -93,6 +101,8 @@ __all__ = [
     "EstimatorInputs",
     "EvidenceClass",
     "ExternalAnchor",
+    "ExternalQwen32BDeploymentBinding",
+    "ExternalServiceValue",
     "FabricSpec",
     "FeasibilityReport",
     "FrontierLadderPoint",
@@ -138,4 +148,6 @@ __all__ = [
     "queue_occupancy",
     "scan",
     "to_json",
+    "validate_external_scored_stamp",
+    "weak_dominance_pareto",
 ]

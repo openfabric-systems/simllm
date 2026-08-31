@@ -7,7 +7,7 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from enum import Enum
 from fractions import Fraction
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, TypeVar
 
 from simllm.core._wire import (
     _array,
@@ -302,6 +302,7 @@ StaticRankBytesResolver: TypeAlias = Callable[
     [DeploymentCandidate],
     Mapping[str, int],
 ]
+_ParetoValue = TypeVar("_ParetoValue")
 
 
 @dataclass(slots=True)
@@ -732,6 +733,56 @@ def pareto_front(points: Iterable[FrontierPoint]) -> tuple[FrontierPoint, ...]:
     return tuple(sorted(front, key=_point_sort_key))
 
 
+def weak_dominance_pareto(
+    values: Iterable[_ParetoValue],
+    *,
+    coordinate: Callable[[_ParetoValue], tuple[Fraction, Fraction]],
+    identity: Callable[[_ParetoValue], str],
+) -> tuple[_ParetoValue, ...]:
+    """Return a stable coordinate-deduplicated upper-right frontier.
+
+    This is the coordinate-level rule used by deployment studies whose y axis
+    is a pool-composed throughput rather than ``batch * decode_speed``.
+    """
+
+    candidates = tuple(values)
+    if not candidates:
+        return ()
+    by_coordinate: dict[tuple[Fraction, Fraction], _ParetoValue] = {}
+    for index, value in enumerate(candidates):
+        point = coordinate(value)
+        if not isinstance(point, tuple) or len(point) != 2:
+            raise TypeError(f"values[{index}] coordinate: expected a two-tuple")
+        x_value = _fraction(point[0], f"values[{index}] coordinate x")
+        y_value = _fraction(point[1], f"values[{index}] coordinate y")
+        key = (x_value, y_value)
+        stable_identity = _string(identity(value), f"values[{index}] identity")
+        prior = by_coordinate.get(key)
+        if prior is None or stable_identity < identity(prior):
+            by_coordinate[key] = value
+
+    unique = tuple(by_coordinate.values())
+    front = []
+    for candidate in unique:
+        x_value, y_value = coordinate(candidate)
+        dominated = any(
+            other_x >= x_value
+            and other_y >= y_value
+            and (other_x > x_value or other_y > y_value)
+            for other in unique
+            if other is not candidate
+            for other_x, other_y in (coordinate(other),)
+        )
+        if not dominated:
+            front.append(candidate)
+    return tuple(
+        sorted(
+            front,
+            key=lambda value: (*coordinate(value), identity(value)),
+        )
+    )
+
+
 def _term_duration(stamp: EstimateStamp, name: str, *, default: int | None = None) -> int:
     matching = [term.estimate.duration_ps for term in stamp.terms if term.name == name]
     if matching:
@@ -1015,4 +1066,5 @@ __all__ = [
     "pareto_front",
     "prepare_plot_v3",
     "scan",
+    "weak_dominance_pareto",
 ]

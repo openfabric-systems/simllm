@@ -1831,6 +1831,21 @@ beyond this exact identity and offline composition surface. COMP-87
 specifically owns the imported but undispatched WideEP MoE, MLA BMM, Mamba2,
 MLA and generation-MLA operation families.
 
+The
+[matched-seam frontier](../../examples/matched_seam_frontier_v1/RESULTS.md)
+first publication is void against its own impossible FG-1, which forbade
+roofline and fitted terms inside an external resolver that is
+speed-of-light-normalized and applies empirical adjustments. The guard was not
+widened. The corrected run proves that SimLLM's own `RooflineProvider` and
+fitted values cannot reach any scored root, declares all eight external
+adjustments with pinned source hashes, and publishes a remove-one Family R
+range for each. The source audit also corrects the prose-level phase
+transposition: the pinned installation assigns 0.9 to prefill rate matching and
+0.92 to decode. **Every external adjustment carried by the composition is
+declared, source-attributed and joined to the imported operation slice through
+a content-addressed composition surface.** COMP-88 owns promotion from the
+study-local declaration to that installed surface.
+
 ## Open tasks
 
 ### Precision
@@ -1846,6 +1861,17 @@ MLA and generation-MLA operation families.
   requires both frameworks to agree, the same mathematical pair to carry the
   same FLOP coefficient in decode and prefill, exact family conservation, and
   a successor frontier comparison that names the new inventory hashes.
+- COMP-88 (Precision; P1; M): move the external serving-composition constants
+  into a content-addressed artifact joined to the imported operation slice.
+  The matched-seam study declares the 1.1 prefill correction, 1.08 decode
+  correction, 1.8 TTFT autoscale, 0.9 prefill and 0.92 decode rate-degradation
+  factors, 0.8 memory-bandwidth derating, 3 microsecond memory-operation
+  constant and 1.1 context-attention extra-latency correction. Promote that
+  source-attributed study table into an immutable composition record with its
+  own digest, then require it to reproduce all 13 Family S hexadecimal
+  services, all 10 Family R quotients, every remove-one sensitivity row and the
+  full Family D decomposition exactly. Omitting the record must preserve the
+  current explicit configuration path and every accepted artifact byte.
 - COMP-1 (Precision; P1; L): complete production compute calibration.
   This task is the numerical capstone for every selected target: it owns
   target-silicon compute and memory anchors, per-device fit inputs, untouched

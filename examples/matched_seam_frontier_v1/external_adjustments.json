@@ -1,0 +1,217 @@
+{
+  "adjustments": [
+    {
+      "applied_to": [
+        "S-prefill",
+        "F",
+        "M",
+        "D"
+      ],
+      "documentation": {
+        "meaning": "Multiplies predicted prefill latency when the prediction is too optimistic.",
+        "path": "aiconfigurator/cli/example_v1_deprecated.yaml",
+        "sha256": "865453c28c57c7424c86c86f30bd6852d6f9e9bbd5a98e8380baf45831b0d3dd",
+        "start_line": 118,
+        "end_line": 118
+      },
+      "family_r_reachable": false,
+      "id": "prefill_latency_correction",
+      "kind": "multiplicative_latency_correction",
+      "removal_value": "1.0",
+      "source": {
+        "path": "aiconfigurator/sdk/task_v2.py",
+        "sha256": "d0bd9d712b8a62eff7bc961b2c4a97299ac9679cdcc01fe7b862cda702f1b02e",
+        "start_line": 441,
+        "end_line": 441
+      },
+      "value": "1.1"
+    },
+    {
+      "applied_to": [
+        "S-decode",
+        "R",
+        "F",
+        "M"
+      ],
+      "documentation": {
+        "meaning": "Multiplies predicted decode latency when the prediction is too optimistic.",
+        "path": "aiconfigurator/cli/example_v1_deprecated.yaml",
+        "sha256": "865453c28c57c7424c86c86f30bd6852d6f9e9bbd5a98e8380baf45831b0d3dd",
+        "start_line": 119,
+        "end_line": 119
+      },
+      "family_r_reachable": true,
+      "id": "decode_latency_correction",
+      "kind": "multiplicative_latency_correction",
+      "removal_value": "1.0",
+      "source": {
+        "path": "aiconfigurator/sdk/task_v2.py",
+        "sha256": "d0bd9d712b8a62eff7bc961b2c4a97299ac9679cdcc01fe7b862cda702f1b02e",
+        "start_line": 442,
+        "end_line": 442
+      },
+      "value": "1.08"
+    },
+    {
+      "applied_to": [
+        "F",
+        "M"
+      ],
+      "documentation": {
+        "meaning": "Degrades prefill throughput during rate matching to account for pipeline bubbles.",
+        "path": "aiconfigurator/sdk/inference_session.py",
+        "sha256": "7c95060d8363080b4139b821c0902a432d60cd16861c08498696e5a28c8ab159",
+        "start_line": 227,
+        "end_line": 239
+      },
+      "family_r_reachable": false,
+      "id": "prefill_rate_matching_degradation",
+      "kind": "multiplicative_throughput_degradation",
+      "removal_value": "1.0",
+      "source": {
+        "path": "aiconfigurator/sdk/task_v2.py",
+        "sha256": "d0bd9d712b8a62eff7bc961b2c4a97299ac9679cdcc01fe7b862cda702f1b02e",
+        "start_line": 443,
+        "end_line": 447
+      },
+      "value": "0.9"
+    },
+    {
+      "applied_to": [
+        "F",
+        "M"
+      ],
+      "documentation": {
+        "meaning": "Degrades decode throughput during rate matching to account for batch-slot under-saturation.",
+        "path": "aiconfigurator/sdk/inference_session.py",
+        "sha256": "7c95060d8363080b4139b821c0902a432d60cd16861c08498696e5a28c8ab159",
+        "start_line": 227,
+        "end_line": 239
+      },
+      "family_r_reachable": false,
+      "id": "decode_rate_matching_degradation",
+      "kind": "multiplicative_throughput_degradation",
+      "removal_value": "1.0",
+      "source": {
+        "path": "aiconfigurator/sdk/task_v2.py",
+        "sha256": "d0bd9d712b8a62eff7bc961b2c4a97299ac9679cdcc01fe7b862cda702f1b02e",
+        "start_line": 443,
+        "end_line": 447
+      },
+      "value": "0.92"
+    },
+    {
+      "applied_to": [
+        "D"
+      ],
+      "documentation": {
+        "meaning": "Approximates concurrent prefill queueing before the TTFT filter when local concurrency is not yet known.",
+        "path": "aiconfigurator/sdk/inference_session.py",
+        "sha256": "7c95060d8363080b4139b821c0902a432d60cd16861c08498696e5a28c8ab159",
+        "start_line": 684,
+        "end_line": 690
+      },
+      "family_r_reachable": false,
+      "id": "autoscale_ttft_correction",
+      "kind": "multiplicative_latency_heuristic",
+      "removal_value": "1.0",
+      "source": {
+        "path": "aiconfigurator/sdk/task_v2.py",
+        "sha256": "d0bd9d712b8a62eff7bc961b2c4a97299ac9679cdcc01fe7b862cda702f1b02e",
+        "start_line": 448,
+        "end_line": 452
+      },
+      "value": "1.8"
+    },
+    {
+      "applied_to": [
+        "S-decode",
+        "S-prefill",
+        "R",
+        "F",
+        "M",
+        "D"
+      ],
+      "documentation": {
+        "meaning": "Derates peak memory bandwidth using a nonofficial correction based on observations.",
+        "path": "aiconfigurator_core/systems/h200_sxm.yaml",
+        "sha256": "142584d6bddd98207fd04e844029b0ba5d6fcd4c6f41016c5e77f0cbe4053614",
+        "start_line": 7,
+        "end_line": 7
+      },
+      "family_r_reachable": true,
+      "id": "memory_bandwidth_empirical_scale",
+      "kind": "multiplicative_bandwidth_derating",
+      "removal_value": "1.0",
+      "source": {
+        "path": "aiconfigurator_core/systems/h200_sxm.yaml",
+        "sha256": "142584d6bddd98207fd04e844029b0ba5d6fcd4c6f41016c5e77f0cbe4053614",
+        "start_line": 7,
+        "end_line": 7
+      },
+      "value": "0.8"
+    },
+    {
+      "applied_to": [
+        "S-decode",
+        "S-prefill",
+        "R",
+        "F",
+        "M",
+        "D"
+      ],
+      "documentation": {
+        "meaning": "Adds a 3 microsecond empirical memory-operation latency based on observations.",
+        "path": "aiconfigurator_core/systems/h200_sxm.yaml",
+        "sha256": "142584d6bddd98207fd04e844029b0ba5d6fcd4c6f41016c5e77f0cbe4053614",
+        "start_line": 8,
+        "end_line": 8
+      },
+      "family_r_reachable": true,
+      "id": "memory_empirical_constant_latency",
+      "kind": "additive_latency_correction",
+      "removal_value": "0.0",
+      "source": {
+        "path": "aiconfigurator_core/systems/h200_sxm.yaml",
+        "sha256": "142584d6bddd98207fd04e844029b0ba5d6fcd4c6f41016c5e77f0cbe4053614",
+        "start_line": 8,
+        "end_line": 8
+      },
+      "units": "seconds",
+      "value": "0.000003"
+    },
+    {
+      "applied_to": [
+        "S-prefill",
+        "F",
+        "M",
+        "D"
+      ],
+      "documentation": {
+        "meaning": "Inflates the extra context-attention QK normalization, rotary-position and KV-write latency.",
+        "path": "aiconfigurator_core/sdk/operations/attention.py",
+        "sha256": "abca1a359a1b33447389298b474afb2e485835f5024dfb05f7273635ff13fe0f",
+        "start_line": 539,
+        "end_line": 549
+      },
+      "family_r_reachable": false,
+      "id": "context_attention_extra_latency_correction",
+      "kind": "multiplicative_latency_correction",
+      "removal_value": "1.0",
+      "source": {
+        "path": "aiconfigurator_core/sdk/operations/attention.py",
+        "sha256": "abca1a359a1b33447389298b474afb2e485835f5024dfb05f7273635ff13fe0f",
+        "start_line": 549,
+        "end_line": 549
+      },
+      "value": "1.1"
+    }
+  ],
+  "external_packages": {
+    "aiconfigurator": "0.11.0",
+    "aiconfigurator-core": "0.11.0"
+  },
+  "phase_assignment_finding": "The pinned source assigns 0.9 to prefill rate matching and 0.92 to decode. The corrected-freeze narrative transposes those phase names; the run adopts the pinned source assignments verbatim.",
+  "schema": "simllm-matched-seam-external-adjustments-v1",
+  "scope": "External empirical multipliers and additive constants reached by the study composition. Structural model constants and interpolation coordinates are not adjustment factors."
+}
