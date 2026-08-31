@@ -1,0 +1,1324 @@
+{
+  "schema": "simllm-collective-floor-calibration-study-v1",
+  "study": "collective_floor_calibration_v1",
+  "chronology": {
+    "first_freeze_commit": "6ba6742",
+    "corrected_axis_freeze_commit": "0174d50",
+    "attempt_0001": {
+      "status": "VOID",
+      "finding": "The first freeze pinned BYTES, but the pinned SDK and table prove the source coordinate is ELEMENTS.",
+      "stopping_point": "The run stopped before regime selection, fitting, implementation, or scored evaluation.",
+      "interpretation": "The fatal axis guard worked as designed."
+    },
+    "this_configuration": "Frozen before fit implementation and before the corrected scored run."
+  },
+  "source": {
+    "tool": "NVIDIA AIConfigurator",
+    "aiconfigurator_version": "0.11.0",
+    "aiconfigurator_core_version": "0.11.0",
+    "system": "h200_sxm",
+    "backend": "nccl",
+    "database_version": "2.26.2",
+    "row_version": "2.29.2",
+    "artifact_sha256": "e432db694195110aa39c1e1eccf1accda012e69ef68e95210d049809bb93f015",
+    "duplicate_resolution": "first source row at each coordinate wins"
+  },
+  "axis": {
+    "source_coordinate": "ELEMENTS",
+    "physical_fit_axis": "BYTES",
+    "conversion": "true_bytes = source_elements * dtype_width_bytes",
+    "dtype_width_bytes": {
+      "half": 2,
+      "int8": 1
+    },
+    "sdk_citations": [
+      {
+        "path": "aiconfigurator_core/sdk/operations/communication.py",
+        "line": 516,
+        "finding": "The SDK constructs message_size as tokens times elements per token and passes that element count directly to query_nccl."
+      },
+      {
+        "path": "aiconfigurator_core/sdk/operations/communication.py",
+        "lines": "394-395",
+        "finding": "The analytic path multiplies message_size by dtype.value.memory separately, proving message_size itself does not already carry bytes."
+      },
+      {
+        "path": "aiconfigurator_core/sdk/common.py",
+        "lines": "1112-1113",
+        "finding": "CommQuantMode declares half width 2 and int8 width 1."
+      }
+    ],
+    "importer_citation": {
+      "path": "simllm/calibration/external_nccl.py",
+      "lines": "281-288",
+      "finding": "The importer stores the raw message_size coordinate without conversion."
+    },
+    "table_cross_check": "The half ladder starts at 256 elements and the int8 ladder at 512 elements; both first cells represent 512 bytes.",
+    "probe_correction": "The probe section-4 intercepts remain zero-size floors, but every listed half slope was per element and every listed effective bandwidth used the mislabeled element axis. The corrected study re-derives both over true bytes.",
+    "equal_byte_guard": {
+      "true_bytes": 512,
+      "dtype_half": {
+        "source_elements": 256,
+        "operation": "all_gather",
+        "ranks": 2,
+        "measured_latency_ms": "0.00517"
+      },
+      "dtype_int8": {
+        "source_elements": 512,
+        "operation": "all_gather",
+        "ranks": 2,
+        "measured_latency_ms": "0.00519"
+      },
+      "expected": "The equal-byte half and int8 queries resolve distinct measured cells."
+    }
+  },
+  "clock": {
+    "device": "NVIDIA DGX H200, H200 141GB HBM3e (GH100)",
+    "gpu_core_clock_hz": 1980000000,
+    "gpu_boost_clock_hz": 1980000000,
+    "source_url": "https://docs.nvidia.com/nim/benchmarking/llm/1.0.0/performance.html",
+    "source_location": "Hardware Specifications, NVIDIA H200",
+    "two_gpu_cycles_ps_exact": "100000/99",
+    "two_gpu_cycles_ps_ceiling": 1011,
+    "use": "Informational only; the frozen 10 percent Family H side dominates every held-out cell."
+  },
+  "fit": {
+    "dtype": "half",
+    "operations": [
+      "all_gather",
+      "reduce_scatter"
+    ],
+    "ranks": [
+      2,
+      4,
+      8
+    ],
+    "source_size_indices": {
+      "minimum": 0,
+      "maximum": 20,
+      "count_per_curve": 21
+    },
+    "source_element_range": {
+      "minimum": 256,
+      "maximum": 268435456
+    },
+    "true_byte_range": {
+      "minimum": 512,
+      "maximum": 536870912
+    },
+    "model": "T_ps = floor_ps + true_bytes * slope_ps_per_byte",
+    "fitting_objective": "Minimize the sum of squared relative residuals on training cells only.",
+    "arithmetic": "Use exact rational normal equations after converting source latency to integer picoseconds.",
+    "parameter_guards": "Every fitted floor and slope is strictly positive.",
+    "regime_selection": {
+      "candidate_count": "one, two, or three contiguous regimes per curve",
+      "minimum_training_cells_per_regime": 2,
+      "boundary_candidates": "true-byte sizes of training cells only",
+      "boundary_semantics": "Each boundary is the inclusive lower byte size of the following regime.",
+      "criterion": "Minimize BIC = n * ln(relative_SSE / n) + (3 * regimes - 1) * ln(n) over positive-parameter candidates.",
+      "tie_break": "Fewer regimes, then lexicographically smaller true-byte boundaries."
+    },
+    "regime_boundaries_true_bytes": [
+      {
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "lower_bounds_of_following_regimes": [
+          32768,
+          8388608
+        ]
+      },
+      {
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "lower_bounds_of_following_regimes": [
+          131072,
+          8388608
+        ]
+      },
+      {
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "lower_bounds_of_following_regimes": [
+          131072,
+          33554432
+        ]
+      },
+      {
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "lower_bounds_of_following_regimes": [
+          262144,
+          4194304
+        ]
+      },
+      {
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "lower_bounds_of_following_regimes": [
+          4194304,
+          67108864
+        ]
+      },
+      {
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "lower_bounds_of_following_regimes": [
+          262144,
+          16777216
+        ]
+      }
+    ],
+    "serving_rounding": "Round the modeled aggregate completion upward to the next integer picosecond.",
+    "holdout_use": "No holdout cell selects a boundary, fitted value, algorithm, or correction."
+  },
+  "membership": {
+    "training_rule": "At every rank, even size indices for all_gather and odd size indices for reduce_scatter.",
+    "holdout_rule": "The complementary size indices at every rank and operation.",
+    "training_count": 63,
+    "holdout_count": 63,
+    "training_cells": [
+      {
+        "cell_id": "half/all_gather/r2/i00",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 0,
+        "source_elements": 256,
+        "true_bytes": 512
+      },
+      {
+        "cell_id": "half/all_gather/r2/i02",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 2,
+        "source_elements": 1024,
+        "true_bytes": 2048
+      },
+      {
+        "cell_id": "half/all_gather/r2/i04",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 4,
+        "source_elements": 4096,
+        "true_bytes": 8192
+      },
+      {
+        "cell_id": "half/all_gather/r2/i06",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 6,
+        "source_elements": 16384,
+        "true_bytes": 32768
+      },
+      {
+        "cell_id": "half/all_gather/r2/i08",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 8,
+        "source_elements": 65536,
+        "true_bytes": 131072
+      },
+      {
+        "cell_id": "half/all_gather/r2/i10",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 10,
+        "source_elements": 262144,
+        "true_bytes": 524288
+      },
+      {
+        "cell_id": "half/all_gather/r2/i12",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 12,
+        "source_elements": 1048576,
+        "true_bytes": 2097152
+      },
+      {
+        "cell_id": "half/all_gather/r2/i14",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 14,
+        "source_elements": 4194304,
+        "true_bytes": 8388608
+      },
+      {
+        "cell_id": "half/all_gather/r2/i16",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 16,
+        "source_elements": 16777216,
+        "true_bytes": 33554432
+      },
+      {
+        "cell_id": "half/all_gather/r2/i18",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 18,
+        "source_elements": 67108864,
+        "true_bytes": 134217728
+      },
+      {
+        "cell_id": "half/all_gather/r2/i20",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 20,
+        "source_elements": 268435456,
+        "true_bytes": 536870912
+      },
+      {
+        "cell_id": "half/all_gather/r4/i00",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 0,
+        "source_elements": 256,
+        "true_bytes": 512
+      },
+      {
+        "cell_id": "half/all_gather/r4/i02",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 2,
+        "source_elements": 1024,
+        "true_bytes": 2048
+      },
+      {
+        "cell_id": "half/all_gather/r4/i04",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 4,
+        "source_elements": 4096,
+        "true_bytes": 8192
+      },
+      {
+        "cell_id": "half/all_gather/r4/i06",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 6,
+        "source_elements": 16384,
+        "true_bytes": 32768
+      },
+      {
+        "cell_id": "half/all_gather/r4/i08",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 8,
+        "source_elements": 65536,
+        "true_bytes": 131072
+      },
+      {
+        "cell_id": "half/all_gather/r4/i10",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 10,
+        "source_elements": 262144,
+        "true_bytes": 524288
+      },
+      {
+        "cell_id": "half/all_gather/r4/i12",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 12,
+        "source_elements": 1048576,
+        "true_bytes": 2097152
+      },
+      {
+        "cell_id": "half/all_gather/r4/i14",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 14,
+        "source_elements": 4194304,
+        "true_bytes": 8388608
+      },
+      {
+        "cell_id": "half/all_gather/r4/i16",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 16,
+        "source_elements": 16777216,
+        "true_bytes": 33554432
+      },
+      {
+        "cell_id": "half/all_gather/r4/i18",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 18,
+        "source_elements": 67108864,
+        "true_bytes": 134217728
+      },
+      {
+        "cell_id": "half/all_gather/r4/i20",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 20,
+        "source_elements": 268435456,
+        "true_bytes": 536870912
+      },
+      {
+        "cell_id": "half/all_gather/r8/i00",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 0,
+        "source_elements": 256,
+        "true_bytes": 512
+      },
+      {
+        "cell_id": "half/all_gather/r8/i02",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 2,
+        "source_elements": 1024,
+        "true_bytes": 2048
+      },
+      {
+        "cell_id": "half/all_gather/r8/i04",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 4,
+        "source_elements": 4096,
+        "true_bytes": 8192
+      },
+      {
+        "cell_id": "half/all_gather/r8/i06",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 6,
+        "source_elements": 16384,
+        "true_bytes": 32768
+      },
+      {
+        "cell_id": "half/all_gather/r8/i08",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 8,
+        "source_elements": 65536,
+        "true_bytes": 131072
+      },
+      {
+        "cell_id": "half/all_gather/r8/i10",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 10,
+        "source_elements": 262144,
+        "true_bytes": 524288
+      },
+      {
+        "cell_id": "half/all_gather/r8/i12",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 12,
+        "source_elements": 1048576,
+        "true_bytes": 2097152
+      },
+      {
+        "cell_id": "half/all_gather/r8/i14",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 14,
+        "source_elements": 4194304,
+        "true_bytes": 8388608
+      },
+      {
+        "cell_id": "half/all_gather/r8/i16",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 16,
+        "source_elements": 16777216,
+        "true_bytes": 33554432
+      },
+      {
+        "cell_id": "half/all_gather/r8/i18",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 18,
+        "source_elements": 67108864,
+        "true_bytes": 134217728
+      },
+      {
+        "cell_id": "half/all_gather/r8/i20",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 20,
+        "source_elements": 268435456,
+        "true_bytes": 536870912
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i01",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 1,
+        "source_elements": 512,
+        "true_bytes": 1024
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i03",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 3,
+        "source_elements": 2048,
+        "true_bytes": 4096
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i05",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 5,
+        "source_elements": 8192,
+        "true_bytes": 16384
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i07",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 7,
+        "source_elements": 32768,
+        "true_bytes": 65536
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i09",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 9,
+        "source_elements": 131072,
+        "true_bytes": 262144
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i11",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 11,
+        "source_elements": 524288,
+        "true_bytes": 1048576
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i13",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 13,
+        "source_elements": 2097152,
+        "true_bytes": 4194304
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i15",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 15,
+        "source_elements": 8388608,
+        "true_bytes": 16777216
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i17",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 17,
+        "source_elements": 33554432,
+        "true_bytes": 67108864
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i19",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 19,
+        "source_elements": 134217728,
+        "true_bytes": 268435456
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i01",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 1,
+        "source_elements": 512,
+        "true_bytes": 1024
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i03",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 3,
+        "source_elements": 2048,
+        "true_bytes": 4096
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i05",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 5,
+        "source_elements": 8192,
+        "true_bytes": 16384
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i07",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 7,
+        "source_elements": 32768,
+        "true_bytes": 65536
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i09",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 9,
+        "source_elements": 131072,
+        "true_bytes": 262144
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i11",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 11,
+        "source_elements": 524288,
+        "true_bytes": 1048576
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i13",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 13,
+        "source_elements": 2097152,
+        "true_bytes": 4194304
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i15",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 15,
+        "source_elements": 8388608,
+        "true_bytes": 16777216
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i17",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 17,
+        "source_elements": 33554432,
+        "true_bytes": 67108864
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i19",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 19,
+        "source_elements": 134217728,
+        "true_bytes": 268435456
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i01",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 1,
+        "source_elements": 512,
+        "true_bytes": 1024
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i03",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 3,
+        "source_elements": 2048,
+        "true_bytes": 4096
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i05",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 5,
+        "source_elements": 8192,
+        "true_bytes": 16384
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i07",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 7,
+        "source_elements": 32768,
+        "true_bytes": 65536
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i09",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 9,
+        "source_elements": 131072,
+        "true_bytes": 262144
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i11",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 11,
+        "source_elements": 524288,
+        "true_bytes": 1048576
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i13",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 13,
+        "source_elements": 2097152,
+        "true_bytes": 4194304
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i15",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 15,
+        "source_elements": 8388608,
+        "true_bytes": 16777216
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i17",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 17,
+        "source_elements": 33554432,
+        "true_bytes": 67108864
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i19",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 19,
+        "source_elements": 134217728,
+        "true_bytes": 268435456
+      }
+    ],
+    "holdout_cells": [
+      {
+        "cell_id": "half/all_gather/r2/i01",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 1,
+        "source_elements": 512,
+        "true_bytes": 1024
+      },
+      {
+        "cell_id": "half/all_gather/r2/i03",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 3,
+        "source_elements": 2048,
+        "true_bytes": 4096
+      },
+      {
+        "cell_id": "half/all_gather/r2/i05",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 5,
+        "source_elements": 8192,
+        "true_bytes": 16384
+      },
+      {
+        "cell_id": "half/all_gather/r2/i07",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 7,
+        "source_elements": 32768,
+        "true_bytes": 65536
+      },
+      {
+        "cell_id": "half/all_gather/r2/i09",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 9,
+        "source_elements": 131072,
+        "true_bytes": 262144
+      },
+      {
+        "cell_id": "half/all_gather/r2/i11",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 11,
+        "source_elements": 524288,
+        "true_bytes": 1048576
+      },
+      {
+        "cell_id": "half/all_gather/r2/i13",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 13,
+        "source_elements": 2097152,
+        "true_bytes": 4194304
+      },
+      {
+        "cell_id": "half/all_gather/r2/i15",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 15,
+        "source_elements": 8388608,
+        "true_bytes": 16777216
+      },
+      {
+        "cell_id": "half/all_gather/r2/i17",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 17,
+        "source_elements": 33554432,
+        "true_bytes": 67108864
+      },
+      {
+        "cell_id": "half/all_gather/r2/i19",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 2,
+        "size_index": 19,
+        "source_elements": 134217728,
+        "true_bytes": 268435456
+      },
+      {
+        "cell_id": "half/all_gather/r4/i01",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 1,
+        "source_elements": 512,
+        "true_bytes": 1024
+      },
+      {
+        "cell_id": "half/all_gather/r4/i03",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 3,
+        "source_elements": 2048,
+        "true_bytes": 4096
+      },
+      {
+        "cell_id": "half/all_gather/r4/i05",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 5,
+        "source_elements": 8192,
+        "true_bytes": 16384
+      },
+      {
+        "cell_id": "half/all_gather/r4/i07",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 7,
+        "source_elements": 32768,
+        "true_bytes": 65536
+      },
+      {
+        "cell_id": "half/all_gather/r4/i09",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 9,
+        "source_elements": 131072,
+        "true_bytes": 262144
+      },
+      {
+        "cell_id": "half/all_gather/r4/i11",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 11,
+        "source_elements": 524288,
+        "true_bytes": 1048576
+      },
+      {
+        "cell_id": "half/all_gather/r4/i13",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 13,
+        "source_elements": 2097152,
+        "true_bytes": 4194304
+      },
+      {
+        "cell_id": "half/all_gather/r4/i15",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 15,
+        "source_elements": 8388608,
+        "true_bytes": 16777216
+      },
+      {
+        "cell_id": "half/all_gather/r4/i17",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 17,
+        "source_elements": 33554432,
+        "true_bytes": 67108864
+      },
+      {
+        "cell_id": "half/all_gather/r4/i19",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 4,
+        "size_index": 19,
+        "source_elements": 134217728,
+        "true_bytes": 268435456
+      },
+      {
+        "cell_id": "half/all_gather/r8/i01",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 1,
+        "source_elements": 512,
+        "true_bytes": 1024
+      },
+      {
+        "cell_id": "half/all_gather/r8/i03",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 3,
+        "source_elements": 2048,
+        "true_bytes": 4096
+      },
+      {
+        "cell_id": "half/all_gather/r8/i05",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 5,
+        "source_elements": 8192,
+        "true_bytes": 16384
+      },
+      {
+        "cell_id": "half/all_gather/r8/i07",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 7,
+        "source_elements": 32768,
+        "true_bytes": 65536
+      },
+      {
+        "cell_id": "half/all_gather/r8/i09",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 9,
+        "source_elements": 131072,
+        "true_bytes": 262144
+      },
+      {
+        "cell_id": "half/all_gather/r8/i11",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 11,
+        "source_elements": 524288,
+        "true_bytes": 1048576
+      },
+      {
+        "cell_id": "half/all_gather/r8/i13",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 13,
+        "source_elements": 2097152,
+        "true_bytes": 4194304
+      },
+      {
+        "cell_id": "half/all_gather/r8/i15",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 15,
+        "source_elements": 8388608,
+        "true_bytes": 16777216
+      },
+      {
+        "cell_id": "half/all_gather/r8/i17",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 17,
+        "source_elements": 33554432,
+        "true_bytes": 67108864
+      },
+      {
+        "cell_id": "half/all_gather/r8/i19",
+        "dtype": "half",
+        "operation": "all_gather",
+        "ranks": 8,
+        "size_index": 19,
+        "source_elements": 134217728,
+        "true_bytes": 268435456
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i00",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 0,
+        "source_elements": 256,
+        "true_bytes": 512
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i02",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 2,
+        "source_elements": 1024,
+        "true_bytes": 2048
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i04",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 4,
+        "source_elements": 4096,
+        "true_bytes": 8192
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i06",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 6,
+        "source_elements": 16384,
+        "true_bytes": 32768
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i08",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 8,
+        "source_elements": 65536,
+        "true_bytes": 131072
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i10",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 10,
+        "source_elements": 262144,
+        "true_bytes": 524288
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i12",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 12,
+        "source_elements": 1048576,
+        "true_bytes": 2097152
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i14",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 14,
+        "source_elements": 4194304,
+        "true_bytes": 8388608
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i16",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 16,
+        "source_elements": 16777216,
+        "true_bytes": 33554432
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i18",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 18,
+        "source_elements": 67108864,
+        "true_bytes": 134217728
+      },
+      {
+        "cell_id": "half/reduce_scatter/r2/i20",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 2,
+        "size_index": 20,
+        "source_elements": 268435456,
+        "true_bytes": 536870912
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i00",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 0,
+        "source_elements": 256,
+        "true_bytes": 512
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i02",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 2,
+        "source_elements": 1024,
+        "true_bytes": 2048
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i04",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 4,
+        "source_elements": 4096,
+        "true_bytes": 8192
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i06",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 6,
+        "source_elements": 16384,
+        "true_bytes": 32768
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i08",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 8,
+        "source_elements": 65536,
+        "true_bytes": 131072
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i10",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 10,
+        "source_elements": 262144,
+        "true_bytes": 524288
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i12",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 12,
+        "source_elements": 1048576,
+        "true_bytes": 2097152
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i14",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 14,
+        "source_elements": 4194304,
+        "true_bytes": 8388608
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i16",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 16,
+        "source_elements": 16777216,
+        "true_bytes": 33554432
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i18",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 18,
+        "source_elements": 67108864,
+        "true_bytes": 134217728
+      },
+      {
+        "cell_id": "half/reduce_scatter/r4/i20",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 4,
+        "size_index": 20,
+        "source_elements": 268435456,
+        "true_bytes": 536870912
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i00",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 0,
+        "source_elements": 256,
+        "true_bytes": 512
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i02",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 2,
+        "source_elements": 1024,
+        "true_bytes": 2048
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i04",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 4,
+        "source_elements": 4096,
+        "true_bytes": 8192
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i06",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 6,
+        "source_elements": 16384,
+        "true_bytes": 32768
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i08",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 8,
+        "source_elements": 65536,
+        "true_bytes": 131072
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i10",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 10,
+        "source_elements": 262144,
+        "true_bytes": 524288
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i12",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 12,
+        "source_elements": 1048576,
+        "true_bytes": 2097152
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i14",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 14,
+        "source_elements": 4194304,
+        "true_bytes": 8388608
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i16",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 16,
+        "source_elements": 16777216,
+        "true_bytes": 33554432
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i18",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 18,
+        "source_elements": 67108864,
+        "true_bytes": 134217728
+      },
+      {
+        "cell_id": "half/reduce_scatter/r8/i20",
+        "dtype": "half",
+        "operation": "reduce_scatter",
+        "ranks": 8,
+        "size_index": 20,
+        "source_elements": 268435456,
+        "true_bytes": 536870912
+      }
+    ]
+  }
+}

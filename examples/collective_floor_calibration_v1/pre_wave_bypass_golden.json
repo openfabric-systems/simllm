@@ -1,0 +1,4543 @@
+{
+  "generating_commit": "06fc199783e364c2eaa6a7c917a1f9f2c84d79ac",
+  "record": {
+    "backend_invocation_order": [
+      "step-000000.artifact-0001.phase-0000.goal",
+      "step-000000.artifact-0001.phase-0001.goal",
+      "step-000000.artifact-0001.phase-0002.goal",
+      "step-000000.artifact-0001.phase-0003.goal",
+      "step-000000.artifact-0001.phase-0004.goal",
+      "step-000000.artifact-0001.phase-0005.goal",
+      "step-000000.artifact-0002.phase-0000.goal",
+      "step-000000.artifact-0002.phase-0001.goal",
+      "step-000000.artifact-0002.phase-0002.goal",
+      "step-000000.artifact-0002.phase-0003.goal",
+      "step-000000.artifact-0002.phase-0004.goal",
+      "step-000000.artifact-0002.phase-0005.goal",
+      "step-000001.artifact-0001.phase-0000.goal",
+      "step-000001.artifact-0001.phase-0001.goal",
+      "step-000001.artifact-0001.phase-0002.goal",
+      "step-000001.artifact-0001.phase-0003.goal",
+      "step-000001.artifact-0001.phase-0004.goal",
+      "step-000001.artifact-0001.phase-0005.goal",
+      "step-000001.artifact-0002.phase-0000.goal",
+      "step-000001.artifact-0002.phase-0001.goal",
+      "step-000001.artifact-0002.phase-0002.goal",
+      "step-000001.artifact-0002.phase-0003.goal",
+      "step-000001.artifact-0002.phase-0004.goal",
+      "step-000001.artifact-0002.phase-0005.goal"
+    ],
+    "backend_invocations": [
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2655360,
+            "flow_id": 4294967296,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1000,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2655360,
+            "flow_id": 12884901888,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1000,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "684513cc8332001076b4df8c2b744534fb05820eb8a703a7e9e2168b8e322d15",
+        "goal_text_bytes": 192,
+        "name": "step-000000.artifact-0001.phase-0000.goal",
+        "quiescent": true,
+        "service_ps": 2655360,
+        "wire_send_bytes": 65536
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2655360,
+            "flow_id": 4294967296,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1001,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2655360,
+            "flow_id": 12884901888,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1001,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "c9e13108d24fa20498081b972821eae9aa50138487f748d4c35f1571e8b2a44c",
+        "goal_text_bytes": 192,
+        "name": "step-000000.artifact-0001.phase-0001.goal",
+        "quiescent": true,
+        "service_ps": 2655360,
+        "wire_send_bytes": 65536
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2655360,
+            "flow_id": 4294967296,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1002,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2655360,
+            "flow_id": 12884901888,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1002,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "e80fc5d9c542cb9ad8b80c6934b83dc81aa43df2768230fed125de90d67759d2",
+        "goal_text_bytes": 192,
+        "name": "step-000000.artifact-0001.phase-0002.goal",
+        "quiescent": true,
+        "service_ps": 2655360,
+        "wire_send_bytes": 65536
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2655360,
+            "flow_id": 4294967296,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1003,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2655360,
+            "flow_id": 12884901888,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1003,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "e6c6bc2155205810fab384a6c7678c66316026ab89884b2344ddee336d8291e2",
+        "goal_text_bytes": 192,
+        "name": "step-000000.artifact-0001.phase-0003.goal",
+        "quiescent": true,
+        "service_ps": 2655360,
+        "wire_send_bytes": 65536
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2655360,
+            "flow_id": 4294967296,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1004,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2655360,
+            "flow_id": 12884901888,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1004,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "da985bc2d8776d97f3296c374446fe8f63b626003c296975bf5adbea1c5d293d",
+        "goal_text_bytes": 192,
+        "name": "step-000000.artifact-0001.phase-0004.goal",
+        "quiescent": true,
+        "service_ps": 2655360,
+        "wire_send_bytes": 65536
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2655360,
+            "flow_id": 4294967296,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1005,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2655360,
+            "flow_id": 12884901888,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1005,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "3ae73a7732d77079a6c87535950919984c927dc536c506c811ebb08af3102926",
+        "goal_text_bytes": 192,
+        "name": "step-000000.artifact-0001.phase-0005.goal",
+        "quiescent": true,
+        "service_ps": 2655360,
+        "wire_send_bytes": 65536
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2655360,
+            "flow_id": 4294967296,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1006,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2655360,
+            "flow_id": 12884901888,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1006,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "51e79b1dd1d0743e1c975a2fe16293f920b680bb44e29a9116b6a468ea01a45f",
+        "goal_text_bytes": 192,
+        "name": "step-000000.artifact-0002.phase-0000.goal",
+        "quiescent": true,
+        "service_ps": 2655360,
+        "wire_send_bytes": 65536
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2655360,
+            "flow_id": 4294967296,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1007,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2655360,
+            "flow_id": 12884901888,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1007,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "86228609979128d3f83f9d2ca5157cd64222f67ed904c81fc23d4535034fd183",
+        "goal_text_bytes": 192,
+        "name": "step-000000.artifact-0002.phase-0001.goal",
+        "quiescent": true,
+        "service_ps": 2655360,
+        "wire_send_bytes": 65536
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2655360,
+            "flow_id": 4294967296,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1008,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2655360,
+            "flow_id": 12884901888,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1008,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "b2bdeb22bfde3df7b4fce0e51c7eb0ffa0ff37bf010e5ab12ac59920ae3e6604",
+        "goal_text_bytes": 192,
+        "name": "step-000000.artifact-0002.phase-0002.goal",
+        "quiescent": true,
+        "service_ps": 2655360,
+        "wire_send_bytes": 65536
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2655360,
+            "flow_id": 4294967296,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1009,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2655360,
+            "flow_id": 12884901888,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1009,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "7619b2f98c01bb2aa32d8a98687579722ba9e9f049b363cf173442f8bd510cac",
+        "goal_text_bytes": 192,
+        "name": "step-000000.artifact-0002.phase-0003.goal",
+        "quiescent": true,
+        "service_ps": 2655360,
+        "wire_send_bytes": 65536
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2655360,
+            "flow_id": 4294967296,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1010,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2655360,
+            "flow_id": 12884901888,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1010,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "61a7ac11e0b6c4278066d2615e25781f698a9c4a6a700eab6a748fe3dc0af10a",
+        "goal_text_bytes": 192,
+        "name": "step-000000.artifact-0002.phase-0004.goal",
+        "quiescent": true,
+        "service_ps": 2655360,
+        "wire_send_bytes": 65536
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2655360,
+            "flow_id": 4294967296,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1011,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2655360,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2655360,
+            "flow_id": 12884901888,
+            "payload_bytes": 32768,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1011,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "e1fabfea5feb7d6b1744fe62b2abedbbc60b3bcc8eccd3aa1238f91fa8adabd8",
+        "goal_text_bytes": 192,
+        "name": "step-000000.artifact-0002.phase-0005.goal",
+        "quiescent": true,
+        "service_ps": 2655360,
+        "wire_send_bytes": 65536
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2010240,
+            "flow_id": 4294967296,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1000,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2010240,
+            "flow_id": 12884901888,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1000,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "295dc80fcbe6c8181943819e7969c678313c0c50c0da24d6efefa2222046dc07",
+        "goal_text_bytes": 184,
+        "name": "step-000001.artifact-0001.phase-0000.goal",
+        "quiescent": true,
+        "service_ps": 2010240,
+        "wire_send_bytes": 1024
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2010240,
+            "flow_id": 4294967296,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1001,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2010240,
+            "flow_id": 12884901888,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1001,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "3620ba3fe8d58525ee9fb85bad68c9c457a9bda231ce02ca4419e57ff865fb59",
+        "goal_text_bytes": 184,
+        "name": "step-000001.artifact-0001.phase-0001.goal",
+        "quiescent": true,
+        "service_ps": 2010240,
+        "wire_send_bytes": 1024
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2010240,
+            "flow_id": 4294967296,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1002,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2010240,
+            "flow_id": 12884901888,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1002,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "cd795868c6d9844944d4991208ae6deb5bd1a3aa4a262edd1250d174eddb348b",
+        "goal_text_bytes": 184,
+        "name": "step-000001.artifact-0001.phase-0002.goal",
+        "quiescent": true,
+        "service_ps": 2010240,
+        "wire_send_bytes": 1024
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2010240,
+            "flow_id": 4294967296,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1003,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2010240,
+            "flow_id": 12884901888,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1003,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "c1011d4534020a8850e1fd86b459de0497765cd72865a70daf38bfd5f62aba24",
+        "goal_text_bytes": 184,
+        "name": "step-000001.artifact-0001.phase-0003.goal",
+        "quiescent": true,
+        "service_ps": 2010240,
+        "wire_send_bytes": 1024
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2010240,
+            "flow_id": 4294967296,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1004,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2010240,
+            "flow_id": 12884901888,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1004,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "629dee6203e3526ae1c8f00fa6bf0fab466835f84f6a1863b79b5617c1c33c1a",
+        "goal_text_bytes": 184,
+        "name": "step-000001.artifact-0001.phase-0004.goal",
+        "quiescent": true,
+        "service_ps": 2010240,
+        "wire_send_bytes": 1024
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2010240,
+            "flow_id": 4294967296,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1005,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2010240,
+            "flow_id": 12884901888,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1005,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "4450ac8ce531c0b7f32b7c0015efd9823ddf42fa72a9cdde0cc3c8fab377caf9",
+        "goal_text_bytes": 184,
+        "name": "step-000001.artifact-0001.phase-0005.goal",
+        "quiescent": true,
+        "service_ps": 2010240,
+        "wire_send_bytes": 1024
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2010240,
+            "flow_id": 4294967296,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1006,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2010240,
+            "flow_id": 12884901888,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1006,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "5522be344a26a6ac6f9e4184dd1b1b19bc45d51ebf2e32e507a5d690387dd38b",
+        "goal_text_bytes": 184,
+        "name": "step-000001.artifact-0002.phase-0000.goal",
+        "quiescent": true,
+        "service_ps": 2010240,
+        "wire_send_bytes": 1024
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2010240,
+            "flow_id": 4294967296,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1007,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2010240,
+            "flow_id": 12884901888,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1007,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "4fd01d6d92e65868af8ac72d4ef18612dee2549bb456e19c45b66aa19d95b5ba",
+        "goal_text_bytes": 184,
+        "name": "step-000001.artifact-0002.phase-0001.goal",
+        "quiescent": true,
+        "service_ps": 2010240,
+        "wire_send_bytes": 1024
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2010240,
+            "flow_id": 4294967296,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1008,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2010240,
+            "flow_id": 12884901888,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1008,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "c7901e296c2970d8a270cc65b45c41d46436e7c606d260d1911634e5d08c36ce",
+        "goal_text_bytes": 184,
+        "name": "step-000001.artifact-0002.phase-0002.goal",
+        "quiescent": true,
+        "service_ps": 2010240,
+        "wire_send_bytes": 1024
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2010240,
+            "flow_id": 4294967296,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1009,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2010240,
+            "flow_id": 12884901888,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1009,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "25510512b172338c7ff6f30b7cd8d3922d75c3ec7437fc9b23ef1ce52264a0da",
+        "goal_text_bytes": 184,
+        "name": "step-000001.artifact-0002.phase-0003.goal",
+        "quiescent": true,
+        "service_ps": 2010240,
+        "wire_send_bytes": 1024
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2010240,
+            "flow_id": 4294967296,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1010,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2010240,
+            "flow_id": 12884901888,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1010,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "29f89ffd79e76d1b7425f1da8e92434dbcf7f800b44e88a6d72646f5f855171b",
+        "goal_text_bytes": 184,
+        "name": "step-000001.artifact-0002.phase-0004.goal",
+        "quiescent": true,
+        "service_ps": 2010240,
+        "wire_send_bytes": 1024
+      },
+      {
+        "flows": [
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 2,
+            "fct_ps": 2010240,
+            "flow_id": 4294967296,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 1,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1011,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          },
+          {
+            "completion_time_ps": 2010240,
+            "cq_consume_sequence": null,
+            "cq_id": null,
+            "cq_post_sequence": null,
+            "destination": 0,
+            "fct_ps": 2010240,
+            "flow_id": 12884901888,
+            "payload_bytes": 512,
+            "profile": "rnic-nn-fluid",
+            "rq_id": null,
+            "source": 3,
+            "sq_dispatch_sequence": null,
+            "sq_id": null,
+            "sq_post_sequence": null,
+            "start_time_ps": 0,
+            "tag": 1011,
+            "transport_kind": null,
+            "transport_object_id": null,
+            "wqe_id": null
+          }
+        ],
+        "goal_sha256": "be8139347ebf226508ad212d63f974d1416de77f626719744f572020f6c0b066",
+        "goal_text_bytes": 184,
+        "name": "step-000001.artifact-0002.phase-0005.goal",
+        "quiescent": true,
+        "service_ps": 2010240,
+        "wire_send_bytes": 1024
+      }
+    ],
+    "completion_order": [
+      0,
+      1
+    ],
+    "plans": [
+      {
+        "application_bytes": {
+          "fabric_directed_bytes": 786432,
+          "local_directed_bytes": 786432,
+          "phases": [
+            {
+              "fabric_directed_bytes": 65536,
+              "local_directed_bytes": 65536,
+              "phase_id": "layer-0:tp-attention:round-0",
+              "total_directed_bytes": 131072
+            },
+            {
+              "fabric_directed_bytes": 65536,
+              "local_directed_bytes": 65536,
+              "phase_id": "layer-0:tp-attention:round-1",
+              "total_directed_bytes": 131072
+            },
+            {
+              "fabric_directed_bytes": 65536,
+              "local_directed_bytes": 65536,
+              "phase_id": "layer-0:tp-attention:round-2",
+              "total_directed_bytes": 131072
+            },
+            {
+              "fabric_directed_bytes": 65536,
+              "local_directed_bytes": 65536,
+              "phase_id": "layer-0:tp-attention:round-3",
+              "total_directed_bytes": 131072
+            },
+            {
+              "fabric_directed_bytes": 65536,
+              "local_directed_bytes": 65536,
+              "phase_id": "layer-0:tp-attention:round-4",
+              "total_directed_bytes": 131072
+            },
+            {
+              "fabric_directed_bytes": 65536,
+              "local_directed_bytes": 65536,
+              "phase_id": "layer-0:tp-attention:round-5",
+              "total_directed_bytes": 131072
+            },
+            {
+              "fabric_directed_bytes": 65536,
+              "local_directed_bytes": 65536,
+              "phase_id": "layer-0:tp-mlp:round-0",
+              "total_directed_bytes": 131072
+            },
+            {
+              "fabric_directed_bytes": 65536,
+              "local_directed_bytes": 65536,
+              "phase_id": "layer-0:tp-mlp:round-1",
+              "total_directed_bytes": 131072
+            },
+            {
+              "fabric_directed_bytes": 65536,
+              "local_directed_bytes": 65536,
+              "phase_id": "layer-0:tp-mlp:round-2",
+              "total_directed_bytes": 131072
+            },
+            {
+              "fabric_directed_bytes": 65536,
+              "local_directed_bytes": 65536,
+              "phase_id": "layer-0:tp-mlp:round-3",
+              "total_directed_bytes": 131072
+            },
+            {
+              "fabric_directed_bytes": 65536,
+              "local_directed_bytes": 65536,
+              "phase_id": "layer-0:tp-mlp:round-4",
+              "total_directed_bytes": 131072
+            },
+            {
+              "fabric_directed_bytes": 65536,
+              "local_directed_bytes": 65536,
+              "phase_id": "layer-0:tp-mlp:round-5",
+              "total_directed_bytes": 131072
+            }
+          ],
+          "total_directed_bytes": 1572864
+        },
+        "artifacts": [
+          {
+            "artifact_id": "graph-artifact-0:compute",
+            "collective_operation_id": null,
+            "goal": null,
+            "local_service_ps": 3885000,
+            "operation_ids": [
+              "step-0:layer-0:rank-0:compute",
+              "step-0:layer-0:rank-1:compute",
+              "step-0:layer-0:rank-2:compute",
+              "step-0:layer-0:rank-3:compute"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-0",
+            "collective_operation_id": "step-0:layer-0:tp-attention",
+            "goal": {
+              "goal_sha256": "684513cc8332001076b4df8c2b744534fb05820eb8a703a7e9e2168b8e322d15",
+              "goal_text_bytes": 192,
+              "name": "step-000000.artifact-0001.phase-0000.goal",
+              "wire_send_bytes": 65536
+            },
+            "local_service_ps": 73000,
+            "operation_ids": [
+              "step-0:layer-0:tp-attention"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-1",
+            "collective_operation_id": "step-0:layer-0:tp-attention",
+            "goal": {
+              "goal_sha256": "c9e13108d24fa20498081b972821eae9aa50138487f748d4c35f1571e8b2a44c",
+              "goal_text_bytes": 192,
+              "name": "step-000000.artifact-0001.phase-0001.goal",
+              "wire_send_bytes": 65536
+            },
+            "local_service_ps": 73000,
+            "operation_ids": [
+              "step-0:layer-0:tp-attention"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-2",
+            "collective_operation_id": "step-0:layer-0:tp-attention",
+            "goal": {
+              "goal_sha256": "e80fc5d9c542cb9ad8b80c6934b83dc81aa43df2768230fed125de90d67759d2",
+              "goal_text_bytes": 192,
+              "name": "step-000000.artifact-0001.phase-0002.goal",
+              "wire_send_bytes": 65536
+            },
+            "local_service_ps": 73000,
+            "operation_ids": [
+              "step-0:layer-0:tp-attention"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-3",
+            "collective_operation_id": "step-0:layer-0:tp-attention",
+            "goal": {
+              "goal_sha256": "e6c6bc2155205810fab384a6c7678c66316026ab89884b2344ddee336d8291e2",
+              "goal_text_bytes": 192,
+              "name": "step-000000.artifact-0001.phase-0003.goal",
+              "wire_send_bytes": 65536
+            },
+            "local_service_ps": 73000,
+            "operation_ids": [
+              "step-0:layer-0:tp-attention"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-4",
+            "collective_operation_id": "step-0:layer-0:tp-attention",
+            "goal": {
+              "goal_sha256": "da985bc2d8776d97f3296c374446fe8f63b626003c296975bf5adbea1c5d293d",
+              "goal_text_bytes": 192,
+              "name": "step-000000.artifact-0001.phase-0004.goal",
+              "wire_send_bytes": 65536
+            },
+            "local_service_ps": 73000,
+            "operation_ids": [
+              "step-0:layer-0:tp-attention"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-5",
+            "collective_operation_id": "step-0:layer-0:tp-attention",
+            "goal": {
+              "goal_sha256": "3ae73a7732d77079a6c87535950919984c927dc536c506c811ebb08af3102926",
+              "goal_text_bytes": 192,
+              "name": "step-000000.artifact-0001.phase-0005.goal",
+              "wire_send_bytes": 65536
+            },
+            "local_service_ps": 73000,
+            "operation_ids": [
+              "step-0:layer-0:tp-attention"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-0",
+            "collective_operation_id": "step-0:layer-0:tp-mlp",
+            "goal": {
+              "goal_sha256": "51e79b1dd1d0743e1c975a2fe16293f920b680bb44e29a9116b6a468ea01a45f",
+              "goal_text_bytes": 192,
+              "name": "step-000000.artifact-0002.phase-0000.goal",
+              "wire_send_bytes": 65536
+            },
+            "local_service_ps": 73000,
+            "operation_ids": [
+              "step-0:layer-0:tp-mlp"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-1",
+            "collective_operation_id": "step-0:layer-0:tp-mlp",
+            "goal": {
+              "goal_sha256": "86228609979128d3f83f9d2ca5157cd64222f67ed904c81fc23d4535034fd183",
+              "goal_text_bytes": 192,
+              "name": "step-000000.artifact-0002.phase-0001.goal",
+              "wire_send_bytes": 65536
+            },
+            "local_service_ps": 73000,
+            "operation_ids": [
+              "step-0:layer-0:tp-mlp"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-2",
+            "collective_operation_id": "step-0:layer-0:tp-mlp",
+            "goal": {
+              "goal_sha256": "b2bdeb22bfde3df7b4fce0e51c7eb0ffa0ff37bf010e5ab12ac59920ae3e6604",
+              "goal_text_bytes": 192,
+              "name": "step-000000.artifact-0002.phase-0002.goal",
+              "wire_send_bytes": 65536
+            },
+            "local_service_ps": 73000,
+            "operation_ids": [
+              "step-0:layer-0:tp-mlp"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-3",
+            "collective_operation_id": "step-0:layer-0:tp-mlp",
+            "goal": {
+              "goal_sha256": "7619b2f98c01bb2aa32d8a98687579722ba9e9f049b363cf173442f8bd510cac",
+              "goal_text_bytes": 192,
+              "name": "step-000000.artifact-0002.phase-0003.goal",
+              "wire_send_bytes": 65536
+            },
+            "local_service_ps": 73000,
+            "operation_ids": [
+              "step-0:layer-0:tp-mlp"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-4",
+            "collective_operation_id": "step-0:layer-0:tp-mlp",
+            "goal": {
+              "goal_sha256": "61a7ac11e0b6c4278066d2615e25781f698a9c4a6a700eab6a748fe3dc0af10a",
+              "goal_text_bytes": 192,
+              "name": "step-000000.artifact-0002.phase-0004.goal",
+              "wire_send_bytes": 65536
+            },
+            "local_service_ps": 73000,
+            "operation_ids": [
+              "step-0:layer-0:tp-mlp"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-5",
+            "collective_operation_id": "step-0:layer-0:tp-mlp",
+            "goal": {
+              "goal_sha256": "e1fabfea5feb7d6b1744fe62b2abedbbc60b3bcc8eccd3aa1238f91fa8adabd8",
+              "goal_text_bytes": 192,
+              "name": "step-000000.artifact-0002.phase-0005.goal",
+              "wire_send_bytes": 65536
+            },
+            "local_service_ps": 73000,
+            "operation_ids": [
+              "step-0:layer-0:tp-mlp"
+            ]
+          }
+        ],
+        "locality": {
+          "authority": "placement-manifest",
+          "dependency_edges": [
+            {
+              "operation_id": "step-0:layer-0:tp-attention",
+              "origin": "explicit",
+              "participant_rank": 0,
+              "predecessor_id": "step-0:layer-0:rank-0:compute",
+              "scope": "participant-local"
+            },
+            {
+              "operation_id": "step-0:layer-0:tp-attention",
+              "origin": "explicit",
+              "participant_rank": 1,
+              "predecessor_id": "step-0:layer-0:rank-1:compute",
+              "scope": "participant-local"
+            },
+            {
+              "operation_id": "step-0:layer-0:tp-attention",
+              "origin": "explicit",
+              "participant_rank": 2,
+              "predecessor_id": "step-0:layer-0:rank-2:compute",
+              "scope": "participant-local"
+            },
+            {
+              "operation_id": "step-0:layer-0:tp-attention",
+              "origin": "explicit",
+              "participant_rank": 3,
+              "predecessor_id": "step-0:layer-0:rank-3:compute",
+              "scope": "participant-local"
+            },
+            {
+              "operation_id": "step-0:layer-0:tp-mlp",
+              "origin": "explicit",
+              "participant_rank": 0,
+              "predecessor_id": "step-0:layer-0:tp-attention",
+              "scope": "participant-local"
+            },
+            {
+              "operation_id": "step-0:layer-0:tp-mlp",
+              "origin": "explicit",
+              "participant_rank": 1,
+              "predecessor_id": "step-0:layer-0:tp-attention",
+              "scope": "participant-local"
+            },
+            {
+              "operation_id": "step-0:layer-0:tp-mlp",
+              "origin": "explicit",
+              "participant_rank": 2,
+              "predecessor_id": "step-0:layer-0:tp-attention",
+              "scope": "participant-local"
+            },
+            {
+              "operation_id": "step-0:layer-0:tp-mlp",
+              "origin": "explicit",
+              "participant_rank": 3,
+              "predecessor_id": "step-0:layer-0:tp-attention",
+              "scope": "participant-local"
+            },
+            {
+              "operation_id": "step-0:layer-0:tp-mlp",
+              "origin": "logical-queue-fifo",
+              "participant_rank": null,
+              "predecessor_id": "step-0:layer-0:tp-attention",
+              "scope": "whole-operation"
+            }
+          ],
+          "graph_execution_id": "step-0",
+          "nvlink_bandwidth_bytes_per_second": 450000000000,
+          "phases": [
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1000
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1000
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  32768,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  32768
+                ],
+                [
+                  2,
+                  32768,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  32768
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1000
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1000
+                }
+              ],
+              "nvlink_service_ps": 73000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-0:layer-0:tp-attention",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-attention:round-0",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1000
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1000
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1000
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1000
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1001
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1001
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  32768,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  32768
+                ],
+                [
+                  2,
+                  32768,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  32768
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1001
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1001
+                }
+              ],
+              "nvlink_service_ps": 73000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-0:layer-0:tp-attention",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-attention:round-1",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1001
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1001
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1001
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1001
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1002
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1002
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  32768,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  32768
+                ],
+                [
+                  2,
+                  32768,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  32768
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1002
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1002
+                }
+              ],
+              "nvlink_service_ps": 73000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-0:layer-0:tp-attention",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-attention:round-2",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1002
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1002
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1002
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1002
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1003
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1003
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  32768,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  32768
+                ],
+                [
+                  2,
+                  32768,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  32768
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1003
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1003
+                }
+              ],
+              "nvlink_service_ps": 73000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-0:layer-0:tp-attention",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-attention:round-3",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1003
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1003
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1003
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1003
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1004
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1004
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  32768,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  32768
+                ],
+                [
+                  2,
+                  32768,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  32768
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1004
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1004
+                }
+              ],
+              "nvlink_service_ps": 73000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-0:layer-0:tp-attention",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-attention:round-4",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1004
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1004
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1004
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1004
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1005
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1005
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  32768,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  32768
+                ],
+                [
+                  2,
+                  32768,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  32768
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1005
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1005
+                }
+              ],
+              "nvlink_service_ps": 73000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-0:layer-0:tp-attention",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-attention:round-5",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1005
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1005
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1005
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1005
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1006
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1006
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  32768,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  32768
+                ],
+                [
+                  2,
+                  32768,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  32768
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1006
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1006
+                }
+              ],
+              "nvlink_service_ps": 73000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-0:layer-0:tp-mlp",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-mlp:round-0",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1006
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1006
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1006
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1006
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1007
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1007
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  32768,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  32768
+                ],
+                [
+                  2,
+                  32768,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  32768
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1007
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1007
+                }
+              ],
+              "nvlink_service_ps": 73000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-0:layer-0:tp-mlp",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-mlp:round-1",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1007
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1007
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1007
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1007
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1008
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1008
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  32768,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  32768
+                ],
+                [
+                  2,
+                  32768,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  32768
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1008
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1008
+                }
+              ],
+              "nvlink_service_ps": 73000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-0:layer-0:tp-mlp",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-mlp:round-2",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1008
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1008
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1008
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1008
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1009
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1009
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  32768,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  32768
+                ],
+                [
+                  2,
+                  32768,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  32768
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1009
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1009
+                }
+              ],
+              "nvlink_service_ps": 73000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-0:layer-0:tp-mlp",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-mlp:round-3",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1009
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1009
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1009
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1009
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1010
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1010
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  32768,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  32768
+                ],
+                [
+                  2,
+                  32768,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  32768
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1010
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1010
+                }
+              ],
+              "nvlink_service_ps": 73000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-0:layer-0:tp-mlp",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-mlp:round-4",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1010
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1010
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1010
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1010
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1011
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1011
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  32768,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  32768
+                ],
+                [
+                  2,
+                  32768,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  32768
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1011
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 32768,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1011
+                }
+              ],
+              "nvlink_service_ps": 73000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-0:layer-0:tp-mlp",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-mlp:round-5",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1011
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1011
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1011
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 32768,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1011
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "phase_timestamps": [
+          {
+            "artifact_id": "graph-artifact-0:compute",
+            "finished_at_ps": 3885000,
+            "started_at_ps": 0
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-0",
+            "finished_at_ps": 6540360,
+            "started_at_ps": 3885000
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-1",
+            "finished_at_ps": 9195720,
+            "started_at_ps": 6540360
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-2",
+            "finished_at_ps": 11851080,
+            "started_at_ps": 9195720
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-3",
+            "finished_at_ps": 14506440,
+            "started_at_ps": 11851080
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-4",
+            "finished_at_ps": 17161800,
+            "started_at_ps": 14506440
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-5",
+            "finished_at_ps": 19817160,
+            "started_at_ps": 17161800
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-0",
+            "finished_at_ps": 22472520,
+            "started_at_ps": 19817160
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-1",
+            "finished_at_ps": 25127880,
+            "started_at_ps": 22472520
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-2",
+            "finished_at_ps": 27783240,
+            "started_at_ps": 25127880
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-3",
+            "finished_at_ps": 30438600,
+            "started_at_ps": 27783240
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-4",
+            "finished_at_ps": 33093960,
+            "started_at_ps": 30438600
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-5",
+            "finished_at_ps": 35749320,
+            "started_at_ps": 33093960
+          }
+        ],
+        "step_index": 0,
+        "virtual_time_ps": 0
+      },
+      {
+        "application_bytes": {
+          "fabric_directed_bytes": 12288,
+          "local_directed_bytes": 12288,
+          "phases": [
+            {
+              "fabric_directed_bytes": 1024,
+              "local_directed_bytes": 1024,
+              "phase_id": "layer-0:tp-attention:round-0",
+              "total_directed_bytes": 2048
+            },
+            {
+              "fabric_directed_bytes": 1024,
+              "local_directed_bytes": 1024,
+              "phase_id": "layer-0:tp-attention:round-1",
+              "total_directed_bytes": 2048
+            },
+            {
+              "fabric_directed_bytes": 1024,
+              "local_directed_bytes": 1024,
+              "phase_id": "layer-0:tp-attention:round-2",
+              "total_directed_bytes": 2048
+            },
+            {
+              "fabric_directed_bytes": 1024,
+              "local_directed_bytes": 1024,
+              "phase_id": "layer-0:tp-attention:round-3",
+              "total_directed_bytes": 2048
+            },
+            {
+              "fabric_directed_bytes": 1024,
+              "local_directed_bytes": 1024,
+              "phase_id": "layer-0:tp-attention:round-4",
+              "total_directed_bytes": 2048
+            },
+            {
+              "fabric_directed_bytes": 1024,
+              "local_directed_bytes": 1024,
+              "phase_id": "layer-0:tp-attention:round-5",
+              "total_directed_bytes": 2048
+            },
+            {
+              "fabric_directed_bytes": 1024,
+              "local_directed_bytes": 1024,
+              "phase_id": "layer-0:tp-mlp:round-0",
+              "total_directed_bytes": 2048
+            },
+            {
+              "fabric_directed_bytes": 1024,
+              "local_directed_bytes": 1024,
+              "phase_id": "layer-0:tp-mlp:round-1",
+              "total_directed_bytes": 2048
+            },
+            {
+              "fabric_directed_bytes": 1024,
+              "local_directed_bytes": 1024,
+              "phase_id": "layer-0:tp-mlp:round-2",
+              "total_directed_bytes": 2048
+            },
+            {
+              "fabric_directed_bytes": 1024,
+              "local_directed_bytes": 1024,
+              "phase_id": "layer-0:tp-mlp:round-3",
+              "total_directed_bytes": 2048
+            },
+            {
+              "fabric_directed_bytes": 1024,
+              "local_directed_bytes": 1024,
+              "phase_id": "layer-0:tp-mlp:round-4",
+              "total_directed_bytes": 2048
+            },
+            {
+              "fabric_directed_bytes": 1024,
+              "local_directed_bytes": 1024,
+              "phase_id": "layer-0:tp-mlp:round-5",
+              "total_directed_bytes": 2048
+            }
+          ],
+          "total_directed_bytes": 24576
+        },
+        "artifacts": [
+          {
+            "artifact_id": "graph-artifact-0:compute",
+            "collective_operation_id": null,
+            "goal": null,
+            "local_service_ps": 3886000,
+            "operation_ids": [
+              "step-1:layer-0:rank-0:compute",
+              "step-1:layer-0:rank-1:compute",
+              "step-1:layer-0:rank-2:compute",
+              "step-1:layer-0:rank-3:compute"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-0",
+            "collective_operation_id": "step-1:layer-0:tp-attention",
+            "goal": {
+              "goal_sha256": "295dc80fcbe6c8181943819e7969c678313c0c50c0da24d6efefa2222046dc07",
+              "goal_text_bytes": 184,
+              "name": "step-000001.artifact-0001.phase-0000.goal",
+              "wire_send_bytes": 1024
+            },
+            "local_service_ps": 2000,
+            "operation_ids": [
+              "step-1:layer-0:tp-attention"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-1",
+            "collective_operation_id": "step-1:layer-0:tp-attention",
+            "goal": {
+              "goal_sha256": "3620ba3fe8d58525ee9fb85bad68c9c457a9bda231ce02ca4419e57ff865fb59",
+              "goal_text_bytes": 184,
+              "name": "step-000001.artifact-0001.phase-0001.goal",
+              "wire_send_bytes": 1024
+            },
+            "local_service_ps": 2000,
+            "operation_ids": [
+              "step-1:layer-0:tp-attention"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-2",
+            "collective_operation_id": "step-1:layer-0:tp-attention",
+            "goal": {
+              "goal_sha256": "cd795868c6d9844944d4991208ae6deb5bd1a3aa4a262edd1250d174eddb348b",
+              "goal_text_bytes": 184,
+              "name": "step-000001.artifact-0001.phase-0002.goal",
+              "wire_send_bytes": 1024
+            },
+            "local_service_ps": 2000,
+            "operation_ids": [
+              "step-1:layer-0:tp-attention"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-3",
+            "collective_operation_id": "step-1:layer-0:tp-attention",
+            "goal": {
+              "goal_sha256": "c1011d4534020a8850e1fd86b459de0497765cd72865a70daf38bfd5f62aba24",
+              "goal_text_bytes": 184,
+              "name": "step-000001.artifact-0001.phase-0003.goal",
+              "wire_send_bytes": 1024
+            },
+            "local_service_ps": 2000,
+            "operation_ids": [
+              "step-1:layer-0:tp-attention"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-4",
+            "collective_operation_id": "step-1:layer-0:tp-attention",
+            "goal": {
+              "goal_sha256": "629dee6203e3526ae1c8f00fa6bf0fab466835f84f6a1863b79b5617c1c33c1a",
+              "goal_text_bytes": 184,
+              "name": "step-000001.artifact-0001.phase-0004.goal",
+              "wire_send_bytes": 1024
+            },
+            "local_service_ps": 2000,
+            "operation_ids": [
+              "step-1:layer-0:tp-attention"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-5",
+            "collective_operation_id": "step-1:layer-0:tp-attention",
+            "goal": {
+              "goal_sha256": "4450ac8ce531c0b7f32b7c0015efd9823ddf42fa72a9cdde0cc3c8fab377caf9",
+              "goal_text_bytes": 184,
+              "name": "step-000001.artifact-0001.phase-0005.goal",
+              "wire_send_bytes": 1024
+            },
+            "local_service_ps": 2000,
+            "operation_ids": [
+              "step-1:layer-0:tp-attention"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-0",
+            "collective_operation_id": "step-1:layer-0:tp-mlp",
+            "goal": {
+              "goal_sha256": "5522be344a26a6ac6f9e4184dd1b1b19bc45d51ebf2e32e507a5d690387dd38b",
+              "goal_text_bytes": 184,
+              "name": "step-000001.artifact-0002.phase-0000.goal",
+              "wire_send_bytes": 1024
+            },
+            "local_service_ps": 2000,
+            "operation_ids": [
+              "step-1:layer-0:tp-mlp"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-1",
+            "collective_operation_id": "step-1:layer-0:tp-mlp",
+            "goal": {
+              "goal_sha256": "4fd01d6d92e65868af8ac72d4ef18612dee2549bb456e19c45b66aa19d95b5ba",
+              "goal_text_bytes": 184,
+              "name": "step-000001.artifact-0002.phase-0001.goal",
+              "wire_send_bytes": 1024
+            },
+            "local_service_ps": 2000,
+            "operation_ids": [
+              "step-1:layer-0:tp-mlp"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-2",
+            "collective_operation_id": "step-1:layer-0:tp-mlp",
+            "goal": {
+              "goal_sha256": "c7901e296c2970d8a270cc65b45c41d46436e7c606d260d1911634e5d08c36ce",
+              "goal_text_bytes": 184,
+              "name": "step-000001.artifact-0002.phase-0002.goal",
+              "wire_send_bytes": 1024
+            },
+            "local_service_ps": 2000,
+            "operation_ids": [
+              "step-1:layer-0:tp-mlp"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-3",
+            "collective_operation_id": "step-1:layer-0:tp-mlp",
+            "goal": {
+              "goal_sha256": "25510512b172338c7ff6f30b7cd8d3922d75c3ec7437fc9b23ef1ce52264a0da",
+              "goal_text_bytes": 184,
+              "name": "step-000001.artifact-0002.phase-0003.goal",
+              "wire_send_bytes": 1024
+            },
+            "local_service_ps": 2000,
+            "operation_ids": [
+              "step-1:layer-0:tp-mlp"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-4",
+            "collective_operation_id": "step-1:layer-0:tp-mlp",
+            "goal": {
+              "goal_sha256": "29f89ffd79e76d1b7425f1da8e92434dbcf7f800b44e88a6d72646f5f855171b",
+              "goal_text_bytes": 184,
+              "name": "step-000001.artifact-0002.phase-0004.goal",
+              "wire_send_bytes": 1024
+            },
+            "local_service_ps": 2000,
+            "operation_ids": [
+              "step-1:layer-0:tp-mlp"
+            ]
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-5",
+            "collective_operation_id": "step-1:layer-0:tp-mlp",
+            "goal": {
+              "goal_sha256": "be8139347ebf226508ad212d63f974d1416de77f626719744f572020f6c0b066",
+              "goal_text_bytes": 184,
+              "name": "step-000001.artifact-0002.phase-0005.goal",
+              "wire_send_bytes": 1024
+            },
+            "local_service_ps": 2000,
+            "operation_ids": [
+              "step-1:layer-0:tp-mlp"
+            ]
+          }
+        ],
+        "locality": {
+          "authority": "placement-manifest",
+          "dependency_edges": [
+            {
+              "operation_id": "step-1:layer-0:tp-attention",
+              "origin": "explicit",
+              "participant_rank": 0,
+              "predecessor_id": "step-1:layer-0:rank-0:compute",
+              "scope": "participant-local"
+            },
+            {
+              "operation_id": "step-1:layer-0:tp-attention",
+              "origin": "explicit",
+              "participant_rank": 1,
+              "predecessor_id": "step-1:layer-0:rank-1:compute",
+              "scope": "participant-local"
+            },
+            {
+              "operation_id": "step-1:layer-0:tp-attention",
+              "origin": "explicit",
+              "participant_rank": 2,
+              "predecessor_id": "step-1:layer-0:rank-2:compute",
+              "scope": "participant-local"
+            },
+            {
+              "operation_id": "step-1:layer-0:tp-attention",
+              "origin": "explicit",
+              "participant_rank": 3,
+              "predecessor_id": "step-1:layer-0:rank-3:compute",
+              "scope": "participant-local"
+            },
+            {
+              "operation_id": "step-1:layer-0:tp-mlp",
+              "origin": "explicit",
+              "participant_rank": 0,
+              "predecessor_id": "step-1:layer-0:tp-attention",
+              "scope": "participant-local"
+            },
+            {
+              "operation_id": "step-1:layer-0:tp-mlp",
+              "origin": "explicit",
+              "participant_rank": 1,
+              "predecessor_id": "step-1:layer-0:tp-attention",
+              "scope": "participant-local"
+            },
+            {
+              "operation_id": "step-1:layer-0:tp-mlp",
+              "origin": "explicit",
+              "participant_rank": 2,
+              "predecessor_id": "step-1:layer-0:tp-attention",
+              "scope": "participant-local"
+            },
+            {
+              "operation_id": "step-1:layer-0:tp-mlp",
+              "origin": "explicit",
+              "participant_rank": 3,
+              "predecessor_id": "step-1:layer-0:tp-attention",
+              "scope": "participant-local"
+            },
+            {
+              "operation_id": "step-1:layer-0:tp-mlp",
+              "origin": "logical-queue-fifo",
+              "participant_rank": null,
+              "predecessor_id": "step-1:layer-0:tp-attention",
+              "scope": "whole-operation"
+            }
+          ],
+          "graph_execution_id": "step-1",
+          "nvlink_bandwidth_bytes_per_second": 450000000000,
+          "phases": [
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1000
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1000
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  512,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  512
+                ],
+                [
+                  2,
+                  512,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  512
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1000
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1000
+                }
+              ],
+              "nvlink_service_ps": 2000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-1:layer-0:tp-attention",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-attention:round-0",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1000
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1000
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1000
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1000
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1001
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1001
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  512,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  512
+                ],
+                [
+                  2,
+                  512,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  512
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1001
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1001
+                }
+              ],
+              "nvlink_service_ps": 2000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-1:layer-0:tp-attention",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-attention:round-1",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1001
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1001
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1001
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1001
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1002
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1002
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  512,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  512
+                ],
+                [
+                  2,
+                  512,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  512
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1002
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1002
+                }
+              ],
+              "nvlink_service_ps": 2000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-1:layer-0:tp-attention",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-attention:round-2",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1002
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1002
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1002
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1002
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1003
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1003
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  512,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  512
+                ],
+                [
+                  2,
+                  512,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  512
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1003
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1003
+                }
+              ],
+              "nvlink_service_ps": 2000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-1:layer-0:tp-attention",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-attention:round-3",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1003
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1003
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1003
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1003
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1004
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1004
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  512,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  512
+                ],
+                [
+                  2,
+                  512,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  512
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1004
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1004
+                }
+              ],
+              "nvlink_service_ps": 2000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-1:layer-0:tp-attention",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-attention:round-4",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1004
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1004
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1004
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1004
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1005
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1005
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  512,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  512
+                ],
+                [
+                  2,
+                  512,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  512
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1005
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1005
+                }
+              ],
+              "nvlink_service_ps": 2000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-1:layer-0:tp-attention",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-attention:round-5",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1005
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1005
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1005
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1005
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1006
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1006
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  512,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  512
+                ],
+                [
+                  2,
+                  512,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  512
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1006
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1006
+                }
+              ],
+              "nvlink_service_ps": 2000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-1:layer-0:tp-mlp",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-mlp:round-0",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1006
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1006
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1006
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1006
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1007
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1007
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  512,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  512
+                ],
+                [
+                  2,
+                  512,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  512
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1007
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1007
+                }
+              ],
+              "nvlink_service_ps": 2000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-1:layer-0:tp-mlp",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-mlp:round-1",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1007
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1007
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1007
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1007
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1008
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1008
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  512,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  512
+                ],
+                [
+                  2,
+                  512,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  512
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1008
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1008
+                }
+              ],
+              "nvlink_service_ps": 2000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-1:layer-0:tp-mlp",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-mlp:round-2",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1008
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1008
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1008
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1008
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1009
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1009
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  512,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  512
+                ],
+                [
+                  2,
+                  512,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  512
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1009
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1009
+                }
+              ],
+              "nvlink_service_ps": 2000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-1:layer-0:tp-mlp",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-mlp:round-3",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1009
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1009
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1009
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1009
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1010
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1010
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  512,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  512
+                ],
+                [
+                  2,
+                  512,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  512
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1010
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1010
+                }
+              ],
+              "nvlink_service_ps": 2000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-1:layer-0:tp-mlp",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-mlp:round-4",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1010
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1010
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1010
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1010
+                  }
+                ]
+              }
+            },
+            {
+              "fabric_segments": [
+                {
+                  "destination_rank": 2,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 1,
+                  "tag": 1011
+                },
+                {
+                  "destination_rank": 0,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 3,
+                  "tag": 1011
+                }
+              ],
+              "nvlink_bandwidth_bytes_per_second": 450000000000,
+              "nvlink_endpoint_bytes": [
+                [
+                  0,
+                  512,
+                  0
+                ],
+                [
+                  1,
+                  0,
+                  512
+                ],
+                [
+                  2,
+                  512,
+                  0
+                ],
+                [
+                  3,
+                  0,
+                  512
+                ]
+              ],
+              "nvlink_segments": [
+                {
+                  "destination_rank": 1,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 0,
+                  "tag": 1011
+                },
+                {
+                  "destination_rank": 3,
+                  "payload_bytes": 512,
+                  "request_payload_bytes": [],
+                  "source_rank": 2,
+                  "tag": 1011
+                }
+              ],
+              "nvlink_service_ps": 2000,
+              "phase": {
+                "layer": 0,
+                "operation_id": "step-1:layer-0:tp-mlp",
+                "participants": [
+                  0,
+                  1,
+                  2,
+                  3
+                ],
+                "phase_id": "layer-0:tp-mlp:round-5",
+                "segments": [
+                  {
+                    "destination_rank": 1,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 0,
+                    "tag": 1011
+                  },
+                  {
+                    "destination_rank": 2,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 1,
+                    "tag": 1011
+                  },
+                  {
+                    "destination_rank": 3,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 2,
+                    "tag": 1011
+                  },
+                  {
+                    "destination_rank": 0,
+                    "payload_bytes": 512,
+                    "request_payload_bytes": [],
+                    "source_rank": 3,
+                    "tag": 1011
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "phase_timestamps": [
+          {
+            "artifact_id": "graph-artifact-0:compute",
+            "finished_at_ps": 39635320,
+            "started_at_ps": 35749320
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-0",
+            "finished_at_ps": 41645560,
+            "started_at_ps": 39635320
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-1",
+            "finished_at_ps": 43655800,
+            "started_at_ps": 41645560
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-2",
+            "finished_at_ps": 45666040,
+            "started_at_ps": 43655800
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-3",
+            "finished_at_ps": 47676280,
+            "started_at_ps": 45666040
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-4",
+            "finished_at_ps": 49686520,
+            "started_at_ps": 47676280
+          },
+          {
+            "artifact_id": "layer-0:tp-attention:round-5",
+            "finished_at_ps": 51696760,
+            "started_at_ps": 49686520
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-0",
+            "finished_at_ps": 53707000,
+            "started_at_ps": 51696760
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-1",
+            "finished_at_ps": 55717240,
+            "started_at_ps": 53707000
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-2",
+            "finished_at_ps": 57727480,
+            "started_at_ps": 55717240
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-3",
+            "finished_at_ps": 59737720,
+            "started_at_ps": 57727480
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-4",
+            "finished_at_ps": 61747960,
+            "started_at_ps": 59737720
+          },
+          {
+            "artifact_id": "layer-0:tp-mlp:round-5",
+            "finished_at_ps": 63758200,
+            "started_at_ps": 61747960
+          }
+        ],
+        "step_index": 1,
+        "virtual_time_ps": 35749320
+      }
+    ],
+    "random_generator_state": {
+      "after": "d89e44f0786273a96fc0eb42f8f715a32c13dfba56a7d0dc298526e70f756acb",
+      "before": "d89e44f0786273a96fc0eb42f8f715a32c13dfba56a7d0dc298526e70f756acb"
+    },
+    "results": [
+      {
+        "step_result": {
+          "additive_visit_totals": null,
+          "completed_at_ps": 35749320,
+          "request_metrics": [],
+          "step_index": 0,
+          "step_latency_ps": 35749320
+        }
+      },
+      {
+        "step_result": {
+          "additive_visit_totals": null,
+          "completed_at_ps": 63758200,
+          "request_metrics": [],
+          "step_index": 1,
+          "step_latency_ps": 28008880
+        }
+      }
+    ],
+    "wire_bytes": {
+      "fabric_goal_send_bytes": 798720,
+      "per_invocation": [
+        65536,
+        65536,
+        65536,
+        65536,
+        65536,
+        65536,
+        65536,
+        65536,
+        65536,
+        65536,
+        65536,
+        65536,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024,
+        1024
+      ]
+    }
+  },
+  "scenario": {
+    "hosts": [
+      "node-a",
+      "node-a",
+      "node-b",
+      "node-b"
+    ],
+    "profile": "rnic-nn-fluid",
+    "prompt_tokens": 64,
+    "scenario_id": "traf76-mixed-locality-bypass-v1",
+    "steps": 2,
+    "tp_ranks": [
+      0,
+      1,
+      2,
+      3
+    ]
+  },
+  "schema": "simllm-collective-floor-pre-wave-bypass-golden-v1"
+}
