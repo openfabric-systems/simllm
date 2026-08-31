@@ -23,6 +23,7 @@ import re
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, is_dataclass
 from enum import Enum
 from fractions import Fraction
@@ -440,30 +441,32 @@ def _records(*, prompt_tokens: int, steps: int) -> list[StepRecord]:
     return records
 
 
-def _artifact_manifest(workdir: Path) -> list[dict[str, Any]]:
+def _artifact_manifest(paths: tuple[Path, ...]) -> list[dict[str, Any]]:
     rows = []
-    for path in sorted(workdir.rglob("*.goal")):
+    for path in sorted(paths, key=lambda candidate: candidate.name):
         raw = path.read_bytes()
-        sends = [int(value) for value in re.findall(rb"send ([0-9]+)b", raw)]
-        rows.append(
-            {
-                "kind": "goal",
-                "name": path.name,
-                "bytes": len(raw),
-                "sha256": _sha256_bytes(raw),
-                "application_send_bytes": sum(sends),
-            }
-        )
-    for path in sorted(workdir.rglob("*.csv")):
-        raw = path.read_bytes()
-        rows.append(
-            {
-                "kind": "completion",
-                "name": path.name,
-                "bytes": len(raw),
-                "sha256": _sha256_bytes(raw),
-            }
-        )
+        if path.suffix == ".goal":
+            sends = [int(value) for value in re.findall(rb"send ([0-9]+)b", raw)]
+            rows.append(
+                {
+                    "kind": "goal",
+                    "name": path.name,
+                    "bytes": len(raw),
+                    "sha256": _sha256_bytes(raw),
+                    "application_send_bytes": sum(sends),
+                }
+            )
+        elif path.suffix == ".csv":
+            rows.append(
+                {
+                    "kind": "completion",
+                    "name": path.name,
+                    "bytes": len(raw),
+                    "sha256": _sha256_bytes(raw),
+                }
+            )
+        else:
+            raise ValueError(f"unsupported study artifact {path.name!r}")
     return rows
 
 
@@ -639,8 +642,7 @@ def _run_dense_width(
         if htsim is None or txt2bin is None:
             raise StudyUnavailable("mixed-width diagnostics require htsim and txt2bin")
         topology = _write_width_clos(workdir / f"clos-{width}-400g.topo", width=width)
-    rows = []
-    for phase in _dense_phases(width):
+    def price_phase(phase: Any) -> dict[str, Any]:
         operation = phase.phase.operation_id.rsplit(":", 1)[-1]
         fabric_ps = 0
         manifest = []
@@ -672,7 +674,7 @@ def _run_dense_width(
                 timeout_s=900,
             )
             fabric_ps = run.job_completion_time_ps()
-            manifest = _artifact_manifest(workdir)
+            manifest = _artifact_manifest((goal_path, completion_csv))
         estimate = calibration.estimate(
             dtype="half",
             operation=operation,
@@ -696,39 +698,45 @@ def _run_dense_width(
             physical_endpoint_estimate.serialization_ps,
             fabric_ps,
         )
-        rows.append(
-            {
-                "operation": operation,
-                "width": width,
-                "local_endpoint_bytes": phase.nvlink_peak_endpoint_bytes,
-                "operation_buffer_bytes": operation_buffer_bytes,
-                "current_local_serialization_ps": phase.nvlink_service_ps,
-                "calibrated_local_serialization_ps": estimate.serialization_ps,
-                "aggregate_floor_ps": estimate.floor_charge_ps,
-                "fabric_service_ps_unchanged": fabric_ps,
-                "current_composed_phase_ps": current_phase_ps,
-                "calibrated_composed_phase_ps": calibrated_phase_ps,
-                "evidence_class": estimate.evidence_class,
-                "transfer_reason": estimate.transfer_reason,
-                "regime": estimate.regime.as_dict(),
-                "physical_endpoint_reading": {
-                    "query_bytes": phase.nvlink_peak_endpoint_bytes,
-                    "calibrated_local_serialization_ps": (
-                        physical_endpoint_estimate.serialization_ps
-                    ),
-                    "aggregate_floor_ps": (
-                        physical_endpoint_estimate.floor_charge_ps
-                    ),
-                    "composed_phase_ps": physical_endpoint_phase_ps,
-                    "evidence_class": physical_endpoint_estimate.evidence_class,
-                    "transfer_reason": physical_endpoint_estimate.transfer_reason,
-                    "regime": physical_endpoint_estimate.regime.as_dict(),
-                },
-                "artifacts": manifest,
-            }
-        )
+        return {
+            "operation": operation,
+            "width": width,
+            "local_endpoint_bytes": phase.nvlink_peak_endpoint_bytes,
+            "operation_buffer_bytes": operation_buffer_bytes,
+            "current_local_serialization_ps": phase.nvlink_service_ps,
+            "calibrated_local_serialization_ps": estimate.serialization_ps,
+            "aggregate_floor_ps": estimate.floor_charge_ps,
+            "fabric_service_ps_unchanged": fabric_ps,
+            "current_composed_phase_ps": current_phase_ps,
+            "calibrated_composed_phase_ps": calibrated_phase_ps,
+            "evidence_class": estimate.evidence_class,
+            "transfer_reason": estimate.transfer_reason,
+            "regime": estimate.regime.as_dict(),
+            "physical_endpoint_reading": {
+                "query_bytes": phase.nvlink_peak_endpoint_bytes,
+                "calibrated_local_serialization_ps": (
+                    physical_endpoint_estimate.serialization_ps
+                ),
+                "aggregate_floor_ps": physical_endpoint_estimate.floor_charge_ps,
+                "composed_phase_ps": physical_endpoint_phase_ps,
+                "evidence_class": physical_endpoint_estimate.evidence_class,
+                "transfer_reason": physical_endpoint_estimate.transfer_reason,
+                "regime": physical_endpoint_estimate.regime.as_dict(),
+            },
+            "artifacts": manifest,
+        }
+
+    phases = _dense_phases(width)
+    if any(phase.fabric_segments for phase in phases):
+        with ThreadPoolExecutor(max_workers=len(phases)) as executor:
+            rows = list(executor.map(price_phase, phases))
+        execution_mode = "parallel-independent-semantic-halves"
+    else:
+        rows = [price_phase(phase) for phase in phases]
+        execution_mode = "analytic-local-only"
     return {
         "expert_parallel": width,
+        "execution_mode": execution_mode,
         "current_dispatch_combine_ms": (
             sum(row["current_composed_phase_ps"] for row in rows)
             * REPRESENTED_LAYERS
@@ -1336,6 +1344,18 @@ def _evaluate(output_dir: Path) -> dict[str, Any]:
             "The production consumer allowed transferred-at-use timing into signature metrics without explicit acknowledgement.",
         ],
     }
+    record_chronology["attempt_0003"] = {
+        "status": "VOID",
+        "finding": (
+            "The second fresh evaluation took 657.1472301706672 seconds, "
+            "above the unchanged 600-second Family W ceiling; the first took "
+            "564.1278964616358 seconds, so W also made FG-6 differ."
+        ),
+        "interpretation": (
+            "The corrected H, B, D8, and M findings are retained but cannot "
+            "support publication from this void attempt."
+        ),
+    }
     bypass_held = family_b["status"] == "PASS"
     guards = [
         {
@@ -1548,7 +1568,8 @@ def _coordinator(workdir: Path, *, write_tracked: bool) -> dict[str, Any]:
     record["verdict"] = (
         "interpretable" if all(guard["held"] for guard in guards) else "VOID"
     )
-    record["chronology"]["attempt_0003"] = {
+    attempt_key = workdir.name.replace("-", "_")
+    record["chronology"][attempt_key] = {
         "status": record["verdict"].upper(),
         "fresh_process_evaluations": 2,
         "coordinate_mapping_freeze_commit": COORDINATE_FREEZE_COMMIT,
