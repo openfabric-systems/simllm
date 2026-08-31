@@ -1,0 +1,176 @@
+from __future__ import annotations
+
+import importlib.util
+import io
+import json
+from pathlib import Path
+from types import ModuleType
+
+import pytest
+
+
+def _load_reader() -> ModuleType:
+    path = (
+        Path(__file__).resolve().parents[1]
+        / "examples/deployment_curve_v1/core63_clean_field_reader.py"
+    )
+    spec = importlib.util.spec_from_file_location("core63_clean_field_reader", path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+reader = _load_reader()
+
+
+def _source(payload: bytes):
+    return reader._PartialSource(io.BytesIO(payload), len(payload))
+
+
+def test_top_field_selector_stops_before_end() -> None:
+    payload = b'{"calibration_context":{"tokens":32},"forbidden":999}\n'
+    source = _source(payload)
+
+    value = reader._extract_top_field(source, "calibration_context")
+
+    assert value == {"tokens": 32}
+    assert 0 < source.bytes_accessed < len(payload)
+
+
+def test_selector_that_would_stream_whole_file_is_rejected() -> None:
+    payload = b'{"other":1}'
+    source = _source(payload)
+
+    with pytest.raises(reader.WholeFileAccessRejected):
+        reader._extract_top_field(source, "missing")
+
+    assert source.bytes_accessed == len(payload) - 1
+
+
+def test_kernel_selector_stops_at_boundary_prefix() -> None:
+    header = ",".join(reader.EXPECTED_HEADER) + "\n"
+    selected = (
+        "decode,decode_b32_c2000,0,1,fused_moe_kernel,False,,1,1,1,1,0.1,1,1\n"
+    )
+    collective = (
+        "decode,decode_b32_c2000,0,2,collective_kernel,True,all_reduce,1,1,1,1,0.1,1,1\n"
+    )
+    boundary = "prefill,prefill_s1,0,secret_payload_that_must_not_be_decoded\n"
+    trailing = "decode,other,0,unused\n"
+    payload = (header + selected + collective + boundary + trailing).encode("utf-8")
+    source = _source(payload)
+
+    rows = reader._extract_kernels(source)
+
+    assert len(rows) == 1
+    assert rows[0]["name"] == "fused_moe_kernel"
+    assert source.bytes_accessed < len(payload)
+    assert source.bytes_accessed <= payload.index(b"secret_payload")
+
+
+def test_sparse_kernel_selector_reads_header_and_terminal_group_only() -> None:
+    header = ",".join(reader.LEGACY_HEADER) + "\n"
+    selected = (
+        "decode,decode_b32_c2000,1,fused_moe_kernel,False,1,1,1,1,0.1,1,1\n"
+    )
+    collective = (
+        "decode,decode_b32_c2000,2,collective_kernel,True,1,1,1,1,0.1,1,1\n"
+    )
+    payload = (header + selected + collective).encode("utf-8")
+    source = reader._SparseSource(io.BytesIO(payload), len(payload))
+
+    rows = reader._extract_kernels_sparse(source)
+
+    assert len(rows) == 1
+    assert rows[0]["name"] == "fused_moe_kernel"
+    assert source.bytes_accessed == source.unique_bytes_accessed
+    assert source.unique_bytes_accessed == len(payload) - 1
+
+
+def test_registry_selector_does_not_assume_table_punctuation() -> None:
+    payload = b"# Core tasks\n\n### CORE-63 residency\n\nLater text\n"
+    source = _source(payload)
+
+    value = reader._extract_task_line(source, "CORE-63")
+
+    assert value == "### CORE-63 residency"
+    assert source.bytes_accessed < len(payload)
+
+
+def test_reverse_registry_selector_returns_last_task_paragraph() -> None:
+    payload = (
+        b"# Core tasks\n\n"
+        b"### CORE-63 residency\n"
+        b"Acceptance: candidate evidence closes only the derivation.\n\n"
+        b"### CORE-64 follow-on\n"
+        b"Status: conditional on CORE-63.\n\n"
+        b"Footer\n"
+    )
+    source = reader._SparseSource(io.BytesIO(payload), len(payload))
+
+    value = reader._extract_last_task_paragraph(source, "CORE-63")
+
+    assert value == (
+        "### CORE-63 residency\n"
+        "Acceptance: candidate evidence closes only the derivation."
+    )
+    assert source.unique_bytes_accessed < len(payload)
+
+
+def test_reverse_registry_block_retains_blank_continuation() -> None:
+    payload = (
+        b"# Core tasks\n\n"
+        b"- CORE-64 follow-on\n"
+        b"  First sentence.\n\n"
+        b"  Acceptance remains conditional.\n"
+        b"## Next section\n"
+        b"Footer\n"
+    )
+    source = reader._SparseSource(io.BytesIO(payload), len(payload))
+
+    value = reader._extract_last_task_block(source, "CORE-64")
+
+    assert value == (
+        "- CORE-64 follow-on\n"
+        "  First sentence.\n\n"
+        "  Acceptance remains conditional."
+    )
+    assert source.unique_bytes_accessed < len(payload)
+
+
+def test_access_begin_is_written_before_extractor_runs(tmp_path: Path) -> None:
+    record = tmp_path / "record.json"
+    record.write_text('{"selected":1,"later":2}\n', encoding="utf-8", newline="\n")
+    ledger = tmp_path / "access.jsonl"
+    recorder = reader.AccessRecorder(ledger)
+
+    def extract(source):
+        entries = [json.loads(line) for line in ledger.read_text().splitlines()]
+        assert [entry["event"] for entry in entries] == ["BEGIN"]
+        return reader._extract_top_field(source, "selected")
+
+    value = reader._read_allowlisted(
+        record,
+        record,
+        classification="synthetic",
+        label="synthetic.json",
+        selector="/selected",
+        recorder=recorder,
+        extractor=extract,
+    )
+
+    assert value == 1
+    entries = [json.loads(line) for line in ledger.read_text().splitlines()]
+    assert [entry["event"] for entry in entries] == ["BEGIN", "END"]
+    assert entries[-1]["status"] == "PASS"
+    assert entries[-1]["bytes_accessed"] < entries[-1]["record_size_bytes"]
+
+
+def test_access_ledger_cannot_be_reused(tmp_path: Path) -> None:
+    ledger = tmp_path / "access.jsonl"
+    reader.AccessRecorder(ledger)
+
+    with pytest.raises(FileExistsError):
+        reader.AccessRecorder(ledger)

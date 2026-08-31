@@ -56,19 +56,27 @@ backend submodules.
 - `HtsimUecConfig` + `build_htsim_uec_command`: argv construction for
   GOAL-driven `htsim_uec` runs.
 - `LogGopsimConfig` + `build_loggopsim_command` + `run_loggopsim` +
-  `parse_loggopsim_stdout` (BACK-2): the flow-level analytical seam. The same
-  binary GOAL is costed with the LogGOPS model instead of a packet fabric, so
-  a sweep that only needs a schedule completion time does not pay for a
-  packet-level run. LogGOPS parameters keep the tool's own units, `L`, `o`,
-  `g` and `O` in whole nanoseconds and `G` in nanoseconds per byte, under
-  explicit `_ns` field names; parsed times convert to picoseconds by exactly
-  1000. The parser reads both output shapes the tool can print, the per-host
-  block and the batch-mode maximum, and treats a nonfinite `Average FCT` as
-  absent. Discovery is `SIMLLM_LOGGOPSIM`, the `build/loggopsim` CMake
-  layout, the ATLAHS submodule's own make output, then `PATH`; with none of
-  those present the runner raises and names the environment variable. This is
-  an invocation helper only, and TRAF-20 still owns the fluid fast fidelity
-  level.
+  `parse_loggopsim_stdout` + `derive_loggp_params` (BACK-2, TRAF-20): the
+  flow-level analytical seam. The same binary GOAL is costed with the LogGOPS
+  model instead of a packet fabric. LogGOPS parameters keep the tool's own
+  units, `L`, `o`, `g` and `O` in whole nanoseconds and `G` in nanoseconds per
+  byte, under explicit `_ns` field names; parsed times convert to picoseconds
+  by exactly 1000. The ideal mapping derives `G = 8e9 / rate_bits_per_second`
+  and preserves its shortest binary64 decimal string. All six values carry a
+  `DECLARED` evidence record. The parser reads both output shapes the tool can
+  print, the per-host block and the batch-mode maximum, and treats a
+  nonfinite `Average FCT` as absent. Discovery is `SIMLLM_LOGGOPSIM`, the
+  `build/loggopsim` CMake layout, the ATLAHS submodule's own make output, then
+  `PATH`; with none present the runner raises and names the environment
+  variable.
+- `LogGopsimStepSink` + `LogGopsimStepSinkConfig` (TRAF-20): the selectable
+  ideal-network sibling of `HtsimStepSink`. It reuses the serial lowerer,
+  graph authority, GOAL rendering and analytic local path unchanged, then
+  runs each remote fabric artifact through LogGOPSim and returns the standard
+  `StepResult`. Provenance records the binary SHA-256 and, for every native
+  invocation, the full argv, exact `G` string, input hashes and maximum host
+  finish. Its declared `S` keeps every rendered payload eager, with a
+  pre-invocation rejection if that contract is violated.
 - `HtsimStepSink` + `HtsimStepSinkConfig` (M4): the closed-loop step sink,
   a callable `StepRecord -> StepResult | None` matching the adapters' sink
   contract. Per step its serial lowerer builds one `ExecutionGraph`; that
@@ -943,7 +951,33 @@ size and per-byte gap reproduces the LogGOPS cost model on four of four scored
 instances with an invariant 6500 ns constant, every cell above its own
 serialization floor
 ([loggopsim_helper_v1](../../examples/loggopsim_helper_v1/RESULTS.md)). The
-helper is the invocation seam only; TRAF-20 still owns the fluid fast level.
+helper remains the generic invocation seam.
+
+The TRAF-20 ideal-network slice passes 30 of 30 exact LogGOPS arithmetic
+observables, 3 of 3 live metric-chain identities and 3 of 3 generous wall-time
+ceilings in separate evidence classes. The sink's 202,000 ps network
+makespan equals an independent execution of its emitted artifact, and the
+remote step's TTFT exceeds the zero-collective control by exactly the same
+202,000 ps
+([loggopsim_ideal_v1](../../examples/loggopsim_ideal_v1/RESULTS.md)). All six
+fatal guards held. The
+[frontier ladder](../../examples/frontier_ladder_v1/RESULTS.md) measures the
+modeled-error half against pinned packet observations: batch-32 packet over
+ideal is 1.015637 for serialized traffic, 8.110405 for incast and 1.015682 for
+the isolated incast control. It executes no packet reference and therefore
+measures no packet wall clock. The level refuses overlapping multi-source
+receiver fan-in by default because its receiver per-byte gap is unmodeled; an
+explicit acknowledgment permits the run and is stamped in provenance.
+The separately frozen
+[acceptance study](../../examples/loggopsim_acceptance_v1/RESULTS.md) executes
+both repository runners seven times on each of the same twelve GOAL binaries.
+All twelve packet completions exactly reproduce the pinned reference, and all
+three enforcement cells pass. The full acceptance is nevertheless REFUTED:
+the packet total is 1.088866981 seconds, the ideal total is 0.029767114
+seconds, and their 36.579528x ratio misses the frozen 50x floor. All four
+fatal guards hold, so TRAF-20 remains open specifically on the speed
+qualification. The backend evidence does not extend packet or silicon
+fidelity beyond the pinned frontier record.
 
 HTSIM-25 and HTSIM-8 closed on 2026-08-13, each against its own acceptance
 clauses. An exact bound-authorship reproduction classified all 17 previously

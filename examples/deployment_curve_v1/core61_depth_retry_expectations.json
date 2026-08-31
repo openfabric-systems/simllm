@@ -1,0 +1,116 @@
+{
+  "acceptance": {
+    "held_out_tolerance_percent": "5",
+    "linearity_pass_rule": "abs(measured_service_ps - preregistered_prediction_ps) / measured_service_ps <= 0.05",
+    "on_miss": "Publish the signed non-linearity and register its remainder as CORE-63 only if residual work remains.",
+    "on_pass": "Validate linear depth scaling for the frozen decode family. The remaining decode-family gap then belongs to expert-parallel residency shape or decode-side overlap.",
+    "preregistered_prediction_ps": 3751359511,
+    "signed_residual_rule": "measured_service_ps - preregistered_prediction_ps",
+    "unchanged_from_original_freeze": true
+  },
+  "amendment": {
+    "chronology": "No depth-8 decode cell had reached a measured boundary when this supplement was committed.",
+    "legitimacy": "This is a pre-scoring harness amendment. It changes startup scaffolding and the route to the exact scheduler state, not the measured state or its comparison.",
+    "reason": "The original 65,536-token vLLM dummy startup run exhausted the GH200 allocation headroom before measurement.",
+    "scored_values_available_before_amendment": false,
+    "status": "PRE_SCORING_HARNESS_AMENDMENT"
+  },
+  "diagnosis": {
+    "inherited_profile_reason": "The original decode submission explicitly passed MAX_NUM_BATCHED_TOKENS=65536. vLLM used that scheduler maximum as its dummy startup profile length even though REDUCED_LAYERS=8 changed only model depth.",
+    "job_200123": {
+      "allocation_bytes": 939524096,
+      "allocation_mib": 896,
+      "allocation_site": "vllm/model_executor/layers/fused_moe/modular_kernel.py: output = torch.empty_like(hidden_states)",
+      "exact_shape_inference": "65536 tokens x 7168 hidden values x 2 bytes per bfloat16 value",
+      "file_manifest_sha256": "b7d23c479b604d82537e837ca160e9ad626772ec8e076b355b966234209d2a69",
+      "job_log_sha256": "2514a378ff120651f9486339d8f19b1979ea487610cb4067678f945addeff44e"
+    },
+    "job_200128": {
+      "allocation_bytes": 3221225472,
+      "allocation_gib": 3,
+      "allocation_site": "vllm/model_executor/kernels/linear/scaled_mm/flashinfer.py: output = torch.empty",
+      "exact_shape": "65536 tokens x 24576 output values x 2 bytes per bfloat16 value",
+      "file_manifest_sha256": "3345fc82b8f5f5085fd7f33344efcb63592e6f0f15696e8ecb832b97dde29e1a",
+      "job_log_sha256": "1eedf9c326cd763651f50dfb6e61d1c4ee8b5c06eb7033f8686d61d5a6214867"
+    },
+    "merged_summary_correction": "The pinned logs do not show identical final allocation sites. Job 200123 ends on 896 MiB, while the warm-cache retry ends on a 3 GiB FlashInfer DeepGEMM output. Both are startup-only failures caused by the 65,536-token dummy run.",
+    "measurement_reached": false
+  },
+  "execution": {
+    "base_command": "ssh merlin sbatch -M gmerlin7 --partition=gh-hourly --time=00:25:00 --job-name=gh-core61r-d8-base --export=ALL,MODEL=deepseek-ai/DeepSeek-V3,MODEL_KEY=deepseek-v3,SHAPE_SET=deepseek,REVISION=e815299b0bcbac849fa540c768ef21845365c9eb,REDUCED_LAYERS=8,GPU_MEMORY_UTILIZATION=0.88,MODE=graph,DEEPSEEK_SUITE=base,MAX_MODEL_LEN=8192,MAX_NUM_BATCHED_TOKENS=16384,RUN_WALL=0 $SIMLLM_MERLIN_STAGE_ROOT/gh200lane/run_vllm_capture.sbatch",
+    "decode_command": "ssh merlin sbatch -M gmerlin7 --partition=gh-hourly --time=00:20:00 --job-name=gh-core61r-d8-decode --export=ALL,MODEL=deepseek-ai/DeepSeek-V3,REVISION=e815299b0bcbac849fa540c768ef21845365c9eb,REDUCED_LAYERS=8,GPU_MEMORY_UTILIZATION=0.88,MAX_MODEL_LEN=8192,STARTUP_MAX_NUM_BATCHED_TOKENS=4096,MAX_NUM_SEQS=32,BATCH_SIZE=32,REMOTE_KV_TOKENS=2000 $SIMLLM_CORE61_RETRY_STAGE_ROOT/run_core61_depth_retry.sbatch",
+    "order": "Submit base, wait for its terminal retained attempt, inspect hourly occupancy, then submit decode.",
+    "output_root_environment": "SIMLLM_CORE61_RETRY_RUN_ROOT",
+    "resume_rule": "Never overwrite an attempt. Retain a file manifest for every terminal attempt and park on SSH or MFA loss with the last job identifier and state."
+  },
+  "fatal_guards": [
+    "The model, revision, reduced depth, framework version, CUDA-graph mode and TP1/DP1/EP1 physical envelope match the frozen identity.",
+    "The scheduler marker reports one decode step with exactly 32 requests and exactly 2,000 computed KV tokens for every request.",
+    "Exactly one execute_context_0(0)_generation_32(32) boundary is selected through Nsight Systems runtime correlations.",
+    "The measured service is the positive additive noncollective kernel duration inside that boundary, converted from nanoseconds to integer picoseconds.",
+    "No model weight file appears in the isolated cache, and every retained source is digest complete.",
+    "The scorer reads the measured service once and does not modify the prediction, tolerance or sign convention."
+  ],
+  "measurement_contract": {
+    "batch_size": 32,
+    "boundary_label": "execute_context_0(0)_generation_32(32)",
+    "depth_layers": 8,
+    "launch_mode": "cuda-graph",
+    "model": "deepseek-ai/DeepSeek-V3",
+    "parallelism": {
+      "data_parallel": 1,
+      "expert_parallel": 1,
+      "pipeline_parallel": 1,
+      "tensor_parallel": 1
+    },
+    "remote_kv_tokens_per_request": 2000,
+    "revision": "e815299b0bcbac849fa540c768ef21845365c9eb",
+    "service": "additive noncollective GPU kernel duration selected by exact NVTX runtime correlation"
+  },
+  "occupancy": {
+    "check": "Inspect gh-hourly before each submission.",
+    "maximum_task_owned_live_jobs": 1,
+    "minimum_poll_interval_seconds": 60,
+    "policy": "Pace short submissions, keep base and decode sequential, and do not bypass queue occupancy."
+  },
+  "preservation": {
+    "comp76_touched": false,
+    "finite_overlap_recomputed": false,
+    "model_weights_downloaded": false,
+    "original_comp78_result_touched": false,
+    "original_expectations_touched": false,
+    "prediction_changed": false,
+    "scored_artifacts_touched": false,
+    "tolerance_changed": false,
+    "web_pages_fetched": false
+  },
+  "residual_ledger": [
+    {
+      "owner": "CORE-61",
+      "signed_rule": "measured_service_ps - 3751359511",
+      "term": "held-out depth scaling"
+    },
+    {
+      "owner": "TRAF-66",
+      "state": "UNCHANGED_NOT_RECOMPUTED",
+      "term": "finite compute and communication overlap"
+    }
+  ],
+  "schema": "simllm-deployment-curve-core61-depth-retry-expectations-v1",
+  "source_locks": {
+    "core61_depth_comp78_result_json_sha256": "90796c5f9eca05535e309ec10600f08ae43735b6399034fb91d4b25b7f41858e",
+    "core61_depth_comp78_result_md_sha256": "2d22b551f6039b735c2271f1aad8a266bb8f935fc5e275eccb1e2570cbc1578e",
+    "core61_depth_expectations_json_sha256": "f6af234593d3b0ca7844b9dba4928514d60f517296a0b101f3e708eb4379bd11",
+    "core61_depth_expectations_md_sha256": "fb130573db29a02f6b5154c854cb93f7301cbd4fb8c1b713bb61732a09c04c41",
+    "core61_depth_result_json_sha256": "67061c5d0ef4dcd45c2c0608ff5068af98739928be0e5eb643411f2251c1a13a",
+    "core61_depth_result_md_sha256": "fd71813c911cb1cea59933d6db30a10e3114beffe2e7c4d56f5f3f2b050712bc"
+  },
+  "startup_amendment": {
+    "alignment": "Calibrate staggered prompt lengths under the small scheduler cap, keep early requests alive, and accept only the first full-batch decode state whose 32 cached token counts are all exactly 2,000.",
+    "measurement_effect": "None. The startup profile and prompt-construction route are scaffolding outside the selected decode boundary.",
+    "original_dummy_tokens": 65536,
+    "retry_dummy_tokens": 4096
+  },
+  "status": "EXPECTATIONS_ONLY_PRE_SCORING_AMENDMENT",
+  "task": "CORE-61"
+}

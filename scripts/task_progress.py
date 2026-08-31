@@ -27,6 +27,7 @@ END = "<!-- end task-progress -->"
 
 PREFIXES = (
     "CORE",
+    "DEPLOY",
     "WORK",
     "COMP",
     "PLACE",
@@ -43,6 +44,7 @@ PREFIXES = (
 # Module doc -> the ID prefixes it owns, in the order the status table lists them.
 OWNERS = (
     ("core", ("CORE", "BRIDGE")),
+    ("deploy", ("DEPLOY",)),
     ("workload", ("WORK",)),
     ("compute", ("COMP",)),
     ("placement", ("PLACE",)),
@@ -118,7 +120,7 @@ def render() -> str:
         "",
         (
             f"**{total_done} of {total} registered tasks closed.** "
-            f"{total_open} remain open across ten modules."
+            f"{total_open} remain open across {len(OWNERS)} modules."
         ),
         "",
         f"{bar(total_done, total)} {round(100 * total_done / total)} percent",

@@ -1,0 +1,97 @@
+num_ranks 4
+rank 0 {
+r0op0: send 4096b to 1 tag 100
+r0op1: recv 4096b from 3 tag 100
+r0op2: send 4096b to 1 tag 101
+r0op3: recv 4096b from 3 tag 101
+r0op4: send 4096b to 1 tag 102
+r0op5: recv 4096b from 3 tag 102
+r0op6: send 4096b to 1 tag 103
+r0op7: recv 4096b from 3 tag 103
+r0op8: send 4096b to 1 tag 104
+r0op9: recv 4096b from 3 tag 104
+r0op10: send 4096b to 1 tag 105
+r0op11: recv 4096b from 3 tag 105
+r0op2 requires r0op1
+r0op3 requires r0op1
+r0op4 requires r0op3
+r0op5 requires r0op3
+r0op6 requires r0op5
+r0op7 requires r0op5
+r0op8 requires r0op7
+r0op9 requires r0op7
+r0op10 requires r0op9
+r0op11 requires r0op9
+}
+rank 1 {
+r1op0: send 4096b to 2 tag 100
+r1op1: recv 4096b from 0 tag 100
+r1op2: send 4096b to 2 tag 101
+r1op3: recv 4096b from 0 tag 101
+r1op4: send 4096b to 2 tag 102
+r1op5: recv 4096b from 0 tag 102
+r1op6: send 4096b to 2 tag 103
+r1op7: recv 4096b from 0 tag 103
+r1op8: send 4096b to 2 tag 104
+r1op9: recv 4096b from 0 tag 104
+r1op10: send 4096b to 2 tag 105
+r1op11: recv 4096b from 0 tag 105
+r1op2 requires r1op1
+r1op3 requires r1op1
+r1op4 requires r1op3
+r1op5 requires r1op3
+r1op6 requires r1op5
+r1op7 requires r1op5
+r1op8 requires r1op7
+r1op9 requires r1op7
+r1op10 requires r1op9
+r1op11 requires r1op9
+}
+rank 2 {
+r2op0: send 4096b to 3 tag 100
+r2op1: recv 4096b from 1 tag 100
+r2op2: send 4096b to 3 tag 101
+r2op3: recv 4096b from 1 tag 101
+r2op4: send 4096b to 3 tag 102
+r2op5: recv 4096b from 1 tag 102
+r2op6: send 4096b to 3 tag 103
+r2op7: recv 4096b from 1 tag 103
+r2op8: send 4096b to 3 tag 104
+r2op9: recv 4096b from 1 tag 104
+r2op10: send 4096b to 3 tag 105
+r2op11: recv 4096b from 1 tag 105
+r2op2 requires r2op1
+r2op3 requires r2op1
+r2op4 requires r2op3
+r2op5 requires r2op3
+r2op6 requires r2op5
+r2op7 requires r2op5
+r2op8 requires r2op7
+r2op9 requires r2op7
+r2op10 requires r2op9
+r2op11 requires r2op9
+}
+rank 3 {
+r3op0: send 4096b to 0 tag 100
+r3op1: recv 4096b from 2 tag 100
+r3op2: send 4096b to 0 tag 101
+r3op3: recv 4096b from 2 tag 101
+r3op4: send 4096b to 0 tag 102
+r3op5: recv 4096b from 2 tag 102
+r3op6: send 4096b to 0 tag 103
+r3op7: recv 4096b from 2 tag 103
+r3op8: send 4096b to 0 tag 104
+r3op9: recv 4096b from 2 tag 104
+r3op10: send 4096b to 0 tag 105
+r3op11: recv 4096b from 2 tag 105
+r3op2 requires r3op1
+r3op3 requires r3op1
+r3op4 requires r3op3
+r3op5 requires r3op3
+r3op6 requires r3op5
+r3op7 requires r3op5
+r3op8 requires r3op7
+r3op9 requires r3op7
+r3op10 requires r3op9
+r3op11 requires r3op9
+}

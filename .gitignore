@@ -19,6 +19,8 @@ runs/
 *.bin
 *.npz
 *.csv
+!examples/nvlink_incast_validation_v1/comparison.csv
+!examples/nvlink_rnic_comparison_v1/dispersion.csv
 !tests/data/*.csv
 !examples/gpu_task_mix/results.csv
 !examples/gpu_task_mix/nccl_convergence.csv
@@ -28,6 +30,8 @@ runs/
 !examples/vllm_skeleton_v1/results.csv
 !examples/rnic_device_v1/results.csv
 !examples/rnic_device_v1/native_tests.csv
+!examples/external_db_parity_v1/results.csv
+!examples/matched_seam_frontier_v1/results.csv
 
 # Local agent rule files (kept out of the public repo on purpose)
 CLAUDE.md

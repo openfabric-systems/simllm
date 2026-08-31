@@ -1005,7 +1005,7 @@ node. Standard decode binds the exact EP72 candidate key but predicts
 8,949.759685 tokens per second per node, 59.834128 percent below the published
 calibration value. No decode-side mechanism or in-run adjustment is claimed.
 CORE-54 remains open on the refuted prefill score, the COMP-72 MTP cell,
-COMP-76 decode repetition, CORE-61 depth validity and COMP-74 distributions.
+COMP-76 decode repetition and COMP-74 distributions.
 
 The [third scored CORE-54 run](../../examples/deployment_curve_v1/RESULTS_RUN3.md)
 fits the calibration-clean overlap-exposure fraction to its perfect-overlap
@@ -1036,11 +1036,196 @@ TRAF-68 study is still a refutation of its registered bottleneck direction
 because the nine-node htsim incast service remains below the H100 roofline over
 batch per GPU 1 through 32. The complete gate and refuted map remain published in
 [the analytical frontier result](../../examples/deployment_frontier_v1/RESULTS.md).
-TRAF-69 and COMP-77 remain reserved because the unexplained residual is zero.
+COMP-77 remains reserved because the unexplained compute residual is zero.
+The separately directed
+[TRAF-69 NVLink flow-dynamics study](../../examples/nvlink_flow_dynamics_v1/RESULTS.md)
+closes with both transition identities exact, every CDF rung and incast ceiling
+passing, and the separate sender fan-out row honestly refuted. It selects an
+opt-in release-aware packet policy and leaves every core default unchanged.
+
+The [CORE-61 depth-8 retry](../../examples/deployment_curve_v1/core61_depth_retry_result.md)
+measures 3,629,568,000 ps at the frozen eight-layer, batch-32,
+remote-KV-2000 boundary. Its signed `measured - predicted` residual is
+-121,791,511 ps, or -3.355537 percent over measured service, against the
+unchanged 3,751,359,511 ps prediction. This passes the frozen five-percent
+bar and validates linear depth scaling for this decode family, so CORE-61 is
+complete. The larger decode-family gap therefore lives in expert-parallel
+residency shape or decode-side overlap. TRAF-66's finite-overlap term remains
+separate and unchanged, COMP-76 is untouched, and CORE-63 is registered below.
+
+The [CORE-63 expert-residency finding](../../examples/deployment_curve_v1/core63_calibration_result.md)
+derives the exact EP72 scale from 256 tokens per node, top-8 routing, four
+resident physical slots and 288 total slots. One rank therefore expects
+256/9 assignments against 256 assignments in the TP1 batch-32 capture, so
+only the recorded routed `fused_moe_kernel` service receives the exact 1/9
+scale. Retained service is 1,744,159,511 ps, routed service is 131,520,000 ps
+and the 489 ps fixed term stays once, producing a corrected 61-layer step of
+26,821,286,365 ps. The calibration-only prediction rises from 8,949.76 to
+9,544.657796 tokens/s/node but remains -57.164268 percent below the published
+22,282 anchor, an honest undercorrection. Current decode pricing contains no
+communication term, so overlap is not yet a binding composition.
+
+The numerical finding is protocol void and cannot close CORE-63. Before the
+committed reader and freeze, an ambient range inspection exposed a forbidden
+held-out MTP number and a retained historical record was inspected without a
+contemporaneous access row; a later broad registry inspection re-exposed the
+held-out number. The field-addressed CSV selector also streamed all 13,985
+cataloged bytes, which fails the literal no-whole-file-read clause even though
+it materialized no whole record and decoded no unselected payload. None of the
+held-out values entered the arithmetic and no MTP score or comparison was
+performed, but literal clean exposure is impossible in that void worktree. All
+93 preservation locks pass, and the void study remains published as the
+historical comparison.
+
+The [clean CORE-63 repetition](../../examples/deployment_curve_v1/core63_clean_calibration_result.md)
+independently reproduces the 26,821,286,365 ps corrected step and -57.164268
+percent standard-decode residual before comparing them with the void finding.
+Its forbidden-access ledger is empty. Every source access has a contemporaneous
+begin/end pair, every selector remains short of complete byte coverage, the
+component reconstruction is exact, all 93 preservation locks remain
+byte-identical and no fitted constant is introduced. The complete append-only
+ledger set retains three structurally rejected preflights as well as the
+successful tranche and the bounded literal-registry resolution. No ambient or
+unlogged record inspection occurred. These facts meet every literal CORE-63
+acceptance clause, so CORE-63 is complete.
+
+The reproduced undercorrection promotes CORE-64 unconditionally. Only routed
+`fused_moe_kernel` work received the frozen 1/9 scale; attention, MLA,
+shared-expert and every other nonmatching noncollective family remained at
+scale one. CORE-64 therefore stays open on that exact component-backed gap,
+with decode-side overlap still out of scope until a real decode communication
+service term exists.
+
+The [CORE-64 per-rank shape result](../../examples/deployment_curve_v1/core64_shape_result.md)
+finds no deployment-shape mismatch in the retained standard-decode families.
+Nine eight-GPU decode nodes at attention DP72 turn the disclosed 256 requests
+per node into `9 * 256 / 72 = 32` requests per rank. KV 2,000 therefore gives
+64,000 aggregate KV-token references per rank, exactly matching the TP1
+batch-32, KV-2,000 capture. MLA, attention, compressed-KV read, dense early
+MLP, router, shared expert and LM head all stay at scale one; the inherited
+routed `1/9` scale and 489 ps fixed term are unchanged. The resulting movement
+is exactly 0.000000 tokens/s/node: the prediction remains 9,544.657796 against
+22,282, with a signed -12,737.342204 tokens/s/node difference and -57.164268
+percent residual. The first three-selector tranche was retained after a
+nonnumeric attention-label spelling rejection, and the frozen retry passed
+the identical selectors. All twelve access events are contemporaneous, every
+selector stops before whole-file coverage and before the MTP case, the
+forbidden ledger is empty, and all 134 preservation locks pass.
+
+This honest null result does not satisfy CORE-64's literal gap-resolution
+clause, so CORE-64 remains open and CORE-65 receives the exact physical
+attribution remainder. The logical projection is total, but the retained TP1
+kernel stream has no total binding to SGLang's EP72 physical MLA,
+shared-expert, dense and output launches. No semantic mapping or calibration
+constant is invented.
+
+The [CORE-65 physical-binding result](../../examples/deployment_curve_v1/core65_physical_binding_result.md)
+enumerates all 46 retained kernel rows, assigning every name, family,
+captured count and service share with no unmapped row. The four-layer vLLM
+TP1/DP1/EP1/PP1 capture is exactly three dense layers followed by one MoE
+layer. Its routed MoE path is resident over 256 logical experts, whereas an
+EP72 rank has four physical slots. That establishes `1/64` for a per-layer
+expert-count or resident-weight term and `58 * 4 / 256 = 29/32` across the
+full 58-layer routed inventory, but neither scale can replace the inherited
+`1/9` assignment-tracked compute scale. The retained stream has no routing
+identities or HBM counters, and its vLLM alignment, sort, expert-compute,
+activation and sum rows have no one-to-one identity in SGLang's DeepEP path.
+Real EP72 additionally requires DeepEP dispatch and combine launches absent
+from the retained noncollective stream.
+
+Those missing physical services make every component-specific movement
+inadmissible. A frequency-only regrouping is retained as a rejected diagnostic,
+not a calibration result. The published movement is therefore exactly
+0.000000 tokens/s/node: the prediction stays 9,544.657796 against 22,282 and
+the signed gap stays -12,737.342204 tokens/s/node, or -57.164268 percent.
+Additionally, two pre-reader incidents make the CORE-65 forbidden-access
+ledger nonempty, so its literal protocol clause cannot pass in this worker.
+CORE-65 remains open and CORE-66 receives the exact EP72 hardware-capture
+remainder. All 154 preservation locks pass; no parameter was fitted, no MTP
+value was used or compared, and no fifth scored run occurred.
+
+The [CORE-66 feasible-capture result](../../examples/deployment_curve_v1/core66_capture_result.md)
+records no hardware submission. The registered 72-rank cell is impossible on
+the project's three four-GPU GH200 nodes, and the frozen EP12 replacement was
+not allocated after this worktree became protocol void on pre-reader result
+listing and two unlogged full-test runs. The later field-addressed reader has
+empty per-tranche forbidden ledgers, but it cannot erase those earlier
+incidents. No physical identity, DeepEP service, HBM counter or routing ledger
+was obtained. Both the `1/64` count-and-weight and `1/9` assignment checks stay
+undecided, and calibration-only signed movement is null because neither
+correction direction can be priced. CORE-66 remains open.
 
 ## Open tasks
 
 ### Precision
+
+- CORE-64 (Precision; P0; M): resolve the exact -57.164268 percent
+  standard-decode undercorrection that remains after the architecture-only
+  expert-residency scale, now unconditionally promoted by the clean CORE-63
+  repetition. Identify component-backed EP72 residency-shape physics without
+  fitting a calibration constant, preserve attention, MLA and shared-expert
+  locality explicitly, and publish the signed movement from 9,544.657796
+  tokens/s/node against the 22,282 calibration anchor. Decode-side overlap
+  remains out of scope until a real decode communication service term exists.
+
+- CORE-65 (Precision; P0; L): resolve the exact remaining -12,737.342204
+  tokens/s/node, or -57.164268 percent, standard-decode physical attribution
+  gap after CORE-64 proves that every disclosed EP72 per-rank request, KV,
+  MLA, shared-expert, dense, router and output shape matches the TP1 capture.
+  Bind the retained kernel stream totally to SGLang's EP72 physical operation
+  identities or obtain a matching EP72 per-rank capture, then derive any
+  component-specific service movement without fitting a calibration constant.
+  Preserve the inherited routed `1/9` scale, the 489 ps fixed term, every
+  prior artifact and the explicit family-locality ledger. The held-out MTP
+  value and fifth scored run remain out of scope, and decode-side overlap
+  remains deferred until a real decode communication service term exists.
+
+- CORE-66 (Precision; P0; L): obtain the exact SGLang EP72 physical capture
+  that CORE-65 proves is missing. Run the pinned DeepSeek-V3 standard-decode
+  cell on nine eight-GPU nodes at DP72/EP72, batch 32 and KV 2,000 per rank,
+  MTP disabled, with DeepEP and the data-parallel LM head enabled. Capture all
+  72 ranks, including both the four-logical-expert and three-plus-one-redundant
+  residency classes; bind every CUDA launch to its attention, router, shared
+  expert, local routed expert, DeepEP dispatch/combine, residual or output
+  phase; record routing identities, physical slots, payloads and per-kernel HBM
+  read/write bytes. Then derive any standard-decode service movement against
+  the 22,282 tokens/s/node anchor without fitting a calibration constant. The
+  exact cell and command are registered in `core66_hardware_remainder.json`.
+  The residency-matched EP8 remainder is frozen in
+  `core66_ep8_expectations.json`, but its scheduler preflight failed before job
+  creation with `allocation failure: Invalid qos specification`: `gh-hourly`
+  and the `gpu_hourly` definition both admit eight GPUs, while the requesting
+  user association admits only `gpu_general`. That association remains limited
+  to four GPUs per job, so EP8 is infeasible under current policy. The
+  zero-allocation result and its full deviation ledger are registered in
+  `core66_ep8_capture_result.json`. The separately frozen EP4 ceiling in
+  `core66_ep4_expectations.json` received one four-GPU allocation under
+  `gpu_general`, but the compute node lacked the requested `cuda/13.2.1`
+  module and the `nsys` executable. The timing pass exited 127 before SGLang,
+  the counter pass did not run and zero physical rows were bound. The void
+  capture and its EP4-to-EP72 deviation ledger are registered in
+  `core66_ep4_capture_result.json`. The environment-only retry in
+  `core66_ep4_env_retry_expectations.json` then reused the exact successful
+  CORE-61 CUDA 12.9 modules, profiler tools and ARM Python 3.11 interpreter.
+  Job `200891` verified that environment but stopped before profiling because
+  the staged `sgl-deep-ep` wheel requires CUDA 13 and is tagged for CPython
+  3.12 x86-64, while the recovered environment is cu129, CPython 3.11 and ARM
+  aarch64. The fail-fast result is registered in
+  `core66_ep4_env_retry_result.json`. CORE-66 remains open on a compatible
+  cu129, CPython 3.11, ARM aarch64 DeepEP build and hardware capable of the
+  registered EP72 cell; no further submission is authorized by that result.
+  The distinct fallback freeze in `core66_ep4_fallback_expectations.json` then
+  disabled DeepEP and selected SGLang's standard `none` mixture-of-experts
+  backend so non-DeepEP kernel identities and memory bytes could still be
+  captured. Job `200961` allocated four GPUs under `gpu_general`, verified the
+  recovered CUDA 12.9 profiler and Python environment, then failed closed
+  before profiling because importing pinned SGLang required the absent
+  `orjson` module. Zero of 37 rows bound; timing, counters and routing did not
+  run; and movement remains null. The final fallback result is registered in
+  `core66_ep4_fallback_result.json`. CORE-66 remains open on a runnable pinned
+  SGLang dependency set for the CUDA 12.9, CPython 3.11, ARM environment, a
+  compatible DeepEP build and hardware capable of the registered EP72 cell.
+  No further submission is authorized by this result.
 
 - CORE-53 (Precision; P1; M): replace the first disaggregated session slice's
   roofline bootstrap with the accepted COMP-64 kernel-cycle lookup record.
@@ -1068,28 +1253,6 @@ TRAF-69 and COMP-77 remain reserved because the unexplained residual is zero.
   differ only in the declared opaque fields, and unchanged accepted
   `pd_session_v1` compact cells. The void run remains void and cannot be
   retrospectively rescored.
-
-- CORE-61 (Precision; P1; M): validate whether the measured four-layer EP72
-  standard-decode basis may be extrapolated linearly to DeepSeek-V3's declared
-  61-layer depth. Freeze at least two measured depths and the exact batch-32,
-  remote-KV-2000 shape before comparison; retain the candidate key, per-layer
-  work inventory and every fixed component separately. Acceptance requires a
-  held-out depth prediction within 5 percent of its measured service and a
-  signed residual ledger that distinguishes depth scaling from the finite
-  compute/communication overlap owned by TRAF-66. The published 22,282
-  tokens-per-second calibration value is comparison evidence only and may not
-  tune the depth rule. COMP-76 owns independent repetition of the four-layer
-  basis, while COMP-72 owns the missing MTP cell.
-  The [CORE-61 local derivation](../../examples/deployment_curve_v1/core61_depth_result.md)
-  separates the retained step into 489 ps fixed plus 1,875,679,511 ps
-  repeatable across four layers. Its corrected 61-layer declaration is
-  28.604113032 ms, only 6.96825 ns below the 28.604120000 ms linear rule, so
-  the fixed-component hypothesis has the expected sign but a materially null
-  magnitude. The result remains a `DECLARED` derivation from one `MEASURED`
-  service decomposition with `DISCLOSED` component attribution. CORE-61 stays
-  open with a frozen 3.751359511 ms prediction for the held-out eight-layer,
-  batch-32, remote-KV-2000 cell. That measurement joins COMP-72's resumable
-  Merlin remainder; COMP-76 is unchanged and CORE-63 remains reserved.
 
 - CORE-48 (Precision; P1; M): give the cross-node coarse RNIC path a
   destination-ingress serializer. Semantic sends serialize per source RNIC and
@@ -1447,7 +1610,7 @@ TRAF-69 and COMP-77 remain reserved because the unexplained residual is zero.
   byte-locked because its v2 contract has no MTP marker slot. CORE-54 stays
   open on COMP-76's decode calibration reproduction, COMP-74 distribution
   propagation now partially unlocked by two retained observations, COMP-78's
-  Granite campaign arm, CORE-61 depth linearity, SGL-36 and TRAF-64.
+  Granite campaign arm, SGL-36 and TRAF-64.
 - CORE-52 (Completeness; P1; L): run the live 16-prefill plus 40-decode target
   through the same disaggregated session with 448 simulated workers. Retain
   every engine simultaneously, route requests through every declared pool

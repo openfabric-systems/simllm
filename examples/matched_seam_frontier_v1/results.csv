@@ -1,0 +1,66 @@
+evidence_class,family,id,kind,passed,expected,observed,units,detail
+GUARD,FG,FG-1a,fatal,True,true,true,,"the deploy RooflineProvider interception fired zero times and the complete scored-value dependency graph contains no reachable SimLLM roofline, efficiency, fitted constant or fitted curve"
+GUARD,FG,FG-1b,fatal,True,true,true,,applied external adjustments equal the tracked table exactly and every pinned source and documentation line verifies
+GUARD,FG,FG-1c,fatal,True,true,true,,every declared applied adjustment has a ten-row remove-one Family R sensitivity disclosure
+GUARD,FG,FG-2,fatal,True,true,true,,service values and every positive ideal stamp retain MEASURED-EXTERNAL plus the frozen slice identity
+GUARD,FG,FG-3,fatal,True,true,true,,external frontier tables and parity publication artifacts are byte-identical before and after
+GUARD,FG,FG-4,fatal,True,true,true,,"{""binding_before_run"": true, ""corrected_expectations_before_run"": true, ""expectations_before_service_freeze"": true, ""service_freeze_before_binding"": true}"
+GUARD,FG,FG-5,fatal,True,true,true,,published disagg TTFT appears only in Family D and is not equated with isolated prefill service
+MEASURED-EXTERNAL,S,decode-tp2-b128,scored,True,0x1.1d8d671b75ea8p+4,0x1.1d8d671b75ea8p+4,binary64 ms,live-sdk=0x1.1d8d671b75ea8p+4
+MEASURED-EXTERNAL,S,decode-tp2-b112,scored,True,0x1.0db4b19f4debbp+4,0x1.0db4b19f4debbp+4,binary64 ms,live-sdk=0x1.0db4b19f4debbp+4
+MEASURED-EXTERNAL,S,decode-tp2-b48,scored,True,0x1.7ceccbb1996e5p+3,0x1.7ceccbb1996e5p+3,binary64 ms,live-sdk=0x1.7ceccbb1996e5p+3
+MEASURED-EXTERNAL,S,decode-tp4-b64,scored,True,0x1.25ba43f7a9302p+3,0x1.25ba43f7a9302p+3,binary64 ms,live-sdk=0x1.25ba43f7a9302p+3
+MEASURED-EXTERNAL,S,decode-tp4-b56,scored,True,0x1.1df41880040e3p+3,0x1.1df41880040e3p+3,binary64 ms,live-sdk=0x1.1df41880040e3p+3
+MEASURED-EXTERNAL,S,decode-tp4-b26,scored,True,0x1.f7af39b1f321bp+2,0x1.f7af39b1f321bp+2,binary64 ms,live-sdk=0x1.f7af39b1f321bp+2
+MEASURED-EXTERNAL,S,decode-tp4-b16,scored,True,0x1.b659980d48d67p+2,0x1.b659980d48d67p+2,binary64 ms,live-sdk=0x1.b659980d48d67p+2
+MEASURED-EXTERNAL,S,decode-tp8-b64,scored,True,0x1.0b79459c50400p+3,0x1.0b79459c50400p+3,binary64 ms,live-sdk=0x1.0b79459c50400p+3
+MEASURED-EXTERNAL,S,decode-tp8-b20,scored,True,0x1.7ca7f197dfb6cp+2,0x1.7ca7f197dfb6cp+2,binary64 ms,live-sdk=0x1.7ca7f197dfb6cp+2
+MEASURED-EXTERNAL,S,decode-tp8-b9,scored,True,0x1.3c91735cd2edcp+2,0x1.3c91735cd2edcp+2,binary64 ms,live-sdk=0x1.3c91735cd2edcp+2
+MEASURED-EXTERNAL,S,prefill-tp2-b1,scored,True,0x1.554eb5aea47aep+7,0x1.554eb5aea47aep+7,binary64 ms,live-sdk=0x1.554eb5aea47aep+7
+MEASURED-EXTERNAL,S,prefill-tp4-b1,scored,True,0x1.b47f2a68ff1e7p+6,0x1.b47f2a68ff1e7p+6,binary64 ms,live-sdk=0x1.b47f2a68ff1e7p+6
+MEASURED-EXTERNAL,S,prefill-tp8-b1,scored,True,0x1.45cd0cab7cc1fp+6,0x1.45cd0cab7cc1fp+6,binary64 ms,live-sdk=0x1.45cd0cab7cc1fp+6
+MEASURED-EXTERNAL,R,R-01,scored,True,"[0.98, 1.02]",1.000001241602,quotient,tp2 batch 128: ours 17.847022158878332 ms / published 17.847 ms
+MEASURED-EXTERNAL,R,R-02,scored,True,"[0.98, 1.02]",0.999977143401,quotient,tp2 batch 112: ours 16.856614706309056 ms / published 16.857 ms
+MEASURED-EXTERNAL,R,R-03,scored,True,"[0.98, 1.02]",0.999992080183,quotient,tp2 batch 48: ours 11.903905722497663 ms / published 11.904 ms
+MEASURED-EXTERNAL,R,R-04,scored,True,"[0.98, 1.02]",0.999998636836,quotient,tp4 batch 64: ours 9.178987487518956 ms / published 9.179 ms
+MEASURED-EXTERNAL,R,R-05,scored,True,"[0.98, 1.02]",1.000005241583,quotient,tp4 batch 56: ours 8.936046838789883 ms / published 8.936 ms
+MEASURED-EXTERNAL,R,R-06,scored,True,"[0.98, 1.02]",0.999946608534,quotient,tp8 batch 64: ours 8.358553700732955 ms / published 8.359 ms
+MEASURED-EXTERNAL,R,R-07,scored,True,"[0.98, 1.02]",1.000008882838,quotient,tp4 batch 26: ours 7.870069907931362 ms / published 7.87 ms
+MEASURED-EXTERNAL,R,R-08,scored,True,"[0.98, 1.02]",1.000031885078,quotient,tp4 batch 16: ours 6.849218380902449 ms / published 6.849 ms
+MEASURED-EXTERNAL,R,R-09,scored,True,"[0.98, 1.02]",0.999958048321,quotient,tp8 batch 20: ours 5.947750471414889 ms / published 5.948 ms
+MEASURED-EXTERNAL,R,R-10,scored,True,"[0.98, 1.02]",1.000076344974,quotient,tp8 batch 9: ours 4.946377602241878 ms / published 4.946 ms
+DISCLOSURE,R,R-SENS-prefill_latency_correction,unscored,,,"[0.999946608534, 1.000076344974]",Family R quotient range,remove prefill_latency_correction by replacing it with 1.0; complete Family R dependency trace proves this factor unreachable; the baseline decode reevaluation is reused exactly
+DISCLOSURE,R,R-SENS-decode_latency_correction,unscored,,,"[0.925876489383, 0.925996615717]",Family R quotient range,remove decode_latency_correction by replacing it with 1.0; full decode-composition reevaluation with only this factor removed
+DISCLOSURE,R,R-SENS-prefill_rate_matching_degradation,unscored,,,"[0.999946608534, 1.000076344974]",Family R quotient range,remove prefill_rate_matching_degradation by replacing it with 1.0; complete Family R dependency trace proves this factor unreachable; the baseline decode reevaluation is reused exactly
+DISCLOSURE,R,R-SENS-decode_rate_matching_degradation,unscored,,,"[0.999946608534, 1.000076344974]",Family R quotient range,remove decode_rate_matching_degradation by replacing it with 1.0; complete Family R dependency trace proves this factor unreachable; the baseline decode reevaluation is reused exactly
+DISCLOSURE,R,R-SENS-autoscale_ttft_correction,unscored,,,"[0.999946608534, 1.000076344974]",Family R quotient range,remove autoscale_ttft_correction by replacing it with 1.0; complete Family R dependency trace proves this factor unreachable; the baseline decode reevaluation is reused exactly
+DISCLOSURE,R,R-SENS-memory_bandwidth_empirical_scale,unscored,,,"[0.995899044931, 0.999412885209]",Family R quotient range,remove memory_bandwidth_empirical_scale by replacing it with 1.0; full decode-composition reevaluation with only this factor removed
+DISCLOSURE,R,R-SENS-memory_empirical_constant_latency,unscored,,,"[0.873646907044, 0.964963420120]",Family R quotient range,remove memory_empirical_constant_latency by replacing it with 0.0; full decode-composition reevaluation with only this factor removed
+DISCLOSURE,R,R-SENS-context_attention_extra_latency_correction,unscored,,,"[0.999946608534, 1.000076344974]",Family R quotient range,remove context_attention_extra_latency_correction by replacing it with 1.0; complete Family R dependency trace proves this factor unreachable; the baseline decode reevaluation is reused exactly
+MEASURED-EXTERNAL,F,F-1,scored,True,x=1e12/decode_step_ps; y=request_capacity*500/used_gpus,"x=108.944477951, y=601.373518290, candidate=external-disagg-row-04",tokens/s,
+MEASURED-EXTERNAL,F,F-2-01,scored,True,"[0.75, 1.35]",0.988204705008,frontier/external quotient,frontier answer external-disagg-row-02
+MEASURED-EXTERNAL,F,F-2-02,scored,True,"[0.75, 1.35]",0.841593217236,frontier/external quotient,frontier answer external-disagg-row-03
+MEASURED-EXTERNAL,F,F-2-03,scored,True,"[0.75, 1.35]",0.999985578864,frontier/external quotient,frontier answer external-disagg-row-03
+MEASURED-EXTERNAL,F,F-2-04,scored,True,"[0.75, 1.35]",0.997987869433,frontier/external quotient,frontier answer external-disagg-row-04
+MEASURED-EXTERNAL,F,F-2-05,scored,True,"[0.75, 1.35]",0.997969860631,frontier/external quotient,frontier answer external-disagg-row-05
+MEASURED-EXTERNAL,F,F-2-06,scored,True,"[0.75, 1.35]",0.876367649038,frontier/external quotient,frontier answer external-disagg-row-07
+MEASURED-EXTERNAL,F,F-2-07,scored,True,"[0.75, 1.35]",0.888876989773,frontier/external quotient,frontier answer external-disagg-row-08
+MEASURED-EXTERNAL,F,F-2-08,scored,True,"[0.75, 1.35]",0.999985966850,frontier/external quotient,frontier answer external-disagg-row-08
+MEASURED-EXTERNAL,F,F-2-09,scored,False,"[0.75, 1.35]",0.607495219355,frontier/external quotient,frontier answer external-disagg-row-10
+MEASURED-EXTERNAL,F,F-2-10,scored,True,"[0.75, 1.35]",0.998085814935,frontier/external quotient,frontier answer external-disagg-row-10
+DISCLOSURE,F,F-BOUNDARY-01,unscored,,,-0.000243492334423,tokens/s/user,exact local x=56.031756507665577; published x=56.032; selected=external-disagg-row-02
+DISCLOSURE,F,F-BOUNDARY-02,unscored,,,-0.000107424816642,tokens/s/user,exact local x=59.323892575183358; published x=59.324; selected=external-disagg-row-03
+DISCLOSURE,F,F-BOUNDARY-06,unscored,,,-0.000077487118127,tokens/s/user,exact local x=119.637922512881872; published x=119.638; selected=external-disagg-row-07
+DISCLOSURE,F,F-BOUNDARY-07,unscored,,,-0.000325637528251,tokens/s/user,exact local x=127.063674362471744; published x=127.064; selected=external-disagg-row-08
+DISCLOSURE,F,F-BOUNDARY-09,unscored,,,-0.000207547325164,tokens/s/user,exact local x=168.130792452674825; published x=168.131; selected=external-disagg-row-10
+MEASURED-EXTERNAL,F,F-3,scored,True,monotone with at least 8 points,"monotone=True, points=10",,
+MEASURED-EXTERNAL,F,F-4,scored,True,maximum endpoint use <= 3,2,external rows per frontier point,"{""external-disagg-row-02"": 1, ""external-disagg-row-03"": 2, ""external-disagg-row-04"": 1, ""external-disagg-row-05"": 1, ""external-disagg-row-07"": 1, ""external-disagg-row-08"": 2, ""external-disagg-row-10"": 2}"
+MEASURED-EXTERNAL + SIM-DERIVED,M,M-1,scored,True,>= 1.000000 for every candidate,minimum=1.000000000000,packet-priced/unpriced-network capacity-step quotient,the unpriced-network arm charges exactly zero network service
+MEASURED-EXTERNAL + SIM-DERIVED,M,M-2,scored,True,>= 1.02 for at least one candidate,maximum=1.042715399805,packet-priced/unpriced-network capacity-step quotient,the unpriced-network arm charges exactly zero network service
+MEASURED-EXTERNAL,D,D-1,unscored,,,99.203804744868890,ms,imported TP4 batch-1 prefill pass
+MEASURED-EXTERNAL,D,D-2,unscored,,,97.219195255131112,ms,published TTFT minus raw prefill pass
+MEASURED-EXTERNAL,D,D-3,unscored,,,9.920380474486905,ms,1.1 prefill service correction contribution
+MEASURED-EXTERNAL,D,D-4,unscored,,,87.299348175484639,ms,1.8 autoscale correction contribution
+MEASURED-EXTERNAL,D,D-5,unscored,,,-0.000533394840431,ms,three-decimal publication reconciliation residual
+GUARD,FG,FG-6,fatal,True,true,true,,complete scored evaluation JSON is byte-identical across two fresh processes; elapsed_seconds and W-1 are excluded by name
+WALL,W,W-1,scored,True,<= 600,289.941444,seconds,two complete fresh-process scored evaluations and the figure

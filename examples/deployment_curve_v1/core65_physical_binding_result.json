@@ -1,0 +1,310 @@
+{
+  "access": {
+    "access_count": 8,
+    "access_event_count": 16,
+    "capture_profile": {
+      "access_event_count": 2,
+      "available": false,
+      "bytes_accessed": 0
+    },
+    "completed_accesses": [
+      {
+        "access_id": "A01",
+        "bytes_accessed": 2510,
+        "classification": "retained_component_basis",
+        "event": "END",
+        "event_index": 2,
+        "held_out_mtp_value_accessed": false,
+        "record": "<wave-runs>/core63/reproduction/basis-success.json",
+        "record_size_bytes": 27555,
+        "schema": "simllm-deployment-curve-core65-access-v1",
+        "selector": "/component_basis",
+        "status": "PASS",
+        "whole_file_streamed": false
+      },
+      {
+        "access_id": "A02",
+        "bytes_accessed": 27552,
+        "classification": "retained_total_kernel_inventory",
+        "event": "END",
+        "event_index": 4,
+        "held_out_mtp_value_accessed": false,
+        "record": "<wave-runs>/core63/reproduction/basis-success.json",
+        "record_size_bytes": 27555,
+        "schema": "simllm-deployment-curve-core65-access-v1",
+        "selector": "/kernel_rows",
+        "status": "PASS",
+        "whole_file_streamed": false
+      },
+      {
+        "access_id": "A03",
+        "bytes_accessed": 31964,
+        "classification": "inherited_core64_standard_decode_remainder",
+        "event": "END",
+        "event_index": 6,
+        "held_out_mtp_value_accessed": false,
+        "record": "examples/deployment_curve_v1/core64_shape_result.json",
+        "record_size_bytes": 32044,
+        "schema": "simllm-deployment-curve-core65-access-v1",
+        "selector": "/{calibration_only,component_classification/retained_physical_decomposition,preservation_lock,registry_disposition,scope}",
+        "status": "PASS",
+        "whole_file_streamed": false
+      },
+      {
+        "access_id": "A04",
+        "bytes_accessed": 6069,
+        "classification": "frozen_deepseek_physical_contract",
+        "event": "END",
+        "event_index": 8,
+        "held_out_mtp_value_accessed": false,
+        "record": "examples/model_extraction_deepseek_v3_v1/expectations.json",
+        "record_size_bytes": 22621,
+        "schema": "simllm-deployment-curve-core65-access-v1",
+        "selector": "/geometry_symbols",
+        "status": "PASS",
+        "whole_file_streamed": false
+      },
+      {
+        "access_id": "A05",
+        "bytes_accessed": 10933,
+        "classification": "frozen_deepseek_physical_contract",
+        "event": "END",
+        "event_index": 10,
+        "held_out_mtp_value_accessed": false,
+        "record": "examples/model_extraction_deepseek_v3_v1/expectations.json",
+        "record_size_bytes": 22621,
+        "schema": "simllm-deployment-curve-core65-access-v1",
+        "selector": "/inventory_contract",
+        "status": "PASS",
+        "whole_file_streamed": false
+      },
+      {
+        "access_id": "A06",
+        "bytes_accessed": 21296,
+        "classification": "frozen_deepseek_physical_contract",
+        "event": "END",
+        "event_index": 12,
+        "held_out_mtp_value_accessed": false,
+        "record": "examples/model_extraction_deepseek_v3_v1/expectations.json",
+        "record_size_bytes": 22621,
+        "schema": "simllm-deployment-curve-core65-access-v1",
+        "selector": "/deployment_projection_contract",
+        "status": "PASS",
+        "whole_file_streamed": false
+      },
+      {
+        "access_id": "A07",
+        "bytes_accessed": 21931,
+        "classification": "frozen_deepseek_physical_contract",
+        "event": "END",
+        "event_index": 14,
+        "held_out_mtp_value_accessed": false,
+        "record": "examples/model_extraction_deepseek_v3_v1/expectations.json",
+        "record_size_bytes": 22621,
+        "schema": "simllm-deployment-curve-core65-access-v1",
+        "selector": "/physical_sanity",
+        "status": "PASS",
+        "whole_file_streamed": false
+      },
+      {
+        "access_id": "A08",
+        "access_pattern": "reverse_nonterminal_task_block",
+        "bytes_accessed": 29183,
+        "classification": "literal_core65_registry_entry",
+        "event": "END",
+        "event_index": 16,
+        "held_out_mtp_value_accessed": false,
+        "record": "docs/modules/core.md",
+        "record_size_bytes": 102420,
+        "schema": "simllm-deployment-curve-core65-access-v1",
+        "selector": "/task-entry[last-leading-block task_id=CORE-65]",
+        "status": "PASS",
+        "unique_bytes_accessed": 29183,
+        "whole_file_streamed": false
+      }
+    ],
+    "forbidden_access_incident_count": 2,
+    "forbidden_access_ledger_empty": false,
+    "held_out_mtp_numeric_values_accessed_or_compared_by_reader": false,
+    "literal_protocol_satisfied": false,
+    "whole_file_reader_streams": 0
+  },
+  "base_commit": "4158055a52a19b225210fdd03d0ce230eaaee37d",
+  "calibration_only": {
+    "anchor_tokens_per_second_per_node": "22282",
+    "classification": "UNDERCORRECTION",
+    "corrected_step_ps_round_half_up": 26821286365,
+    "final_prediction_tokens_per_second_per_node": "9544.657796",
+    "final_signed_residual_percent": "-57.164268",
+    "prediction_movement_tokens_per_second_per_node": "0.000000",
+    "signed_difference_from_anchor_tokens_per_second_per_node": "-12737.342204",
+    "signed_residual_movement_percentage_points": "0.000000"
+  },
+  "candidate_verdicts": {
+    "expert_population": {
+      "expected_direction": "decrease_for_count_or_weight_bytes",
+      "finding": {
+        "assignment_tracked_compute_scale": "1/9_inherited_not_refit",
+        "capture_logical_experts_resident_in_moe_layer": 256,
+        "ep72_physical_slots_per_rank": 4,
+        "expert_count_or_per_layer_resident_weight_scale": "1/64",
+        "full_model_layer_adjusted_resident_routed_weight_scale": "29/32",
+        "full_model_layer_adjusted_scale_formula": "58 * 4 / 256",
+        "unique_active_expert_read_scale": "UNDECIDABLE_ROUTING_NOT_CAPTURED"
+      },
+      "numeric_calibration_movement_admissible": false,
+      "verdict": "COMPUTE_AND_MEMORY_TRACKING_VARIABLES_NOT_INTERCHANGEABLE"
+    },
+    "layer_type_composition": {
+      "expected_direction": "dense_decrease_and_moe_increase_net_indeterminate",
+      "finding": {
+        "dense_layers": 3,
+        "moe_layers": 1,
+        "proof": "effective num_hidden_layers=4 with first_k_dense_replace=3 and moe_layer_freq=1",
+        "state": "DECIDED_THREE_DENSE_THEN_ONE_MOE"
+      },
+      "numeric_calibration_movement_admissible": false,
+      "verdict": "DECIDED_THREE_DENSE_PLUS_ONE_MOE"
+    },
+    "other_kernel_counterparts": {
+      "expected_direction": "capture_only_decrease_ep72_required_absent_increase",
+      "finding": {
+        "capture_only_vllm_routed_rows": [
+          96,
+          98,
+          100,
+          101,
+          104
+        ],
+        "ep72_required_absent_families": [
+          "deepep_dispatch_a",
+          "deepep_dispatch_b",
+          "deepep_combine_a",
+          "deepep_combine_b"
+        ]
+      },
+      "numeric_calibration_movement_admissible": false,
+      "verdict": "DECIDED_IDENTITY_MISMATCH_SERVICE_UNDECIDABLE"
+    },
+    "weight_read_volume": {
+      "expected_direction": "decrease_if_capture_reads_more_increase_if_less",
+      "finding": {
+        "actual_capture_per_step_read_bytes": "UNAVAILABLE",
+        "actual_ep72_per_step_read_bytes": "UNAVAILABLE",
+        "attention_per_layer": 187151072,
+        "captured_reduced4_tp1_resident": 15116101504,
+        "captured_reduced4_tp1_routed_all256_one_layer": 11277041664,
+        "dense_per_layer": 396458496,
+        "ep72_common_nonrouted_per_rank": 17226824032,
+        "ep72_declared_physical_per_rank": 27446643040,
+        "ep72_routed_four_slots_all58_layers": 10219819008,
+        "lm_head": 1853358080,
+        "moe_router_per_layer": 3671040,
+        "moe_shared_expert_per_layer": 44050944,
+        "naive_captured_resident_scaled_by_61_over_4": 230520547936,
+        "resident_bytes_are_not_per_step_reads": true
+      },
+      "numeric_calibration_movement_admissible": false,
+      "verdict": "UNDECIDABLE_NO_CAPTURE_OR_EP72_HBM_COUNTERS"
+    }
+  },
+  "conditional_frequency_only_diagnostic": {
+    "admissible_for_calibration": false,
+    "formula": "fixed + (step_once - fixed) + first_once + 61/4*common + 20*later_variants + dense + 58*(moe-routed) + 58/9*routed",
+    "prediction_movement_tokens_per_second_per_node": "5575.031079",
+    "prediction_tokens_per_second_per_node": "15119.688875",
+    "rejection_reasons": [
+      "row 11 aggregates attention, dense, and shared-expert quantization without per-launch durations",
+      "the vLLM TP1 physical launches are not bound to SGLang EP72 launches",
+      "DeepEP dispatch and combine are absent from the retained stream",
+      "routing identities and actual HBM read bytes were not captured"
+    ],
+    "signed_residual_percent": "-32.143933",
+    "step_ps": {
+      "denominator": 3,
+      "numerator": 50794696000,
+      "round_half_up": 16931565333
+    }
+  },
+  "expectations_commit": "b70ce24",
+  "hardware_remainder": {
+    "artifact": "examples/deployment_curve_v1/core66_hardware_remainder.json",
+    "task": "CORE-66"
+  },
+  "inventory_summary": {
+    "bucket_row_counts": {
+      "all_layer_common": 9,
+      "dense_only": 5,
+      "first_layer_only": 3,
+      "later_layer_attention": 3,
+      "moe_only": 14,
+      "step_or_output_once": 12
+    },
+    "bucket_service_ps": {
+      "all_layer_common": 684256000,
+      "dense_only": 397696000,
+      "first_layer_only": 8544000,
+      "later_layer_attention": 25248000,
+      "moe_only": 203616000,
+      "step_or_output_once": 556320000
+    },
+    "captured_framework": "vllm-0.27.1+cu129",
+    "captured_parallelism": "TP1_DP1_EP1_PP1",
+    "coverage": "TOTAL_46_OF_46_ROWS_NO_UNMAPPED_KERNEL",
+    "kernel_row_count": 46,
+    "measured_service_ps": 1875680000,
+    "schema": "simllm-deployment-curve-core65-kernel-inventory-v1"
+  },
+  "layer_composition_arithmetic": {
+    "all_layer_common_multiplier": "61/4",
+    "dense_correct_multiplier": "3/3=1",
+    "dense_naive_overpricing_multiplier_relative_to_correct": "61/4",
+    "moe_correct_multiplier": "58/1=58",
+    "moe_naive_underpricing_multiplier_relative_to_correct": "61/232",
+    "net_service_direction": "INDETERMINATE_WITHOUT_COMPONENT_SERVICE_SPLIT",
+    "step_or_output_correct_multiplier": "1",
+    "step_or_output_naive_overpricing_multiplier_relative_to_correct": "61/4"
+  },
+  "physical_binding": {
+    "capture": "vLLM_TP1_DP1_EP1_PP1_reduced4",
+    "capture_original_profile_available": false,
+    "coverage": "TOTAL_46_OF_46_ROWS_NO_UNMAPPED_KERNEL",
+    "ep72_target": "SGLang_DP72_EP72_DeepEP_3_dense_plus_58_MoE",
+    "state": "TOTAL_RETAINED_INVENTORY_BUT_NOT_TOTAL_EP72_PHYSICAL_BINDING"
+  },
+  "preservation_lock": {
+    "additional_core64_git_blob_count": 20,
+    "checked_count": 154,
+    "inherited_core64_checked_count": 134,
+    "prior_artifacts_mutated": false
+  },
+  "registry_disposition": {
+    "core65": "REMAINS_OPEN_PROTOCOL_VOID_AND_PHYSICAL_SERVICE_UNRESOLVED",
+    "exact_remainder_id": "CORE-66",
+    "reserved_id_free_on_base_main": true
+  },
+  "runner_commit": "cefa9f8",
+  "schema": "simllm-deployment-curve-core65-physical-binding-result-v1",
+  "scope": {
+    "calibration_constant_fitted": false,
+    "decode_overlap_term_added": false,
+    "held_out_mtp_numeric_value_compared": false,
+    "held_out_mtp_numeric_value_used_in_arithmetic": false,
+    "model_weights_downloaded": false,
+    "scored_run_performed": false,
+    "web_pages_fetched": false
+  },
+  "source_pins": {
+    "sglang": {
+      "implementation": "DeepseekV2AttentionMLA_and_DeepseekV2MoE",
+      "source_commit": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
+      "version": "0.5.19.dev345+gbfeae4e79"
+    },
+    "vllm": {
+      "deepseek_source_sha256": "f22d4458a604875fbc3fb194119519734b3f2b2460276ef2091419ed6988f1be",
+      "source_commit": "6e448d0ea9bf3d88d898b65449ca6dc2aec170ac"
+    }
+  },
+  "status": "PROTOCOL_VOID_NULL_MOVEMENT_EXACT_HARDWARE_REMAINDER",
+  "task": "CORE-65"
+}

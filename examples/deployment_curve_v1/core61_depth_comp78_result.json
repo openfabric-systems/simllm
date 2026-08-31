@@ -1,0 +1,87 @@
+{
+  "acceptance": {
+    "held_out_tolerance_percent": "5",
+    "prediction_within_tolerance": null,
+    "registered_base_digest_complete": false,
+    "registered_decode_digest_complete": false
+  },
+  "attempts": [
+    {
+      "analysis_status": 1,
+      "digest_manifest_sha256": "e7127bd24de5e390a26eccd02733fd3512ec583284afa67a1a6ff6a07acdedf5",
+      "job_id": 200120,
+      "role": "base",
+      "slurm_state": "COMPLETED",
+      "verdict": "BLOCKED_COMPACT_ANALYSIS"
+    },
+    {
+      "digest_manifest_sha256": "b7d23c479b604d82537e837ca160e9ad626772ec8e076b355b966234209d2a69",
+      "failure": "CUDA out of memory while allocating 896 MiB during the 65,536-token startup profile",
+      "job_id": 200123,
+      "role": "decode",
+      "slurm_state": "COMPLETED",
+      "verdict": "BLOCKED_NSYS_MODEL_CAPTURE"
+    },
+    {
+      "digest_manifest_sha256": "3345fc82b8f5f5085fd7f33344efcb63592e6f0f15696e8ecb832b97dde29e1a",
+      "failure": "CUDA out of memory while allocating 896 MiB during the 65,536-token startup profile",
+      "job_id": 200128,
+      "role": "decode exact retry after compile-cache warming",
+      "slurm_state": "COMPLETED",
+      "verdict": "BLOCKED_NSYS_MODEL_CAPTURE"
+    }
+  ],
+  "evidence_class": "ABSENT",
+  "held_out_depth": {
+    "depth_layers": 8,
+    "measured_service_ps": null,
+    "preregistered_prediction_ps": 3751359511,
+    "shape": {
+      "batch_size": 32,
+      "remote_kv_tokens_per_request": 2000
+    },
+    "signed_residual_percent": null,
+    "signed_residual_ps": null,
+    "signed_residual_rule": "measured_service_ps - preregistered_prediction_ps; percent denominator is measured_service_ps"
+  },
+  "linearity_verdict": "UNAVAILABLE_WITHOUT_MEASURED_DECODE_SERVICE",
+  "preservation": {
+    "comp76_touched": false,
+    "expectations_amended": false,
+    "failed_attempt_overwritten": false,
+    "model_weights_downloaded": false,
+    "scored_runs_touched": false
+  },
+  "registry": {
+    "comp72": "OPEN",
+    "comp78": "OPEN_EXACT_REGISTERED_REMAINDER",
+    "core61": "OPEN_BLOCKED_EXACT_DECODE_STARTUP_OOM"
+  },
+  "schema": "simllm-deployment-curve-core61-depth-comp78-result-v1",
+  "signed_residual_ledger": [
+    {
+      "direction": "decrease",
+      "owner": "CORE-61",
+      "signed_ps": -6968,
+      "state": "DECLARED_SINGLE_DEPTH",
+      "term": "depth scaling correction"
+    },
+    {
+      "direction": "unchanged_not_recomputed",
+      "owner": "TRAF-66",
+      "signed_ps": null,
+      "state": "OUT_OF_SCOPE",
+      "term": "finite compute and communication overlap"
+    },
+    {
+      "direction": "unavailable_without_measurement",
+      "owner": "CORE-61",
+      "signed_ps": null,
+      "state": "BLOCKED_EXACT_DECODE_STARTUP_OOM",
+      "term": "held-out depth prediction residual"
+    }
+  ],
+  "status": "REGISTERED_EXECUTION_PARTIAL_CORE61_OPEN",
+  "successor_lookup_record_sha256": "58d169865109a5eaca3e69978a48080c25a6bb48ee6607d32e82ed8487d17fdd",
+  "task": "CORE-61"
+}

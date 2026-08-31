@@ -1,0 +1,16 @@
+{
+  "bounded_reader_rejections": [
+    {
+      "disposition": "no value returned; no arithmetic, comparison, fitting or publication used it",
+      "error": "WholeFileAccessRejected",
+      "record": "core65-expectations",
+      "selector": "/candidate_verdicts"
+    }
+  ],
+  "fatal_held_out_use_occurred": false,
+  "incidental_exposure_count": 0,
+  "incidental_exposures": [],
+  "result_interpretable": true,
+  "schema": "simllm-deployment-curve-core66e-disclosure-v1",
+  "task": "CORE-66"
+}

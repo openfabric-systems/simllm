@@ -1,0 +1,23 @@
+{
+  "arithmetic_input": false,
+  "expected_forbidden_access_ledger": [],
+  "prior_resolution": {
+    "access_ledger_path": "examples/deployment_curve_v1/core63_clean_registry_resolution_access_ledger.jsonl",
+    "access_ledger_sha256": "45faed56adb6c4ebf01ade141d0b3ec43fd3a6128e3ac40f1485bc34e925799d",
+    "status": "PASS_LITERAL_REGISTRY_RESOLUTION"
+  },
+  "registry_access": {
+    "access_pattern": "reverse_nonterminal_task_block",
+    "expected_access_count": 2,
+    "expected_event_count": 4,
+    "selectors": [
+      "/task-entry[last-leading-block task_id=CORE-63]",
+      "/task-entry[last-leading-block task_id=CORE-64]"
+    ],
+    "terminal_byte_accessed": false,
+    "whole_file_streams_permitted": false
+  },
+  "schema": "simllm-deployment-curve-core63-clean-registry-block-v1",
+  "status": "EXPECTATIONS_ONLY_REGISTRY_BLOCK_RESOLUTION",
+  "task": "CORE-63"
+}

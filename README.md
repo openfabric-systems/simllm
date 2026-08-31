@@ -72,6 +72,14 @@ Berkeley National Laboratory.
 
 <p align="center"><a href="https://ethz.ch"><img src="resources/figures/supporters/tile-ethz.png" height="64" alt="ETH Zurich"></a><a href="https://www.cscs.ch"><img src="resources/figures/supporters/tile-cscs.png" height="64" alt="Swiss National Supercomputing Centre (CSCS)"></a><a href="https://spcl.inf.ethz.ch"><img src="resources/figures/supporters/tile-spcl.png" height="64" alt="Scalable Parallel Computing Laboratory (SPCL)"></a><a href="https://www.stanford.edu"><img src="resources/figures/supporters/tile-stanford.png" height="64" alt="Stanford University"></a><a href="https://www.nersc.gov"><img src="resources/figures/supporters/tile-nersc.png" height="64" alt="NERSC"></a></p>
 
+### Hardware supported
+
+<p align="center"><a href="https://www.nvidia.com"><img src="resources/figures/hardware/tile-nvidia.png" height="64" alt="NVIDIA"></a><a href="https://www.amd.com"><img src="resources/figures/hardware/tile-amd.png" height="64" alt="AMD"></a></p>
+
+### Frameworks supported
+
+<p align="center"><a href="https://github.com/vllm-project/vllm"><img src="resources/figures/frameworks/tile-vllm.png" height="64" alt="vLLM"></a><a href="https://github.com/sgl-project/sglang"><img src="resources/figures/frameworks/tile-sglang.png" height="64" alt="SGLang"></a></p>
+
 ## Architecture
 
 ```
@@ -229,6 +237,15 @@ wire port goes out to the fabric.
 <img src="resources/figures/xpu-rnic-model.png" width="72%" alt="The xPU and RNIC mental model: one simulated node holds xPU and RNIC devices, each composed from module boxes; PCIe connects the xPU host interface, the RNIC DMA engine and the host CPU with DRAM, so network invocation can come from the host driver, a CPU proxy or the GPU itself; scale-up ports connect peer xPUs inside the node, and the RNIC network port feeds the packet fabric">
 </p>
 
+The selected A100 packet candidate decomposes one scale-up transfer into
+queue-level TX, switch and RX services. Its parameters remain declared
+candidates; the [NVLink domain-model study](docs/design/nvlink-domain-model.md)
+records the exact evidence boundary and analytic bypass.
+
+<p align="center">
+<img src="resources/figures/nvlink-domain-model.png" width="96%" alt="The NVLink queue-level domain: a per-endpoint TX packetizes per-destination staging queues, gates them on returned credits and stripes packets over four bonded links; one parameterized switch is exact pass-through on the A100 direct mesh or exposes ingress FIFOs and a contention point for an NVSwitch-class profile; the per-endpoint RX tracks ingress-buffer occupancy, returns credits, reassembles extent sequences and delivers them in order. All numeric module values are declared candidates, while the pair and fan-out rates are published-measurement checks only.">
+</p>
+
 ### The xPU device
 
 The accelerator is modeled the way the NIC is, as boxes already: the
@@ -316,6 +333,7 @@ status and numbered open tasks; the README stays a map.
 | Module | Purpose | Doc |
 |---|---|---|
 | `simllm/core` | Virtual clock, scheduler-step records, execution graphs, central bookkeeping, completion contracts | [core](docs/modules/core.md) |
+| `simllm/deploy` | The planning rung: declared deployment candidates, closed-form capacity estimates and Pareto frontier scans in milliseconds, with every number labeled as an estimate, never a simulation result | [deploy](docs/modules/deploy.md) |
 | `simllm/workload` | Arrival processes, length distributions, deterministic generation requests, shared-prefix structure | [workload](docs/modules/workload.md) |
 | `simllm/compute` | Pluggable compute-time providers, the GPU service model and its concurrent task primitive, host initiation, and the NCCL stack skeleton | [compute](docs/modules/compute.md) |
 | `simllm/placement` | **The mapper**: placement + fabric manifests, rank-to-endpoint/GOAL-rank resolution | [placement](docs/modules/placement.md) |

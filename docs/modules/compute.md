@@ -107,6 +107,17 @@ remain offline; none runs once per serving step.
   simulator. It consumes content-addressed captured inputs and emits typed
   simulator observations. It is optional, capability queried and never a
   source of silicon truth.
+- `ExternalOperationDatabase`: a standard-library-only reader for the
+  content-addressed NVIDIA AIConfigurator slice. It verifies package, system,
+  backend, version, source-file, model and payload identity before exposing a
+  value. Every value carries `MEASURED-EXTERNAL` plus the complete frozen
+  source identity. Its family map distinguishes exact operations, declared
+  composites and gaps, and its composition ledger rejects fused plus
+  constituent double charging.
+- `ExternalQwen32BPassModel`: the audited TensorRT-LLM Python context and
+  generation composition over that database. It preserves effective-token
+  accounting, generation stride and repeat rules, and the H200 analytical
+  embedding and elementwise memory terms.
 - `CalibrationCompiler`: the deterministic offline compiler from validated
   evidence and an immutable split to a compact device model. It applies
   source precedence, fits only the training partition, scores validation and
@@ -1400,6 +1411,19 @@ deterministic device model. The model records typed shape and implementation
 selection, exact source provenance and a support envelope; optional Accel-Sim
 use is isolated to qualified A100 gaps and is absent from online execution.
 
+The local-shard collector supplies the executable offline `run` boundary. Its
+content-addressed request separates logical tensor, pipeline, data and expert
+parallel sizes from one physical shard coordinate, carries the exact model
+revision and dispatch signature, and generates deterministic synthetic token
+rows. An external framework target owns compilation and execution. Its
+candidate result is accepted only when the model, framework, physical shard,
+device ISA and synthetic-input hash agree exactly and every relative sample
+blob matches its recorded size and SHA-256. Distributed collectives and network
+service are explicit exclusions. The
+[contract study](../../examples/local_shard_kernel_collector_v1/RESULTS.md)
+passes all four cells over the frozen tensor-parallel and batch grid; it is
+nonphysical conformance evidence and installs no device constant.
+
 The retained kernel-cycle candidate now binds into the live disaggregated
 session through `ProfileTableProvider`, rather than through a second provider
 type or timing authority. Exact selection retains the record SHA-256, candidate
@@ -1411,15 +1435,16 @@ prefill row plus only one decode shape, so COMP-73 owns the target-record
 coverage needed for closure; see
 [the session kernel-cycle result](../../examples/pd_session_kernel_cycle_v1/RESULTS.md).
 
-The nonvoid
-[offline model-extraction study](../../examples/model_extraction_v1/RESULTS.md)
-publishes the Granite column's vLLM and SGLang inventories. Both framework
-paths emit all 15 cases with identical structural denominators, exactly 97
-logical family invocations per case and two graph-template classes; repeated
-extractions are byte identical and no fatal guard is violated. This makes the
-first COMP-54 coverage column literal. It is structure-only evidence: all
-physical implementation fields remain absent by design, and the task stays
-open for the nominated Qwen3.8-27B column and the Kimi K3 structure half.
+The nonvoid offline model-extraction studies publish the Granite, Qwen3.8-27B
+and comparison-specific Qwen3-32B-FP8 columns for both framework rows. Their
+structural denominators agree across vLLM and SGLang, each committed inventory
+is canonical at its content-addressed filename, and all physical implementation
+fields remain absent by design. No tracked second Qwen3-32B-FP8 extraction run
+exists, so the column makes no repeat-run claim.
+The latest Qwen3-32B-FP8 column binds exact revision
+`aa55da1ecc13d006e8b8e4f54579b1ea8c3db2df`, covers all 15 declared cases and
+emits exactly 257 logical visits per case. COMP-54 stays open for the Kimi K3
+structure half.
 
 The kernel-time determinism contract above is stated publicly and enforced. The
 pre-registered
@@ -1778,10 +1803,109 @@ publication artifacts remain unchanged. COMP-74 closes literally; COMP-79
 owns single-seed DeepSeek keys including simulated MTP, and COMP-80 owns the
 Granite arm's absent repetitions.
 
+The [external database parity study](../../examples/external_db_parity_v1/RESULTS.md)
+installs the H200 SXM, TensorRT-LLM 1.3.0rc10, SILICON, Python-surface slice as
+a 284,717-row content-addressed artifact. The importer preserves every raw
+binary64 value, applies the source tool's three GEMM and 367 generation-
+attention speed-of-light corrections, records every ignored or rewritten key
+dimension, and requires the primary database version with shared-layer
+inheritance disabled. The resolver implements the source interpolation rules
+and serves only `MEASURED-EXTERNAL` values under the frozen identity. Before
+use, the reader verifies the compressed payload plus `system.json`,
+`model-config.json` and `family-mapping.json` against their manifest hashes and
+verifies the converted files' source-specific change notices.
+
+The reconciled comparison is nonvoid: all eight fatal guards hold, all 25
+importer-identity rows pass from an independent payload recount, all 26
+pre-specified I2 resolver points are bit-equal, and all 13 post-specified I2S
+rows pass in their own register. The two query denominators are never summed.
+All four Qwen3-32B-FP8 pass totals and their terms are bit-equal, and the
+complete repeated conversion and evaluation takes 83.376052 seconds. The I2,
+I2S and P1 ULP finding ledgers are empty. The I2S register attributes the 11
+review-addendum rows to `25dc6b5` and the concurrent two-point supplement to
+`a679b0e`; the latter includes one bit-equal value and one structured miss on
+both sides. The artifact carries the exact Apache 2.0 bytes, both preserved
+NVIDIA copyright lines and file-local conversion notices backed by an
+exhaustive `MODIFIED` ledger.
+
+The model-configured external pass composer preserves those four Qwen totals
+bit for bit and adds the 62-layer MiniMax-M2.5 mixture-of-experts pass with
+explicit MTP nextn 3. Its content-addressed H200 NCCL collection resolves the
+source tool's measured rank-2, rank-4 and rank-8 rows, message-size
+interpolation and declared above-rank-8 extrapolation while retaining NCCL as
+the operation source. The
+[MiniMax expert-parallel study](../../examples/minimax_ep_scaling_v1/RESULTS.md)
+is nonvoid: E passes 4 of 4 bit-equal dispatch cells and C passes 4 of 4
+decode quotients at exactly 1.0. The first packet comparison is retained only
+as void strategy evidence because the donor's half-precision
+`tokens * hidden * E` buffer and the routed FP8 expert payload are different
+traffic abstractions. Corrected Family D compares an opaque NCCL-table cost
+model with a direct packet Clos cost model on the same requested logical
+element count. It refutes all three measured cells; EP 256 is an unscored
+post-specified diagnostic, and the comparison does not isolate contention.
+COMP-82 through COMP-86 retain their listed identity, surface and live-chain
+gaps.
+COMP-87 specifically owns the imported but undispatched WideEP MoE, MLA BMM,
+Mamba2, MLA and generation-MLA operation families; it does not own the generic
+composer or MiniMax MoEDispatch, which are literal here. COMP-89 owns the
+remaining donor-extrapolation precision gap.
+
+The
+[matched-seam frontier](../../examples/matched_seam_frontier_v1/RESULTS.md)
+first publication is void against its own impossible FG-1, which forbade
+roofline and fitted terms inside an external resolver that is
+speed-of-light-normalized and applies empirical adjustments. The guard was not
+widened. The corrected run proves that SimLLM's own `RooflineProvider` and
+fitted values cannot reach any scored root, declares all eight external
+adjustments with pinned source hashes, and publishes a remove-one Family R
+range for each. The source audit also corrects the prose-level phase
+transposition: the pinned installation assigns 0.9 to prefill rate matching and
+0.92 to decode. **Every external adjustment carried by the composition is
+declared, source-attributed and joined to the imported operation slice through
+a content-addressed composition surface.** COMP-88 owns promotion from the
+study-local declaration to that installed surface.
+
 ## Open tasks
 
 ### Precision
 
+- COMP-81 (Precision; P0; M): reconcile the Qwen3-32B-FP8 `attn_score`
+  projection convention before any successor inventory enters deployment
+  pricing. The frozen decode case carries 4,292,870,144 aggregate FLOPs over
+  2,047 realized query-key pairs, or 2,097,152 FLOPs per pair; the frozen
+  prefill projection divided by its current 16,384 token-square convention is
+  262,144 FLOPs per pair, exactly 8x lower. Freeze one phase-independent pair
+  contract from `step_shape`, then publish new content-addressed vLLM and
+  SGLang inventories without changing either frozen object. Acceptance
+  requires both frameworks to agree, the same mathematical pair to carry the
+  same FLOP coefficient in decode and prefill, exact family conservation, and
+  a successor frontier comparison that names the new inventory hashes.
+- COMP-88 (Precision; P1; M): move the external serving-composition constants
+  into a content-addressed artifact joined to the imported operation slice.
+  The matched-seam study declares the 1.1 prefill correction, 1.08 decode
+  correction, 1.8 TTFT autoscale, 0.9 prefill and 0.92 decode rate-degradation
+  factors, 0.8 memory-bandwidth derating, 3 microsecond memory-operation
+  constant and 1.1 context-attention extra-latency correction. Promote that
+  source-attributed study table into an immutable composition record with its
+  own digest, then require it to reproduce all 13 Family S hexadecimal
+  services, all 10 Family R quotients, every remove-one sensitivity row and the
+  full Family D decomposition exactly. Omitting the record must preserve the
+  current explicit configuration path and every accepted artifact byte.
+- COMP-89 (Precision; P1; L): replace the MiniMax external dispatch
+  extrapolation above eight ranks with independently measured H200 NCCL
+  all-gather and reduce-scatter evidence at the message sizes and widths the
+  supported pass selects. The active surrogate uses measured rank-2, rank-4
+  and rank-8 rows, fixes `effective_ranks = min(E, 8)`, then applies a 50 GB/s
+  above-rank-8 bandwidth tier. It contributes 51.39544921875 ms to the EP 256
+  decode step and therefore dominates a reported metric. Freeze the rank and
+  message-size grid before capture, record topology and launch mode, and fit
+  only from training cells. Acceptance reports the surrogate's before error
+  and the new model's held-out median and p95 error, keeps source identity on
+  every term, reproduces the four MiniMax pass cells through the selected
+  calibration, and preserves every Qwen parity byte plus the current
+  extrapolation exactly when the measured arm is disabled. TRAF-77 separately
+  owns routed expert traffic and receiver-side packet calibration; the two
+  abstractions are never fitted to each other.
 - COMP-1 (Precision; P1; L): complete production compute calibration.
   This task is the numerical capstone for every selected target: it owns
   target-silicon compute and memory anchors, per-device fit inputs, untouched
@@ -2301,6 +2425,54 @@ Granite arm's absent repetitions.
 
 ### Completeness
 
+- COMP-82 (Completeness; P2; L): import additional external system, backend or
+  database-version identities through separately frozen slices and mapping
+  tables. The shipped reader accepts exactly H200 SXM, TensorRT-LLM 1.3.0rc10
+  and rejects every other identity before lookup. Each added identity must
+  freeze its package and closure hashes, convert without donor rows, pass at
+  least twenty live resolver points plus phase oracles, and retain this
+  identity's artifact bytes and rejection behavior exactly when unselected.
+- COMP-83 (Completeness; P2; M): add explicit external HYBRID database mode
+  with shared-layer inheritance and per-row donor provenance. The shipped mode
+  fixes `shared_layer=false` and rejects any donor version. Freeze the source
+  tool's precedence and collision rules before implementation, require every
+  inherited value to name its donor identity, and prove that disabling HYBRID
+  reproduces the current payload, query values, row-version scan and failures
+  byte for byte.
+- COMP-84 (Completeness; P2; M): add the external compiled estimator as a
+  separately named surface. The shipped contract is the Python estimator and
+  treats the audited one-ULP compiled difference as out of scope. Freeze
+  compiled query and pass literals before implementation, publish every ULP
+  difference instead of widening tolerance, and preserve all Python-surface
+  results and source labels exactly when the compiled surface is unselected.
+- COMP-85 (Completeness; P2; L): import and propagate external power and energy
+  fields only from a source slice that actually records them. The shipped
+  slice declares those fields absent and makes no power claim. A future path
+  must freeze units, sampling boundaries and conservation checks, bind every
+  field to its measured source row, and leave latency, evidence identity and
+  explicit field absence unchanged when power import is disabled.
+- COMP-86 (Completeness; P1; L): connect the external operation database to a
+  supported end-to-end metric path through input or `ExecutionGraph`, the one
+  runtime timing authority, `CompletionEvent`, `StepResult`, then TTFT and
+  TPOT. The shipped surface resolves operations and composes frozen passes
+  offline without becoming a second mutable device authority. Freeze at least
+  two bandwidths and two parallel widths before integration, require the
+  enabled selection to move the expected end-to-end term exactly, and require
+  the disabled selection to preserve every accepted provider timestamp,
+  completion order, metric and run-record byte.
+
+- COMP-87 (Completeness; P2; L): add dispatched resolver operations for the
+  imported WideEP MoE, MLA BMM, Mamba2, MLA and generation-MLA families. Their
+  rows are preserved and hash-verified, but `query_operation` rejects them and
+  no pass composition can select them; that refusal is the explicit off path.
+  Freeze the source rule list, exact and interpolation points, ignored or
+  rewritten dimensions, and live SDK parity before implementation. Acceptance
+  requires bit-equal local-versus-live values on every enabled family and a
+  supported composition that consumes each selected operation. The disabled
+  path must preserve the current rejection behavior, 26 pre-specified I2
+  results, 13 separately reported post-specified I2S results, pass totals,
+  artifact payload and source-identity ledger exactly.
+
 - COMP-4 (Completeness; P2; M): add generic multi-axis interpolation as an
   explicit optional path without weakening the device-model v1 boundary.
   Version 1 supports exact cells or one declared affine axis, and
@@ -2553,6 +2725,13 @@ Granite arm's absent repetitions.
   closed on unknown fields, duplicate keys, nonfinite values, unsafe archives,
   hash mismatch, incomplete bindings, split leakage or physical-floor
   violation.
+  The local `run` slice is delivered through the strict local-shard request and
+  candidate-result contract. Its nonphysical conformance study passes all four
+  frozen tensor-parallel and batch cells with repeat-stable kernel order,
+  content identities and verified sample-blob closure. This does not close the
+  task: concrete CUDA and ROCm doctor backends, the remaining compiler and
+  package surfaces, authenticated data-only submission and target-specific
+  silicon evidence remain under this entry and COMP-1.
 - COMP-51 (Completeness; P1; M): add the official Accel-Sim framework unchanged
   as an optional offline submodule and close its reproducible dependency
   envelope at `third_party/accel-sim-framework`. Pin upstream commit
@@ -2605,11 +2784,11 @@ Granite arm's absent repetitions.
   rejects rather than emitting a partial column. COMP-50 owns the canonical
   record rules this task reuses; this task owns the extraction
   orchestration, the inventory schema, the per-framework drivers and the
-  coverage denominators it publishes. The Granite first slice is published
-  for both framework rows by `model_extraction_v1`; complete the remaining
-  nominated columns (Qwen3.8-27B, and the Kimi K3 structure half beside the
-  COMP-59 physical envelope) with their own exact checkpoint identities and
-  freeze-first shape grids, and until then this task stays open.
+  coverage denominators it publishes. The Granite, Qwen3.8-27B and
+  comparison-specific Qwen3-32B-FP8 slices are published for both framework
+  rows with exact checkpoint identities and freeze-first shape grids. Complete
+  the Kimi K3 structure half beside the COMP-59 physical envelope; until then
+  this task stays open.
 - COMP-59 (Completeness; P1; L): fill coverage columns for models whose
   weights exceed the reachable fleet, with the Kimi K3 class (2.8T-parameter
   MXFP4 MoE against 1.6 TB of total A100 HBM and about 1.15 TB of GH200
@@ -2706,12 +2885,20 @@ Granite arm's absent repetitions.
   CORE-61 adds a companion held-out eight-layer capture under the same freeze,
   forbidden before `2026-08-28T06:30` in `Europe/Zurich`. Its exact base
   submission is `ssh merlin sbatch -M gmerlin7 --partition=gh-hourly --time=00:25:00 --job-name=gh-core61-d8-base --export=ALL,MODEL=deepseek-ai/DeepSeek-V3,MODEL_KEY=deepseek-v3,SHAPE_SET=deepseek,REVISION=e815299b0bcbac849fa540c768ef21845365c9eb,REDUCED_LAYERS=8,GPU_MEMORY_UTILIZATION=0.88,MODE=graph,DEEPSEEK_SUITE=base,MAX_MODEL_LEN=8192,MAX_NUM_BATCHED_TOKENS=16384,RUN_WALL=0 $SIMLLM_MERLIN_STAGE_ROOT/gh200lane/run_vllm_capture.sbatch`.
-  Its exact batch-32, remote-KV-2000 decode submission is
-  `ssh merlin sbatch -M gmerlin7 --partition=gh-hourly --time=00:20:00 --job-name=gh-core61-d8-decode --export=ALL,MODEL=deepseek-ai/DeepSeek-V3,MODEL_KEY=deepseek-v3,SHAPE_SET=deepseek,REVISION=e815299b0bcbac849fa540c768ef21845365c9eb,REDUCED_LAYERS=8,GPU_MEMORY_UTILIZATION=0.88,MODE=graph,DEEPSEEK_SUITE=decode,MAX_MODEL_LEN=8192,MAX_NUM_BATCHED_TOKENS=65536,MAX_NUM_SEQS=64,RUN_WALL=0 $SIMLLM_MERLIN_STAGE_ROOT/gh200lane/run_vllm_capture.sbatch`.
+  Its original batch-32, remote-KV-2000 decode submission is superseded only
+  for CORE-61 by the pre-scoring
+  [retry supplement](../../examples/deployment_curve_v1/core61_depth_retry_expectations.md).
+  The amended command uses a 4,096-token startup cap and a task-owned exact-KV
+  alignment harness; the eight-layer, batch-32, remote-KV-2000 measurement,
+  3,751,359,511 ps prediction, signed residual and five-percent rule are
+  unchanged. No depth-8 cell had scored when the supplement was committed.
   Submit base then decode, retain every digest-complete output below the
   CORE-61 external run root, and stop cleanly on SSH loss. The preregistered
-  eight-layer prediction is 3,751,359,511 ps; its measurement and signed
-  residual remain absent while Merlin is unavailable.
+  eight-layer prediction is 3,751,359,511 ps. The later
+  [CORE-61 retry](../../examples/deployment_curve_v1/core61_depth_retry_result.md)
+  measures 3,629,568,000 ps and retains a signed `measured - predicted`
+  residual of -121,791,511 ps, or -3.355537 percent over measured service.
+  This passes the unchanged five-percent rule and completes the depth arm.
   Acceptance requires all registered Granite cells plus the exact DeepSeek
   physical cells, retained source and output digests, and a resumable campaign
   record whose completed-cell prefix survives interruption byte for byte.
@@ -2732,7 +2919,9 @@ Granite arm's absent repetitions.
   `d868a4f35d633032daa238168d00f42c2ab47fc569db649b19b907008072e107`;
   the `ff46f6d8...` predecessor remains immutable. This does not meet the
   literal acceptance above, so COMP-72 stays open and COMP-78 owns the exact
-  remainder.
+  remainder. The later CORE-61 retry satisfies that depth sub-arm with base
+  job `200137` and exact decode job `200138`; COMP-72 now stays open on the
+  still-empty Granite prefix and final successor work, not on depth linearity.
 - COMP-73 (Completeness; P1; L): produce the key-compatible target record that
   makes the CORE-53 frozen disaggregated session grid total. The accepted
   retained fixture is A100, vLLM 0.26, tensor parallel one and partial decode
@@ -2776,6 +2965,31 @@ Granite arm's absent repetitions.
   `d868a4f3...` immutable. Acceptance requires the complete Granite prefix,
   both digest-complete CORE-61 outputs, the signed depth residual, all retained
   source and output digests, and only then literal COMP-72 closure.
+  The [COMP-78 execution record](../../examples/hopper_kernel_cycle_candidate_v1/COMP78_RESULTS.md)
+  retains exact CORE-61 base job `200120` and decode attempts `200123` and
+  `200128` without overwriting an attempt or changing a registered command.
+  Both decode attempts failed before the scored boundary in the same
+  65,536-token startup profile. The pinned logs refine their final allocations:
+  job `200123` requested 896 MiB for a BF16 hidden-state output, while warm
+  retry `200128` requested 3 GiB for a BF16 FlashInfer DeepGEMM output. The
+  measured service, signed residual and linearity verdict remain absent. Pinned
+  real vLLM and SGLang target executables are
+  staged, but the landed cell driver cannot prove fragmented KV placement or
+  emit the required routing, two-clean-harvest and digest-completion outputs.
+  The Granite prefix therefore remains 0 of 1,212, byte-identical to the empty
+  prefix, at the same first incomplete cell. Candidate successor
+  `58d169865109a5eaca3e69978a48080c25a6bb48ee6607d32e82ed8487d17fdd`
+  retains that partial evidence while `ff46f6d8...` and `d868a4f3...` remain
+  immutable. That execution did not meet literal acceptance at the time.
+  COMP-79 is already allocated below and was not reassigned. The later
+  pre-scoring-amended
+  [CORE-61 retry](../../examples/deployment_curve_v1/core61_depth_retry_result.md)
+  retains base job `200137` and exact decode job `200138`. The measured decode
+  service is 3,629,568,000 ps and the signed residual is -121,791,511 ps, or
+  -3.355537 percent, so the five-percent depth rule passes and CORE-61 closes.
+  Both task-owned attempt trees are digest complete. COMP-72 and COMP-78 remain
+  open on the 0-of-1,212 Granite prefix and final successor only. CORE-63 is
+  not registered, and COMP-79 remains unchanged.
 - COMP-79 (Completeness; P1; M): extend key-local repeat-derived distribution
   propagation to DeepSeek candidate keys that still have only one independent
   seed, beginning with the separately measured EP72 simulated-MTP mode. Freeze

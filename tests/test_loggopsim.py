@@ -9,8 +9,10 @@ import pytest
 
 from simllm.backends import loggopsim
 from simllm.backends.loggopsim import (
+    LOGGOPSIM_DECLARED_EVIDENCE_SOURCE,
     LogGopsimConfig,
     build_loggopsim_command,
+    derive_loggp_params,
     find_loggopsim,
     parse_loggopsim_stdout,
     run_loggopsim,
@@ -101,6 +103,37 @@ def test_extra_flags_render_valueless_and_valued_options():
 def test_integer_gap_renders_as_a_double_literal():
     cfg = LogGopsimConfig(goal_bin=Path("trace.bin"), byte_gap_ns=6)
     assert "6.0" in build_loggopsim_command(Path("LogGOPSim"), cfg)
+
+
+def test_an_exact_gap_string_is_preserved_in_the_argument_vector():
+    cfg = LogGopsimConfig(
+        goal_bin=Path("trace.bin"),
+        byte_gap_ns=0.02,
+        byte_gap_ns_string="0.020000000000000000",
+    )
+    argv = build_loggopsim_command(Path("LogGOPSim"), cfg)
+    assert argv[argv.index("-G") + 1] == "0.020000000000000000"
+
+
+def test_ideal_parameter_derivation_preserves_shortest_decimal_and_evidence():
+    rate_400 = derive_loggp_params(
+        rate_bits_per_second=400_000_000_000,
+        latency_ns=123,
+    )
+    rate_200 = derive_loggp_params(
+        rate_bits_per_second=200_000_000_000,
+        latency_ns=123,
+    )
+    assert rate_400.exact_g_string == "0.02"
+    assert rate_200.exact_g_string == "0.04"
+    assert rate_400.to_json()["L"]["value"] == 123
+    assert rate_400.to_json()["o"]["value"] == 0
+    assert rate_400.to_json()["g"]["value"] == 0
+    assert rate_400.to_json()["O"]["value"] == 0
+    assert {
+        parameter["evidence_source"]
+        for parameter in rate_400.to_json().values()
+    } == {LOGGOPSIM_DECLARED_EVIDENCE_SOURCE}
 
 
 def test_parses_the_per_host_output_shape():

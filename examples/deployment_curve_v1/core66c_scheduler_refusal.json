@@ -1,0 +1,33 @@
+{
+  "account": "merlin",
+  "cluster": "gmerlin7",
+  "command_class": "sbatch --test-only with the frozen EP8 script and exports",
+  "error": "allocation failure: Invalid qos specification",
+  "job_created": false,
+  "partition": {
+    "default_qos": "gpu_hourly",
+    "name": "gh-hourly",
+    "nodes": 3,
+    "state": "UP"
+  },
+  "qos_definition": {
+    "max_gpus_per_job": 8,
+    "max_gpus_per_user": 8,
+    "name": "gpu_hourly"
+  },
+  "request": {
+    "gpu_count": 8,
+    "gpus_per_node": 4,
+    "node_count": 2,
+    "qos": "gpu_hourly"
+  },
+  "resolution": "the user association allows only gpu_general, so the defined gpu_hourly QoS is not a valid explicit QoS for this user",
+  "schema": "simllm-deployment-curve-core66c-scheduler-refusal-v1",
+  "task": "CORE-66",
+  "user_association": {
+    "allowed_qos": [
+      "gpu_general"
+    ],
+    "partition": null
+  }
+}

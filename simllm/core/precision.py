@@ -85,6 +85,7 @@ class NetworkLevel(str, enum.Enum):
     """How network completion is modeled."""
 
     RNIC_NN_FLUID = "rnic-nn-fluid"
+    LOGGOPSIM_IDEAL = "loggopsim-ideal"
     PACKET_LEVEL = "packet-level"
 
 
@@ -148,12 +149,13 @@ class PrecisionConfig:
                     f"got {type(value).__name__}"
                 )
         if (
-            self.network is NetworkLevel.RNIC_NN_FLUID
+            self.network
+            in {NetworkLevel.RNIC_NN_FLUID, NetworkLevel.LOGGOPSIM_IDEAL}
             and self.rnic_hardware is RnicHardwareLevel.COMPOSED_NATIVE
         ):
             raise ValueError(
                 "precision.rnic_hardware='composed-native' is incompatible with "
-                "precision.network='rnic-nn-fluid'; select "
+                f"precision.network={self.network.value!r}; select "
                 "rnic_hardware='timing-neutral-bypass' or network='packet-level'"
             )
 

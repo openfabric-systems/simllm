@@ -1,0 +1,155 @@
+{
+  "access_protocol": {
+    "access_log_schema": "simllm-deployment-curve-core63-access-v1",
+    "allowed_records": [
+      {
+        "classification": "retained_measured_component_decomposition",
+        "path": "examples/hopper_kernel_cycle_candidate_v1/candidate-record.json",
+        "published_sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+        "selector": "/entries[7]"
+      },
+      {
+        "classification": "retained_standard_decode_kernel_decomposition",
+        "path": "$SIMLLM_KERNELPROBE_ROOT/gh200lane/capture-198891-deepseek-v3-tp1-graph-decode/analysis/kernel-summary.csv",
+        "published_bytes": 13985,
+        "published_sha256": "c4d8ece981478ce57ebca95f7f2f168865713b66e87ed21a1d3f76976e834b7c",
+        "selector": "/rows[pool=decode,shape=32,device=0,is_collective=False]"
+      }
+    ],
+    "expected_access_count": 2,
+    "expected_held_out_access_ledger": [],
+    "held_out_anchor_ids_forbidden": [
+      "sglang_decode_simulated_mtp"
+    ],
+    "reader_path": "examples/deployment_curve_v1/core63_field_reader.py",
+    "unselected_payload_fields_may_be_decoded": false,
+    "whole_record_reads_permitted": false
+  },
+  "architecture_arithmetic": {
+    "assignment_scale": {
+      "denominator": 9,
+      "numerator": 1
+    },
+    "captured_routed_assignments_per_rank": {
+      "formula": "capture_batch_size * top_k",
+      "value": 256
+    },
+    "capture_batch_size": 32,
+    "disclosed_batch_per_node": 256,
+    "expected_ep72_assignments_per_rank": {
+      "denominator": 9,
+      "formula": "batch_per_node * top_k * resident_physical_slots_per_rank / physical_expert_slots",
+      "numerator": 256
+    },
+    "expert_parallel_ranks": 72,
+    "model_layers": 61,
+    "moe_layers": 58,
+    "physical_expert_slots": 288,
+    "resident_physical_slots_per_rank": 4,
+    "shared_experts_per_rank": 1,
+    "sources": [
+      {
+        "fields": [
+          "anchors[sglang_decode_standard].batch_per_node",
+          "disclosed_configurations.sglang_reproduction.decode.nodes",
+          "disclosed_configurations.sglang_reproduction.decode.expert_parallelism"
+        ],
+        "path": "examples/deployment_curve_v1/expectations.json"
+      },
+      {
+        "fields": [
+          "model.geometry.layers",
+          "expert_contract.logical_experts",
+          "expert_contract.physical_slots",
+          "expert_contract.top_k",
+          "expert_contract.base_moe_layers",
+          "units[sglang-decode-ep72-dp-attention].attention_parallelism",
+          "units[sglang-decode-ep72-dp-attention].static_rank_classes"
+        ],
+        "path": "offline/calibration/deployment-projections/ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2.json"
+      },
+      {
+        "fields": [
+          "reference_model.geometry.num_experts",
+          "reference_model.geometry.top_k",
+          "reference_model.deepseek_stack.n_shared_experts"
+        ],
+        "path": "offline/calibration/suites/deepseek-v3-text-v1-frameworks-2026-08-25/suite.json"
+      }
+    ],
+    "top_k": 8,
+    "uniform_routing_assumption": "Each of the batch_per_node * top_k routed assignments selects uniformly over the 288 physical residency slots, so one rank's four resident slots receive exactly the expectation 256 * 8 * 4 / 288 = 256 / 9 assignments. This is an expectation, not a balance measurement."
+  },
+  "calibration_context": {
+    "anchor_id": "sglang_decode_standard",
+    "current_prediction_tokens_per_second_per_node_display": "8949.76",
+    "current_step_ps": 28604120000,
+    "may_fit_or_select": false,
+    "per_node_tokens": 256,
+    "published_tokens_per_second_per_node": 22282,
+    "role": "calibration-only comparison after the residency step is derived"
+  },
+  "classification": {
+    "absolute_relative_error_pass_bar_percent": "5",
+    "overcorrection": "corrected prediction is above the published calibration anchor",
+    "pass": "absolute signed calibration residual is at most 5 percent",
+    "undercorrection": "corrected prediction remains below the published calibration anchor"
+  },
+  "component_rule": {
+    "composition": "sum retained kernel service, scale only routed-expert GEMM service by 1 / 9, keep the per-step fixed component once, then scale four-layer repeatable service by 61 / 4",
+    "fixed_component_source": "/entries[7]/kernels[0]/components/fixed_overhead_ps",
+    "fixed_component_treatment": "retain once per step exactly as validated by CORE-61",
+    "kernel_service_field": "total_duration_per_step_ns",
+    "per_kernel_service_conversion": "exact decimal nanoseconds times 1000 picoseconds per nanosecond",
+    "retained_families": [
+      "attention and MLA",
+      "router and top-k",
+      "shared expert",
+      "dense early MLP",
+      "normalization and elementwise kernels",
+      "all other noncollective standard-decode kernels"
+    ],
+    "routed_expert_kernel_name_markers": [
+      "fused_moe_kernel"
+    ],
+    "routed_family": "only recorded routed-expert fused MoE GEMM kernels",
+    "routed_scale": {
+      "denominator": 9,
+      "numerator": 1
+    },
+    "source_reconstruction_tolerance_ps": 1,
+    "zero_free_or_fitted_constants": true
+  },
+  "expected_signed_direction": {
+    "corrected_step": "decrease",
+    "prediction": "increase",
+    "signed_residual": "less_negative_before_any_possible_crossing"
+  },
+  "overlap_ruling": {
+    "binding_now": false,
+    "communication_term_in_current_decode_pricing": false,
+    "follow_on": "Register decode-side overlap only after a decode communication term exists; do not derive a speculative overlap composition in CORE-63."
+  },
+  "preservation_lock": {
+    "artifact_count": 93,
+    "class": "all prior CORE-54 scored publication artifacts plus later decode-lineage records",
+    "manifest_path": "examples/deployment_curve_v1/core63_preservation_lock.sha256",
+    "manifest_sha256": "3586ddd96cfad09d8b7c8015eda6641ba5f4180a1f55c5b9f34e06cd29eb445d"
+  },
+  "registry": {
+    "close_core63_only_if_literal": true,
+    "core63": "OPEN",
+    "reserved_residual_id": "CORE-64"
+  },
+  "schema": "simllm-deployment-curve-core63-expectations-v1",
+  "scope_locks": {
+    "decode_communication_term_added": false,
+    "held_out_mtp_value_accessed_or_compared": false,
+    "model_weights_downloaded": false,
+    "prior_scored_artifact_mutated": false,
+    "scored_run_performed": false,
+    "web_pages_fetched": false
+  },
+  "status": "EXPECTATIONS_ONLY",
+  "task": "CORE-63"
+}

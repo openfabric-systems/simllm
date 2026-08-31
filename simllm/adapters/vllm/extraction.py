@@ -11,6 +11,7 @@ from simllm.adapters.vllm._version import PINNED_VLLM_VERSION
 from simllm.calibration.extraction import (
     FrameworkConfigurationProjection,
     FrameworkDeepseekStack,
+    FrameworkDenseStack,
     FrameworkTextStack,
     extract_model_inventory,
 )
@@ -26,6 +27,8 @@ VLLM_EXTRACTION_SEAM = "flagged-skeleton-step-record-v1"
 VLLM_CONFIGURATION_SEAM = "ModelConfig-with-skip-tokenizer-init"
 VLLM_QWEN35_BINDING = "model_executor/models/registry.py:573"
 VLLM_QWEN35_IMPLEMENTATION = "QwenGatedDeltaNetAttention"
+VLLM_QWEN3_BINDING = "model_executor/models/registry.py:199"
+VLLM_QWEN3_IMPLEMENTATION = "Qwen3Attention"
 VLLM_DEEPSEEK_V3_BINDING = "model_executor/models/registry.py:93"
 VLLM_DEEPSEEK_V3_IMPLEMENTATION = "DeepseekV2Attention and DeepseekV2MoE"
 
@@ -101,6 +104,73 @@ def _qwen35_projection(
                 "one-layer-mtp-speculative-head",
             ),
         ),
+    )
+
+
+def _qwen3_projection(
+    model_config: Any,
+    framework: FrameworkIdentity,
+) -> FrameworkConfigurationProjection | None:
+    hf = model_config.hf_config
+    architectures = tuple(hf.architectures or ())
+    if architectures != ("Qwen3ForCausalLM",):
+        return None
+    from vllm.model_executor.models.registry import ModelRegistry
+
+    architecture = architectures[0]
+    registered = ModelRegistry.models.get(architecture)
+    if (
+        registered is None
+        or getattr(registered, "module_name", None)
+        != "vllm.model_executor.models.qwen3"
+        or getattr(registered, "class_name", None) != architecture
+    ):
+        raise RuntimeError("vLLM Qwen3 architecture binding does not match the pin")
+    quantization = hf.quantization_config
+    if not isinstance(quantization, dict):
+        raise TypeError("vLLM Qwen3 quantization config is not an object")
+    geometry = ModelGeometry(
+        layers=hf.num_hidden_layers,
+        hidden_size=hf.hidden_size,
+        intermediate_size=hf.intermediate_size,
+        num_heads=hf.num_attention_heads,
+        num_kv_heads=hf.num_key_value_heads,
+        head_size=hf.head_dim,
+        num_experts=0,
+        top_k=0,
+        vocab_size=hf.vocab_size,
+    )
+    return FrameworkConfigurationProjection(
+        framework=framework,
+        configuration_seam=VLLM_CONFIGURATION_SEAM,
+        architecture_binding=VLLM_QWEN3_BINDING,
+        text_implementation=VLLM_QWEN3_IMPLEMENTATION,
+        dense_stack=FrameworkDenseStack(
+            architecture=architecture,
+            model_type=hf.model_type,
+            scope="text-only",
+            geometry=geometry,
+            attention_mechanism="grouped-query causal self-attention",
+            quantization="fp8-e4m3-block-128x128",
+            weight_block_size=tuple(quantization["weight_block_size"]),
+            excluded_components=("input-embedding-family", "normalization-family"),
+        ),
+    )
+
+
+def _qwen3_dims(stack: FrameworkDenseStack) -> ModelDims:
+    geometry = stack.geometry
+    return ModelDims(
+        num_layers=geometry.layers,
+        hidden_size=geometry.hidden_size,
+        intermediate_size=geometry.intermediate_size,
+        num_heads=geometry.num_heads,
+        num_kv_heads=geometry.num_kv_heads,
+        head_size=geometry.head_size,
+        vocab_size=geometry.vocab_size,
+        dtype_bytes=2,
+        weight_dtype_bytes=1,
+        kv_dtype_bytes=2,
     )
 
 
@@ -221,6 +291,15 @@ def _configuration(
         dtype="bfloat16",
         enforce_eager=True,
     )
+    framework = _framework_identity(version)
+    qwen3_projection = _qwen3_projection(model_config, framework)
+    if qwen3_projection is not None:
+        assert qwen3_projection.dense_stack is not None
+        return (
+            _qwen3_dims(qwen3_projection.dense_stack),
+            framework,
+            qwen3_projection,
+        )
     config = VllmConfig(
         model_config=model_config,
         parallel_config=ParallelConfig(
@@ -229,7 +308,6 @@ def _configuration(
             data_parallel_size=1,
         ),
     )
-    framework = _framework_identity(version)
     deepseek_projection = _deepseek_v3_projection(model_config, framework)
     if deepseek_projection is not None:
         assert deepseek_projection.deepseek_stack is not None
@@ -274,6 +352,8 @@ __all__ = [
     "VLLM_DEEPSEEK_V3_BINDING",
     "VLLM_DEEPSEEK_V3_IMPLEMENTATION",
     "VLLM_EXTRACTION_SEAM",
+    "VLLM_QWEN3_BINDING",
+    "VLLM_QWEN3_IMPLEMENTATION",
     "VLLM_QWEN35_BINDING",
     "VLLM_QWEN35_IMPLEMENTATION",
     "VLLM_SOURCE_COMMIT",

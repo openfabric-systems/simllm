@@ -1,0 +1,227 @@
+{
+  "achieved_capture_configuration": null,
+  "allocated_cell_configuration": {
+    "attention_parallelism": "data-parallel",
+    "batch_per_rank": 32,
+    "captured_layer_count_requested": 4,
+    "deep_ep_enabled": false,
+    "dense_layer_count_requested": 3,
+    "expert_parallel_width": 4,
+    "gpu_model": "NVIDIA GH200 120GB",
+    "gpus_per_node": 4,
+    "kv_length_per_rank": 2000,
+    "lm_head_parallelism": "data-parallel",
+    "logical_experts_per_rank": 4,
+    "measured_decode_iterations_completed": 0,
+    "measured_decode_iterations_requested": 1,
+    "moe_a2a_backend_requested": "none",
+    "moe_dispatcher_expected_from_pinned_source": "sglang.srt.layers.moe.token_dispatcher.standard.StandardDispatcher",
+    "moe_layer_count_requested": 1,
+    "mtp_enabled": false,
+    "node_count": 1,
+    "rank_count": 4,
+    "routed_expert_total": 16,
+    "sglang_commit": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
+    "weights": "dummy-only"
+  },
+  "calibration_only": {
+    "downward_correction_published_alone": false,
+    "missing_requirements": [
+      "DeepEP dispatch and combine service with a zero-parameter registered-cell projection, unavailable by construction in this fallback cell",
+      "rank-preserving per-kernel and per-step HBM read and write bytes, not reached after SGLang import failure"
+    ],
+    "service_multipliers_applied": false,
+    "service_multiplier_structure": {
+      "common": "61/4",
+      "dense": 1,
+      "moe": 58,
+      "output": 1,
+      "step": 1
+    },
+    "signed_movement_tokens_per_second_per_node": null,
+    "status": "NULL_DEEPEP_UNPRICED_AND_COUNTER_PASS_NOT_REACHED"
+  },
+  "candidate_disposition": {
+    "expert_population": {
+      "assignment_scale_1_over_9": "UNCHECKED_NO_ROUTING_RECORD",
+      "count_and_resident_weight_scale_1_over_64": "UNCHECKED_NO_ROUTING_OR_HBM_RECORD",
+      "new_decision": false
+    },
+    "layer_type_composition": {
+      "new_decision": false,
+      "state": "STRUCTURALLY_FROZEN_THREE_DENSE_THEN_ONE_MOE_BUT_NO_PHYSICAL_EXECUTION"
+    },
+    "other_kernel_counterparts": {
+      "deep_ep_families_absent_by_construction": 4,
+      "new_physical_bindings": 0,
+      "new_decision": false
+    },
+    "weight_read_volume": {
+      "actual_capture_per_step_read_bytes": null,
+      "new_decision": false,
+      "state": "UNDECIDABLE_COUNTER_PASS_NOT_REACHED"
+    }
+  },
+  "chronology": {
+    "actual_submission_count": 1,
+    "expectations_commit": "3440ed1",
+    "pre_submit_commands_creating_jobs": 0,
+    "previous_ep4_failures_preserved": true,
+    "previous_refusal_records_preserved": true,
+    "scheduler_submission_identifier": 200961
+  },
+  "declared_deviation_ledger": [
+    {
+      "difference": "expert-parallel peer count",
+      "expected_signed_effect": "fewer participants reduce collective work and omit the registered peer topology; no DeepEP service is inferred",
+      "feasible": 4,
+      "registered": 72
+    },
+    {
+      "difference": "routed expert total",
+      "expected_signed_effect": "the smaller unique expert population changes routing frequencies and can increase repeated expert selection; grouped-kernel occupancy remains indeterminate",
+      "feasible": 16,
+      "registered": 256
+    },
+    {
+      "difference": "physical expert-slot population and redundancy",
+      "expected_signed_effect": "the fallback cell omits the redundant-slot cohort, leaving duplicate-residency and routing-locality effects indeterminate",
+      "feasible": "16 unique experts in 16 slots",
+      "registered": "256 unique experts in 288 slots"
+    },
+    {
+      "difference": "transformer depth",
+      "expected_signed_effect": "four layers reduce raw step service; only separately identified per-layer services could use the frozen multipliers",
+      "feasible": 4,
+      "registered": 61
+    },
+    {
+      "difference": "node count",
+      "expected_signed_effect": "one node omits fabric serialization, switch traversal and cross-node contention, biasing communication work downward",
+      "feasible": 1,
+      "registered": 9
+    },
+    {
+      "difference": "GPUs per node",
+      "expected_signed_effect": "four GPUs reduce the number of intra-node participants",
+      "feasible": 4,
+      "registered": 8
+    },
+    {
+      "difference": "expert residency per rank",
+      "expected_signed_effect": "matched; no routed-weight residency-count bias is expected",
+      "feasible": 4,
+      "registered": 4
+    },
+    {
+      "difference": "CUDA graph launch mode",
+      "expected_signed_effect": "eager launch raises host overhead but leaves deterministic kernel service identifiable; raw eager step time cannot become registered graph-mode service",
+      "feasible": "disabled for semantic instrumentation",
+      "registered": "standard graph decode"
+    },
+    {
+      "difference": "MoE communication backend",
+      "expected_signed_effect": "the physical launches and durations would be backend-specific; DeepEP dispatch and combine remain unpriced and calibration movement is forced null",
+      "feasible": "SGLang standard none backend and StandardDispatcher",
+      "registered": "DeepEP"
+    },
+    {
+      "difference": "weight materialization",
+      "expected_signed_effect": "tensor shapes and byte demand would remain measurable, but dummy-activation routing IDs would not be production routing statistics",
+      "feasible": "dummy weights",
+      "registered": "pre-staged local DeepSeek-V3 model"
+    }
+  ],
+  "environment_preflight": {
+    "deep_ep_import_attempted": false,
+    "failed_check": "fallback SGLang import",
+    "failure": {
+      "exception": "ModuleNotFoundError",
+      "missing_module": "orjson",
+      "source_import_path": "sglang.srt.utils.common"
+    },
+    "passed_by_direct_record": {
+      "loaded_modules": [
+        "gcc/12.3.0",
+        "cuda/12.9.1"
+      ],
+      "ncu_version": "2025.2.1.0",
+      "nsys_version": "2025.1.3.140-251335620677v0",
+      "nvcc_version": "12.9.86",
+      "path_resolved_interpreter": "${SIMLLM_CORE66F_GH200_VENV}/bin/python"
+    },
+    "passed_by_ordered_control_flow": {
+      "cuda_device": "NVIDIA GH200 120GB",
+      "interpreter_machine": "aarch64",
+      "interpreter_sha256": "71eb688df288d106c65112c2d8a69bb22c0e4737951f8c0946476fd0f43dde7b",
+      "python_version": "3.11.11",
+      "torch_cuda_version": "12.9",
+      "torch_version": "2.13.0+cu129"
+    },
+    "profiler_call_count": 0,
+    "status": "FAILED_CLOSED_BEFORE_PROFILER"
+  },
+  "evidence": {
+    "artifact_root": "<wave-runs>/core66c/ep4-fallback/retrieved",
+    "environment_preflight_log_sha256": "74d72842eaf5d31b148570db6b7453fa9837b046b3f3ceb6209bda377ea3d675",
+    "final_sacct_sha256": "632ce378cd773d1d4d69f477d9b0c004ca9b94e491eab9b37722f61e949d5b12",
+    "job_stdout_sha256": "ea78e1230eb171b1b7838b6e28b036339de301c3ebf8d5623473b3891521974a",
+    "pre_submit_sha256": "c329f37e25d11cc12c828f0e76e3c19405545ae9770c959217ae0a3c679f6816",
+    "resolved_job_sha256": "30baac498a4752bde768b6b6384d9076ddf3b3c01cee9f428a65a5b3a80fcce4"
+  },
+  "hardware": {
+    "allocated_gpu_count": 4,
+    "allocated_job_id": 200961,
+    "allocated_node": "gpu002",
+    "cumulative_ep4_gpu_hours_consumed": 0.15333333333333332,
+    "elapsed_seconds": 49,
+    "exit_code": "4:0",
+    "feasible_cell_status": "ALLOCATED_PREFLIGHT_FAILED_BEFORE_PROFILER",
+    "finished_at": "2026-08-28T17:34:02",
+    "gpu_hours_consumed": 0.05444444444444445,
+    "gpu_seconds_consumed": 196,
+    "partition": "gh-hourly",
+    "qos": "gpu_general",
+    "registered_ep72_status": "BLOCKED_IMPOSSIBLE_ON_PROJECT_CLUSTER",
+    "scheduler_state": "FAILED",
+    "started_at": "2026-08-28T17:33:13",
+    "submission_count": 1
+  },
+  "identity_and_physics": {
+    "deep_ep_combine_launch_count": 0,
+    "deep_ep_combine_launches": null,
+    "deep_ep_dispatch_launch_count": 0,
+    "deep_ep_dispatch_launches": null,
+    "fallback_backend_runtime_identity": null,
+    "hbm_counter_permission": "NOT_REACHED",
+    "hbm_read_write_bytes": null,
+    "physical_identity_binding_count": 0,
+    "physical_identity_binding_target": 37,
+    "physical_identity_bindings": null,
+    "routing_assignment_record_count": 0,
+    "routing_assignments_and_local_slots": null,
+    "status": "UNAVAILABLE_SGLANG_IMPORT_PREFLIGHT_FAILURE"
+  },
+  "physical_sanity": {
+    "hbm_floor_evaluated": false,
+    "kernel_ceiling_evaluated": false,
+    "reason": "no kernel, decode duration or HBM byte measurement exists"
+  },
+  "project_disposition": {
+    "core_66": "OPEN_BLOCKED_ON_A_RUNNABLE_ARM_PY311_CU129_SGLANG_ENVIRONMENT_DEEPEP_BUILD_AND_EP72_HARDWARE",
+    "fifth_scored_run_performed": false,
+    "milestone_movement": null,
+    "next_authorized_action": null,
+    "resolved_previous_blocker": "the CUDA 12.9 toolchain, nsys, ncu and CORE-61 interpreter are present on the GH200 compute node"
+  },
+  "protocol": {
+    "disclosure_incident_count": 4,
+    "fatal_held_out_use_occurred": false,
+    "parameters_fitted": false,
+    "reader_forbidden_ledgers_empty": true,
+    "status": "PASS_NO_HELD_OUT_USE"
+  },
+  "schema": "simllm-deployment-curve-core66-ep4-fallback-result-v1",
+  "status": "FAILED_CLOSED_PREFLIGHT_MISSING_ORJSON_NO_PHYSICAL_CAPTURE",
+  "task": "CORE-66"
+}

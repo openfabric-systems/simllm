@@ -1,0 +1,17 @@
+num_ranks 4
+rank 0 {
+r0op0: send 17b to 1 tag 10
+r0op1: recv 17b from 3 tag 10
+}
+rank 1 {
+r1op0: send 17b to 2 tag 10
+r1op1: recv 17b from 0 tag 10
+}
+rank 2 {
+r2op0: send 17b to 3 tag 10
+r2op1: recv 17b from 1 tag 10
+}
+rank 3 {
+r3op0: send 17b to 0 tag 10
+r3op1: recv 17b from 2 tag 10
+}

@@ -1,0 +1,42 @@
+{
+  "fatal_held_out_use_occurred": false,
+  "incidental_exposure_count": 4,
+  "incidental_exposures": [
+    {
+      "arithmetic_use": false,
+      "comparison_use": false,
+      "fitting_use": false,
+      "published_numeric_reproduction": false,
+      "source": "tests/test_deployment_curve_core65_result.py",
+      "what_was_seen": "retained calibration-output numeric fields during narrow candidate-key discovery"
+    },
+    {
+      "arithmetic_use": false,
+      "comparison_use": false,
+      "fitting_use": false,
+      "published_numeric_reproduction": false,
+      "source": "guarded markdown-task:CORE-66 access",
+      "what_was_seen": "the registered standard-decode anchor embedded in the task text"
+    },
+    {
+      "arithmetic_use": false,
+      "comparison_use": false,
+      "fitting_use": false,
+      "published_numeric_reproduction": false,
+      "source": "narrow environment-command search expanded into unrelated retained session output",
+      "what_was_seen": "unrelated historical numeric output fields while recovering the prior submission environment"
+    },
+    {
+      "arithmetic_use": false,
+      "comparison_use": false,
+      "fitting_use": false,
+      "published_numeric_reproduction": false,
+      "source": "guarded post-result markdown-task:CORE-66 verification",
+      "what_was_seen": "the registered standard-decode anchor embedded in the verified task text"
+    }
+  ],
+  "result_interpretable": true,
+  "still_interpretable": "physical kernel identities, HBM bytes and routing records; calibration movement is forced null without DeepEP pricing",
+  "schema": "simllm-deployment-curve-core66f-disclosure-v1",
+  "task": "CORE-66"
+}

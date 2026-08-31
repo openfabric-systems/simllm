@@ -1,0 +1,101 @@
+{
+  "capture_reference": {
+    "cell_changes_permitted": false,
+    "deviation_ledger_changes_permitted": false,
+    "ep4_expectations": "core66_ep4_expectations.json",
+    "ep4_expectations_sha256": "8202f70f578408fd3aaa985bc7fa3ab3a88726019d8cbef896ae0d049f781d35",
+    "previous_ep4_result": "core66_ep4_capture_result.json",
+    "previous_ep4_result_sha256": "e58b318aaf80175944aea6b1093d3b098f0a08a4f1287b714965d284edf1d709"
+  },
+  "chronology": {
+    "environment_retry_result_permitted_after_expectations_commit": true,
+    "held_out_values_may_enter_arithmetic_or_predictions": false,
+    "parameters_may_be_fit": false,
+    "previous_refusal_or_failure_records_may_be_amended": false
+  },
+  "comparison_gate": {
+    "both_correction_directions_required": [
+      "DeepEP dispatch and combine service with a zero-parameter registered-cell projection",
+      "rank-preserving HBM read and write bytes"
+    ],
+    "counter_unavailable_disposition": "publish the timing domain only and keep signed movement null",
+    "deepep_registered_projection_unavailable_disposition": "publish the EP4 timing domain only and keep signed movement null",
+    "never_publish_downward_correction_alone": true
+  },
+  "disclosure_guard": {
+    "automated_process_exemptions": [
+      "pytest",
+      "ruff",
+      "documentation and task-progress checkers",
+      "git plumbing"
+    ],
+    "fatal_not_survivable": {
+      "condition": "a held-out value enters arithmetic, a prediction comparison, fitting or reproduction in a published artifact",
+      "disposition": "the run is void and CORE-66 remains open"
+    },
+    "incidental_exposure": {
+      "condition": "a held-out value is incidentally exposed without entering arithmetic, comparison, fitting or a published reproduction",
+      "disposition": "survivable with a disclosure-ledger row; disclosure quality degrades but the result is not void",
+      "reason": "the derivation contains zero free or fitted parameters and its arithmetic is independently checkable from the published record",
+      "still_interpretable": "physical identity bindings, measured DeepEP and HBM services, routing-scale checks and any zero-parameter signed derivation"
+    }
+  },
+  "environment_provenance": {
+    "core61_decode_job": 200138,
+    "core61_decode_job_state": "COMPLETED",
+    "core61_merged_script": "core61_depth_retry.sbatch",
+    "core61_merged_script_sha256": "6f467a4bf4d0fee0d390113c4bf580edfbda3bbe48b4bf6bb0cfec78a5c9020e",
+    "core61_remote_script_sha256": "6f467a4bf4d0fee0d390113c4bf580edfbda3bbe48b4bf6bb0cfec78a5c9020e",
+    "recorded_nsys_version": "NVIDIA Nsight Systems version 2025.1.3.140-251335620677v0",
+    "recorded_nsys_version_file_sha256": "96ee6a04a390c528d5eafc7b21d5524f5e3f5864367724288ca2429a0b5445db",
+    "recorded_package_versions_file_sha256": "9721ceea8d24955a1fd52aab1beb75fa3b465428f936015eac9a58aaf128fe01"
+  },
+  "environment_selection": {
+    "interpreter": "${SIMLLM_CORE66E_GH200_VENV}/bin/python",
+    "interpreter_binary_sha256": "71eb688df288d106c65112c2d8a69bb22c0e4737951f8c0946476fd0f43dde7b",
+    "interpreter_machine": "aarch64",
+    "module_commands": [
+      "module purge",
+      "module load gcc/12.3.0",
+      "module load cuda/12.9.1"
+    ],
+    "path_prefix": "${SIMLLM_CORE66E_GH200_VENV}/bin",
+    "python_version": "3.11.11",
+    "torch_cuda_version": "12.9",
+    "torch_version": "2.13.0+cu129"
+  },
+  "fail_fast_preflight": {
+    "failure_disposition": "write the exact failed check, finalize the evidence manifest and stop before the profiler call without a retry",
+    "required_before_profiler": [
+      "all three recovered module commands return zero",
+      "nvcc reports CUDA 12.9",
+      "nsys is on PATH and reports the recorded 2025.1.3 version",
+      "ncu is on PATH",
+      "PATH resolves python to the recovered interpreter",
+      "the explicit interpreter hash, version and aarch64 machine match",
+      "Torch reports 2.13.0+cu129 and CUDA 12.9 on a visible GH200",
+      "the pinned SGLang source commit matches",
+      "the SGLang capture module imports under the recovered interpreter",
+      "DeepEP imports under the recovered interpreter and its extension is aarch64"
+    ],
+    "status": "FROZEN_FAIL_CLOSED"
+  },
+  "retry_submission": {
+    "account": "merlin",
+    "cluster": "gmerlin7",
+    "partition": "gh-hourly",
+    "qos": "gpu_general",
+    "submission_limit": 1,
+    "time_limit": "00:55:00"
+  },
+  "schema": "simllm-deployment-curve-core66-ep4-env-retry-expectations-v1",
+  "service_multiplier_freeze": {
+    "common": "61/4",
+    "dense": 1,
+    "moe": 58,
+    "output": 1,
+    "step": 1
+  },
+  "status": "EXPECTATIONS_ONLY",
+  "task": "CORE-66"
+}
