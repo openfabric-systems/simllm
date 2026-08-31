@@ -107,7 +107,7 @@ assignments. TRAF-75 explicitly owns propagating dispatch and combine
 precision from supported framework configuration. TRAF-77 is narrowed to
 hardware transport calibration, including queue service, phase makespan,
 buffering and receiver occupancy. TRAF-26 continues to own complete production
-peer workloads, and COMP-88 continues to own independent calibration of the
+peer workloads, and COMP-89 continues to own independent calibration of the
 external NCCL extrapolation.
 
 ## What it does not change
@@ -116,7 +116,7 @@ The run does not isolate contention, determine which communication strategy a
 MiniMax deployment uses, validate either timing model against H200 hardware,
 or turn Family S into a precision claim. It does not make Family C independent
 evidence for Family E. It does not close TRAF-26, TRAF-77, TRAF-78, TRAF-75,
-TRAF-76 or COMP-88, and it does not change accepted default traffic timestamps,
+TRAF-76 or COMP-89, and it does not change accepted default traffic timestamps,
 the imported operation artifact or the prior Qwen parity result.
 
 ## Physical sanity before detailed interpretation

@@ -46,6 +46,7 @@ class EvidenceClass(str, Enum):
     """Origin class for one duration used by the planning estimator."""
 
     MEASURED = "MEASURED"
+    MEASURED_EXTERNAL = "MEASURED-EXTERNAL"
     ROOFLINE = "ROOFLINE"
     DECLARED = "DECLARED"
     SIM_DERIVED = "SIM-DERIVED"
@@ -367,8 +368,8 @@ class EstimatorInputs:
         if self.surfaces is not None and self.surface_evidence is None:
             raise ValueError(
                 "inputs.surface_evidence: state the evidence class of the "
-                "supplied batch-service points explicitly (MEASURED or "
-                "DECLARED); nothing defaults"
+                "supplied batch-service points explicitly (MEASURED, "
+                "MEASURED-EXTERNAL or DECLARED); nothing defaults"
             )
         if self.surfaces is None and self.surface_evidence is not None:
             raise ValueError(
@@ -379,12 +380,25 @@ class EstimatorInputs:
                 raise TypeError("inputs.surface_evidence: expected EvidenceClass")
             if self.surface_evidence not in {
                 EvidenceClass.MEASURED,
+                EvidenceClass.MEASURED_EXTERNAL,
                 EvidenceClass.DECLARED,
             }:
                 raise ValueError(
-                    "inputs.surface_evidence: batch service must be MEASURED "
-                    "or DECLARED"
+                    "inputs.surface_evidence: batch service must be MEASURED, "
+                    "MEASURED-EXTERNAL or DECLARED"
                 )
+        if (
+            self.surfaces is not None
+            and self.surface_evidence is EvidenceClass.MEASURED_EXTERNAL
+            and any(
+                point.evidence_class != EvidenceClass.MEASURED_EXTERNAL.value
+                for point in self.surfaces
+            )
+        ):
+            raise ValueError(
+                "inputs.surfaces: MEASURED-EXTERNAL evidence requires every "
+                "batch-service point to carry MEASURED-EXTERNAL"
+            )
         if self.surface_source is not None:
             _string(self.surface_source, "inputs.surface_source")
         if (
@@ -814,7 +828,12 @@ def estimate_decode_step(
             "this rung cannot price (feasibility rejects it as "
             f"{PIPELINE_PARALLEL_UNPRICED!r})"
         )
-    kernel = _kernel_floor(candidate, pool, batch, inputs)
+    batch_service = _surface_term(inputs, batch)
+    kernel = (
+        batch_service
+        if inputs.surface_evidence is EvidenceClass.MEASURED_EXTERNAL
+        else _kernel_floor(candidate, pool, batch, inputs)
+    )
     fabric, intra = _network_floors(candidate, pool, batch, inputs)
     named_terms = [
         NamedTermEstimate("kernel_floor", kernel),
@@ -848,8 +867,10 @@ def estimate_decode_step(
             )
         )
 
-    batch_service = _surface_term(inputs, batch)
-    if batch_service is not None:
+    if (
+        batch_service is not None
+        and inputs.surface_evidence is not EvidenceClass.MEASURED_EXTERNAL
+    ):
         named_terms.append(NamedTermEstimate("batch_service", batch_service))
 
     analytical, step = _account_step(

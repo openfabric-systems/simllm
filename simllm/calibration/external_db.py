@@ -2205,7 +2205,7 @@ class ExternalPassResult:
 
 
 class ExternalQwen32BPassModel:
-    """Audited TensorRT-LLM Python composition for Qwen3-32B-FP8 on TP4."""
+    """Audited TensorRT-LLM Python composition for Qwen3-32B-FP8."""
 
     _HIDDEN_SIZE = 5120
     _INTERMEDIATE_SIZE = 25600
@@ -2214,10 +2214,28 @@ class ExternalQwen32BPassModel:
     _NUM_HEADS = 64
     _NUM_KV_HEADS = 8
     _HEAD_SIZE = 128
-    _TP_SIZE = 4
-
-    def __init__(self, database: ExternalOperationDatabase) -> None:
+    def __init__(
+        self,
+        database: ExternalOperationDatabase,
+        *,
+        tensor_parallel: int = 4,
+        kv_cache_quant_mode: str = "bfloat16",
+        fmha_quant_mode: str = "bfloat16",
+        communication_quant_mode: str = "half",
+    ) -> None:
         self.database = database
+        if tensor_parallel not in {2, 4, 8}:
+            raise ValueError("tensor_parallel must be one of 2, 4 or 8")
+        if kv_cache_quant_mode not in {"bfloat16", "fp8"}:
+            raise ValueError("kv_cache_quant_mode must be bfloat16 or fp8")
+        if fmha_quant_mode not in {"bfloat16", "fp8"}:
+            raise ValueError("fmha_quant_mode must be bfloat16 or fp8")
+        if communication_quant_mode != "half":
+            raise ValueError("communication_quant_mode must be half")
+        self.tensor_parallel = tensor_parallel
+        self.kv_cache_quant_mode = kv_cache_quant_mode
+        self.fmha_quant_mode = fmha_quant_mode
+        self.communication_quant_mode = communication_quant_mode
         expected_model = {
             "hidden_size": self._HIDDEN_SIZE,
             "intermediate_size": self._INTERMEDIATE_SIZE,
@@ -2281,8 +2299,8 @@ class ExternalQwen32BPassModel:
         scale_factor: float,
     ) -> ExternalLatency:
         base = self.database.query_custom_allreduce(
-            quant_mode="half",
-            tp_size=self._TP_SIZE,
+            quant_mode=self.communication_quant_mode,
+            tp_size=self.tensor_parallel,
             size=tokens * self._HIDDEN_SIZE,
         )
         return self._result(
@@ -2298,16 +2316,16 @@ class ExternalQwen32BPassModel:
         sequence: int,
         prefix: int,
     ) -> ExternalLatency:
-        num_heads = self._NUM_HEADS // self._TP_SIZE
-        num_kv_heads = self._NUM_KV_HEADS // self._TP_SIZE
+        num_heads = self._NUM_HEADS // self.tensor_parallel
+        num_kv_heads = self._NUM_KV_HEADS // self.tensor_parallel
         result = self.database.query_context_attention(
             b=batch_size,
             s=sequence,
             prefix=prefix,
             n=num_heads,
             n_kv=num_kv_heads,
-            kv_quant_mode="bfloat16",
-            fmha_quant_mode="bfloat16",
+            kv_quant_mode=self.kv_cache_quant_mode,
+            fmha_quant_mode=self.fmha_quant_mode,
             window_size=0,
             head_size=self._HEAD_SIZE,
         ).latency_ms
@@ -2323,9 +2341,10 @@ class ExternalQwen32BPassModel:
         apply_rope_latency = 2 * self.database.query_memory_operation(
             query_elements * 2 + key_elements * 2
         )
+        kv_element_bytes = 1 if self.fmha_quant_mode == "fp8" else 2
         kv_write_latency = self.database.query_memory_operation(
-            key_elements * 2
-        ) + self.database.query_memory_operation(value_elements * 2)
+            key_elements * kv_element_bytes
+        ) + self.database.query_memory_operation(value_elements * kv_element_bytes)
         extra_latency += apply_rope_latency + kv_write_latency
         result += extra_latency * 1.1
         return self._result(
@@ -2338,9 +2357,9 @@ class ExternalQwen32BPassModel:
         base = self.database.query_generation_attention(
             b=batch_size,
             s=sequence,
-            n=self._NUM_HEADS // self._TP_SIZE,
-            n_kv=self._NUM_KV_HEADS // self._TP_SIZE,
-            kv_quant_mode="bfloat16",
+            n=self._NUM_HEADS // self.tensor_parallel,
+            n_kv=self._NUM_KV_HEADS // self.tensor_parallel,
+            kv_quant_mode=self.kv_cache_quant_mode,
             window_size=0,
             head_size=self._HEAD_SIZE,
         )
@@ -2358,11 +2377,11 @@ class ExternalQwen32BPassModel:
         prefix: int,
     ) -> tuple[ExternalLatency, ...]:
         tokens = batch_size * effective_isl
-        vocab_per_rank = self._VOCAB_SIZE // self._TP_SIZE
-        intermediate_per_rank = self._INTERMEDIATE_SIZE // self._TP_SIZE
+        vocab_per_rank = self._VOCAB_SIZE // self.tensor_parallel
+        intermediate_per_rank = self._INTERMEDIATE_SIZE // self.tensor_parallel
         qkv_width = (
-            self._NUM_HEADS * self._HEAD_SIZE // self._TP_SIZE
-            + self._HEAD_SIZE * (self._NUM_KV_HEADS // self._TP_SIZE) * 2
+            self._NUM_HEADS * self._HEAD_SIZE // self.tensor_parallel
+            + self._HEAD_SIZE * (self._NUM_KV_HEADS // self.tensor_parallel) * 2
         )
         return (
             self._memory_operation(
@@ -2392,7 +2411,7 @@ class ExternalQwen32BPassModel:
                 operation="context_proj_gemm",
                 m=tokens,
                 n=self._HIDDEN_SIZE,
-                k=self._NUM_HEADS * self._HEAD_SIZE // self._TP_SIZE,
+                k=self._NUM_HEADS * self._HEAD_SIZE // self.tensor_parallel,
                 quant_mode="fp8_block",
                 scale_factor=self._NUM_LAYERS,
             ),
@@ -2451,11 +2470,11 @@ class ExternalQwen32BPassModel:
         sequence: int,
     ) -> tuple[ExternalLatency, ...]:
         tokens = batch_size
-        vocab_per_rank = self._VOCAB_SIZE // self._TP_SIZE
-        intermediate_per_rank = self._INTERMEDIATE_SIZE // self._TP_SIZE
+        vocab_per_rank = self._VOCAB_SIZE // self.tensor_parallel
+        intermediate_per_rank = self._INTERMEDIATE_SIZE // self.tensor_parallel
         qkv_width = (
-            self._NUM_HEADS * self._HEAD_SIZE // self._TP_SIZE
-            + self._HEAD_SIZE * (self._NUM_KV_HEADS // self._TP_SIZE) * 2
+            self._NUM_HEADS * self._HEAD_SIZE // self.tensor_parallel
+            + self._HEAD_SIZE * (self._NUM_KV_HEADS // self.tensor_parallel) * 2
         )
         return (
             self._memory_operation(
@@ -2481,7 +2500,7 @@ class ExternalQwen32BPassModel:
                 operation="generation_proj_gemm",
                 m=tokens,
                 n=self._HIDDEN_SIZE,
-                k=self._NUM_HEADS * self._HEAD_SIZE // self._TP_SIZE,
+                k=self._NUM_HEADS * self._HEAD_SIZE // self.tensor_parallel,
                 quant_mode="fp8_block",
                 scale_factor=float(self._NUM_LAYERS),
             ),
@@ -2533,7 +2552,14 @@ class ExternalQwen32BPassModel:
             self._result(0.0, "generation_p2p", "pipeline-width-one-no-op"),
         )
 
-    def run_context(self, *, batch_size: int, isl: int, prefix: int = 0) -> ExternalPassResult:
+    def run_context(
+        self,
+        *,
+        batch_size: int,
+        isl: int,
+        prefix: int = 0,
+        latency_correction_scale: float = 1.0,
+    ) -> ExternalPassResult:
         """Evaluate one frozen static-context pass."""
 
         return self._generic.run_context(batch_size=batch_size, isl=isl, prefix=prefix)
@@ -2544,10 +2570,24 @@ class ExternalQwen32BPassModel:
             raise ValueError("batch_size must be positive")
         if effective_isl <= 0:
             raise ValueError("isl must remain positive after removing prefix")
-        operations = self._context_operations(
+        if not math.isfinite(latency_correction_scale) or latency_correction_scale <= 0:
+            raise ValueError("latency_correction_scale must be finite and positive")
+        raw_operations = self._context_operations(
             batch_size=batch_size,
             effective_isl=effective_isl,
             prefix=prefix,
+        )
+        operations = (
+            raw_operations
+            if latency_correction_scale == 1.0
+            else tuple(
+                self._result(
+                    entry.latency_ms * latency_correction_scale,
+                    entry.operation,
+                    f"{entry.rule};latency-correction",
+                )
+                for entry in raw_operations
+            )
         )
         total = math.fsum(entry.latency_ms for entry in operations)
         return ExternalPassResult(
@@ -2564,6 +2604,7 @@ class ExternalQwen32BPassModel:
         osl: int,
         stride: int = 32,
         beam_width: int = 1,
+        latency_correction_scale: float = 1.0,
     ) -> ExternalPassResult:
         """Evaluate the frozen sampled static-generation pass."""
 
@@ -2584,6 +2625,8 @@ class ExternalQwen32BPassModel:
             raise ValueError("stride must be positive")
         if beam_width != 1:
             raise ValueError("the frozen generation composition supports beam_width=1 only")
+        if not math.isfinite(latency_correction_scale) or latency_correction_scale <= 0:
+            raise ValueError("latency_correction_scale must be finite and positive")
 
         names: list[str] = []
         totals: dict[str, float] = {}
@@ -2600,8 +2643,13 @@ class ExternalQwen32BPassModel:
                     totals[entry.operation] = 0.0
                     rules[entry.operation] = entry.rule
                 totals[entry.operation] += entry.latency_ms * repeat_count
+        correction_suffix = ";latency-correction" if latency_correction_scale != 1.0 else ""
         operations = tuple(
-            self._result(totals[name], name, f"{rules[name]};stride-repeat")
+            self._result(
+                totals[name] * latency_correction_scale,
+                name,
+                f"{rules[name]};stride-repeat{correction_suffix}",
+            )
             for name in names
         )
         total = math.fsum(entry.latency_ms for entry in operations)

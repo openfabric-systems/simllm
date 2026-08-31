@@ -1168,7 +1168,7 @@ route to those higher degrees.
   reproduces the corrected result exactly when hardware calibration is
   disabled. TRAF-78 owns observed assignment geometry, TRAF-75 owns
   directional precision selection, TRAF-26 supplies complete peer workloads,
-  and COMP-88 separately owns the donor NCCL extrapolation.
+  and COMP-89 separately owns the donor NCCL extrapolation.
 - TRAF-78 (Precision; P1; L): replace the MiniMax full-population packet
   arm's deterministic balanced assignment surrogate with independently
   observed per-rank expert assignments. The corrected surrogate routes whole
@@ -1204,7 +1204,7 @@ route to those higher degrees.
   count, completion order and random draw exactly. Acceptance also demonstrates
   the expected TTFT or TPOT change through the supported metric chain. TRAF-77
   owns cross-node transport calibration, TRAF-78 owns destination geometry,
-  TRAF-75 owns directional precision selection, and COMP-88 owns independent
+  TRAF-75 owns directional precision selection, and COMP-89 owns independent
   calibration of the external NCCL extrapolation.
 - TRAF-20 (Precision; P2; M): qualify the delivered `loggopsim-ideal`
   fast level for schedule-shape studies that do not need per-flow transport

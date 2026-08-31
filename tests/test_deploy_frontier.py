@@ -39,6 +39,7 @@ from simllm.deploy import (
     pareto_front,
     prepare_plot_v3,
     scan,
+    weak_dominance_pareto,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -410,3 +411,20 @@ def test_single_axis_tie_uses_weak_dominance() -> None:
     assert dominant.x_tokens_per_second_per_request > dominated.x_tokens_per_second_per_request
     assert pareto_front((dominant, dominated)) == (dominant,)
     assert pareto_front((dominated, dominant)) == (dominant,)
+
+
+def test_generic_weak_dominance_front_deduplicates_by_stable_identity() -> None:
+    points = (
+        {"id": "z", "x": Fraction(1), "y": Fraction(3)},
+        {"id": "a", "x": Fraction(1), "y": Fraction(3)},
+        {"id": "b", "x": Fraction(2), "y": Fraction(2)},
+        {"id": "dominated", "x": Fraction(1), "y": Fraction(1)},
+    )
+
+    front = weak_dominance_pareto(
+        reversed(points),
+        coordinate=lambda point: (point["x"], point["y"]),
+        identity=lambda point: point["id"],
+    )
+
+    assert [point["id"] for point in front] == ["a", "b"]
