@@ -678,6 +678,9 @@ def _resolved_tuple(llm: object, cell: FrozenCell) -> dict[str, Any]:
         "speculative_decoding": vllm_config.speculative_config is not None,
         "lora": vllm_config.lora_config is not None,
         "multimodal": bool(vllm_config.model_config.is_multimodal_model),
+        "construction_validation_bypass": bool(
+            getattr(llm.llm_engine, "_simllm_chunking_validation_bypass", False)
+        ),
         "cell_id": cell.cell_id,
     }
 
@@ -706,6 +709,11 @@ def _construct_live_engine(
         ),
     )
     engine = cell.engine
+    desired_chunking = bool(engine["chunked_prefill"])
+    validation_bypass = (
+        not desired_chunking
+        and int(engine["budget"]) < int(engine["max_model_len"])
+    )
     llm = LLM(
         model=str(model),
         worker_cls="simllm.adapters.vllm.SimWorker",
@@ -717,7 +725,7 @@ def _construct_live_engine(
         num_gpu_blocks_override=int(engine["num_kv_blocks"]),
         block_size=int(config["fixed_engine"]["scheduler_block_size"]),
         disable_log_stats=True,
-        enable_chunked_prefill=bool(engine["chunked_prefill"]),
+        enable_chunked_prefill=(True if validation_bypass else desired_chunking),
         enable_prefix_caching=bool(engine["prefix_caching"]),
         long_prefill_token_threshold=int(engine["long_prefill_threshold"]),
         scheduler_reserve_full_isl=True,
@@ -727,6 +735,19 @@ def _construct_live_engine(
         async_scheduling=False,
         enable_lora=False,
     )
+    if validation_bypass:
+        # SchedulerConfig rejects this tuple at EngineArgs validation even
+        # though the stock scheduler has a frozen stop-at-head rule for it.
+        # Construct the empty in-process engine with chunking enabled, then
+        # switch the one shared config authority before the first request.
+        core = llm.llm_engine.engine_core.engine_core
+        if core.scheduler.has_requests():
+            raise RuntimeError("chunking validation bypass requires an empty scheduler")
+        scheduler_config = llm.llm_engine.vllm_config.scheduler_config
+        if core.scheduler.scheduler_config is not scheduler_config:
+            raise RuntimeError("engine and scheduler do not share one config authority")
+        scheduler_config.enable_chunked_prefill = False
+        llm.llm_engine._simllm_chunking_validation_bypass = True
     worker = latest_worker()
     if worker is None:
         llm.llm_engine.engine_core.shutdown()
@@ -1222,6 +1243,17 @@ def _configuration_mismatches(
             inactive,
             {key: live.causal_tuple[key] for key in inactive},
             "$.inactive-features",
+        )
+    )
+    expected_bypass = (
+        not bool(engine["chunked_prefill"])
+        and int(engine["budget"]) < int(engine["max_model_len"])
+    )
+    mismatches.extend(
+        _diff(
+            expected_bypass,
+            live.causal_tuple["construction_validation_bypass"],
+            "$.construction-validation-bypass",
         )
     )
     return mismatches
