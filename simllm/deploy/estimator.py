@@ -56,6 +56,7 @@ class EstimatorClass(str, Enum):
     """Model class carried by every deployment estimate stamp."""
 
     ESTIMATE = "ESTIMATE"
+    ESTIMATE_LOOP = "ESTIMATE-LOOP"
 
 
 def _positive_integer(value: object, path: str) -> int:
@@ -133,8 +134,11 @@ class EstimateStamp:
         _sha256(self.candidate_key, "estimate.candidate_key")
         if not isinstance(self.estimator_class, EstimatorClass):
             raise TypeError("estimate.estimator_class: expected EstimatorClass")
-        if self.estimator_class is not EstimatorClass.ESTIMATE:
-            raise ValueError("estimate.estimator_class: v1 supports only ESTIMATE")
+        if self.estimator_class not in (
+            EstimatorClass.ESTIMATE,
+            EstimatorClass.ESTIMATE_LOOP,
+        ):
+            raise ValueError("estimate.estimator_class: unsupported model class")
         terms = _require_tuple(self.terms, "estimate.terms")
         names: list[str] = []
         for index, term in enumerate(terms):
