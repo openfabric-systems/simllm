@@ -78,8 +78,9 @@ def render(record_path: Path, output_dir: Path) -> tuple[Path, Path, Path]:
         + ", ".join(f"{ratio:.3f}" for ratio in cost_model_ratios)
         + " at EP 8, 32, 128 and 256; the superseded floor-omitting ratios are "
         + ", ".join(f"{ratio:.3f}" for ratio in superseded_cost_model_ratios)
-        + ". The corrected packet arm charges aggregate all-gather and "
-        "reduce-scatter floors once outside local/fabric max service. EP 8 has "
+        + ". The corrected packet arm charges aggregate half-precision "
+        "all-gather and reduce-scatter floors once outside local/fabric max "
+        "service. EP 8 has "
         "no cross-node traffic. EP 256 uses an unscored component-wise diagnostic. "
         "Family S compares the dense fallback with corrected sparse routed FP8 "
         "dispatch plus BF16 combine; its floor-omitting series is superseded."
