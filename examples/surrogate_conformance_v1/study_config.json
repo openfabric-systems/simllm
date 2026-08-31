@@ -1,0 +1,323 @@
+{
+  "schema": "simllm-surrogate-conformance-config-v1",
+  "study_id": "surrogate_conformance_v1",
+  "expectation_commit": "7c81a34",
+  "governing_amendment_commit": "61bf165",
+  "configuration_freeze_parent": "719e5419a5379dd3f201441efe3f78c8e6e9fdd3",
+  "oracle": {
+    "distribution": "vllm",
+    "version": "0.27.1",
+    "release_commit": "6e448d0ea9bf3d88d898b65449ca6dc2aec170ac",
+    "scheduler_source": "vllm/v1/core/sched/scheduler.py",
+    "scheduler_sha256": "c67bda2886b52865ddafabaae7d797c359e930752f374421a33e537d94a5f45a",
+    "model_id": "ibm-granite/granite-3.0-1b-a400m-instruct",
+    "model_revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
+    "model_config_sha256": "ca4bb3a5c1bdef988ab413e0d731640446da65316e4ed16de3666cd96ecc3a0b",
+    "simulated_token_id": 512
+  },
+  "fixed_engine": {
+    "in_process": true,
+    "v1_multiprocessing": false,
+    "async_scheduling": false,
+    "prefill_schedule_interval": 1,
+    "speculative_decoding": false,
+    "lora": false,
+    "multimodal": false,
+    "pipeline_parallel_size": 1,
+    "tensor_parallel_size": 1,
+    "max_num_scheduled_tokens_equals_max_num_batched_tokens": true,
+    "scheduler_block_size": 16,
+    "queue_policy": "fcfs",
+    "reserve_mode": "full-isl",
+    "watermark": 0.0,
+    "hash_algorithm": "sha256",
+    "prefix_salt": null,
+    "kv_dtype": "bfloat16",
+    "pricing_step_ps": 1000000
+  },
+  "causal_tuple_fields": [
+    "resolved_max_num_scheduled_tokens",
+    "max_num_seqs",
+    "enable_chunked_prefill",
+    "enable_prefix_caching",
+    "long_prefill_token_threshold",
+    "max_model_len",
+    "queue_policy",
+    "scheduler_block_size",
+    "num_kv_blocks",
+    "reserve_mode",
+    "watermark"
+  ],
+  "families": {
+    "F1": {
+      "clause": "budget-by-sequence-cap",
+      "scoring": "exact",
+      "family_guard": "no-allocation-failure-or-preemption",
+      "cells": [
+        {
+          "cell_id": "f1-budget16-seqs1",
+          "family_clause": "F1 budget by sequence cap",
+          "engine": {
+            "budget": 16,
+            "max_num_seqs": 1,
+            "chunked_prefill": true,
+            "long_prefill_threshold": 0,
+            "max_model_len": 128,
+            "num_kv_blocks": 128,
+            "prefix_caching": false
+          },
+          "requests": [
+            {"request_id": "r0", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 11}, "max_output_tokens": 2, "priority": 0},
+            {"request_id": "r1", "arrived_at_ps": 0, "prompt": {"start": 128, "count": 9}, "max_output_tokens": 2, "priority": 0},
+            {"request_id": "r2", "arrived_at_ps": 0, "prompt": {"start": 224, "count": 7}, "max_output_tokens": 2, "priority": 0}
+          ]
+        },
+        {
+          "cell_id": "f1-budget16-seqs2",
+          "family_clause": "F1 budget by sequence cap",
+          "engine": {
+            "budget": 16,
+            "max_num_seqs": 2,
+            "chunked_prefill": true,
+            "long_prefill_threshold": 0,
+            "max_model_len": 128,
+            "num_kv_blocks": 128,
+            "prefix_caching": false
+          },
+          "requests": [
+            {"request_id": "r0", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 11}, "max_output_tokens": 2, "priority": 0},
+            {"request_id": "r1", "arrived_at_ps": 0, "prompt": {"start": 128, "count": 9}, "max_output_tokens": 2, "priority": 0},
+            {"request_id": "r2", "arrived_at_ps": 0, "prompt": {"start": 224, "count": 7}, "max_output_tokens": 2, "priority": 0}
+          ]
+        },
+        {
+          "cell_id": "f1-budget24-seqs1",
+          "family_clause": "F1 budget by sequence cap",
+          "engine": {
+            "budget": 24,
+            "max_num_seqs": 1,
+            "chunked_prefill": true,
+            "long_prefill_threshold": 0,
+            "max_model_len": 128,
+            "num_kv_blocks": 128,
+            "prefix_caching": false
+          },
+          "requests": [
+            {"request_id": "r0", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 11}, "max_output_tokens": 2, "priority": 0},
+            {"request_id": "r1", "arrived_at_ps": 0, "prompt": {"start": 128, "count": 9}, "max_output_tokens": 2, "priority": 0},
+            {"request_id": "r2", "arrived_at_ps": 0, "prompt": {"start": 224, "count": 7}, "max_output_tokens": 2, "priority": 0}
+          ]
+        },
+        {
+          "cell_id": "f1-budget24-seqs2",
+          "family_clause": "F1 budget by sequence cap",
+          "engine": {
+            "budget": 24,
+            "max_num_seqs": 2,
+            "chunked_prefill": true,
+            "long_prefill_threshold": 0,
+            "max_model_len": 128,
+            "num_kv_blocks": 128,
+            "prefix_caching": false
+          },
+          "requests": [
+            {"request_id": "r0", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 11}, "max_output_tokens": 2, "priority": 0},
+            {"request_id": "r1", "arrived_at_ps": 0, "prompt": {"start": 128, "count": 9}, "max_output_tokens": 2, "priority": 0},
+            {"request_id": "r2", "arrived_at_ps": 0, "prompt": {"start": 224, "count": 7}, "max_output_tokens": 2, "priority": 0}
+          ]
+        }
+      ]
+    },
+    "F2": {
+      "clause": "chunk-boundaries-and-disabled-head-stop",
+      "scoring": "exact",
+      "cells": [
+        {
+          "cell_id": "f2-budget-minus-one",
+          "family_clause": "F2 prompt at budget minus one with chunking enabled",
+          "engine": {"budget": 32, "max_num_seqs": 1, "chunked_prefill": true, "long_prefill_threshold": 0, "max_model_len": 128, "num_kv_blocks": 64, "prefix_caching": false},
+          "requests": [{"request_id": "r0", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 31}, "max_output_tokens": 1, "priority": 0}]
+        },
+        {
+          "cell_id": "f2-budget",
+          "family_clause": "F2 prompt at budget with chunking enabled",
+          "engine": {"budget": 32, "max_num_seqs": 1, "chunked_prefill": true, "long_prefill_threshold": 0, "max_model_len": 128, "num_kv_blocks": 64, "prefix_caching": false},
+          "requests": [{"request_id": "r0", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 32}, "max_output_tokens": 1, "priority": 0}]
+        },
+        {
+          "cell_id": "f2-budget-plus-one",
+          "family_clause": "F2 prompt at budget plus one with chunking enabled",
+          "engine": {"budget": 32, "max_num_seqs": 1, "chunked_prefill": true, "long_prefill_threshold": 0, "max_model_len": 128, "num_kv_blocks": 64, "prefix_caching": false},
+          "requests": [{"request_id": "r0", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 33}, "max_output_tokens": 1, "priority": 0}]
+        },
+        {
+          "cell_id": "f2-threshold-one",
+          "family_clause": "F2 one long-prefill-threshold extent with chunking enabled",
+          "engine": {"budget": 64, "max_num_seqs": 1, "chunked_prefill": true, "long_prefill_threshold": 16, "max_model_len": 128, "num_kv_blocks": 64, "prefix_caching": false},
+          "requests": [{"request_id": "r0", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 16}, "max_output_tokens": 1, "priority": 0}]
+        },
+        {
+          "cell_id": "f2-threshold-two",
+          "family_clause": "F2 two long-prefill-threshold extents with chunking enabled",
+          "engine": {"budget": 64, "max_num_seqs": 1, "chunked_prefill": true, "long_prefill_threshold": 16, "max_model_len": 128, "num_kv_blocks": 64, "prefix_caching": false},
+          "requests": [{"request_id": "r0", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 32}, "max_output_tokens": 1, "priority": 0}]
+        },
+        {
+          "cell_id": "f2-threshold-three",
+          "family_clause": "F2 three long-prefill-threshold extents with chunking enabled",
+          "engine": {"budget": 64, "max_num_seqs": 1, "chunked_prefill": true, "long_prefill_threshold": 16, "max_model_len": 128, "num_kv_blocks": 64, "prefix_caching": false},
+          "requests": [{"request_id": "r0", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 48}, "max_output_tokens": 1, "priority": 0}]
+        },
+        {
+          "cell_id": "f2-chunking-off-stop-at-head",
+          "family_clause": "F2 disabled chunking stops at an over-budget waiting head",
+          "execution_mode": "one-decision",
+          "engine": {"budget": 32, "max_num_seqs": 2, "chunked_prefill": false, "long_prefill_threshold": 0, "max_model_len": 128, "num_kv_blocks": 64, "prefix_caching": false},
+          "requests": [
+            {"request_id": "head", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 33}, "max_output_tokens": 1, "priority": 0},
+            {"request_id": "follower", "arrived_at_ps": 0, "prompt": {"start": 256, "count": 8}, "max_output_tokens": 1, "priority": 0}
+          ]
+        },
+        {
+          "cell_id": "f2-chunking-off-threshold",
+          "family_clause": "F2 long-prefill threshold is applied before disabled chunking",
+          "engine": {"budget": 64, "max_num_seqs": 1, "chunked_prefill": false, "long_prefill_threshold": 16, "max_model_len": 128, "num_kv_blocks": 64, "prefix_caching": false},
+          "requests": [{"request_id": "r0", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 32}, "max_output_tokens": 1, "priority": 0}]
+        }
+      ]
+    },
+    "F3": {
+      "clause": "capacity-preemption-and-recompute",
+      "scoring": "exact",
+      "cells": [
+        {
+          "cell_id": "f3-blocks3-seqs1",
+          "family_clause": "F3 three blocks with one concurrent sequence",
+          "engine": {"budget": 32, "max_num_seqs": 1, "chunked_prefill": true, "long_prefill_threshold": 0, "max_model_len": 64, "num_kv_blocks": 3, "prefix_caching": false},
+          "requests": [
+            {"request_id": "a", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 16}, "max_output_tokens": 3, "priority": 0},
+            {"request_id": "b", "arrived_at_ps": 0, "prompt": {"start": 128, "count": 16}, "max_output_tokens": 3, "priority": 0}
+          ]
+        },
+        {
+          "cell_id": "f3-blocks3-seqs2",
+          "family_clause": "F3 three blocks with two concurrent sequences",
+          "engine": {"budget": 32, "max_num_seqs": 2, "chunked_prefill": true, "long_prefill_threshold": 0, "max_model_len": 64, "num_kv_blocks": 3, "prefix_caching": false},
+          "requests": [
+            {"request_id": "a", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 16}, "max_output_tokens": 3, "priority": 0},
+            {"request_id": "b", "arrived_at_ps": 0, "prompt": {"start": 128, "count": 16}, "max_output_tokens": 3, "priority": 0}
+          ]
+        },
+        {
+          "cell_id": "f3-blocks5-seqs1",
+          "family_clause": "F3 five blocks with one concurrent sequence",
+          "engine": {"budget": 32, "max_num_seqs": 1, "chunked_prefill": true, "long_prefill_threshold": 0, "max_model_len": 64, "num_kv_blocks": 5, "prefix_caching": false},
+          "requests": [
+            {"request_id": "a", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 16}, "max_output_tokens": 3, "priority": 0},
+            {"request_id": "b", "arrived_at_ps": 0, "prompt": {"start": 128, "count": 16}, "max_output_tokens": 3, "priority": 0}
+          ]
+        },
+        {
+          "cell_id": "f3-blocks5-seqs2",
+          "family_clause": "F3 five blocks with two concurrent sequences",
+          "engine": {"budget": 32, "max_num_seqs": 2, "chunked_prefill": true, "long_prefill_threshold": 0, "max_model_len": 64, "num_kv_blocks": 5, "prefix_caching": false},
+          "requests": [
+            {"request_id": "a", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 16}, "max_output_tokens": 3, "priority": 0},
+            {"request_id": "b", "arrived_at_ps": 0, "prompt": {"start": 128, "count": 16}, "max_output_tokens": 3, "priority": 0}
+          ]
+        }
+      ]
+    },
+    "F4": {
+      "clause": "prefix-cache-hits-full-hit-recompute-and-eviction",
+      "scoring": "exact-under-one-block-bijection",
+      "cells": [
+        {
+          "cell_id": "f4-zero-full-prefix-blocks",
+          "family_clause": "F4 repeated prefixes share zero full hash blocks",
+          "engine": {"budget": 64, "max_num_seqs": 1, "chunked_prefill": true, "long_prefill_threshold": 0, "max_model_len": 128, "num_kv_blocks": 8, "prefix_caching": true},
+          "submission_groups": [["first"], ["repeat"]],
+          "requests": [
+            {"request_id": "first", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 17}, "max_output_tokens": 1, "priority": 0},
+            {"request_id": "repeat", "arrived_at_ps": 1, "prompt": {"start": 256, "count": 17}, "max_output_tokens": 1, "priority": 0}
+          ]
+        },
+        {
+          "cell_id": "f4-one-full-prefix-block",
+          "family_clause": "F4 repeated prefixes share one full hash block",
+          "engine": {"budget": 64, "max_num_seqs": 1, "chunked_prefill": true, "long_prefill_threshold": 0, "max_model_len": 128, "num_kv_blocks": 8, "prefix_caching": true},
+          "submission_groups": [["first"], ["repeat"]],
+          "requests": [
+            {"request_id": "first", "arrived_at_ps": 0, "prompt_token_ids": [32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,80], "max_output_tokens": 1, "priority": 0},
+            {"request_id": "repeat", "arrived_at_ps": 1, "prompt_token_ids": [32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,81], "max_output_tokens": 1, "priority": 0}
+          ]
+        },
+        {
+          "cell_id": "f4-several-full-prefix-blocks",
+          "family_clause": "F4 several full hash blocks, full-hit last-token recompute, and stable eviction order",
+          "engine": {"budget": 64, "max_num_seqs": 1, "chunked_prefill": true, "long_prefill_threshold": 0, "max_model_len": 128, "num_kv_blocks": 5, "prefix_caching": true},
+          "submission_groups": [["first"], ["repeat"], ["churn"]],
+          "requests": [
+            {"request_id": "first", "arrived_at_ps": 0, "prompt": {"start": 32, "count": 49}, "max_output_tokens": 1, "priority": 0},
+            {"request_id": "repeat", "arrived_at_ps": 1, "prompt": {"start": 32, "count": 49}, "max_output_tokens": 1, "priority": 0},
+            {"request_id": "churn", "arrived_at_ps": 2, "prompt": {"start": 1024, "count": 49}, "max_output_tokens": 1, "priority": 0}
+          ]
+        }
+      ]
+    },
+    "F5": {
+      "clause": "arrival-admission-v1-replay",
+      "scoring": "exact",
+      "fixture": "examples/preplay_trace_v1/granite_length_cap.jsonl",
+      "fixture_sha256": "36334f3aaa767c46d5f9c8498e02f6c2805a46e5000a57aea2747e17dd5d1341",
+      "prompt_token_ids": [49152, 496],
+      "engine": {"budget": 64, "max_num_seqs": 2, "chunked_prefill": false, "long_prefill_threshold": 0, "max_model_len": 64, "num_kv_blocks": 64, "prefix_caching": false},
+      "cells": [
+        {"cell_id": "f5-one-offset750000", "family_clause": "F5 one follower at 750000 ps", "load": "one", "arrival_offset_ps": 750000, "request_ids": ["r0", "r1"]},
+        {"cell_id": "f5-one-offset1250000", "family_clause": "F5 one follower at 1250000 ps", "load": "one", "arrival_offset_ps": 1250000, "request_ids": ["r0", "r1"]},
+        {"cell_id": "f5-three-offset750000", "family_clause": "F5 three followers at 750000 ps", "load": "three", "arrival_offset_ps": 750000, "request_ids": ["r0", "r1", "r2", "r3"]},
+        {"cell_id": "f5-three-offset1250000", "family_clause": "F5 three followers at 1250000 ps", "load": "three", "arrival_offset_ps": 1250000, "request_ids": ["r0", "r1", "r2", "r3"]}
+      ],
+      "output_tokens": {"r0": 4, "r1": 1, "r2": 1, "r3": 1}
+    },
+    "F6": {
+      "clause": "identical-pricing-chain-and-metric-reachability",
+      "scoring": "exact",
+      "source_cells": ["f1-budget16-seqs2", "f3-blocks3-seqs2", "f4-one-full-prefix-block"],
+      "pricing": {"provider": "fixed-step", "duration_ps": 1000000, "runtime": "coarse-device", "lowerer": "serial-step"}
+    },
+    "F7": {
+      "clause": "witnessed-kv-work-alphabet",
+      "scoring": "exact-under-the-F4-block-bijection",
+      "source_cells": ["f3-blocks3-seqs2", "f3-blocks5-seqs2", "f4-zero-full-prefix-blocks", "f4-one-full-prefix-block", "f4-several-full-prefix-blocks"],
+      "witnessed_actions": ["bind-prefix", "touch", "allocate", "release", "free", "evict", "recompute"],
+      "surrogate_unscored_actions": ["reserve"],
+      "other_unscored_actions": ["retain", "read", "write"]
+    }
+  },
+  "wall_time": {
+    "family": "W",
+    "clause": "steady-loop-one-hundred-times",
+    "scoring": "banded",
+    "repetitions": 7,
+    "summary": "median",
+    "maximum_surrogate_to_live_ratio": 0.01,
+    "construction_inside_timed_region": false,
+    "engine": {"budget": 512, "max_num_seqs": 16, "chunked_prefill": true, "long_prefill_threshold": 0, "max_model_len": 128, "num_kv_blocks": 2048, "prefix_caching": false},
+    "workload": {"request_count": 128, "request_id_format": "w{index:03d}", "arrived_at_ps": 0, "prompt_start": 1024, "prompt_stride": 64, "prompt_tokens": 64, "max_output_tokens": 32, "priority": 0}
+  },
+  "fatal_guards": [
+    "chronology",
+    "source-hash",
+    "configuration-tuple-recorded",
+    "identifier-uniqueness",
+    "capacity-pinning",
+    "inactive-features",
+    "token-conservation-live",
+    "token-conservation-surrogate",
+    "F1-no-allocation-failure-or-preemption",
+    "native-output-retained-beside-projection",
+    "append-only-attempt",
+    "end-to-end-mutation-controls"
+  ]
+}
