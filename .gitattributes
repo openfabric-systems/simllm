@@ -372,6 +372,7 @@ tests/test_deployment_curve_comp74_result.py text eol=lf
 docs/papers/deepseek-deployment-disclosures.md text eol=lf
 README.md text eol=lf
 docs/design/nvlink-domain-model.md text eol=lf
+docs/design/nvlink-mechanism-reverse-engineering.md text eol=lf
 resources/figures/nvlink-domain-model.svg text eol=lf
 resources/figures/nvlink-domain-model.png -text -diff
 examples/loggopsim_ideal_v1/*.csv text eol=lf
@@ -425,6 +426,7 @@ examples/nvlink_credit_arbitration_v1/*.md text eol=lf
 examples/nvlink_credit_arbitration_v1/*.py text eol=lf
 tests/test_nvlink_credit_arbitration_*.py text eol=lf
 notes/2026-08-28-nvfair-worker-sizing.md text eol=lf
+notes/2026-08-28-nvrev-worker-sizing.md text eol=lf
 simllm/backends/__init__.py text eol=lf
 examples/frontier_comparison_v1/*.json text eol=lf
 examples/frontier_comparison_v1/*.md text eol=lf
