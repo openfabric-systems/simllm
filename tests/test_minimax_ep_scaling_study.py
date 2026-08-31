@@ -45,14 +45,24 @@ def _runner():
     return module
 
 
+def _calibration(runner):
+    from simllm.calibration.external_nccl import ExternalNcclDatabase
+
+    config = runner._load_config()
+    return config, runner._load_collective_floor_calibration(
+        config,
+        ExternalNcclDatabase.load(),
+    )
+
+
 def test_both_expectation_freezes_are_immutable() -> None:
     assert _sha256(STUDY / "expectations.md") == FIRST_FREEZE_SHA256
     assert _sha256(STUDY / "expectations_v2.md") == CORRECTED_FREEZE_SHA256
 
 
-def test_corrected_dense_population_and_extrapolation_are_predeclared() -> None:
+def test_corrected_dense_population_and_component_extrapolation_are_declared() -> None:
     runner = _runner()
-    config = runner._load_config()
+    config, calibration = _calibration(runner)
     assert config["chronology"]["corrected_expectations_commit"] == "4d1e41c"
     assert config["void_first_run"]["published_headline_ratio"] == 0.2742607736975033
 
@@ -72,11 +82,30 @@ def test_corrected_dense_population_and_extrapolation_are_predeclared() -> None:
         width=256,
         anchor={
             "expert_parallel": 128,
-            "layer_packet_ms": 0.5,
+            "phases": [
+                {
+                    "phase": "family-d-dense-all-gather",
+                    "fabric_jct_ps": 227_075_200,
+                    "uncalibrated_phase_duration_ps": 227_075_200,
+                },
+                {
+                    "phase": "family-d-dense-reduce-scatter",
+                    "fabric_jct_ps": 227_075_200,
+                    "uncalibrated_phase_duration_ps": 227_075_200,
+                },
+            ],
             "population_status": "measured full rank and message population",
         },
+        calibration=calibration,
     )
-    assert extrapolated["layer_packet_ms"] == 0.5 * 31 / 15
+    assert extrapolated["superseded_packet_dispatch_combine_ms"] == pytest.approx(
+        61.00753706666667,
+        abs=1e-14,
+    )
+    assert extrapolated["packet_dispatch_combine_ms"] == pytest.approx(
+        62.65087460666667,
+        abs=1e-14,
+    )
     assert extrapolated["simulated_messages_per_layer"] == 0
     assert extrapolated["represented_messages"] == 2 * 256 * 255 * 65
     assert extrapolated["extrapolation"]["anchor_expert_parallel"] == 128
@@ -84,6 +113,65 @@ def test_corrected_dense_population_and_extrapolation_are_predeclared() -> None:
     assert extrapolated["extrapolation"]["rule_commit"] == "a6ba97f"
     assert extrapolated["extrapolation"]["frozen_before_implementation"] is False
     assert extrapolated["extrapolation"]["scored"] is False
+    assert "fixed aggregate floor is additive" in extrapolated["extrapolation"][
+        "linearity_break"
+    ]
+    assert [
+        phase["collective_floor_estimate"]["floor_charge_ps"]
+        for phase in extrapolated["phases"]
+    ] == [13_201_426, 12_080_690]
+
+
+def test_collective_floor_binding_uses_matched_coordinates_and_refuses_transfers() -> None:
+    from simllm.backends import CollectiveFloorTransferError
+
+    runner = _runner()
+    config, calibration = _calibration(runner)
+    dense = runner._dense_floor_requests(config, width=8)
+    assert [request["message_bytes"] for request in dense] == [196_608, 196_608]
+    estimates = [
+        runner._collective_floor_estimate(
+            calibration,
+            dtype=request["dtype"],
+            operation=request["operation"],
+            ranks=8,
+            message_bytes=request["message_bytes"],
+            donor=request["donor"],
+            acknowledge_transfer=False,
+        )
+        for request in dense
+    ]
+    assert sum(estimate.completion_ps for estimate in estimates) * 65 == 2_131_828_400
+    assert all(estimate.evidence_class == "calibrated" for estimate in estimates)
+
+    transferred = runner._dense_floor_requests(config, width=32)[0]
+    with pytest.raises(CollectiveFloorTransferError, match="refuses transferred-at-use"):
+        runner._collective_floor_estimate(
+            calibration,
+            dtype=transferred["dtype"],
+            operation=transferred["operation"],
+            ranks=32,
+            message_bytes=transferred["message_bytes"],
+            donor=transferred["donor"],
+            acknowledge_transfer=False,
+        )
+    accepted = runner._collective_floor_estimate(
+        calibration,
+        dtype=transferred["dtype"],
+        operation=transferred["operation"],
+        ranks=32,
+        message_bytes=transferred["message_bytes"],
+        donor=transferred["donor"],
+        acknowledge_transfer=True,
+    )
+    assert accepted.evidence_class == "transferred-at-use"
+
+    sparse = runner._sparse_floor_requests(config, width=8)
+    assert [request["message_bytes"] for request in sparse] == [98_304, 196_608]
+    assert [request["operation"] for request in sparse] == [
+        "moe_dispatch",
+        "moe_combine",
+    ]
 
 
 def test_family_d_generator_classifies_cost_models_and_diagnostic() -> None:
@@ -91,7 +179,7 @@ def test_family_d_generator_classifies_cost_models_and_diagnostic() -> None:
     measured = runner._family_d_assessment(
         width=128,
         gpus_per_node=8,
-        ratio=0.8026183885459625,
+        ratio=0.8472993823377813,
         population_scored=True,
     )
     assert measured == {
@@ -106,7 +194,7 @@ def test_family_d_generator_classifies_cost_models_and_diagnostic() -> None:
     diagnostic = runner._family_d_assessment(
         width=256,
         gpus_per_node=8,
-        ratio=1.187022158460092,
+        ratio=1.2189965368336635,
         population_scored=False,
     )
     assert diagnostic == {
