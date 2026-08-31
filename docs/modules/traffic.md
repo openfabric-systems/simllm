@@ -1085,13 +1085,20 @@ D cells. The EP 256 ratio 1.187022 is an unscored diagnostic because its
 `31 / 15` rule was specified after the corrected expectations freeze. EP 8 has
 zero cross-node senders per receiver and is not a contention cell.
 
-The external table identifies its dtype only as `half`, not BF16, and names
-its interpolation axis `message_bytes` while the caller passes an element
-count. At EP 128 its 55.445 us eight-rank donor latency contains a 43.211613 us
-fixed and algorithmic residual after ideal two-phase ring serialization. The
-rank extrapolator inflates that residual to 28.664347 ms over 65 layers, more
-than the observed 7.259566 ms external-minus-packet gap. Differing fixed-cost
-treatment fully explains the gap, so the study makes no crossover or
+The external table identifies its dtype only as `half`, not BF16. Its source
+coordinate is an element count despite the SDK interpolation label
+`message_bytes`; the corrected aggregate authority converts that coordinate
+to true bytes using the dtype width before fitting. The
+[aggregate calibration](../../examples/collective_floor_calibration_v1/RESULTS.md)
+reduces held-out median error from 88.1114 to 3.2671 percent and reprices the
+EP-8 zero-fan-in cell from 0.049790 to 1.824984 ms, 0.949499 of its 1.922050 ms
+external arm. Its frozen precision family is still refuted because 12 of 63
+held-out cells exceed 10 percent and p95 is 19.7972 percent. At EP 128 the
+older 55.445 us eight-rank donor latency contains a 43.211613 us fixed and
+algorithmic residual after ideal two-phase ring serialization. The rank
+extrapolator inflates that residual to 28.664347 ms over 65 layers, more than
+the observed 7.259566 ms external-minus-packet gap. Differing fixed-cost
+treatment fully explains the gap, so neither study makes a crossover or
 contention-attribution claim.
 
 The unscored sparse arm simulates every realized message at every width. At EP
@@ -1189,23 +1196,29 @@ route to those higher degrees.
   bypass, then demonstrates the expected byte and TTFT or TPOT changes through
   the supported metric chain. This entry owns combine-precision selection;
   TRAF-78 owns destination geometry and TRAF-77 owns transport calibration.
-- TRAF-76 (Precision; P1; L): price intra-node collective transport and fixed
-  collective overheads in the MiniMax packet arm, including binding the landed
-  NVLink domain into every intra-node leg. The current arm presents zero
-  cross-node fan-in as almost zero packet cost at EP 8 while the external NCCL
-  measurement includes NVLink transfer, kernel launch, synchronization and
-  algorithm selection, so that row measures missing coverage rather than
-  contention. Replace that absent-cost surrogate with one transport authority
-  and named, nonduplicated fixed terms calibrated from independent collective
-  traces. Freeze zero-fan-in and nonzero-fan-in widths over at least two payload
-  sizes before implementation, report the before and after phase-completion
-  errors, and reproduce held-out completion within the larger of 10 percent or
-  two GPU cycles. The explicit bypass preserves every accepted timestamp, byte
-  count, completion order and random draw exactly. Acceptance also demonstrates
-  the expected TTFT or TPOT change through the supported metric chain. TRAF-77
-  owns cross-node transport calibration, TRAF-78 owns destination geometry,
-  TRAF-75 owns directional precision selection, and COMP-89 owns independent
-  calibration of the external NCCL extrapolation.
+- TRAF-76 (Precision; P1; L): complete H200 intra-node collective precision
+  beyond the selectable aggregate completion authority. The
+  [corrected aggregate calibration](../../examples/collective_floor_calibration_v1/RESULTS.md)
+  converts the NVIDIA AIConfigurator coordinate from elements to true bytes,
+  fits separate all-gather and reduce-scatter floors and byte slopes for ranks
+  2, 4 and 8, charges each aggregate floor once outside the local/fabric
+  maximum, and preserves the disabled path exactly. All seven fatal guards
+  held; bypass, EP-8 repricing, the supported TTFT and TPOT chain, and wall time
+  passed. The frozen held-out family refuted the requested precision: 51 of 63
+  cells met the 10 percent band, with median error reduced from 88.1114 to
+  3.2671 percent but p95 remaining 19.7972 percent. Replace or extend that
+  training-only aggregate surrogate without holdout leakage until all 63 cells
+  meet the larger of 10 percent or two GPU cycles, then bind and calibrate the
+  landed NVLink packet domain for credits, geometry, switch behavior and
+  arbitration. Freeze zero-fan-in and nonzero-fan-in widths over at least two
+  payload sizes, retain the one-authority and no-double-count proofs, report
+  before and after phase-completion errors, and preserve every accepted bypass
+  timestamp, byte count, completion order and random draw exactly. The
+  nonzero-fan-in publication remains an explicit transferred local component
+  until this packet integration lands. TRAF-77 owns cross-node transport
+  calibration, TRAF-78 owns destination geometry, TRAF-75 owns directional
+  precision selection, and COMP-89 owns independent calibration of the
+  external NCCL extrapolation.
 - TRAF-20 (Precision; P2; M): qualify the delivered `loggopsim-ideal`
   fast level for schedule-shape studies that do not need per-flow transport
   behavior. The

@@ -42,11 +42,12 @@ labels inside one rank block. Dependency cross-check selection stays a
 diagnostic switch and never names a fidelity level.
 
 ``StepLocalityOutcome`` publishes, for every executed artifact, its analytic
-local service, its semantic collective base latency and the medium that owns
-the local term. An artifact composes as base plus the maximum of its local and
-fabric service, so that triple is the evidence a downstream reducer needs to
-charge the artifact to the resource that actually decided its finish time,
-rather than refusing every step that carries NVLink work.
+local service, its semantic collective base latency, aggregate floor,
+registration cost and the medium that owns the local term. An artifact
+composes as registration plus base plus aggregate floor plus the maximum of
+its local and fabric service. That projection is the evidence a downstream
+reducer needs to charge the artifact to the resource that actually decided
+its finish time, rather than refusing every step that carries NVLink work.
 
 An explicit ``collective_latency_profile`` adds one calibrated base latency at
 the semantic collective boundary and selects that profile's local endpoint
@@ -60,6 +61,17 @@ same selection expressed as one arm of a named bracket, so a study can run the
 ``off``, ``lower`` and ``upper`` arms and publish the interval instead of one
 silently chosen constant. The two spellings are mutually exclusive, and the
 ``off`` arm resolves to no profile at all, which is exactly the default path.
+
+An explicit ``collective_floor_calibration`` replaces the analytic local
+serializer of a fully intra-node ring all-reduce with two aggregate measured
+halves, reduce-scatter then all-gather. Each half distributes its fitted byte
+slope over the ring phases and charges its fitted floor once outside the
+local/fabric maximum. Because that complete measured floor already contains
+launch and synchronization, and cannot identify a disjoint registration cost,
+the selection refuses a semantic base profile, registration charge, non-ideal
+host launch model or second NVLink rate. Other collective algorithms and mixed
+local/fabric integration fail closed instead of silently transferring the
+H200 fit.
 
 The provider object, profile string and placement-manifest presence remain the
 operational selectors. ``HtsimStepSinkConfig`` reports the levels they select
