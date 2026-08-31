@@ -126,7 +126,10 @@ from simllm.placement import PlacementManifest, RankMapper
 from simllm.traffic import (
     COLLECTIVE_FIXED_COST_ARMS,
     DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND,
+    ClassifiedCommunicationPhase,
     CollectiveFixedCostEnvelope,
+    CollectiveFloorCalibration,
+    CollectiveFloorEstimate,
     CollectiveLatencyProfile,
     CollectiveRegistrationEvent,
     CollectiveRegistrationLedger,
@@ -134,6 +137,7 @@ from simllm.traffic import (
     RoutedMoeSupply,
     StepLocalityPlan,
     critical_collective_endpoint_bytes,
+    distribute_collective_serialization_ps,
     plan_execution_graph_locality,
     project_execution_graph_goal,
     render_fabric_phase_goal,
@@ -215,6 +219,10 @@ class HtsimStepSinkConfig:
     collective_fixed_cost_arm: str = "off"
     #: one-time channel-and-buffer registration model; None is the exact off path
     collective_registration: str | CollectiveRegistrationModel | None = None
+    #: optional aggregate H200 completion authority; None is the exact off path
+    collective_floor_calibration: CollectiveFloorCalibration | None = None
+    #: source dtype named explicitly because a byte width cannot distinguish half
+    collective_floor_dtype: str | None = None
     #: immutable registration model resolved during validation, never set by a caller
     resolved_collective_registration: CollectiveRegistrationModel | None = field(
         init=False,
@@ -278,6 +286,26 @@ class HtsimStepSinkConfig:
         self.resolved_collective_registration = resolve_collective_registration(
             self.collective_registration
         )
+        if self.collective_floor_calibration is not None and not isinstance(
+            self.collective_floor_calibration,
+            CollectiveFloorCalibration,
+        ):
+            raise TypeError(
+                "collective_floor_calibration must be a CollectiveFloorCalibration "
+                "or None"
+            )
+        if self.collective_floor_calibration is None:
+            if self.collective_floor_dtype is not None:
+                raise ValueError(
+                    "collective_floor_dtype requires collective_floor_calibration"
+                )
+        elif (
+            not isinstance(self.collective_floor_dtype, str)
+            or not self.collective_floor_dtype.strip()
+        ):
+            raise ValueError(
+                "collective_floor_dtype must name the fitted source dtype"
+            )
         self.resolved_collective_fixed_cost_envelope = (
             resolve_collective_fixed_cost_envelope(self.collective_fixed_cost_envelope)
         )
@@ -318,6 +346,37 @@ class HtsimStepSinkConfig:
                 None
                 if self.resolved_collective_latency_profile is None
                 else self.resolved_collective_latency_profile.evidence_class
+            )
+        if (
+            self.collective_floor_calibration is not None
+            and self.resolved_collective_latency_profile is not None
+        ):
+            raise ValueError(
+                "aggregate collective-floor calibration already contains the "
+                "complete measured fixed floor; disable the CollectiveLatencyProfile "
+                "surcharge"
+            )
+        if (
+            self.collective_floor_calibration is not None
+            and self.resolved_collective_registration is not None
+        ):
+            raise ValueError(
+                "aggregate collective-floor calibration already contains timed "
+                "collective setup; disable the registration charge"
+            )
+        if self.collective_floor_calibration is not None and not self.host_model.is_ideal:
+            raise ValueError(
+                "aggregate collective-floor calibration already contains launch "
+                "service; select the ideal host model"
+            )
+        if (
+            self.collective_floor_calibration is not None
+            and self.nvlink_bandwidth_bytes_per_second
+            != DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND
+        ):
+            raise ValueError(
+                "aggregate collective-floor calibration owns local service; do not "
+                "also override nvlink_bandwidth_bytes_per_second"
             )
         if (
             self.resolved_collective_latency_profile is not None
@@ -467,6 +526,8 @@ class StepLocalityOutcome:
     local_phase_service_ps: tuple[int, ...] = ()
     #: semantic collective fixed cost by executed artifact, owned by no resource
     base_phase_latency_ps: tuple[int, ...] = ()
+    #: fitted aggregate completion floor by artifact, empty on the off path
+    collective_floor_phase_ps: tuple[int, ...] = ()
     #: one-time registration charged at each artifact; empty on the off path
     registration_phase_cost_ps: tuple[int, ...] = ()
     #: ``LOCAL_SERVICE_MEDIA`` owner of each artifact's local service term
@@ -660,6 +721,124 @@ class StepCollectiveTimingOutcome:
 
 
 @dataclass(frozen=True)
+class CollectiveFloorArtifactTiming:
+    """One phase whose local service comes from an aggregate fitted curve."""
+
+    artifact_id: str
+    collective_operation_id: str
+    semantic_collective: str
+    local_service_ps: int
+    aggregate_floor_ps: int
+    fabric_transport_ps: int
+    collective_base_latency_ps: int
+    registration_cost_ps: int
+    composed_service_ps: int
+    estimate: CollectiveFloorEstimate
+
+    def __post_init__(self) -> None:
+        for name in (
+            "artifact_id",
+            "collective_operation_id",
+            "semantic_collective",
+        ):
+            value = getattr(self, name)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{name} must be a nonblank string")
+        for name in (
+            "local_service_ps",
+            "aggregate_floor_ps",
+            "fabric_transport_ps",
+            "collective_base_latency_ps",
+            "registration_cost_ps",
+            "composed_service_ps",
+        ):
+            _require_nonnegative_timing(name, getattr(self, name))
+        if not isinstance(self.estimate, CollectiveFloorEstimate):
+            raise TypeError("estimate must be a CollectiveFloorEstimate")
+        if self.semantic_collective != self.estimate.requested_operation:
+            raise ValueError("semantic collective disagrees with its fitted estimate")
+        if self.collective_base_latency_ps:
+            raise ValueError("aggregate floor cannot carry a semantic base surcharge")
+        if self.registration_cost_ps:
+            raise ValueError("aggregate floor cannot carry a registration surcharge")
+        if self.composed_service_ps != self.aggregate_floor_ps + max(
+            self.local_service_ps,
+            self.fabric_transport_ps,
+        ):
+            raise ValueError("composed service disagrees with the aggregate authority")
+
+
+@dataclass(frozen=True)
+class StepCollectiveFloorTimingOutcome:
+    """Read-only projection of the aggregate authority used for one step."""
+
+    step_index: int
+    calibration_id: str
+    dtype: str
+    input_surface: tuple[str, ...]
+    host_launch_floor_ps: int
+    artifacts: tuple[CollectiveFloorArtifactTiming, ...]
+
+    def __post_init__(self) -> None:
+        _require_nonnegative_timing("step_index", self.step_index)
+        for name in ("calibration_id", "dtype"):
+            value = getattr(self, name)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"{name} must be a nonblank string")
+        object.__setattr__(self, "input_surface", tuple(self.input_surface))
+        object.__setattr__(self, "artifacts", tuple(self.artifacts))
+        _require_nonnegative_timing(
+            "host_launch_floor_ps", self.host_launch_floor_ps
+        )
+        if self.host_launch_floor_ps:
+            raise ValueError("aggregate floor cannot carry a second host launch floor")
+        if not self.artifacts:
+            raise ValueError("a collective-floor outcome needs fitted artifacts")
+        if any(
+            not isinstance(artifact, CollectiveFloorArtifactTiming)
+            for artifact in self.artifacts
+        ):
+            raise TypeError(
+                "artifacts must contain CollectiveFloorArtifactTiming values"
+            )
+        if any(
+            artifact.estimate.calibration_id != self.calibration_id
+            for artifact in self.artifacts
+        ):
+            raise ValueError("artifact estimates belong to another calibration")
+        grouped: dict[
+            tuple[str, str], list[CollectiveFloorArtifactTiming]
+        ] = {}
+        for artifact in self.artifacts:
+            grouped.setdefault(
+                (
+                    artifact.collective_operation_id,
+                    artifact.semantic_collective,
+                ),
+                [],
+            ).append(artifact)
+        for identity, phases in grouped.items():
+            estimates = {phase.estimate for phase in phases}
+            if len(estimates) != 1:
+                raise ValueError(
+                    f"collective half {identity!r} carries inconsistent estimates"
+                )
+            estimate = next(iter(estimates))
+            if sum(phase.local_service_ps for phase in phases) != (
+                estimate.serialization_ps
+            ):
+                raise ValueError(
+                    f"collective half {identity!r} does not conserve serialization"
+                )
+            if sum(phase.aggregate_floor_ps for phase in phases) != (
+                estimate.floor_charge_ps
+            ):
+                raise ValueError(
+                    f"collective half {identity!r} does not charge its floor once"
+                )
+
+
+@dataclass(frozen=True)
 class StepCollectiveRegistrationOutcome:
     """What one scheduler-visible step paid to register channels and buffers.
 
@@ -727,7 +906,72 @@ class _PlannedExecutionArtifact:
     participant_count: int | None = None
     critical_endpoint_bytes: int | None = None
     collective_base_latency_ps: int = 0
+    aggregate_collective_floor_ps: int = 0
+    collective_floor_semantic: str | None = None
+    collective_floor_estimate: CollectiveFloorEstimate | None = None
     registration_cost_ps: int = 0
+
+
+@dataclass(frozen=True)
+class _CollectiveFloorPhaseTerm:
+    """One phase-local projection of an aggregate fitted completion."""
+
+    semantic_collective: str
+    local_service_ps: int
+    aggregate_floor_ps: int
+    estimate: CollectiveFloorEstimate
+
+
+def _ring_collective_floor_terms(
+    *,
+    work: CollectiveWork,
+    phases: tuple[ClassifiedCommunicationPhase, ...],
+    calibration: CollectiveFloorCalibration,
+    dtype: str,
+) -> dict[str, _CollectiveFloorPhaseTerm]:
+    """Project two aggregate ring halves over their ordered local phases."""
+
+    if (work.collective, work.algorithm_hint) != ("all-reduce", "ring"):
+        raise ValueError(
+            "aggregate collective-floor calibration supports ring all-reduce only"
+        )
+    phase_count = len(work.ranks) - 1
+    if len(phases) != 2 * phase_count:
+        raise ValueError("ring locality phases disagree with the two aggregate halves")
+    if any(phase.fabric_segments or not phase.nvlink_segments for phase in phases):
+        raise ValueError(
+            "aggregate H200 collective-floor calibration requires a fully "
+            "intra-node collective; mixed local and fabric integration remains open"
+        )
+    terms: dict[str, _CollectiveFloorPhaseTerm] = {}
+    for half_index, semantic_collective in enumerate(
+        ("reduce_scatter", "all_gather")
+    ):
+        estimate = calibration.estimate(
+            dtype=dtype,
+            operation=semantic_collective,
+            ranks=len(work.ranks),
+            message_bytes=work.payload_bytes,
+        )
+        distributed = distribute_collective_serialization_ps(
+            estimate.serialization_ps,
+            phase_count,
+        )
+        half_phases = phases[
+            half_index * phase_count : (half_index + 1) * phase_count
+        ]
+        for phase_index, (phase, local_service_ps) in enumerate(
+            zip(half_phases, distributed, strict=True)
+        ):
+            terms[phase.phase.phase_id] = _CollectiveFloorPhaseTerm(
+                semantic_collective=semantic_collective,
+                local_service_ps=local_service_ps,
+                aggregate_floor_ps=(
+                    estimate.floor_charge_ps if phase_index == 0 else 0
+                ),
+                estimate=estimate,
+            )
+    return terms
 
 
 @dataclass(frozen=True)
@@ -784,6 +1028,7 @@ class _PlannedStep:
     collective_fixed_cost_envelope_id: str | None
     collective_fixed_cost_arm: str | None
     collective_evidence_class: str | None
+    collective_floor_calibration: CollectiveFloorCalibration | None
     collective_registration: CollectiveRegistrationModel | None
     registration_events: tuple[CollectiveRegistrationEvent, ...]
 
@@ -796,6 +1041,7 @@ class _SimulatedStep:
     outcome: StepNetworkOutcome | None
     locality_outcome: StepLocalityOutcome | None
     collective_timing_outcome: StepCollectiveTimingOutcome | None
+    collective_floor_timing_outcome: StepCollectiveFloorTimingOutcome | None
     dependency_cross_check_report: DependencyCrossCheckReport | None
     collective_registration_outcome: StepCollectiveRegistrationOutcome | None = None
 
@@ -836,6 +1082,10 @@ class HtsimStepSink:
         self.locality_outcomes: list[StepLocalityOutcome] = []
         #: calibrated decompositions; deliberately empty on the legacy/off path
         self.collective_timing_outcomes: list[StepCollectiveTimingOutcome] = []
+        #: aggregate floor projections; deliberately empty on the exact off path
+        self.collective_floor_timing_outcomes: list[
+            StepCollectiveFloorTimingOutcome
+        ] = []
         #: explicitly selected independent dependency comparisons, in call order
         self.dependency_cross_check_reports: list[DependencyCrossCheckReport] = []
         #: registration ledger projections; deliberately empty on the off path
@@ -917,6 +1167,7 @@ class HtsimStepSink:
         if not collectives:
             return None
         collective_profile = cfg.resolved_collective_latency_profile
+        collective_floor = cfg.collective_floor_calibration
         effective_nvlink_bandwidth = (
             collective_profile.bandwidth_bytes_per_second
             if collective_profile is not None
@@ -1115,6 +1366,16 @@ class HtsimStepSink:
                     )
                     continue
                 raise ValueError("collective artifact has no locality service phase")
+            collective_floor_terms = (
+                _ring_collective_floor_terms(
+                    work=collective.work,
+                    phases=classified_phases,
+                    calibration=collective_floor,
+                    dtype=cfg.collective_floor_dtype or "",
+                )
+                if collective_floor is not None
+                else {}
+            )
             if compatibility_fast_path:
                 stem = f"{name}.artifact-{artifact_index:04d}"
                 planned_artifacts.append(
@@ -1173,6 +1434,9 @@ class HtsimStepSink:
                     )
                 )
             for phase_index, phase in enumerate(classified_phases):
+                collective_floor_term = collective_floor_terms.get(
+                    phase.phase.phase_id
+                )
                 trace = (
                     render_fabric_phase_goal(
                         phase,
@@ -1200,7 +1464,11 @@ class HtsimStepSink:
                             if trace is not None
                             else None
                         ),
-                        local_service_ps=phase.nvlink_service_ps,
+                        local_service_ps=(
+                            phase.nvlink_service_ps
+                            if collective_floor_term is None
+                            else collective_floor_term.local_service_ps
+                        ),
                         collective_operation_id=operation_id,
                         participant_count=(
                             timing_parameters[0]
@@ -1216,6 +1484,21 @@ class HtsimStepSink:
                             timing_parameters[2]
                             if timing_parameters is not None and phase_index == 0
                             else 0
+                        ),
+                        aggregate_collective_floor_ps=(
+                            0
+                            if collective_floor_term is None
+                            else collective_floor_term.aggregate_floor_ps
+                        ),
+                        collective_floor_semantic=(
+                            None
+                            if collective_floor_term is None
+                            else collective_floor_term.semantic_collective
+                        ),
+                        collective_floor_estimate=(
+                            None
+                            if collective_floor_term is None
+                            else collective_floor_term.estimate
                         ),
                         registration_cost_ps=(
                             registration_by_operation.get(operation_id, 0)
@@ -1324,6 +1607,7 @@ class HtsimStepSink:
                 else cfg.collective_fixed_cost_arm
             ),
             collective_evidence_class=cfg.resolved_collective_evidence_class,
+            collective_floor_calibration=collective_floor,
             collective_registration=cfg.resolved_collective_registration,
             registration_events=registration_events,
         )
@@ -1413,6 +1697,7 @@ class HtsimStepSink:
             composed_services.append(
                 artifact.registration_cost_ps
                 + artifact.collective_base_latency_ps
+                + artifact.aggregate_collective_floor_ps
                 + max(artifact.local_service_ps, fabric_service_ps)
             )
             artifact_offset_ps += composed_services[-1]
@@ -1495,7 +1780,11 @@ class HtsimStepSink:
             phase_count=len(locality.phases),
             backend_runs=backend_runs,
             compute_service_ps=plan.compute_service_ps,
-            nvlink_service_ps=locality.nvlink_service_ps,
+            nvlink_service_ps=sum(
+                artifact.local_service_ps
+                for artifact in plan.artifacts
+                if artifact.collective_operation_id is not None
+            ),
             nvlink_bandwidth_bytes_per_second=(
                 locality.nvlink_bandwidth_bytes_per_second
             ),
@@ -1506,6 +1795,14 @@ class HtsimStepSink:
             ),
             base_phase_latency_ps=tuple(
                 artifact.collective_base_latency_ps for artifact in plan.artifacts
+            ),
+            collective_floor_phase_ps=(
+                tuple(
+                    artifact.aggregate_collective_floor_ps
+                    for artifact in plan.artifacts
+                )
+                if plan.collective_floor_calibration is not None
+                else ()
             ),
             registration_phase_cost_ps=(
                 tuple(artifact.registration_cost_ps for artifact in plan.artifacts)
@@ -1568,6 +1865,40 @@ class HtsimStepSink:
                     )
                 ),
             )
+        collective_floor_timing_outcome = None
+        if plan.collective_floor_calibration is not None:
+            calibration = plan.collective_floor_calibration
+            fitted_artifacts = tuple(
+                CollectiveFloorArtifactTiming(
+                    artifact_id=artifact.artifact_id,
+                    collective_operation_id=artifact.collective_operation_id or "",
+                    semantic_collective=artifact.collective_floor_semantic or "",
+                    local_service_ps=artifact.local_service_ps,
+                    aggregate_floor_ps=artifact.aggregate_collective_floor_ps,
+                    fabric_transport_ps=fabric_service_ps,
+                    collective_base_latency_ps=(
+                        artifact.collective_base_latency_ps
+                    ),
+                    registration_cost_ps=artifact.registration_cost_ps,
+                    composed_service_ps=composed_service_ps,
+                    estimate=artifact.collective_floor_estimate,
+                )
+                for artifact, fabric_service_ps, composed_service_ps in zip(
+                    plan.artifacts,
+                    fabric_phase_service_ps,
+                    composed_phase_service_ps,
+                    strict=True,
+                )
+                if artifact.collective_floor_estimate is not None
+            )
+            collective_floor_timing_outcome = StepCollectiveFloorTimingOutcome(
+                step_index=plan.step_index,
+                calibration_id=calibration.calibration_id,
+                dtype=self.config.collective_floor_dtype or "",
+                input_surface=calibration.input_surface,
+                host_launch_floor_ps=plan.host_launch_floor_ps,
+                artifacts=fitted_artifacts,
+            )
         registration_outcome = None
         if plan.collective_registration is not None:
             model = plan.collective_registration
@@ -1596,6 +1927,7 @@ class HtsimStepSink:
             outcome=outcome,
             locality_outcome=locality_outcome,
             collective_timing_outcome=collective_timing_outcome,
+            collective_floor_timing_outcome=collective_floor_timing_outcome,
             dependency_cross_check_report=cross_check_report,
             collective_registration_outcome=registration_outcome,
         )
@@ -1608,6 +1940,7 @@ class HtsimStepSink:
                 outcome=None,
                 locality_outcome=None,
                 collective_timing_outcome=None,
+                collective_floor_timing_outcome=None,
                 dependency_cross_check_report=None,
             )
         return self._execute_plan(plan)
@@ -1620,6 +1953,10 @@ class HtsimStepSink:
         if simulation.collective_timing_outcome is not None:
             self.collective_timing_outcomes.append(
                 simulation.collective_timing_outcome
+            )
+        if simulation.collective_floor_timing_outcome is not None:
+            self.collective_floor_timing_outcomes.append(
+                simulation.collective_floor_timing_outcome
             )
         if simulation.dependency_cross_check_report is not None:
             self.dependency_cross_check_reports.append(
@@ -1713,6 +2050,7 @@ class HtsimPersistentStepSink(HtsimStepSink):
                     outcome=None,
                     locality_outcome=None,
                     collective_timing_outcome=None,
+                    collective_floor_timing_outcome=None,
                     dependency_cross_check_report=None,
                 )
                 for future in futures
