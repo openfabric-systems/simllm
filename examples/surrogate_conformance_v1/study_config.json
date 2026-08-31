@@ -13,6 +13,18 @@
     "model_id": "ibm-granite/granite-3.0-1b-a400m-instruct",
     "model_revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
     "model_config_sha256": "ca4bb3a5c1bdef988ab413e0d731640446da65316e4ed16de3666cd96ecc3a0b",
+    "model_geometry": {
+      "num_layers": 24,
+      "hidden_size": 1024,
+      "intermediate_size": 512,
+      "num_attention_heads": 16,
+      "num_kv_heads": 8,
+      "head_size": 64,
+      "vocab_size": 49155,
+      "dtype_bytes": 2,
+      "kv_bytes_per_token": 49152,
+      "kv_block_bytes": 786432
+    },
     "simulated_token_id": 512
   },
   "fixed_engine": {
