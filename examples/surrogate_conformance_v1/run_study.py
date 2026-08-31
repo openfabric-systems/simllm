@@ -2080,6 +2080,17 @@ def _render_results(
             f"{tally['total']} total."
         )
     wall = record["wall_time"]
+    reserve_rows = [
+        (
+            row["cell_id"],
+            row["actual"]["surrogate_reserve_rows_unscored"],
+        )
+        for row in record["checks"]
+        if row["family"] == "F7"
+    ]
+    reserve_detail = ", ".join(
+        f"`{cell_id}` {count}" for cell_id, count in reserve_rows
+    )
     lines.extend(
         [
             "",
@@ -2091,6 +2102,12 @@ def _render_results(
                 f"{wall['live_to_surrogate_speedup']:.3f} times speedup, against "
                 f"the frozen maximum ratio of "
                 f"{wall['maximum_surrogate_to_live_ratio']:.2f}."
+            ),
+            "",
+            (
+                f"F7 retained {sum(count for _, count in reserve_rows)} surrogate "
+                "RESERVE rows outside the amended scored alphabet: "
+                f"{reserve_detail}."
             ),
             "",
             "## Row-level findings",

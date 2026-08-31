@@ -690,6 +690,19 @@ configuration or causal provenance. VLLM-42 through VLLM-45 own the facts that
 the sidecar does not yet identify, and VLLM-11 stays open on their precision
 join rather than treating this projection as complete lifecycle evidence.
 
+The nonvoid
+[surrogate conformance study](../../examples/surrogate_conformance_v1/RESULTS.md)
+runs the pinned vLLM 0.27.1 engine in process and retains each native
+`SchedulerOutput` beside the adapter projection. All native-versus-projection
+guards pass, as do the source hash, causal tuple, token conservation and
+end-to-end mutation guards. The bridge therefore supplies a valid oracle for
+this frozen comparison, but the framework-free surrogate is not certified:
+14 family rows miss, including block-lifetime identity and prefix-cache token
+intervals. The bridge's pre-decision `RESERVE` limitation remains explicitly
+unscored under the governing amendment and remains VLLM-44 work; VLLM-11 and
+VLLM-42 through VLLM-45 neither close nor widen from this result. Certification
+is scoped to this scheduler pin and must be re-earned after every pin bump.
+
 ## Open tasks
 
 ### Precision
