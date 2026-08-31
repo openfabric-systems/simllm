@@ -648,6 +648,21 @@ clean VLLM-40 repetition. VLLM-41 owns the distinct lower-load queue-onset
 residual; see
 [the imported-surface result](../../examples/pd_session_load_delay_v1/RESULTS.md).
 
+The clean VLLM-40 repetition subsequently validated increasing delay on all
+30 segments from 250 to 8,000 requests/s and closed VLLM-35, VLLM-39 and
+VLLM-40 without changing the frozen model. VLLM-41 then froze and ran 78
+lower-load cells from 50 to 250 requests/s. Its surface-and-arrival-only model
+predicted a central onset at 225 to 230 requests/s, with 220 to 225 also
+admitted by the measured-surface uncertainty. All six observed configurations
+instead share the earlier 210 to 220 requests/s first queue-dominated segment,
+after five non-queue-dominated segments. The run conserves 4,992 admissions,
+handoffs and terminals plus 19,968 decode tokens at zero TTFT residual. All 30
+held-out scheduler-wait bands hold, while only 14 of 30 separately scored
+batching-service bands hold. VLLM-41 closes on the common sub-250 onset;
+VLLM-42 owns the batching-service band residual. The validated 250 to 8,000
+requests/s direction was preserved and not rescored; see
+[the lower-load onset result](../../examples/pd_session_queue_onset_v1/RESULTS.md).
+
 The same live driver now accepts pool-specific content-addressed lookup
 bindings for CORE-53. The retained candidate study selected its exact decode
 row twice and surfaced candidate status without a calibration claim. Both
@@ -714,15 +729,17 @@ framework-owned join; see
   matrix. Hold out at least one model and group size; require modeled median
   and p95 call cost within a pre-registered relative or additive band, then
   verify the signed TTFT/TPOT effect and the exact zero-cost bypass baseline.
-- VLLM-41 (Precision; P1; M): identify the scheduler queue-wait onset below
-  the VLLM-39 sweep. Freeze a lower offered-load ladder before running it,
-  retain the imported surface and its no-calibration status unchanged, and
-  report batching service per token separately from arrival-to-prefill plus
-  handoff-to-decode admission wait. Hold out at least one sub-250 load and one
-  pool ratio, predict the first queue-dominated segment with quantitative
-  bands and refuse to fit from the observed curve. The purpose is to replace
-  the refuted 1,056.6 and 2,113.2 requests/s knee predictions, not to reopen
-  the validated monotonic direction over 250 to 8,000 requests/s.
+- VLLM-42 (Precision; P1; M): replace the batching-service component-band
+  model refuted by the VLLM-41 lower-load study. All 30 scheduler-wait bands
+  held, but only 14 of 30 separately scored batching-service bands held. The
+  misses are load 240 for both prompts in the 1:1 and 1:2 ratios, plus loads
+  225 through 250 for both prompts in the held-out 2:1 ratio. Freeze a new
+  service-only predictor before collecting successor evidence, derive it from
+  independently measured batch-service and arrival inputs without fitting the
+  VLLM-41 curve, hold out at least one batch-transition load and one pool
+  ratio, and publish the same separate arrival-to-prefill, handoff-to-decode
+  and batching-service fields. Do not reopen the common 210 to 220 requests/s
+  onset or the validated monotonic direction over 250 to 8,000 requests/s.
 
 ### Completeness
 
