@@ -17,7 +17,7 @@ The frozen F1 through F7 exact families and the W wall-time band ran against the
 - F7: 5 passed, 0 failed, 5 total.
 - W: 0 passed, 1 failed, 1 total.
 
-W measured a live median of 175782543 ns and a surrogate median of 77114203 ns over 7 runs. The surrogate-to-live ratio was 0.438690906, or a 2.280 times speedup, against the frozen maximum ratio of 0.01.
+W measured a live median of 139552358 ns and a surrogate median of 58711515 ns over 7 runs. The surrogate-to-live ratio was 0.420713171, or a 2.377 times speedup, against the frozen maximum ratio of 0.01.
 
 F7 retained 15 surrogate RESERVE rows outside the amended scored alphabet: `f3-blocks3-seqs2` 4, `f3-blocks5-seqs2` 4, `f4-zero-full-prefix-blocks` 2, `f4-one-full-prefix-block` 2, `f4-several-full-prefix-blocks` 3.
 
@@ -44,9 +44,10 @@ Adversarial review found one vacuous negative control, one oracle capture-order 
 |---|---|---|
 | `kv-mutation-control` | BLOCKER | move the KV mutation to a corrected passing F3 row and require an observed PASS-to-FAIL transition |
 | `F3-free-order` | MAJOR | capture each pinned manager group's actual reversed free order instead of its pre-free allocation order |
-| `F7-free-authority` | MAJOR | exclude FREE only from cache-enabled F7 scoring because VLLM-43 records that the bridge cannot identify discarded content; retain every FREE divergence as an unscored observation |
+| `F7-free-authority` | MAJOR | exclude FREE only from cache-enabled F7 scoring because VLLM-47 records that the bridge cannot identify discarded content; retain every FREE divergence as an unscored observation |
 | `F6-kv-accounting` | MAJOR | compare live and surrogate KV accounting exactly as the frozen clause requires |
 | `W-baseline` | UNCHANGED | retain the frozen complete-loop baseline choice, band, and miss without rescoring |
+| `registration-renumbering` | DISCLOSED | renumber the registered residuals VLLM-42 to VLLM-46 and VLLM-43 to VLLM-47 at integration, because the queue-onset publication's frozen bytes on main already reserve VLLM-42 and VLLM-43; the tasks themselves, the frozen expectations, the amendment, and every scored verdict are unchanged |
 
 ### Evaluated mutation control
 
@@ -54,11 +55,11 @@ The KV control is re-pointed to the corrected passing row `f3-blocks3-seqs2`. It
 
 ### Frozen F6 accounting result
 
-F6 is scored without relaxation and fails all three rows. The two prefix-free rows have identical priced StepResult values but the surrogate carries RESERVE and WRITE accounting absent from the live sidecar. The cache-enabled row has those differences, the existing step-index mismatch, and FREE-accounting divergence. VLLM-42 through VLLM-44 own the missing native service, content state and pre-decision observations; none is dropped from F6.
+F6 is scored without relaxation and fails all three rows. The two prefix-free rows have identical priced StepResult values but the surrogate carries RESERVE and WRITE accounting absent from the live sidecar. The cache-enabled row has those differences, the existing step-index mismatch, and FREE-accounting divergence. VLLM-44, VLLM-46 and VLLM-47 own the missing native service, content state and pre-decision observations; none is dropped from F6.
 
 ### Cache-enabled FREE observations
 
-These rows remain recorded but do not decide F7. VLLM-43 documents that the bridge projects release as FREE without observing whether cached content remains reclaimable.
+These rows remain recorded but do not decide F7. VLLM-47 documents that the bridge projects release as FREE without observing whether cached content remains reclaimable.
 
 | Cell | Live FREE rows | Surrogate FREE rows | Divergences |
 |---|---:|---:|---:|
@@ -145,7 +146,7 @@ These rows remain recorded but do not decide F7. VLLM-43 documents that the brid
 | F7 | `f4-one-full-prefix-block` | PASS | 0 | F7 witnessed KV alphabet under one stable block bijection |
 | F7 | `f4-several-full-prefix-blocks` | PASS | 0 | F7 witnessed KV alphabet under one stable block bijection |
 | W | `w-largest-frozen-workload` | FAIL | 1 | steady-loop-one-hundred-times |
-| W finding | `$.surrogate_to_live_ratio` | FAIL | 1 | expected `"<= 0.01"`, observed `0.4386909057289039` |
+| W finding | `$.surrogate_to_live_ratio` | FAIL | 1 | expected `"<= 0.01"`, observed `0.4207131706079807` |
 
 ## Fatal guards
 
@@ -234,7 +235,7 @@ The run is nonvoid. All 78 fatal guards were evaluated: 78 fatal guards passed a
 
 ## What it changes for the project
 
-DEPLOY-18 closes because the review-traced oracle capture now records the pinned engine free order and all four F3 rows plus both F3-derived F7 rows pass exactly, withdrawing the phantom surrogate allocator defect. DEPLOY-19 stays open, narrowed to the genuine one-step-late finished-identity finding in F4. DEPLOY-20 stays open on the prefix decision-step mismatch and frozen KV-accounting equality. DEPLOY-21 stays open on W. VLLM-43 owns the recorded cache-enabled FREE projection limit. No milestone advances, and the faithful-stand-in claim remains nonliteral.
+DEPLOY-18 closes because the review-traced oracle capture now records the pinned engine free order and all four F3 rows plus both F3-derived F7 rows pass exactly, withdrawing the phantom surrogate allocator defect. DEPLOY-19 stays open, narrowed to the genuine one-step-late finished-identity finding in F4. DEPLOY-20 stays open on the prefix decision-step mismatch and frozen KV-accounting equality. DEPLOY-21 stays open on W. VLLM-47 owns the recorded cache-enabled FREE projection limit, renumbered from VLLM-43 at integration because main's queue-onset publication holds frozen claims to VLLM-42 and VLLM-43; the per-layer KV byte residual is VLLM-46 for the same reason. No milestone advances, and the faithful-stand-in claim remains nonliteral. This publication supersedes the attempt-004 record with a verdict-equivalent independent integrator rerun carrying the renumbered registrations; every family tally, every per-cell status and every guard status is unchanged, and only wall-clock measurements and timestamps differ.
 
 ## What it does not change
 
