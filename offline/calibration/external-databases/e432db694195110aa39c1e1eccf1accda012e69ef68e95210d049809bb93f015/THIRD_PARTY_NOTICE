@@ -1,0 +1,7 @@
+Third-party converted NCCL performance table
+
+SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+
+Source packages: aiconfigurator 0.11.0 and aiconfigurator-core 0.11.0.
+The copyright and license lines come from the NCCL collection metadata.

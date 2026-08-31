@@ -1,0 +1,39 @@
+{
+  "caption": "Family D compares two cost models, not contention isolation: an opaque eight-rank NCCL-table measurement scaled by rank versus direct all-pairs packet transfers on a Clos. Both request the dense fallback's generic half-precision all-gather plus reduce-scatter element count. EP 8 has no cross-node contention; EP 256 is a post-specified unscored diagnostic. Family S compares the dense fallback with sparse routed FP8 dispatch plus BF16 combine.",
+  "point_annotations": {
+    "ep256": "unscored post-specified diagnostic",
+    "ep8": "not a contention comparison: no cross-node traffic"
+  },
+  "series": [
+    {
+      "label": "External NCCL cost model\nDense fallback: half all-gather + reduce-scatter",
+      "panel": "family-s-strategy-steps",
+      "strategy": "dense SM90 general fallback",
+      "traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements"
+    },
+    {
+      "label": "Sparse routed payload\nFP8 dispatch + BF16 combine",
+      "panel": "family-s-strategy-steps",
+      "strategy": "sparse routed expert payload",
+      "traffic_definition": "top-k token assignments routed only to realized expert-owner ranks, with FP8 dispatch and BF16 combine"
+    },
+    {
+      "label": "External NCCL cost model\nDense fallback: half all-gather + reduce-scatter",
+      "panel": "family-d-cost-model-times",
+      "strategy": "dense SM90 general fallback",
+      "traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements"
+    },
+    {
+      "label": "Packet Clos cost model\nDirect all-pairs half all-gather + reduce-scatter",
+      "panel": "family-d-cost-model-times",
+      "strategy": "dense SM90 general fallback",
+      "traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements"
+    },
+    {
+      "label": "Packet Clos / external NCCL cost model\nsame requested half-element count",
+      "panel": "family-d-cost-model-ratio",
+      "strategy": "same requested dense logical element count, different physical realizations and cost models",
+      "traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements"
+    }
+  ]
+}

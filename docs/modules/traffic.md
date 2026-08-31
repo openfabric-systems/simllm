@@ -1067,6 +1067,45 @@ Degrees 4, 8 and 16 remain labeled simulated mesh extrapolations. These values
 are frozen predictions for the registered hardware discriminator, not a
 promotion of any arbitration policy.
 
+**Expert-parallel collectives are priced over both intra-node accelerator
+transport and cross-node fabric, with fixed launch, synchronization and
+algorithm-selection overheads carried once in the common metric chain.**
+
+The MiniMax expert-parallel packet arm routes a study-only balanced population
+as whole token-expert assignments, emits messages only to realized
+destinations, and declares FP8 dispatch separately from BF16 combine. The
+[MiniMax scaling result](../../examples/minimax_ep_scaling_v1/RESULTS.md)
+publishes the original run as void, then compares two cost models on the same
+requested generic half-precision all-gather plus reduce-scatter element count.
+The external arm is an opaque eight-rank NCCL table measurement scaled by a
+rank factor, with no source, destination, path or message ledger. The packet
+arm is a direct all-pairs realization on a concrete Clos placement. Their
+ratio is not contention isolation. The measured ratios 0.025905, 0.353015 and
+0.802618 at expert-parallel widths 8, 32 and 128 refute all three scored Family
+D cells. The EP 256 ratio 1.187022 is an unscored diagnostic because its
+`31 / 15` rule was specified after the corrected expectations freeze. EP 8 has
+zero cross-node senders per receiver and is not a contention cell.
+
+The external table identifies its dtype only as `half`, not BF16, and names
+its interpolation axis `message_bytes` while the caller passes an element
+count. At EP 128 its 55.445 us eight-rank donor latency contains a 43.211613 us
+fixed and algorithmic residual after ideal two-phase ring serialization. The
+rank extrapolator inflates that residual to 28.664347 ms over 65 layers, more
+than the observed 7.259566 ms external-minus-packet gap. Differing fixed-cost
+treatment fully explains the gap, so the study makes no crossover or
+contention-attribution claim.
+
+The unscored sparse arm simulates every realized message at every width. At EP
+256 it reconstructs 29.78125 cross-node senders per receiver from simulator
+completion rows, against an analytical 29.576912, and carries 97,920 dispatch
+plus 195,840 combine bytes per rank. The isolated-engine default is unchanged.
+The landed NVLink domain from `nvlink_flow_dynamics_v1` and
+`nvlink_rnic_comparison_v1` supplies the intra-node transport authority;
+TRAF-76 owns its packet-arm binding and the fixed collective overheads.
+TRAF-78 owns observed routing geometry, TRAF-75 owns supported-path directional
+precision, TRAF-77 owns hardware transport calibration, and TRAF-26 owns
+complete production peer workloads.
+
 NVLink hardware incast identification is long-flow only. Sender launches on
 the real node serialize through sequential PCIe writes, so nanosecond-scale
 true synchronous small-flow co-arrival cannot be constructed. Simulated
@@ -1151,6 +1190,62 @@ arbitration parameters after that structure lands.
   whose larger long-flow rungs leave physical margin below the launch-skew
   ceiling; then run one new short paced cell. TRAF-74 stays open until a
   non-void comparison publishes all six per-cell verdicts.
+
+- TRAF-77 (Precision; P1; L): replace the MiniMax scaling study's borrowed
+  32 MiB switch-wide buffer and uncalibrated rnic-cn transport service with
+  independently observed multi-node phase timing, queueing and buffering
+  evidence. The corrected study path supplies full realized populations,
+  explicit routing geometry and directional byte widths to the transport, but
+  it has no H200 hardware capture and still selects its switch buffer from
+  another physical RNIC runtime. Capture phase release and completion times,
+  receiver ingress occupancy, path choices, queue waits and buffer high-water
+  marks for at least two routing concentrations and two expert-parallel widths.
+  Freeze the sweep and expected directions before capture. Acceptance reports
+  the transport surrogate's before error, fits no scored holdout, reproduces
+  phase makespan and receiver occupancy inside frozen quantitative bands, and
+  demonstrates an end-to-end TTFT or TPOT change through the supported metric
+  chain. The explicit uncalibrated transport mode remains selectable and
+  reproduces the corrected result exactly when hardware calibration is
+  disabled. TRAF-78 owns observed assignment geometry, TRAF-75 owns
+  directional precision selection, TRAF-26 supplies complete peer workloads,
+  and COMP-89 separately owns the donor NCCL extrapolation.
+- TRAF-78 (Precision; P1; L): replace the MiniMax full-population packet
+  arm's deterministic balanced assignment surrogate with independently
+  observed per-rank expert assignments. The corrected surrogate routes whole
+  token-expert assignments only to destinations they reach and preserves its
+  exact off path, but it does not identify a deployed engine's routing
+  distribution. Freeze at least two routing concentrations and two
+  expert-parallel widths before capture. Acceptance reports distinct
+  destinations per source, cross-node senders per receiver, phase makespan and
+  the resulting TTFT or TPOT change against held-out multi-node evidence.
+  TRAF-26 owns supplying complete peer workloads; this entry owns the active
+  surrogate's routing-geometry precision.
+- TRAF-75 (Precision; P1; M): propagate separate expert-dispatch and
+  expert-combine element widths from supported framework configuration through
+  the execution graph and traffic lowering. The traffic seam accepts explicit
+  directional precision, while callers that omit it retain the exact symmetric
+  model-dtype baseline. Acceptance covers FP8 dispatch with ordinary BF16
+  combine, an explicitly enabled low-precision combine mode, and the symmetric
+  bypass, then demonstrates the expected byte and TTFT or TPOT changes through
+  the supported metric chain. This entry owns combine-precision selection;
+  TRAF-78 owns destination geometry and TRAF-77 owns transport calibration.
+- TRAF-76 (Precision; P1; L): price intra-node collective transport and fixed
+  collective overheads in the MiniMax packet arm, including binding the landed
+  NVLink domain into every intra-node leg. The current arm presents zero
+  cross-node fan-in as almost zero packet cost at EP 8 while the external NCCL
+  measurement includes NVLink transfer, kernel launch, synchronization and
+  algorithm selection, so that row measures missing coverage rather than
+  contention. Replace that absent-cost surrogate with one transport authority
+  and named, nonduplicated fixed terms calibrated from independent collective
+  traces. Freeze zero-fan-in and nonzero-fan-in widths over at least two payload
+  sizes before implementation, report the before and after phase-completion
+  errors, and reproduce held-out completion within the larger of 10 percent or
+  two GPU cycles. The explicit bypass preserves every accepted timestamp, byte
+  count, completion order and random draw exactly. Acceptance also demonstrates
+  the expected TTFT or TPOT change through the supported metric chain. TRAF-77
+  owns cross-node transport calibration, TRAF-78 owns destination geometry,
+  TRAF-75 owns directional precision selection, and COMP-89 owns independent
+  calibration of the external NCCL extrapolation.
 - TRAF-20 (Precision; P2; M): qualify the delivered `loggopsim-ideal`
   fast level for schedule-shape studies that do not need per-flow transport
   behavior. The
@@ -1972,10 +2067,12 @@ arbitration parameters after that structure lands.
   carry an explicit captured workload or a reproducible independently sampled
   workload, and its routing must be independently observed or sampled.
   Replaying one engine's routing table on every peer is forbidden because it
-  manufactures correlated hot-expert incast. Acceptance compares group bytes,
-  peak egress, incast fan-in, TTFT and TPOT against a multi-engine capture,
-  while selecting the isolated mode preserves every accepted TRAF-25 byte,
-  timestamp and completion order exactly.
+  manufactures correlated hot-expert incast. The MiniMax study's explicit
+  uniform token count per rank is a controlled symmetric surrogate, not an
+  independently routed workload, so it does not close this entry. Acceptance
+  compares group bytes, peak egress, incast fan-in, TTFT and TPOT against a
+  multi-engine capture, while selecting the isolated mode preserves every
+  accepted TRAF-25 byte, timestamp and completion order exactly.
 
 - TRAF-15 (Completeness; P2; M): project arbitrary legal forward, non-monotone
   and general non-contiguous or fan-in DAGs through the step sink. The current
