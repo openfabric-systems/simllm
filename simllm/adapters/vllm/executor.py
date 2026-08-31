@@ -48,6 +48,12 @@ Environment variable            Meaning (default)
 ``SIMLLM_VLLM_STEP_RECORDS``    JSONL path for the step records; each record
                                 is appended the moment its step completes
                                 (unset).
+``SIMLLM_VLLM_SAMPLED_REQUEST_IDS``
+                                ``1`` adds exact sampled identities to each
+                                step projection; ``0`` retains accepted
+                                count-only record bytes (``0``).
+``SIMLLM_VLLM_NATIVE_STEPS``    JSONL path pairing the native scheduler fields
+                                with their step projection (unset).
 ``SIMLLM_VLLM_REPLAY_RUN``      joined ``simllm-preplay-replay-run-v1`` JSON
                                 whose exact tokens replace fabrication; every
                                 request must enter with its oracle length
@@ -97,6 +103,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, TypeAlias, runtime_checkable
 
 from simllm.adapters.vllm._version import PINNED_VLLM_VERSION
+from simllm.adapters.vllm.capture import (
+    VllmNativeStepCaptureStream,
+    capture_vllm_native_step,
+)
 from simllm.adapters.vllm.replay import ReplayTokenSource, sample_adapter_tokens
 from simllm.adapters.vllm.schedule import (
     OBSERVED_SCHEDULE_MODES,
@@ -281,6 +291,18 @@ def _env_float(env: Mapping[str, str], name: str, default: float | None) -> floa
         raise ValueError(f"{name} must be a float, got {value!r}") from exc
 
 
+def _env_bool(env: Mapping[str, str], name: str, default: bool) -> bool:
+    value = env.get(name)
+    if not value:
+        return default
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(f"{name} must be a boolean, got {value!r}")
+
+
 @dataclass(frozen=True)
 class SimExecutorConfig:
     """Executor settings that have no vLLM CLI flag.
@@ -298,6 +320,8 @@ class SimExecutorConfig:
     host_initiation_ps: int = 0
     token_id: int | None = None
     step_records_path: str | None = None
+    emit_sampled_request_ids: bool = False
+    native_step_capture_path: str | None = None
     replay_run_path: str | None = None
     observed_schedule: str = OBSERVED_SCHEDULE_OFF
     pool_role: str = "single"
@@ -318,6 +342,8 @@ class SimExecutorConfig:
             )
         if self.kv_memory_bytes <= 0:
             raise ValueError("SIMLLM_VLLM_KV_MEMORY_BYTES must be positive")
+        if not isinstance(self.emit_sampled_request_ids, bool):
+            raise TypeError("emit_sampled_request_ids must be a boolean")
 
     def selected_precision_levels(
         self,
@@ -361,6 +387,12 @@ class SimExecutorConfig:
             host_initiation_ps=_env_int(env, "SIMLLM_VLLM_HOST_INIT_PS", 0) or 0,
             token_id=_env_int(env, "SIMLLM_VLLM_TOKEN_ID", None),
             step_records_path=_env_str(env, "SIMLLM_VLLM_STEP_RECORDS", None),
+            emit_sampled_request_ids=_env_bool(
+                env, "SIMLLM_VLLM_SAMPLED_REQUEST_IDS", False
+            ),
+            native_step_capture_path=_env_str(
+                env, "SIMLLM_VLLM_NATIVE_STEPS", None
+            ),
             replay_run_path=_env_str(env, "SIMLLM_VLLM_REPLAY_RUN", None),
             observed_schedule=(
                 _env_str(
@@ -502,7 +534,10 @@ class StepTranslator:
     its own: preemption resets it.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, emit_sampled_request_ids: bool = True) -> None:
+        if not isinstance(emit_sampled_request_ids, bool):
+            raise TypeError("emit_sampled_request_ids must be a boolean")
+        self._emit_sampled_request_ids = emit_sampled_request_ids
         self._requests: dict[str, _RequestState] = {}
 
     def __len__(self) -> int:
@@ -601,6 +636,17 @@ class StepTranslator:
             preempted_request_ids=sorted(preempted_req_ids),
             finished_request_ids=finished,
             num_sampled=sum(produces_token),
+            sampled_request_ids=(
+                [
+                    request_id
+                    for request_id, sampled in zip(
+                        req_ids, produces_token, strict=True
+                    )
+                    if sampled
+                ]
+                if self._emit_sampled_request_ids
+                else None
+            ),
         )
         self.forget(finished)
         return TranslatedStep(record=record, req_ids=req_ids, produces_token=produces_token)
@@ -1363,13 +1409,20 @@ class _SimStepRuntime:
         self.clock = VirtualClock() if clock is None else clock
         if isinstance(self.step_sink, ObservationStepSink):
             self.step_sink.bind_clock(self.clock)
-        self.translator = StepTranslator()
+        self.translator = StepTranslator(
+            emit_sampled_request_ids=config.emit_sampled_request_ids
+        )
         self.step_index = 0
         self.step_records: list[StepRecord] = []
         self.step_results: list[StepResult] = []
         self.record_stream = (
             StepRecordStream(config.step_records_path)
             if is_authority and config.step_records_path
+            else None
+        )
+        self.native_step_stream = (
+            VllmNativeStepCaptureStream(config.native_step_capture_path)
+            if is_authority and config.native_step_capture_path
             else None
         )
 
@@ -1411,6 +1464,10 @@ class _SimStepRuntime:
             step_index=self.step_index,
             virtual_time_ps=self.clock.now_ps,
         )
+        if self.native_step_stream is not None:
+            self.native_step_stream.append(
+                capture_vllm_native_step(scheduler_output, translated.record)
+            )
         self.step_index += 1
         return translated
 

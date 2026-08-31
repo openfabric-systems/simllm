@@ -17,6 +17,7 @@ import pytest
 
 from simllm.adapters.vllm import (
     GRANITE_ALL2ALL_BACKEND,
+    NATIVE_STEP_CAPTURE_SCHEMA,
     OBSERVED_SCHEDULE_GRANITE_DBO,
     SKELETON_EMPTY_STEP_CALL_SEQUENCE,
     SKELETON_INIT_CALL_SEQUENCE,
@@ -32,6 +33,7 @@ from simllm.adapters.vllm import (
     StepTranslator,
     VllmBatchSlice,
     build_granite_execution_observations,
+    capture_vllm_native_step,
     configure,
     fabricate_sampled_tokens,
     manifest_from_worker_entries,
@@ -543,6 +545,81 @@ def test_sim_worker_split_step_uses_one_clock_and_stream(monkeypatch, tmp_path):
     assert {entry["schema"] for entry in streamed} == {"atlahs-closed-loop-step-v1"}
 
 
+def test_sampled_identities_and_native_output_capture_are_explicit(monkeypatch, tmp_path):
+    native_path = tmp_path / "native_steps.jsonl"
+    record_path = tmp_path / "steps.jsonl"
+    reset_configuration()
+    monkeypatch.setenv("SIMLLM_VLLM_WORKER_MODE", "skeleton")
+    try:
+        worker = make_sim_worker(
+            VirtualClock(start_ps=123_000),
+            simllm_config=SimExecutorConfig(
+                token_id=512,
+                step_records_path=str(record_path),
+                emit_sampled_request_ids=True,
+                native_step_capture_path=str(native_path),
+            ),
+        )
+        worker.init_device()
+        output = FakeSchedulerOutput(
+            scheduled_new_reqs=[
+                FakeNewRequest("chunked", prompt(8)),
+                FakeNewRequest("sampled", prompt(2)),
+            ],
+            num_scheduled_tokens={"chunked": 4, "sampled": 2},
+            preempted_req_ids={"old"},
+            finished_req_ids={"done"},
+        )
+
+        assert worker.execute_model(output) is None
+        worker.sample_tokens(None)
+
+        record = worker.step_records[0]
+        assert record.num_sampled == 1
+        assert record.sampled_request_ids == ["sampled"]
+        capture = json.loads(native_path.read_text(encoding="utf-8"))
+        assert capture["schema"] == NATIVE_STEP_CAPTURE_SCHEMA
+        assert capture["native_scheduler_output"] == {
+            "ordered_scheduled_request_ids": ["chunked", "sampled"],
+            "num_scheduled_tokens": [
+                {"request_id": "chunked", "num_scheduled_tokens": 4},
+                {"request_id": "sampled", "num_scheduled_tokens": 2},
+            ],
+            "total_num_scheduled_tokens": 6,
+            "preempted_request_ids": ["old"],
+            "finished_request_ids": ["done"],
+        }
+        assert capture["step_record"] == step_records_to_json([record])[0]
+        assert capture["step_record"]["sampled_request_ids"] == ["sampled"]
+    finally:
+        reset_configuration()
+
+
+def test_native_capture_does_not_reconstruct_scheduler_fields_from_projection():
+    native = FakeSchedulerOutput(num_scheduled_tokens={"request": 4})
+    projection = StepRecord(
+        step_index=7,
+        virtual_time_ps=123,
+        scheduled=[
+            ScheduledRequest(
+                request_id="request",
+                phase=RequestPhase.PREFILL,
+                num_new_tokens=99,
+            )
+        ],
+        num_sampled=0,
+        sampled_request_ids=[],
+    )
+
+    capture = capture_vllm_native_step(native, projection)
+
+    assert capture.scheduled[0].num_scheduled_tokens == 4
+    assert capture.step_record.scheduled[0].num_new_tokens == 99
+    native.num_scheduled_tokens = {7: 4}
+    with pytest.raises(ValueError, match="scheduled request ID"):
+        capture_vllm_native_step(native, projection)
+
+
 def test_no_replay_worker_stream_is_byte_locked(monkeypatch, tmp_path):
     stream_path = tmp_path / "steps.jsonl"
     expected_path = (
@@ -576,6 +653,7 @@ def test_no_replay_worker_stream_is_byte_locked(monkeypatch, tmp_path):
         assert worker.sample_tokens(None).sampled_token_ids == [[512]]
 
         assert stream_path.read_bytes() == expected_path.read_bytes()
+        assert all(record.sampled_request_ids is None for record in worker.step_records)
     finally:
         reset_configuration()
 def test_sim_runner_serves_dp_coordination_then_tp_collective(monkeypatch):
@@ -1018,6 +1096,7 @@ def test_mixed_batch_translation_and_bookkeeping():
         "decoding": True,
     }
     assert record.num_sampled == 2
+    assert record.sampled_request_ids == ["short", "decoding"]
     # Finished and preempted ids are sorted for reproducible traces.
     assert record.finished_request_ids == ["also-gone", "gone"]
     assert record.preempted_request_ids == ["evicted"]
@@ -1612,6 +1691,8 @@ def test_config_from_env_reads_every_knob():
             "SIMLLM_VLLM_HOST_INIT_PS": "1234",
             "SIMLLM_VLLM_TOKEN_ID": "99",
             "SIMLLM_VLLM_STEP_RECORDS": "/tmp/steps.jsonl",
+            "SIMLLM_VLLM_SAMPLED_REQUEST_IDS": "true",
+            "SIMLLM_VLLM_NATIVE_STEPS": "/tmp/native.jsonl",
             "SIMLLM_VLLM_REPLAY_RUN": "/tmp/replay.json",
         }
     )
@@ -1620,6 +1701,8 @@ def test_config_from_env_reads_every_knob():
     assert config.efficiency == 0.5
     assert config.host_initiation_ps == 1234
     assert config.token_id == 99
+    assert config.emit_sampled_request_ids is True
+    assert config.native_step_capture_path == "/tmp/native.jsonl"
     assert config.replay_run_path == "/tmp/replay.json"
     gpu = config.gpu_spec()
     assert gpu.name == "h100"
@@ -1637,6 +1720,10 @@ def test_config_rejects_bad_values():
     with pytest.raises(ValueError, match="SIMLLM_VLLM_OBSERVED_SCHEDULE"):
         SimExecutorConfig.from_env(
             {"SIMLLM_VLLM_OBSERVED_SCHEDULE": "plausible-overlap"}
+        )
+    with pytest.raises(ValueError, match="must be a boolean"):
+        SimExecutorConfig.from_env(
+            {"SIMLLM_VLLM_SAMPLED_REQUEST_IDS": "sometimes"}
         )
 
 
@@ -1991,9 +2078,11 @@ def test_step_records_dump_is_json_round_trippable(tmp_path):
     assert lines[0]["scheduled"][0]["phase"] == "prefill"
     assert lines[0]["scheduled"][0]["num_cached_tokens"] == 8
     assert lines[0]["num_sampled"] == 1
+    assert lines[0]["sampled_request_ids"] == ["r0"]
     assert lines[1]["scheduled"][0]["phase"] == "decode"
     assert lines[1]["finished_request_ids"] == ["r0"]
     assert lines[1]["num_sampled"] == 1
+    assert lines[1]["sampled_request_ids"] == ["r0"]
 
 
 # Placement manifest assembly

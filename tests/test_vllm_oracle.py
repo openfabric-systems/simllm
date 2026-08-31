@@ -2,17 +2,21 @@ import json
 import sys
 from types import SimpleNamespace
 
+import pytest
+
 from simllm.adapters.vllm import oracle
 from simllm.adapters.vllm.oracle import (
     ORACLE_ENABLE_ENV,
     ORACLE_LOG_ENV,
     ORACLE_OBSERVATION_SCHEMA,
+    ORACLE_SCOPE_ENV,
     _observe_allocate_slots,
     _observe_eviction,
     _observe_manager_init,
     _observe_prefix_hit,
     _observe_request_finish,
     _observe_worker_load,
+    _oracle_scope,
     mark_oracle_capture_start,
     mark_oracle_request_mapping,
     mark_oracle_submission_group,
@@ -65,6 +69,13 @@ def test_vllm_oracle_gate_and_request_markers(monkeypatch, tmp_path):
         {"internal_request_id": "1", "request_id": "r1"},
     ]
     assert all(value["schema"] == ORACLE_OBSERVATION_SCHEMA for value in values)
+
+
+def test_vllm_oracle_scope_keeps_full_default_and_validates_kv_only():
+    assert _oracle_scope({}) == "full"
+    assert _oracle_scope({ORACLE_SCOPE_ENV: "kv"}) == "kv"
+    with pytest.raises(ValueError, match="must be full or kv"):
+        _oracle_scope({ORACLE_SCOPE_ENV: "scheduler"})
 
 
 def test_vllm_kv_hooks_project_actual_results(monkeypatch, tmp_path):
