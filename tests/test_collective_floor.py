@@ -1,15 +1,15 @@
-import hashlib
 import json
-import random
-from dataclasses import asdict
 from fractions import Fraction
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
-import simllm.backends.step_sink as step_sink_module
+from examples.collective_floor_calibration_v1.bypass_fixture import (
+    PRE_WAVE_COMMIT,
+    produce_bypass_record,
+)
 from simllm.backends import (
+    CollectiveFloorTransferError,
     HtsimRequestMetricReducer,
     HtsimStepSink,
     HtsimStepSinkConfig,
@@ -45,6 +45,12 @@ CONFIG = json.loads(
         / "collective_floor_calibration_v1"
         / "study_config.json"
     ).read_text(encoding="utf-8")
+)
+PRE_WAVE_GOLDEN = (
+    REPO_ROOT
+    / "examples"
+    / "collective_floor_calibration_v1"
+    / "pre_wave_bypass_golden.json"
 )
 
 SEAM_DIMS = ModelDims(
@@ -98,31 +104,6 @@ def _sink_config(workdir, hosts: tuple[str, ...], **kwargs) -> HtsimStepSinkConf
         placement_manifest=_manifest(hosts),
         provider=_FixedProvider(),
         **kwargs,
-    )
-
-
-def _stub_backend(monkeypatch, calls: list[str]) -> None:
-    monkeypatch.setattr(step_sink_module, "to_binary", lambda path: path)
-
-    def run(config):
-        calls.append(config.goal_bin.name)
-        return SimpleNamespace(
-            job_completion_time_ps=lambda: 1_000_000,
-            flows=(),
-            quiescent=True,
-        )
-
-    monkeypatch.setattr(step_sink_module, "run_htsim_rnic", run)
-
-
-def _goal_manifest(workdir: Path) -> tuple[tuple[str, int, str], ...]:
-    return tuple(
-        (
-            path.name,
-            len(path.read_bytes()),
-            hashlib.sha256(path.read_bytes()).hexdigest(),
-        )
-        for path in sorted(workdir.rglob("*.goal"))
     )
 
 
@@ -404,6 +385,7 @@ def test_live_seam_charges_each_aggregate_half_once_outside_composition(
     on_locality = on.locality_outcomes[0]
     off_locality = off.locality_outcomes[0]
     assert timing.host_launch_floor_ps == 0
+    assert not timing.transferred_at_use_acknowledged
     assert on.config.resolved_collective_latency_profile is None
     assert not on.collective_registration_ledger.enabled
     assert on_locality.base_phase_latency_ps == (0,) * on_locality.artifact_count
@@ -451,57 +433,81 @@ def test_live_seam_charges_each_aggregate_half_once_outside_composition(
 
 def test_calibration_off_is_a_byte_exact_bypass_of_every_pinned_field(
     tmp_path,
-    monkeypatch,
 ):
-    implicit_calls: list[str] = []
-    explicit_calls: list[str] = []
-    record = _record()
-    random.seed(76)
-    initial_random_state = random.getstate()
-
-    _stub_backend(monkeypatch, implicit_calls)
-    implicit = HtsimStepSink(
-        _sink_config(tmp_path / "implicit", ("node-a", "node-b"))
+    golden = json.loads(PRE_WAVE_GOLDEN.read_text(encoding="utf-8"))
+    expected = golden["record"]
+    observed = produce_bypass_record(
+        tmp_path / "post-wave-default-off",
+        backend_replay=expected["backend_invocations"],
     )
-    implicit_plan = implicit._plan_step(record)
-    implicit_result = implicit(record)
-    implicit_random_state = random.getstate()
+    assert golden["generating_commit"] == PRE_WAVE_COMMIT
+    assert _json_bytes(observed) == _json_bytes(expected)
+    assert any(
+        phase["local_directed_bytes"]
+        for plan in observed["plans"]
+        for phase in plan["application_bytes"]["phases"]
+    )
+    assert any(
+        phase["fabric_directed_bytes"]
+        for plan in observed["plans"]
+        for phase in plan["application_bytes"]["phases"]
+    )
+    assert observed["wire_bytes"]["fabric_goal_send_bytes"] > 0
+    assert observed["random_generator_state"]["before"] == observed[
+        "random_generator_state"
+    ]["after"]
 
-    random.setstate(initial_random_state)
-    _stub_backend(monkeypatch, explicit_calls)
-    explicit = HtsimStepSink(
+
+def test_transferred_floor_refuses_by_default_and_acknowledges_the_outcome(
+    tmp_path,
+    calibration,
+):
+    record = StepRecord(
+        step_index=0,
+        virtual_time_ps=0,
+        scheduled=[
+            ScheduledRequest(
+                "r0",
+                RequestPhase.PREFILL,
+                num_new_tokens=262_145,
+                context_length=262_145,
+            )
+        ],
+        num_sampled=1,
+    )
+    refused = HtsimStepSink(
         _sink_config(
-            tmp_path / "explicit",
-            ("node-a", "node-b"),
-            collective_floor_calibration=None,
-            collective_floor_dtype=None,
+            tmp_path / "refused",
+            ("node",) * 8,
+            collective_floor_calibration=calibration,
+            collective_floor_dtype="half",
         )
     )
-    explicit_plan = explicit._plan_step(record)
-    explicit_result = explicit(record)
-    explicit_random_state = random.getstate()
+    with pytest.raises(
+        CollectiveFloorTransferError,
+        match="acknowledge_collective_floor_transfer=True",
+    ):
+        refused(record)
+    assert refused.outcomes == []
+    assert refused.collective_floor_timing_outcomes == []
 
-    assert implicit_plan is not None
-    assert explicit_plan is not None
-    implicit_segments = asdict(implicit_plan.locality)
-    explicit_segments = asdict(explicit_plan.locality)
-    assert _json_bytes(explicit_segments) == _json_bytes(implicit_segments)
-    assert explicit_result == implicit_result
-    assert _json_bytes(asdict(explicit.outcomes[0])) == _json_bytes(
-        asdict(implicit.outcomes[0])
+    acknowledged = HtsimStepSink(
+        _sink_config(
+            tmp_path / "acknowledged",
+            ("node",) * 8,
+            collective_floor_calibration=calibration,
+            collective_floor_dtype="half",
+            acknowledge_collective_floor_transfer=True,
+        )
     )
-    assert _json_bytes(asdict(explicit.locality_outcomes[0])) == _json_bytes(
-        asdict(implicit.locality_outcomes[0])
+    result = acknowledged(record)
+    assert result is not None
+    (timing,) = acknowledged.collective_floor_timing_outcomes
+    assert timing.transferred_at_use_acknowledged
+    assert all(
+        artifact.estimate.evidence_class == COLLECTIVE_FLOOR_TRANSFERRED
+        for artifact in timing.artifacts
     )
-    assert _goal_manifest(tmp_path / "explicit") == _goal_manifest(
-        tmp_path / "implicit"
-    )
-    assert explicit_calls == implicit_calls
-    assert explicit_random_state == implicit_random_state == initial_random_state
-    assert implicit.collective_floor_timing_outcomes == []
-    assert explicit.collective_floor_timing_outcomes == []
-    assert implicit.locality_outcomes[0].collective_floor_phase_ps == ()
-    assert explicit.locality_outcomes[0].collective_floor_phase_ps == ()
 
 
 def test_metric_chain_reports_the_fitted_floor_in_ttft_and_tpot(

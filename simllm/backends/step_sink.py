@@ -71,7 +71,9 @@ launch and synchronization, and cannot identify a disjoint registration cost,
 the selection refuses a semantic base profile, registration charge, non-ideal
 host launch model or second NVLink rate. Other collective algorithms and mixed
 local/fabric integration fail closed instead of silently transferring the
-H200 fit.
+H200 fit. An out-of-range estimate is also refused before it reaches a
+``StepResult`` unless ``acknowledge_collective_floor_transfer=True`` is set;
+an accepted transfer is stamped in its timing outcome.
 
 The provider object, profile string and placement-manifest presence remain the
 operational selectors. ``HtsimStepSinkConfig`` reports the levels they select
@@ -137,6 +139,7 @@ from simllm.goal import to_binary
 from simllm.placement import PlacementManifest, RankMapper
 from simllm.traffic import (
     COLLECTIVE_FIXED_COST_ARMS,
+    COLLECTIVE_FLOOR_TRANSFERRED,
     DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND,
     ClassifiedCommunicationPhase,
     CollectiveFixedCostEnvelope,
@@ -162,6 +165,10 @@ from simllm.traffic import (
 
 _STATEFUL_MULTI_ARTIFACT_PROFILES = frozenset({"rnic-cn"})
 DEPENDENCY_CROSS_CHECK_MODES = ("atlahs-goal",)
+
+
+class CollectiveFloorTransferError(ValueError):
+    """Raised when a transferred aggregate estimate lacks acknowledgement."""
 
 
 def _require_nonnegative_timing(name: str, value: object) -> int:
@@ -235,6 +242,8 @@ class HtsimStepSinkConfig:
     collective_floor_calibration: CollectiveFloorCalibration | None = None
     #: source dtype named explicitly because a byte width cannot distinguish half
     collective_floor_dtype: str | None = None
+    #: deliberate acceptance required before a transferred estimate reaches metrics
+    acknowledge_collective_floor_transfer: bool = False
     #: immutable registration model resolved during validation, never set by a caller
     resolved_collective_registration: CollectiveRegistrationModel | None = field(
         init=False,
@@ -317,6 +326,10 @@ class HtsimStepSinkConfig:
         ):
             raise ValueError(
                 "collective_floor_dtype must name the fitted source dtype"
+            )
+        if type(self.acknowledge_collective_floor_transfer) is not bool:
+            raise TypeError(
+                "acknowledge_collective_floor_transfer must be a boolean"
             )
         self.resolved_collective_fixed_cost_envelope = (
             resolve_collective_fixed_cost_envelope(self.collective_fixed_cost_envelope)
@@ -790,6 +803,7 @@ class StepCollectiveFloorTimingOutcome:
     input_surface: tuple[str, ...]
     host_launch_floor_ps: int
     artifacts: tuple[CollectiveFloorArtifactTiming, ...]
+    transferred_at_use_acknowledged: bool = False
 
     def __post_init__(self) -> None:
         _require_nonnegative_timing("step_index", self.step_index)
@@ -799,6 +813,8 @@ class StepCollectiveFloorTimingOutcome:
                 raise ValueError(f"{name} must be a nonblank string")
         object.__setattr__(self, "input_surface", tuple(self.input_surface))
         object.__setattr__(self, "artifacts", tuple(self.artifacts))
+        if type(self.transferred_at_use_acknowledged) is not bool:
+            raise TypeError("transferred_at_use_acknowledged must be a boolean")
         _require_nonnegative_timing(
             "host_launch_floor_ps", self.host_launch_floor_ps
         )
@@ -818,6 +834,14 @@ class StepCollectiveFloorTimingOutcome:
             for artifact in self.artifacts
         ):
             raise ValueError("artifact estimates belong to another calibration")
+        has_transfer = any(
+            artifact.estimate.evidence_class == COLLECTIVE_FLOOR_TRANSFERRED
+            for artifact in self.artifacts
+        )
+        if self.transferred_at_use_acknowledged != has_transfer:
+            raise ValueError(
+                "transferred-at-use artifacts require an acknowledged outcome stamp"
+            )
         grouped: dict[
             tuple[str, str], list[CollectiveFloorArtifactTiming]
         ] = {}
@@ -940,6 +964,7 @@ def _ring_collective_floor_terms(
     phases: tuple[ClassifiedCommunicationPhase, ...],
     calibration: CollectiveFloorCalibration,
     dtype: str,
+    acknowledge_transfer: bool,
 ) -> dict[str, _CollectiveFloorPhaseTerm]:
     """Project two aggregate ring halves over their ordered local phases."""
 
@@ -965,6 +990,17 @@ def _ring_collective_floor_terms(
             ranks=len(work.ranks),
             message_bytes=work.payload_bytes,
         )
+        if (
+            estimate.evidence_class == COLLECTIVE_FLOOR_TRANSFERRED
+            and not acknowledge_transfer
+        ):
+            raise CollectiveFloorTransferError(
+                "aggregate collective-floor timing refuses transferred-at-use "
+                f"estimate for {semantic_collective}, ranks={len(work.ranks)}, "
+                f"message_bytes={work.payload_bytes}: {estimate.transfer_reason}. "
+                "Pass acknowledge_collective_floor_transfer=True only for a "
+                "deliberate transferred run."
+            )
         distributed = distribute_collective_serialization_ps(
             estimate.serialization_ps,
             phase_count,
@@ -1041,6 +1077,7 @@ class _PlannedStep:
     collective_fixed_cost_arm: str | None
     collective_evidence_class: str | None
     collective_floor_calibration: CollectiveFloorCalibration | None
+    collective_floor_transfer_acknowledged: bool
     collective_registration: CollectiveRegistrationModel | None
     registration_events: tuple[CollectiveRegistrationEvent, ...]
 
@@ -1384,6 +1421,9 @@ class HtsimStepSink:
                     phases=classified_phases,
                     calibration=collective_floor,
                     dtype=cfg.collective_floor_dtype or "",
+                    acknowledge_transfer=(
+                        cfg.acknowledge_collective_floor_transfer
+                    ),
                 )
                 if collective_floor is not None
                 else {}
@@ -1620,6 +1660,15 @@ class HtsimStepSink:
             ),
             collective_evidence_class=cfg.resolved_collective_evidence_class,
             collective_floor_calibration=collective_floor,
+            collective_floor_transfer_acknowledged=(
+                cfg.acknowledge_collective_floor_transfer
+                and any(
+                    artifact.collective_floor_estimate is not None
+                    and artifact.collective_floor_estimate.evidence_class
+                    == COLLECTIVE_FLOOR_TRANSFERRED
+                    for artifact in planned_artifacts
+                )
+            ),
             collective_registration=cfg.resolved_collective_registration,
             registration_events=registration_events,
         )
@@ -1910,6 +1959,9 @@ class HtsimStepSink:
                 input_surface=calibration.input_surface,
                 host_launch_floor_ps=plan.host_launch_floor_ps,
                 artifacts=fitted_artifacts,
+                transferred_at_use_acknowledged=(
+                    plan.collective_floor_transfer_acknowledged
+                ),
             )
         registration_outcome = None
         if plan.collective_registration is not None:

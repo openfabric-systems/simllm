@@ -1,6 +1,6 @@
 """Run the corrected true-byte aggregate collective-floor study.
 
-The two expectation documents and ``study_config.json`` freeze every scored
+The three expectation documents and ``study_config.json`` freeze every scored
 relation. A normal invocation creates two fresh-process evaluations below one
 new append-only attempt directory, compares their records after removing only
 fields named ``wall_time_seconds``, and writes the tracked record and CSV.
@@ -19,7 +19,6 @@ import json
 import math
 import os
 import platform
-import random
 import re
 import subprocess
 import sys
@@ -36,7 +35,12 @@ REPOSITORY_ROOT = STUDY_DIR.parents[1]
 if os.fspath(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, os.fspath(REPOSITORY_ROOT))
 
+from examples.collective_floor_calibration_v1.bypass_fixture import (
+    PRE_WAVE_COMMIT,
+    produce_bypass_record,
+)
 from simllm.backends import (
+    CollectiveFloorTransferError,
     HtsimRequestMetricReducer,
     HtsimRnicConfig,
     HtsimStepSink,
@@ -73,10 +77,12 @@ from simllm.traffic import (
 CONFIG_PATH = STUDY_DIR / "study_config.json"
 TRACKED_RECORD = STUDY_DIR / "record.json"
 TRACKED_CSV = STUDY_DIR / "results.csv"
+PRE_WAVE_GOLDEN = STUDY_DIR / "pre_wave_bypass_golden.json"
 SCHEMA = "simllm-collective-floor-calibration-record-v1"
 CALIBRATION_ID = "h200-nccl-2.26.2-aggregate-floor-v1"
 CONFIG_COMMIT = "fdffaec"
 IMPLEMENTATION_COMMIT = "a983c8c"
+COORDINATE_FREEZE_COMMIT = "6df368885a715b12e2c2fdfa1bd7ccb2223236a7"
 HTSIM_ENV = "SIMLLM_HTSIM_RNIC"
 TXT2BIN_ENV = "SIMLLM_TXT2BIN"
 EXTERNAL_VENV_ENV = "SIMLLM_EXTERNAL_AIC_VENV"
@@ -250,6 +256,23 @@ def _ceil_serialization_ps(message_bytes: int) -> int:
     )
 
 
+def _current_ring_half_ps(message_bytes: int, ranks: int) -> int:
+    """Price one semantic half exactly as the current ring path does."""
+
+    chunk_bytes = max(1, message_bytes // ranks)
+    phase_ns = math.ceil(
+        chunk_bytes * 1_000_000_000 / LOCAL_BANDWIDTH_BYTES_PER_SECOND
+    )
+    return phase_ns * 1_000 * (ranks - 1)
+
+
+def _ring_physical_floor_ps(message_bytes: int, ranks: int) -> int:
+    chunk_bytes = max(1, message_bytes // ranks)
+    transmitted_bytes = chunk_bytes * (ranks - 1)
+    numerator = transmitted_bytes * 1_000_000_000_000
+    return math.ceil(numerator / LOCAL_BANDWIDTH_BYTES_PER_SECOND)
+
+
 def _nearest_rank_percentile(values: list[float], percentile: float) -> float:
     ordered = sorted(values)
     return ordered[math.ceil(percentile * len(ordered)) - 1]
@@ -280,7 +303,11 @@ def _family_h(
             ranks=cell.ranks,
             message_bytes=cell.message_bytes,
         )
-        before_ps = _ceil_serialization_ps(cell.message_bytes)
+        before_ps = _current_ring_half_ps(cell.message_bytes, cell.ranks)
+        physical_floor_ps = _ring_physical_floor_ps(
+            cell.message_bytes,
+            cell.ranks,
+        )
         before_error = abs(before_ps - cell.latency_ps) / cell.latency_ps
         after_error = abs(estimate.completion_ps - cell.latency_ps) / cell.latency_ps
         tolerance = max(
@@ -300,7 +327,8 @@ def _family_h(
                 "source_elements": cell.source_elements,
                 "true_bytes": cell.message_bytes,
                 "measured_ps": cell.latency_ps,
-                "bare_serialization_ps": before_ps,
+                "current_ring_ps": before_ps,
+                "physical_ring_floor_ps": physical_floor_ps,
                 "calibrated_ps": estimate.completion_ps,
                 "before_relative_error": before_error,
                 "after_relative_error": after_error,
@@ -337,11 +365,12 @@ def _family_h(
             for curve, values in sorted(by_curve.items())
         },
         "physical_sanity": {
-            "floor": "true bytes divided by 450 GB/s",
+            "floor": "(world - 1) payload/world bytes divided by 450 GB/s",
             "ceiling": "unbounded because the source exposes no algorithm progress bound",
-            "all_measurements_above_serialization_floor": all(
-                row["measured_ps"] >= row["bare_serialization_ps"] for row in rows
+            "all_measurements_above_ring_floor": all(
+                row["measured_ps"] >= row["physical_ring_floor_ps"] for row in rows
             ),
+            "before_column_is_current_ring_path": True,
         },
         "rows": rows,
     }
@@ -411,29 +440,6 @@ def _records(*, prompt_tokens: int, steps: int) -> list[StepRecord]:
     return records
 
 
-class _InspectingSink(HtsimStepSink):
-    def __init__(self, config: HtsimStepSinkConfig) -> None:
-        super().__init__(config)
-        self.backend_invocation_order: list[str] = []
-        self.plan_snapshots: list[dict[str, Any]] = []
-
-    def _run_goal(self, plan, goal_path, completion_csv):
-        self.backend_invocation_order.append(goal_path.name)
-        return super()._run_goal(plan, goal_path, completion_csv)
-
-    def _execute_plan(self, plan):
-        self.plan_snapshots.append(
-            {
-                "locality": _normalize(plan.locality),
-                "artifact_order": [artifact.artifact_id for artifact in plan.artifacts],
-                "operation_order": [
-                    list(artifact.operation_ids) for artifact in plan.artifacts
-                ],
-            }
-        )
-        return super()._execute_plan(plan)
-
-
 def _artifact_manifest(workdir: Path) -> list[dict[str, Any]]:
     rows = []
     for path in sorted(workdir.rglob("*.goal")):
@@ -484,51 +490,36 @@ def _binary_identity(name: str) -> dict[str, Any]:
     }
 
 
-def _run_bypass_arm(workdir: Path, *, explicit: bool) -> dict[str, Any]:
-    kwargs = {}
-    if explicit:
-        kwargs = {
-            "collective_floor_calibration": None,
-            "collective_floor_dtype": None,
-        }
-    sink = _InspectingSink(
-        HtsimStepSinkConfig(
-            profile="rnic-nn-fluid",
-            tp_ranks=(0, 1),
-            dims=_bypass_dims(),
-            workdir=workdir,
-            placement_manifest=_manifest(("node-a", "node-b")),
-            provider=RooflineProvider(efficiency=0.7),
-            gpu=GPU_ENVELOPES["b100"],
-            **kwargs,
-        )
-    )
-    initial_random = _sha256_bytes(repr(random.getstate()).encode())
-    virtual_time_ps = 0
-    results = []
-    for record in _records(prompt_tokens=64, steps=2):
-        record.virtual_time_ps = virtual_time_ps
-        result = sink(record)
-        if result is None:
-            raise RuntimeError("the bypass fixture did not produce a StepResult")
-        results.append(
-            {
-                "result": _normalize(result),
-                "network": _normalize(sink.outcomes[-1]),
-                "locality": _normalize(sink.locality_outcomes[-1]),
-            }
-        )
-        virtual_time_ps = result.completed_at_ps
-    return {
-        "plans": sink.plan_snapshots,
-        "results": results,
-        "completion_order": [row["result"]["step_index"] for row in results],
-        "backend_invocation_order": sink.backend_invocation_order,
-        "artifacts": _artifact_manifest(workdir),
-        "random_state_before": initial_random,
-        "random_state_after": _sha256_bytes(repr(random.getstate()).encode()),
-        "floor_outcomes": _normalize(sink.collective_floor_timing_outcomes),
-    }
+def _first_divergent_field(expected: Any, observed: Any, path: str = "$") -> str | None:
+    if type(expected) is not type(observed):
+        return path
+    if isinstance(expected, dict):
+        if expected.keys() != observed.keys():
+            return path
+        for key in expected:
+            divergence = _first_divergent_field(
+                expected[key],
+                observed[key],
+                f"{path}.{key}",
+            )
+            if divergence is not None:
+                return divergence
+        return None
+    if isinstance(expected, list):
+        if len(expected) != len(observed):
+            return path
+        for index, (expected_item, observed_item) in enumerate(
+            zip(expected, observed, strict=True)
+        ):
+            divergence = _first_divergent_field(
+                expected_item,
+                observed_item,
+                f"{path}[{index}]",
+            )
+            if divergence is not None:
+                return divergence
+        return None
+    return None if expected == observed else path
 
 
 def _family_b(workdir: Path) -> dict[str, Any]:
@@ -543,33 +534,35 @@ def _family_b(workdir: Path) -> dict[str, Any]:
             "denominator": 1,
             "skip_reason": str(error),
         }
-    random.seed(76)
-    initial_state = random.getstate()
-    absent = _run_bypass_arm(workdir / "feature-absent", explicit=False)
-    random.setstate(initial_state)
-    disabled = _run_bypass_arm(workdir / "explicit-off", explicit=True)
-    absent_bytes = _json_bytes(absent)
-    disabled_bytes = _json_bytes(disabled)
-    passed = absent_bytes == disabled_bytes
-    first_divergence = None if passed else "byte-level bypass record"
+    golden = json.loads(PRE_WAVE_GOLDEN.read_text(encoding="utf-8"))
+    if golden.get("generating_commit") != PRE_WAVE_COMMIT:
+        raise RuntimeError("the pre-wave golden names the wrong generating commit")
+    expected = golden["record"]
+    observed = produce_bypass_record(workdir / "post-wave-default-off")
+    expected_bytes = _json_bytes(expected)
+    observed_bytes = _json_bytes(observed)
+    passed = expected_bytes == observed_bytes
     return {
         "id": "B",
         "status": "PASS" if passed else "FAIL",
         "passed": int(passed),
         "denominator": 1,
         "skip_reason": None,
-        "feature_absent_sha256": _sha256_bytes(absent_bytes),
-        "explicit_off_sha256": _sha256_bytes(disabled_bytes),
-        "first_divergent_field": first_divergence,
+        "golden_path": "examples/collective_floor_calibration_v1/pre_wave_bypass_golden.json",
+        "golden_generating_commit": PRE_WAVE_COMMIT,
+        "golden_file_sha256": _sha256_file(PRE_WAVE_GOLDEN),
+        "golden_record_sha256": _sha256_bytes(expected_bytes),
+        "post_wave_default_off_sha256": _sha256_bytes(observed_bytes),
+        "first_divergent_field": _first_divergent_field(expected, observed),
         "checked_fields": [
             "phase and step timestamps",
             "local and fabric segment tuples",
-            "application and emitted GOAL byte counts",
+            "application and wire byte counts",
             "completion order",
             "backend invocation order",
             "random-generator state",
         ],
-        "observed": disabled,
+        "observed": observed,
     }
 
 
@@ -636,6 +629,7 @@ def _run_dense_width(
     workdir: Path,
     calibration: CollectiveFloorCalibration,
     *,
+    operation_buffer_bytes: int,
     htsim: Path | None,
     txt2bin: Path | None,
 ) -> dict[str, Any]:
@@ -679,13 +673,18 @@ def _run_dense_width(
             )
             fabric_ps = run.job_completion_time_ps()
             manifest = _artifact_manifest(workdir)
-        table_source_elements = phase.nvlink_peak_endpoint_bytes
-        table_true_bytes = table_source_elements * 2
         estimate = calibration.estimate(
             dtype="half",
             operation=operation,
             ranks=width,
-            message_bytes=table_true_bytes,
+            message_bytes=operation_buffer_bytes,
+            donor=("half", operation, 8) if width != 8 else None,
+        )
+        physical_endpoint_estimate = calibration.estimate(
+            dtype="half",
+            operation=operation,
+            ranks=width,
+            message_bytes=phase.nvlink_peak_endpoint_bytes,
             donor=("half", operation, 8) if width != 8 else None,
         )
         current_phase_ps = max(phase.nvlink_service_ps, fabric_ps)
@@ -693,13 +692,16 @@ def _run_dense_width(
             estimate.serialization_ps,
             fabric_ps,
         )
+        physical_endpoint_phase_ps = physical_endpoint_estimate.floor_charge_ps + max(
+            physical_endpoint_estimate.serialization_ps,
+            fabric_ps,
+        )
         rows.append(
             {
                 "operation": operation,
                 "width": width,
                 "local_endpoint_bytes": phase.nvlink_peak_endpoint_bytes,
-                "table_source_elements": table_source_elements,
-                "table_true_bytes": table_true_bytes,
+                "operation_buffer_bytes": operation_buffer_bytes,
                 "current_local_serialization_ps": phase.nvlink_service_ps,
                 "calibrated_local_serialization_ps": estimate.serialization_ps,
                 "aggregate_floor_ps": estimate.floor_charge_ps,
@@ -709,6 +711,19 @@ def _run_dense_width(
                 "evidence_class": estimate.evidence_class,
                 "transfer_reason": estimate.transfer_reason,
                 "regime": estimate.regime.as_dict(),
+                "physical_endpoint_reading": {
+                    "query_bytes": phase.nvlink_peak_endpoint_bytes,
+                    "calibrated_local_serialization_ps": (
+                        physical_endpoint_estimate.serialization_ps
+                    ),
+                    "aggregate_floor_ps": (
+                        physical_endpoint_estimate.floor_charge_ps
+                    ),
+                    "composed_phase_ps": physical_endpoint_phase_ps,
+                    "evidence_class": physical_endpoint_estimate.evidence_class,
+                    "transfer_reason": physical_endpoint_estimate.transfer_reason,
+                    "regime": physical_endpoint_estimate.regime.as_dict(),
+                },
                 "artifacts": manifest,
             }
         )
@@ -724,6 +739,11 @@ def _run_dense_width(
             * REPRESENTED_LAYERS
             / 1_000_000_000
         ),
+        "physical_endpoint_dispatch_combine_ms": (
+            sum(row["physical_endpoint_reading"]["composed_phase_ps"] for row in rows)
+            * REPRESENTED_LAYERS
+            / 1_000_000_000
+        ),
         "phases": rows,
     }
 
@@ -733,6 +753,7 @@ def _family_d8(
     calibration: CollectiveFloorCalibration,
 ) -> dict[str, Any]:
     minimax = json.loads(MINIMAX_RECORD.read_text(encoding="utf-8"))
+    minimax_config = json.loads(MINIMAX_CONFIG.read_text(encoding="utf-8"))
     anchors = {
         row["expert_parallel"]: row
         for row in minimax["rows"]
@@ -746,13 +767,31 @@ def _family_d8(
         txt2bin = _require_executable(TXT2BIN_ENV)
     except StudyUnavailable as error:
         mixed_skip_reason = str(error)
-    widths = [_run_dense_width(8, workdir / "ep-8", calibration, htsim=None, txt2bin=None)]
+    tokens_per_rank = minimax_config["operating_point"][
+        "local_batch_per_attention_dp_rank"
+    ] * (minimax_config["model"]["nextn"] + 1)
+
+    def operation_buffer_bytes(width: int) -> int:
+        elements = tokens_per_rank * minimax_config["model"]["hidden_size"] * width
+        return elements * 2
+
+    widths = [
+        _run_dense_width(
+            8,
+            workdir / "ep-8",
+            calibration,
+            operation_buffer_bytes=operation_buffer_bytes(8),
+            htsim=None,
+            txt2bin=None,
+        )
+    ]
     if mixed_skip_reason is None:
         widths.extend(
             _run_dense_width(
                 width,
                 workdir / f"ep-{width}",
                 calibration,
+                operation_buffer_bytes=operation_buffer_bytes(width),
                 htsim=htsim,
                 txt2bin=txt2bin,
             )
@@ -768,6 +807,9 @@ def _family_d8(
     ep8 = widths[0]
     external_ms = anchors[8]["family_d_external_ms"]
     quotient = ep8["calibrated_dispatch_combine_ms"] / external_ms
+    physical_endpoint_quotient = (
+        ep8["physical_endpoint_dispatch_combine_ms"] / external_ms
+    )
     passed = 0.90 <= quotient <= 1.10 and ep8["legacy_anchor_reproduced"]
     return {
         "id": "D8",
@@ -778,6 +820,14 @@ def _family_d8(
         "external_arm_ms": external_ms,
         "before_packet_ms": ep8["current_dispatch_combine_ms"],
         "before_quotient": ep8["current_dispatch_combine_ms"] / external_ms,
+        "attempt_0002_wrong_query_bytes": 344_064,
+        "physical_endpoint_query_bytes": ep8["phases"][0]["local_endpoint_bytes"],
+        "physical_endpoint_packet_ms": ep8[
+            "physical_endpoint_dispatch_combine_ms"
+        ],
+        "physical_endpoint_quotient": physical_endpoint_quotient,
+        "matched_operation_buffer_elements": operation_buffer_bytes(8) // 2,
+        "matched_operation_buffer_bytes": operation_buffer_bytes(8),
         "calibrated_packet_ms": ep8["calibrated_dispatch_combine_ms"],
         "calibrated_quotient": quotient,
         "mixed_width_skip_reason": mixed_skip_reason,
@@ -1003,30 +1053,118 @@ def _double_count_guard(
     }
 
 
-def _evidence_guard(calibration: CollectiveFloorCalibration) -> dict[str, Any]:
+def _consumer_transfer_guard(
+    workdir: Path,
+    calibration: CollectiveFloorCalibration,
+) -> dict[str, Any]:
+    record = StepRecord(
+        step_index=0,
+        virtual_time_ps=0,
+        scheduled=[
+            ScheduledRequest(
+                "r0",
+                RequestPhase.PREFILL,
+                262_145,
+                context_length=262_145,
+            )
+        ],
+        num_sampled=1,
+    )
+    common = {
+        "profile": "rnic-nn-fluid",
+        "tp_ranks": tuple(range(8)),
+        "dims": _bypass_dims(),
+        "placement_manifest": _manifest(("node",) * 8),
+        "collective_floor_calibration": calibration,
+        "collective_floor_dtype": "half",
+    }
+    refused = HtsimStepSink(
+        HtsimStepSinkConfig(workdir=workdir / "refused", **common)
+    )
+    refusal = None
+    try:
+        refused(record)
+    except CollectiveFloorTransferError as error:
+        refusal = {
+            "error_type": type(error).__name__,
+            "message": str(error),
+        }
+    acknowledged = HtsimStepSink(
+        HtsimStepSinkConfig(
+            workdir=workdir / "acknowledged",
+            acknowledge_collective_floor_transfer=True,
+            **common,
+        )
+    )
+    result = acknowledged(record)
+    timing = (
+        acknowledged.collective_floor_timing_outcomes[0]
+        if acknowledged.collective_floor_timing_outcomes
+        else None
+    )
+    transferred = (
+        []
+        if timing is None
+        else [
+            artifact.estimate.evidence_class
+            for artifact in timing.artifacts
+        ]
+    )
+    held = (
+        refusal is not None
+        and "acknowledge_collective_floor_transfer=True" in refusal["message"]
+        and refused.outcomes == []
+        and refused.collective_floor_timing_outcomes == []
+        and result is not None
+        and timing is not None
+        and timing.transferred_at_use_acknowledged
+        and transferred
+        and all(value == COLLECTIVE_FLOOR_TRANSFERRED for value in transferred)
+    )
+    return {
+        "held": bool(held),
+        "default_path": {
+            "refused": refusal is not None,
+            "error": refusal,
+            "published_outcomes": len(refused.outcomes),
+        },
+        "acknowledged_path": {
+            "completed_at_ps": None if result is None else result.completed_at_ps,
+            "outcome_stamped": (
+                False if timing is None else timing.transferred_at_use_acknowledged
+            ),
+            "artifact_evidence_classes": transferred,
+        },
+    }
+
+
+def _evidence_guard(
+    workdir: Path,
+    calibration: CollectiveFloorCalibration,
+) -> dict[str, Any]:
     exact = calibration.estimate(
-        dtype="half", operation="all_gather", ranks=8, message_bytes=344_064
+        dtype="half", operation="all_gather", ranks=8, message_bytes=196_608
     )
     transfers = (
         calibration.estimate(
             dtype="half",
             operation="all_reduce",
             ranks=8,
-            message_bytes=344_064,
+            message_bytes=196_608,
             donor=("half", "all_gather", 8),
         ),
         calibration.estimate(
             dtype="int8",
             operation="all_gather",
             ranks=8,
-            message_bytes=344_064,
+            message_bytes=196_608,
             donor=("half", "all_gather", 8),
         ),
         calibration.estimate(
             dtype="half",
             operation="all_gather",
             ranks=32,
-            message_bytes=344_064,
+            message_bytes=196_608,
             donor=("half", "all_gather", 8),
         ),
         calibration.estimate(
@@ -1036,15 +1174,17 @@ def _evidence_guard(calibration: CollectiveFloorCalibration) -> dict[str, Any]:
             message_bytes=calibration.fitted_byte_range[1] + 1,
         ),
     )
+    consumer = _consumer_transfer_guard(workdir / "consumer", calibration)
     held = exact.evidence_class == COLLECTIVE_FLOOR_CALIBRATED and all(
         estimate.evidence_class == COLLECTIVE_FLOOR_TRANSFERRED
         and estimate.transfer_reason
         for estimate in transfers
-    )
+    ) and consumer["held"]
     return {
         "held": held,
         "exact": exact.as_dict(),
         "transfers": [estimate.as_dict() for estimate in transfers],
+        "consumer_fence": consumer,
     }
 
 
@@ -1084,6 +1224,21 @@ def _chronology_guard() -> dict[str, Any]:
         ).returncode
         == 0
     )
+    repair_implementation_commit = git("rev-parse", "HEAD").stdout.strip()
+    coordinate_freeze_payload = git(
+        "show",
+        f"{COORDINATE_FREEZE_COMMIT}:examples/collective_floor_calibration_v1/expectations_v3.md",
+    ).stdout.encode()
+    coordinate_freeze_before_repair = (
+        git(
+            "merge-base",
+            "--is-ancestor",
+            COORDINATE_FREEZE_COMMIT,
+            repair_implementation_commit,
+            check=False,
+        ).returncode
+        == 0
+    )
     return {
         "configuration_commit": CONFIG_COMMIT,
         "implementation_commit": IMPLEMENTATION_COMMIT,
@@ -1092,10 +1247,22 @@ def _chronology_guard() -> dict[str, Any]:
         "config_sha256_current": _sha256_file(CONFIG_PATH),
         "fit_absent_before_configuration": fit_absent_before_config,
         "implementation_present_at_implementation_commit": implementation_present,
+        "coordinate_mapping_freeze_commit": COORDINATE_FREEZE_COMMIT,
+        "coordinate_freeze_sha256_at_commit": _sha256_bytes(
+            coordinate_freeze_payload
+        ),
+        "coordinate_freeze_sha256_current": _sha256_file(
+            STUDY_DIR / "expectations_v3.md"
+        ),
+        "coordinate_freeze_before_repair": coordinate_freeze_before_repair,
+        "repair_implementation_commit": repair_implementation_commit,
         "held": config_before_implementation
         and _sha256_bytes(config_payload) == _sha256_file(CONFIG_PATH)
         and fit_absent_before_config
-        and implementation_present,
+        and implementation_present
+        and coordinate_freeze_before_repair
+        and _sha256_bytes(coordinate_freeze_payload)
+        == _sha256_file(STUDY_DIR / "expectations_v3.md"),
     }
 
 
@@ -1139,7 +1306,7 @@ def _evaluate(output_dir: Path) -> dict[str, Any]:
     double_count = _double_count_guard(
         output_dir / "double-count", calibration, family_m
     )
-    evidence = _evidence_guard(calibration)
+    evidence = _evidence_guard(output_dir / "evidence", calibration)
     a100_inputs = {
         "packet_geometry",
         "credits",
@@ -1151,6 +1318,24 @@ def _evaluate(output_dir: Path) -> dict[str, Any]:
     }
     a100_fence = a100_inputs.isdisjoint(calibration.input_surface)
     chronology = _chronology_guard()
+    record_chronology = json.loads(json.dumps(config["chronology"]))
+    record_chronology["attempt_0001"]["artifact_status"] = (
+        "No attempt-0001 directory exists by construction because the worker "
+        "stopped at the axis check before creating any artifact; the worker "
+        "report is the only evidence."
+    )
+    record_chronology["coordinate_mapping_freeze_commit"] = (
+        COORDINATE_FREEZE_COMMIT
+    )
+    record_chronology["attempt_0002"] = {
+        "status": "SUPERSEDED",
+        "findings": [
+            "D8 doubled already physical endpoint bytes and queried 344064 bytes instead of the matched 196608-byte operation buffer.",
+            "Family B compared two post-wave all-remote runs instead of the pre-wave mixed-locality path.",
+            "Family H labeled a bare physical floor as the current ring implementation.",
+            "The production consumer allowed transferred-at-use timing into signature metrics without explicit acknowledgement.",
+        ],
+    }
     bypass_held = family_b["status"] == "PASS"
     guards = [
         {
@@ -1200,7 +1385,7 @@ def _evaluate(output_dir: Path) -> dict[str, Any]:
     return {
         "schema": SCHEMA,
         "study": config["study"],
-        "chronology": config["chronology"],
+        "chronology": record_chronology,
         "axis": axis,
         "source": config["source"],
         "clock": config["clock"],
@@ -1256,7 +1441,11 @@ def _csv_bytes(record: dict[str, Any]) -> bytes:
                 "instance": row["cell_id"],
                 "status": "PASS" if row["passed"] else "FAIL",
                 "measured_ps": row["measured_ps"],
-                "before_ps": row["bare_serialization_ps"],
+                "before_ps": (
+                    row["current_ring_ps"]
+                    if "current_ring_ps" in row
+                    else row["bare_serialization_ps"]
+                ),
                 "calibrated_ps": row["calibrated_ps"],
                 "before_relative_error": row["before_relative_error"],
                 "after_relative_error": row["after_relative_error"],
@@ -1359,6 +1548,14 @@ def _coordinator(workdir: Path, *, write_tracked: bool) -> dict[str, Any]:
     record["verdict"] = (
         "interpretable" if all(guard["held"] for guard in guards) else "VOID"
     )
+    record["chronology"]["attempt_0003"] = {
+        "status": record["verdict"].upper(),
+        "fresh_process_evaluations": 2,
+        "coordinate_mapping_freeze_commit": COORDINATE_FREEZE_COMMIT,
+        "repair_implementation_commit": guards[-1]["evaluated"][
+            "repair_implementation_commit"
+        ],
+    }
     record["family_tallies"] = {
         family: {
             "status": payload["status"],
