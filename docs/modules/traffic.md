@@ -1047,15 +1047,16 @@ TRAF-71 preservation locks pass, so TRAF-72 closes while its three behavioral
 refutations remain part of the result.
 
 TRAF-73 separates credit ownership from downstream arbitration. Public NVLink
-architecture descriptions make the receive allocation per physical link and
-per link-layer virtual channel, so one sender cannot consume another sender's
-credits. The model carries one implicit virtual channel and keeps the existing
-256-credit, 272-byte and 200,000 ps values as declared candidates on each
-physical link. Incast contention sits at destination ingress and memory
-acceptance on NV4, plus a crossbar output on an NVSwitch path. Release-aware
-round robin is therefore the documented declared default candidate, with
-static interleave and greedy capture selectable as alternatives. None of these
-policy labels is a hardware measurement.
+documents establish credit flow control and describe multiple virtual-channel
+classes, but they do not identify the A100 credit quantum, allocation scope,
+virtual-channel count, buffer depth or product arbiter. The model carries one
+implicit virtual channel and keeps the existing 256-credit, 272-byte and
+200,000 ps values as declared candidates on each physical link. Incast
+contention sits at destination ingress and memory acceptance on NV4, plus a
+crossbar output on an NVSwitch path. Release-aware round robin is the declared
+baseline candidate, with static interleave and greedy capture selectable as
+alternatives. None of these policy labels is a product fact or hardware
+measurement.
 
 The [TRAF-73 simulation result](../../examples/nvlink_credit_arbitration_v1/RESULTS.md)
 passes all 15 frozen policy and degree instances with all 105 fatal guards
@@ -1126,9 +1127,48 @@ small-flow incast is a model prediction with no direct hardware check. Degrees
 counterpart on an NV4 node; an NVSwitch-class configuration is the physical
 route to those higher degrees.
 
+TRAF-79 reverse engineers the NVLink packet domain from public documents. Its
+28-choice reconciliation confirms 10 current choices, contradicts 6 and
+leaves 12 undocumented. The deciding correction is that the documented family
+unit is a 128-bit, 16-byte flit and a packet occupies 1 through 18 flits; 272
+bytes is therefore one 17-flit occupancy, not the universal unit. The
+[mechanism record](../design/nvlink-mechanism-reverse-engineering.md) makes the
+public evidence boundary literal and closes TRAF-79. TRAF-80 owns the model
+alignment, while TRAF-73 remains open to identify the A100-specific credit and
+arbitration parameters after that structure lands.
+
 ## Open tasks
 
 ### Precision
+
+- TRAF-80 (Precision; P1; L): align the three-module NVLink packet, credit and
+  switch domain with the public mechanism boundary established by TRAF-79.
+  The surrogate being replaced treats one fixed 272-byte extent as the packet
+  and credit unit, frees the sender credit on a fixed timer, models one
+  implicit virtual channel, exposes destination service without explicit
+  receive-buffer ownership, and gives the switch no port, virtual-output-queue
+  or crossbar contention. Replace it with generation-scoped 16-byte flit
+  packetization with optional control flits, link-local acknowledgement and
+  replay accounting, explicit traffic-class and virtual-channel state,
+  receiver-owned credit release, ordering visibility, and an NVSwitch policy
+  seam over input ports, virtual output queues and crossbar outputs. Do not
+  promote an exact A100 credit quantum, pool scope, virtual-channel count,
+  buffer depth, credit-return encoding, striping granularity or product arbiter:
+  public documents leave those parameters unidentified, so TRAF-73 remains
+  their measurement owner. Preserve the profile-absent path and the NV4
+  direct-mesh structural pass-through path exactly, and make the identity
+  arbitration policy preserve every accepted timestamp, wire byte, random
+  draw and completion order. Land an expectations-only commit before the
+  behavioral implementation. Its minimum physical oracles are 94.117647 GB/s
+  payload for repeated 17-flit packets and 88.888889 GB/s for repeated 18-flit
+  packets on four 25 GB/s A100 links, a nonnegative 5.882 percent serialization
+  change when the optional flit is present, credit release never preceding
+  receive-buffer release, and error-free replay producing zero added bytes and
+  time while injected errors add neither negative quantity. The sanity study
+  varies packet occupancy and link rate, measures one fixed job-completion
+  time, and checks the frozen serialization relation. Publish the signed shift
+  in every inherited envelope before TRAF-73 begins identification; a result
+  that violates any conservation, ownership or identity guard is void.
 
 - TRAF-74 (Precision; P1; L): validate the scored three-module A100 NVLink
   incast prediction against one qualified four-A100 `NV4` node at the only
@@ -1842,14 +1882,14 @@ route to those higher degrees.
 - TRAF-73 (Precision; P1; M): identify the effective NVLink credit window,
   credit-pool scope and downstream incast arbitration on the qualified NV4
   node. The surrogate being replaced is the pair-keyed credit ledger plus an
-  undocumented scheduling choice. Public architecture background says receive
-  buffers are hard allocated per physical link and per link-layer virtual
-  channel, so the structural model keys the unchanged 256-credit, 272-byte
-  candidate per link for one implicit modeled virtual channel. It does not
-  claim a physical virtual-channel count. Release-aware round robin is the
-  documented default candidate because independent link credits feed a shared
-  destination-ingress or NVSwitch-output service; static interleave and greedy
-  capture are explicit alternatives.
+  undocumented scheduling choice. Public documents establish credit flow
+  control and multiple virtual-channel classes, but not the A100 allocation
+  scope or quantum. Until TRAF-80 replaces the fixed-unit and timer structure,
+  the unchanged 256-credit, 272-byte candidate stays keyed per link for one
+  implicit modeled virtual channel. It does not claim a physical
+  virtual-channel count. Release-aware round robin is the declared baseline
+  candidate; static interleave and greedy capture are explicit alternatives.
+  TRAF-73 measures among those candidates only after the structure is aligned.
 
   The expectations-only specification is
   [nvlink_credit_arbitration_v1](../../examples/nvlink_credit_arbitration_v1/expectations.md).
