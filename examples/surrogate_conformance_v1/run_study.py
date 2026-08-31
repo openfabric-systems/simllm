@@ -681,6 +681,9 @@ def _resolved_tuple(llm: object, cell: FrozenCell) -> dict[str, Any]:
         "construction_validation_bypass": bool(
             getattr(llm.llm_engine, "_simllm_chunking_validation_bypass", False)
         ),
+        "construction_capacity_validation_bypass": bool(
+            getattr(llm.llm_engine, "_simllm_capacity_validation_bypass", False)
+        ),
         "cell_id": cell.cell_id,
     }
 
@@ -714,11 +717,18 @@ def _construct_live_engine(
         not desired_chunking
         and int(engine["budget"]) < int(engine["max_model_len"])
     )
+    desired_max_model_len = int(engine["max_model_len"])
+    construction_max_model_len = min(
+        desired_max_model_len,
+        int(engine["num_kv_blocks"])
+        * int(config["fixed_engine"]["scheduler_block_size"]),
+    )
+    capacity_validation_bypass = construction_max_model_len < desired_max_model_len
     llm = LLM(
         model=str(model),
         worker_cls="simllm.adapters.vllm.SimWorker",
         enforce_eager=True,
-        max_model_len=int(engine["max_model_len"]),
+        max_model_len=construction_max_model_len,
         max_num_seqs=int(engine["max_num_seqs"]),
         max_num_batched_tokens=int(engine["budget"]),
         max_num_scheduled_tokens=int(engine["budget"]),
@@ -748,6 +758,15 @@ def _construct_live_engine(
             raise RuntimeError("engine and scheduler do not share one config authority")
         scheduler_config.enable_chunked_prefill = False
         llm.llm_engine._simllm_chunking_validation_bypass = True
+    if capacity_validation_bypass:
+        core = llm.llm_engine.engine_core.engine_core
+        if core.scheduler.has_requests():
+            raise RuntimeError("capacity validation bypass requires an empty scheduler")
+        model_config = llm.llm_engine.vllm_config.model_config
+        model_config.max_model_len = desired_max_model_len
+        core.scheduler.max_model_len = desired_max_model_len
+        core.scheduler.kv_cache_manager.max_model_len = desired_max_model_len
+        llm.llm_engine._simllm_capacity_validation_bypass = True
     worker = latest_worker()
     if worker is None:
         llm.llm_engine.engine_core.shutdown()
@@ -1254,6 +1273,17 @@ def _configuration_mismatches(
             expected_bypass,
             live.causal_tuple["construction_validation_bypass"],
             "$.construction-validation-bypass",
+        )
+    )
+    expected_capacity_bypass = int(engine["max_model_len"]) > (
+        int(engine["num_kv_blocks"])
+        * int(fixed["scheduler_block_size"])
+    )
+    mismatches.extend(
+        _diff(
+            expected_capacity_bypass,
+            live.causal_tuple["construction_capacity_validation_bypass"],
+            "$.construction-capacity-validation-bypass",
         )
     )
     return mismatches
