@@ -155,12 +155,12 @@ of 8, F3 is 4 of 4, F5 is 4 of 4 and F7 is 5 of 5. F4 is 0 of 3, F6 is 0 of
 original F3 failures to the oracle recording allocation order before the
 pinned engine freed each manager group in reverse. The corrected capture makes
 every F3 row exact and closes DEPLOY-18, withdrawing the phantom surrogate
-allocator defect. Cache-enabled F7 omits only FREE because VLLM-43 records
+allocator defect. Cache-enabled F7 omits only FREE because VLLM-47 records
 that the bridge cannot distinguish reclaimable cached blocks from discarded
 content; its 4, 4 and 6 FREE divergences remain visible as unscored
 observations. DEPLOY-19 owns only the genuine one-step-late finished identities
 in F4. DEPLOY-20 owns the remaining prefix decision-step and exact KV-accounting
-failures in F6, with VLLM-42 through VLLM-44 providing the missing native
+failures in F6, with VLLM-44, VLLM-46 and VLLM-47 providing the missing native
 observability. The corrected wall-time median is 77,114,203 ns for the
 surrogate versus 175,782,543 ns for the live vLLM loop, a ratio of 0.438690906
 against the frozen maximum of 0.01; DEPLOY-21 remains open. All 78 fatal guards
@@ -222,18 +222,18 @@ their breadth and silicon-precision scopes.
   same decision step as the pinned scheduler. The corrected record withdraws
   the former block-lifecycle attribution: every cache-enabled F7 row passes on
   the authoritative alphabet, while the bridge's 4, 4 and 6 FREE divergences
-  are unscored observations owned by VLLM-43. The genuine surrogate finding is
+  are unscored observations owned by VLLM-47. The genuine surrogate finding is
   that finished identities arrive one decision step late in all three F4
   cells, visible in both the normalized record and retained native comparison.
   Acceptance requires exact finish-step identity on all three cells without
   changing F1, F2, F3, F5 or the authoritative F7 rows. Full F4 closure also
-  requires VLLM-43 to make the cache-enabled FREE projection authoritative.
+  requires VLLM-47 to make the cache-enabled FREE projection authoritative.
 - DEPLOY-20 (Precision; P1; M): preserve native decision-step identity and
   identical KV accounting when records enter the shared pricing chain. Frozen
   F6 is honestly 0 of 3: all rows expose surrogate RESERVE and WRITE accounting
   absent from the live sidecar, while the prefix cell also labels its second
   priced row step 2 instead of step 1 and differs in FREE accounting. Keep the
-  clause exact. Use VLLM-42 through VLLM-44 to observe the native service,
+  clause exact. Use VLLM-44, VLLM-46 and VLLM-47 to observe the native service,
   content state and pre-decision reserve identity rather than dropping any
   compared field. Acceptance requires all three frozen F6 rows to match
   `StepResult`, time to first token, time per output token and KV accounting

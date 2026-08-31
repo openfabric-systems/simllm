@@ -142,7 +142,7 @@ def test_vllm40_publishes_the_complete_refutation():
     }
 
 
-def test_vllm40_registry_closure_and_report_are_literal():
+def test_vllm40_historical_result_and_current_registry_are_literal():
     result = _result()
     task_ledger = json.loads(TASK_LEDGER_PATH.read_text(encoding="utf-8"))
     module = MODULE_PATH.read_text(encoding="utf-8")
@@ -155,12 +155,14 @@ def test_vllm40_registry_closure_and_report_are_literal():
         "VLLM-41": "UNCHANGED_OPEN",
         "VLLM-42": "RESERVED_UNTOUCHED",
     }
-    assert {"VLLM-35", "VLLM-39", "VLLM-40"} <= set(task_ledger["closed"])
-    assert "VLLM-41" not in task_ledger["closed"]
+    assert {"VLLM-35", "VLLM-39", "VLLM-40", "VLLM-41"} <= set(
+        task_ledger["closed"]
+    )
     assert "- VLLM-35 " not in module
     assert "- VLLM-39 " not in module
     assert "- VLLM-40 " not in module
-    assert "- VLLM-41 " in module
+    assert "- VLLM-41 " not in module
+    assert "- VLLM-42 " in module
     assert report.startswith("# VLLM-40 clean load-delay qualification\n")
     assert "Frozen qualification status: **REFUTED**" in report
     assert "Monotonic-delay claim: **VALIDATED**" in report

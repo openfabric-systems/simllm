@@ -1600,7 +1600,7 @@ def _evaluate_cells(
             )
             free_observation = {
                 "attribution": (
-                    "VLLM-43: the bridge cannot distinguish reclaimable cached "
+                    "VLLM-47: the bridge cannot distinguish reclaimable cached "
                     "blocks from discarded content"
                 ),
                 "evidence_class": "recorded-unscored-observation",
@@ -2104,7 +2104,7 @@ def _scoring_correction() -> dict[str, Any]:
                 "finding_class": "MAJOR",
                 "correction": (
                     "exclude FREE only from cache-enabled F7 scoring because "
-                    "VLLM-43 records that the bridge cannot identify discarded "
+                    "VLLM-47 records that the bridge cannot identify discarded "
                     "content; retain every FREE divergence as an unscored "
                     "observation"
                 ),
@@ -2123,6 +2123,18 @@ def _scoring_correction() -> dict[str, Any]:
                 "correction": (
                     "retain the frozen complete-loop baseline choice, band, and "
                     "miss without rescoring"
+                ),
+            },
+            {
+                "id": "registration-renumbering",
+                "finding_class": "DISCLOSED",
+                "correction": (
+                    "renumber the registered residuals VLLM-42 to VLLM-46 and "
+                    "VLLM-43 to VLLM-47 at integration, because the "
+                    "queue-onset publication's frozen bytes on main already "
+                    "reserve VLLM-42 and VLLM-43; the tasks themselves, the "
+                    "frozen expectations, the amendment, and every scored "
+                    "verdict are unchanged"
                 ),
             },
         ],
@@ -2330,7 +2342,7 @@ def _render_results(
                 "the surrogate carries RESERVE and WRITE accounting absent from "
                 "the live sidecar. The cache-enabled row has those differences, "
                 "the existing step-index mismatch, and FREE-accounting divergence. "
-                "VLLM-42 through VLLM-44 own the missing native service, content "
+                "VLLM-44, VLLM-46 and VLLM-47 own the missing native service, content "
                 "state and pre-decision observations; none is dropped from F6."
             ),
         ]
@@ -2347,7 +2359,7 @@ def _render_results(
             "### Cache-enabled FREE observations",
             "",
             (
-                "These rows remain recorded but do not decide F7. VLLM-43 "
+                "These rows remain recorded but do not decide F7. VLLM-47 "
                 "documents that the bridge projects release as FREE without "
                 "observing whether cached content remains reclaimable."
             ),

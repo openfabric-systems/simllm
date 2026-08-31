@@ -227,7 +227,7 @@ def normalize_vllm_kv_events(
     Every output operation is tied to its source-row ordinal. Generated
     operation IDs supply stable projection identity but are not presented as
     native framework correlation identifiers. Reference-sensitive ledger
-    replay remains VLLM-43 work.
+    replay remains VLLM-47 work.
     """
 
     if not isinstance(geometry, VllmKvGeometry):
