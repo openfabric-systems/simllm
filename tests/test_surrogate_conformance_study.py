@@ -14,9 +14,9 @@ ROOT = Path(__file__).parents[1]
 STUDY = ROOT / "examples" / "surrogate_conformance_v1"
 RUNNER_PATH = STUDY / "run_study.py"
 RECORD_PATH = STUDY / "record.json"
-RECORD_SHA256 = "f6f0687eff604c7c664318dcd75810452649bec1816fb6f7b7dec1ffb5426a8b"
+RECORD_SHA256 = "42aa5c6cf723f11412a96f9d803f55ea4992072e86ce30611bcff013053ece22"
 RESULTS_CSV_SHA256 = (
-    "214d236e9af5b6a2210df0bfbd906a3e57f0329f34892159b218e13b6f01777f"
+    "71cf92ddf36fe25754e93436e76829d0b56e7c4f6b6fccebc342a541e1451ccf"
 )
 SUPERSEDED_RECORD_SHA256 = (
     "bfd9c185a9d4d87b1daa6244933a9aeaf57b298547a0a5c80c694418b6a9556c"
@@ -113,7 +113,7 @@ def test_published_verdict_keeps_evidence_classes_separate() -> None:
     }
     assert record["guard_tally"] == {"failed": 0, "passed": 78, "total": 78}
     assert record["wall_time"]["surrogate_to_live_ratio"] == pytest.approx(
-        0.4386909057289039
+        0.4207131706079807
     )
 
 

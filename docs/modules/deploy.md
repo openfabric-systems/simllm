@@ -161,9 +161,10 @@ content; its 4, 4 and 6 FREE divergences remain visible as unscored
 observations. DEPLOY-19 owns only the genuine one-step-late finished identities
 in F4. DEPLOY-20 owns the remaining prefix decision-step and exact KV-accounting
 failures in F6, with VLLM-44, VLLM-46 and VLLM-47 providing the missing native
-observability. The corrected wall-time median is 77,114,203 ns for the
-surrogate versus 175,782,543 ns for the live vLLM loop, a ratio of 0.438690906
-against the frozen maximum of 0.01; DEPLOY-21 remains open. All 78 fatal guards
+observability. The published wall-time median is 58,711,515 ns for the
+surrogate versus 139,552,358 ns for the live vLLM loop, a ratio of 0.420713171
+against the frozen maximum of 0.01; the superseded attempt measured
+0.438690906 and reached the same verdict, and DEPLOY-21 remains open. All 78 fatal guards
 were evaluated and passed, including a KV control that starts from a passing F3
 row and changes it to a failing row. The qualified estimator claim is limited
 to F1, F2, F3, F5 and F7.
@@ -240,10 +241,11 @@ their breadth and silicon-precision scopes.
   exactly through the identical lowerer and device runtime, with record, KV
   and pricing mutation controls still firing.
 - DEPLOY-21 (Precision; P1; M): reduce the framework-free surrogate's steady
-  loop cost from the corrected 77,114,203 ns median on the frozen 128-request
-  workload. The live vLLM median is 175,782,543 ns, so the corrected ratio is
-  0.438690906 rather than the frozen maximum 0.01. The first publication's
-  0.416430536 miss remains preserved and reaches the same verdict. Profile only
+  loop cost from the published 58,711,515 ns median on the frozen 128-request
+  workload. The live vLLM median is 139,552,358 ns, so the published ratio is
+  0.420713171 rather than the frozen maximum 0.01. The superseded attempts'
+  0.416430536 and 0.438690906 misses remain preserved and reach the same
+  verdict. Profile only
   the steady loop, keep construction and capture outside the timed region, and
   replace the identified Python hot paths without changing any decision, KV,
   timestamp or metric byte. Acceptance is a median surrogate-to-live ratio at
