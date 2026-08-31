@@ -151,13 +151,18 @@ def test_batching_gain_and_queue_wait_are_separate_and_preserved() -> None:
     )
 
 
-def test_registry_applies_clean_closure_and_keeps_vllm41_open() -> None:
+def test_registry_advances_after_the_historical_vllm39_result() -> None:
+    result = _result()
     module = (REPOSITORY_ROOT / "docs" / "modules" / "adapters-vllm.md").read_text(
         encoding="utf-8"
     )
 
+    assert result["task_effect"]["vllm_41"] == (
+        "identify the sub-sweep scheduler queue-wait onset"
+    )
     assert "- VLLM-35 (Completeness; P1; L):" not in module
     assert "- VLLM-39 (Precision; P1; M):" not in module
     assert "- VLLM-40 (Precision; P1; M):" not in module
-    assert "- VLLM-41 (Precision; P1; M):" in module
+    assert "- VLLM-41 (Precision; P1; M):" not in module
+    assert "- VLLM-42 (Precision; P1; M):" in module
     assert "it stays open until VLLM-40 permits the literal" not in module
