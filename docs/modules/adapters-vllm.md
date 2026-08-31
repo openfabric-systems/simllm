@@ -657,6 +657,21 @@ clean VLLM-40 repetition. VLLM-41 owns the distinct lower-load queue-onset
 residual; see
 [the imported-surface result](../../examples/pd_session_load_delay_v1/RESULTS.md).
 
+The clean VLLM-40 repetition subsequently validated increasing delay on all
+30 segments from 250 to 8,000 requests/s and closed VLLM-35, VLLM-39 and
+VLLM-40 without changing the frozen model. VLLM-41 then froze and ran 78
+lower-load cells from 50 to 250 requests/s. Its surface-and-arrival-only model
+predicted a central onset at 225 to 230 requests/s, with 220 to 225 also
+admitted by the measured-surface uncertainty. All six observed configurations
+instead share the earlier 210 to 220 requests/s first queue-dominated segment,
+after five non-queue-dominated segments. The run conserves 4,992 admissions,
+handoffs and terminals plus 19,968 decode tokens at zero TTFT residual. All 30
+held-out scheduler-wait bands hold, while only 14 of 30 separately scored
+batching-service bands hold. VLLM-41 closes on the common sub-250 onset;
+VLLM-42 owns the batching-service band residual. The validated 250 to 8,000
+requests/s direction was preserved and not rescored; see
+[the lower-load onset result](../../examples/pd_session_queue_onset_v1/RESULTS.md).
+
 The same live driver now accepts pool-specific content-addressed lookup
 bindings for CORE-53. The retained candidate study selected its exact decode
 row twice and surfaced candidate status without a calibration claim. Both
@@ -686,7 +701,7 @@ and preemption observers for deterministic simulated-worker capture; the
 unset scope retains the accepted full CPU-oracle plugin bytes. The supported
 vLLM v0.27.1 pin has no `max_num_partial_prefills` or
 `max_long_partial_prefills` scheduler fields, so neither appears in adapter
-configuration or causal provenance. VLLM-42 through VLLM-45 own the facts that
+configuration or causal provenance. VLLM-44 through VLLM-47 own the facts that
 the sidecar does not yet identify, and VLLM-11 stays open on their precision
 join rather than treating this projection as complete lifecycle evidence.
 
@@ -700,7 +715,7 @@ this frozen comparison, but the framework-free surrogate is not certified:
 14 family rows miss, including block-lifetime identity and prefix-cache token
 intervals. The bridge's pre-decision `RESERVE` limitation remains explicitly
 unscored under the governing amendment and remains VLLM-44 work; VLLM-11 and
-VLLM-42 through VLLM-45 neither close nor widen from this result. Certification
+VLLM-44 through VLLM-47 neither close nor widen from this result. Certification
 is scoped to this scheduler pin and must be re-earned after every pin bump.
 
 ## Open tasks
@@ -728,7 +743,7 @@ is scoped to this scheduler pin and must be re-earned after every pin bump.
   their attributed residuals rather than aggregate error alone.
 - VLLM-11 (Precision; P1; L) (remaining after the ordered normalization
   slice): join the enriched lifecycle stream into the CORE-3 ledger and the
-  live metric chain after VLLM-42, VLLM-43 and VLLM-44 provide per-layer
+  live metric chain after VLLM-46, VLLM-47 and VLLM-44 provide per-layer
   service bytes, native ownership state and native capacity correlations. The
   landed slice qualifies one uniform manager and projects aggregate pool
   geometry, token intervals, exact block and request IDs, causes available in
@@ -759,36 +774,17 @@ is scoped to this scheduler pin and must be re-earned after every pin bump.
   matrix. Hold out at least one model and group size; require modeled median
   and p95 call cost within a pre-registered relative or additive band, then
   verify the signed TTFT/TPOT effect and the exact zero-cost bypass baseline.
-- VLLM-41 (Precision; P1; M): identify the scheduler queue-wait onset below
-  the VLLM-39 sweep. Freeze a lower offered-load ladder before running it,
-  retain the imported surface and its no-calibration status unchanged, and
-  report batching service per token separately from arrival-to-prefill plus
-  handoff-to-decode admission wait. Hold out at least one sub-250 load and one
-  pool ratio, predict the first queue-dominated segment with quantitative
-  bands and refuse to fit from the observed curve. The purpose is to replace
-  the refuted 1,056.6 and 2,113.2 requests/s knee predictions, not to reopen
-  the validated monotonic direction over 250 to 8,000 requests/s.
-- VLLM-42 (Precision; P1; L): replace the aggregate metadata-only KV byte
-  shape with native per-layer reads and writes on the metric-live path. The
-  current bridge identifies the whole-pool block size as
-  `2 * layers * kv_heads * head_size * dtype_bytes * block_tokens` and emits
-  zero service bytes. Observe each model-runner layer's exact request, block
-  and token interval, then emit `READ` and `WRITE` with the layer index and
-  exact bytes. Acceptance requires the per-layer sum to equal the pinned
-  aggregate shape exactly, exact cardinality against untouched runner calls,
-  a signed KV-service effect through `StepResult`, time to first token (TTFT)
-  or time per output token (TPOT), and byte-identical metadata-only and
-  oracle-disabled baselines.
-- VLLM-43 (Precision; P1; M): replace the bridge's forced prefix `TOUCH` and
-  release-then-`FREE` projection with native ownership and content state. The
-  current sidecar omits block reference counts and hash residency, so it
-  cannot distinguish `TOUCH` from `RETAIN`, or a reclaimable cached block from
-  content that is discarded. Observe the owning pool object's reference count
-  and hash state before and after each action. Acceptance requires exact
-  reference counts, exact `TOUCH` versus `RETAIN`, `FREE` only for discarded
-  content, and successful `KvLifecycleLedger` consumption for one exclusive
-  prefix, one shared live prefix and one released cached prefix, while the
-  current projection and oracle-disabled artifacts remain byte-identical.
+- VLLM-42 (Precision; P1; M): replace the batching-service component-band
+  model refuted by the VLLM-41 lower-load study. All 30 scheduler-wait bands
+  held, but only 14 of 30 separately scored batching-service bands held. The
+  misses are load 240 for both prompts in the 1:1 and 1:2 ratios, plus loads
+  225 through 250 for both prompts in the held-out 2:1 ratio. Freeze a new
+  service-only predictor before collecting successor evidence, derive it from
+  independently measured batch-service and arrival inputs without fitting the
+  VLLM-41 curve, hold out at least one batch-transition load and one pool
+  ratio, and publish the same separate arrival-to-prefill, handoff-to-decode
+  and batching-service fields. Do not reopen the common 210 to 220 requests/s
+  onset or the validated monotonic direction over 250 to 8,000 requests/s.
 - VLLM-44 (Precision; P1; M): add framework-native correlation and capacity
   decision identity beyond the sidecar's row ordinal. The first slice gives
   each projected operation a deterministic source-row ID, leaves
@@ -800,6 +796,37 @@ is scoped to this scheduler pin and must be re-earned after every pin bump.
   join for successful and refused attempts, including the exact preemption
   consequence, without changing the first-slice or oracle-disabled bytes.
 
+- VLLM-46 (Precision; P1; L): replace the aggregate metadata-only KV byte
+  shape with native per-layer reads and writes on the metric-live path. The
+  current bridge identifies the whole-pool block size as
+  `2 * layers * kv_heads * head_size * dtype_bytes * block_tokens` and emits
+  zero service bytes. Observe each model-runner layer's exact request, block
+  and token interval, then emit `READ` and `WRITE` with the layer index and
+  exact bytes. Acceptance requires the per-layer sum to equal the pinned
+  aggregate shape exactly, exact cardinality against untouched runner calls,
+  a signed KV-service effect through `StepResult`, time to first token (TTFT)
+  or time per output token (TPOT), and byte-identical metadata-only and
+  oracle-disabled baselines.
+ This task was numbered VLLM-42 on the surrogate-loop branch before
+  integration; it is renumbered here because the queue-onset publication's
+  frozen bytes on main already reserve VLLM-42 for the batching-service
+  residual. The surrogate-loop publication cites the new number in a
+  disclosed registration correction.
+- VLLM-47 (Precision; P1; M): replace the bridge's forced prefix `TOUCH` and
+  release-then-`FREE` projection with native ownership and content state. The
+  current sidecar omits block reference counts and hash residency, so it
+  cannot distinguish `TOUCH` from `RETAIN`, or a reclaimable cached block from
+  content that is discarded. Observe the owning pool object's reference count
+  and hash state before and after each action. Acceptance requires exact
+  reference counts, exact `TOUCH` versus `RETAIN`, `FREE` only for discarded
+  content, and successful `KvLifecycleLedger` consumption for one exclusive
+  prefix, one shared live prefix and one released cached prefix, while the
+  current projection and oracle-disabled artifacts remain byte-identical.
+ This task was numbered VLLM-43 on the surrogate-loop branch before
+  integration. VLLM-43 itself stays permanently reserved and unassigned: the
+  queue-onset freeze pre-registered it for differing onset segments and the
+  run resolved it unused, so its frozen bytes keep the name and no new task
+  may take it.
 ### Completeness
 
 - VLLM-45 (Completeness; P2; L): normalize stock vLLM offload connector swap
