@@ -18,6 +18,36 @@ widths. EP 8 changes from `0.02590463307406155` to
 from REFUTED to PASS. EP 32 and EP 128 remain REFUTED. EP 256 remains an
 UNSCORED DIAGNOSTIC under a corrected component-wise rule.
 
+## Disclosed priors, and why the EP 8 agreement is not corroboration
+
+Two disclosures the reader needs before weighing the corrected numbers.
+Both were recorded by the integrator before this run reported, so neither is
+retrofitted to its outcome.
+
+First, the correction brief gave the worker the answer. It stated the
+`42.816396866840726` factor, the superseded `0.02590463307406155` ratio, the
+merged TRAF-76 calibration study's `2.131828400` ms packet value and its
+`1.109143050` ratio, and said explicitly that EP 8 should flip from REFUTED to
+PASS. The corrected EP 8 result matching those figures is therefore consistent
+with a disclosed target, not an independent prediction this run generated.
+
+Second, the EP 8 agreement is expected by construction. Rank 8 is one of the
+three ranks (2, 4 and 8) the aggregate floor authority was fitted on, so this
+arm and the calibration study consume the same measured rank-8 floor.
+Reproducing `1.1091430503889075` against that study's `1.109143050` confirms
+the binding consumes the authority correctly, which is a plumbing check. It is
+not independent physical corroboration and must not be cited as agreement
+between two independent measurements. The widths where the authority must
+extrapolate beyond its measured ranks, EP 32, EP 128 and EP 256, carry
+`transferred-at-use` acknowledgement precisely because they are the
+uncorroborated ones.
+
+The prediction that did not survive the corrected numbers was the integrator's,
+not the study's: that all three Family D refutations were artifacts of the
+omitted floor term, and that our arm would exceed the external arm at every
+width. Only EP 8 flipped. EP 32 and EP 128 remain refuted with the floor term
+included, so their refutations are findings rather than artifacts.
+
 ## What ran
 
 Implementation commit `e4626a9` binds the landed
