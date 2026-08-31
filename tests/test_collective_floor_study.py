@@ -24,8 +24,8 @@ RECORD_PATH = STUDY / "record.json"
 CSV_PATH = STUDY / "results.csv"
 RESULTS_PATH = STUDY / "RESULTS.md"
 RUNNER = STUDY / "run_study.py"
-RECORD_SHA256 = "9a65bfb520d6cedac8710b36b556ae46277c6cc2a62a5a93c60646fb7dfed28b"
-CSV_SHA256 = "bbc96f433eb107d501a986551bf8c4a3573913c96792a6a5bdc045b20e4e521e"
+RECORD_SHA256 = "3e41e6ec80e67eed851ca68884da0244ac8f79c338bef06272d8ccb97113026f"
+CSV_SHA256 = "9dc7e5abfb955e6fc731e86fd51c9cc44e24d8b921506e76063f0e9ca723d3e5"
 
 
 @pytest.fixture(scope="module")
@@ -45,6 +45,11 @@ def test_first_attempt_void_opens_the_published_chronology() -> None:
     assert "Attempt 0001 is void" in chronology
     assert "stopped before regime selection,\nfitting or implementation" in chronology
     assert "fatal axis guard worked as designed" in chronology
+    assert "No attempt-0001 directory exists by construction" in chronology
+    assert "worker report is its only evidence" in chronology
+    assert "Attempt 0002 is superseded" in chronology
+    assert "Attempt 0003 is void" in chronology
+    assert "Attempt 0004 is the corrected publication" in chronology
 
 
 def test_corrected_axis_and_three_sdk_citations_are_locked(config: dict) -> None:
@@ -130,9 +135,9 @@ def test_family_h_refutation_and_error_summaries_are_locked(record: dict) -> Non
     assert family["summary"] == {
         "after_median_relative_error": 0.03267105960264901,
         "after_p95_relative_error_nearest_rank": 0.1979721778791334,
-        "before_median_relative_error": 0.8811137755102041,
-        "before_p95_relative_error_nearest_rank": 0.9997792434529583,
-        "median_improvement_factor": 26.96924391882173,
+        "before_median_relative_error": 0.9161607875307629,
+        "before_p95_relative_error_nearest_rank": 0.9995792426367461,
+        "median_improvement_factor": 28.041967376426307,
     }
     failures = [row["cell_id"] for row in family["rows"] if not row["passed"]]
     assert len(failures) == 12
@@ -145,30 +150,69 @@ def test_family_h_refutation_and_error_summaries_are_locked(record: dict) -> Non
 def test_family_b_is_the_generated_byte_exact_bypass(record: dict) -> None:
     family = record["families"]["B"]
     assert family["status"] == "PASS"
-    assert family["feature_absent_sha256"] == family["explicit_off_sha256"]
-    assert family["feature_absent_sha256"] == (
-        "ef294263694dfc1a0475f32fd129416bde7933e4cc86cc6d0083959b8be9e0ab"
+    assert family["golden_generating_commit"] == (
+        "06fc199783e364c2eaa6a7c917a1f9f2c84d79ac"
+    )
+    assert family["golden_file_sha256"] == (
+        "1303b6bffa6f345dad6b374e1507314fe18c9b895cc03c85f12aa16e76a2616b"
+    )
+    assert family["golden_record_sha256"] == family[
+        "post_wave_default_off_sha256"
+    ]
+    assert family["golden_record_sha256"] == (
+        "ac952c0c0f3e9f427fb892711d716c1f93d826a86faabca70221b7b767f03f2d"
     )
     assert family["first_divergent_field"] is None
-    assert family["observed"]["completion_order"] == [0, 1]
-    assert len(family["observed"]["backend_invocation_order"]) == 4
-    assert family["observed"]["random_state_before"] == family["observed"][
-        "random_state_after"
+    assert family["checked_fields"] == [
+        "phase and step timestamps",
+        "local and fabric segment tuples",
+        "application and wire byte counts",
+        "completion order",
+        "backend invocation order",
+        "random-generator state",
     ]
+    plans = family["observed"]["plans"]
+    assert [plan["application_bytes"]["total_directed_bytes"] for plan in plans] == [
+        1_572_864,
+        24_576,
+    ]
+    assert [plan["application_bytes"]["local_directed_bytes"] for plan in plans] == [
+        786_432,
+        12_288,
+    ]
+    assert [plan["application_bytes"]["fabric_directed_bytes"] for plan in plans] == [
+        786_432,
+        12_288,
+    ]
+    assert family["observed"]["wire_bytes"]["fabric_goal_send_bytes"] == 798_720
+    assert family["observed"]["completion_order"] == [0, 1]
+    assert len(family["observed"]["backend_invocation_order"]) == 24
+    rng = family["observed"]["random_generator_state"]
+    assert rng["before"] == rng["after"]
 
 
-def test_family_d8_passes_and_mixed_widths_remain_transfers(record: dict) -> None:
+def test_family_d8_refutes_at_the_matched_coordinate(record: dict) -> None:
     family = record["families"]["D8"]
-    assert family["status"] == "PASS"
+    assert family["status"] == "REFUTED"
+    assert family["passed"] == 0
     assert family["before_quotient"] == 0.02590463307406155
-    assert family["calibrated_packet_ms"] == 1.824983875
-    assert family["calibrated_quotient"] == 0.9494986472776462
-    assert 0.90 <= family["calibrated_quotient"] <= 1.10
+    assert family["physical_endpoint_query_bytes"] == 172_032
+    assert family["physical_endpoint_packet_ms"] == 2.06052353
+    assert family["physical_endpoint_quotient"] == 1.072044707473791
+    assert family["matched_operation_buffer_elements"] == 98_304
+    assert family["matched_operation_buffer_bytes"] == 196_608
+    assert family["calibrated_packet_ms"] == 2.1318284
+    assert family["calibrated_quotient"] == 1.1091430503889075
+    assert family["attempt_0002_wrong_query_bytes"] == 344_064
+    assert family["calibrated_quotient"] > family["band"][1]
     widths = {row["expert_parallel"]: row for row in family["widths"]}
     assert widths[32]["calibrated_dispatch_combine_ms"] == 8.64087354
     assert widths[128]["calibrated_dispatch_combine_ms"] == 31.16311354
     for width in (32, 128):
         assert not widths[width]["scored"]
+        assert widths[width]["execution_mode"] == (
+            "parallel-independent-semantic-halves"
+        )
         assert all(
             phase["evidence_class"] == "transferred-at-use"
             for phase in widths[width]["phases"]
@@ -195,14 +239,14 @@ def test_family_m_moves_ttft_and_tpot_by_the_published_arithmetic(
 def test_family_w_uses_the_slower_evaluation_and_passes(record: dict) -> None:
     family = record["families"]["W"]
     assert family["status"] == "PASS"
-    assert family["wall_time_seconds"] == 592.4841521512717
+    assert family["wall_time_seconds"] == 358.23272075131536
     assert family["wall_time_seconds"] <= family["bound_seconds"] == 600.0
 
 
 def test_families_remain_separate_and_are_never_summed(record: dict) -> None:
     assert record["family_tallies"] == {
         "B": {"denominator": 1, "passed": 1, "status": "PASS"},
-        "D8": {"denominator": 1, "passed": 1, "status": "PASS"},
+        "D8": {"denominator": 1, "passed": 0, "status": "REFUTED"},
         "H": {"denominator": 63, "passed": 51, "status": "REFUTED"},
         "M": {"denominator": 1, "passed": 1, "status": "PASS"},
         "W": {"denominator": 1, "passed": 1, "status": "PASS"},
@@ -224,6 +268,9 @@ def test_record_csv_and_report_digests_are_current(record: dict) -> None:
     assert "TRAF-77 is untouched" in report
     assert "No task closes" in report
     assert record["chronology"]["attempt_0001"]["status"] == "VOID"
+    assert record["chronology"]["attempt_0002"]["status"] == "SUPERSEDED"
+    assert record["chronology"]["attempt_0003"]["status"] == "VOID"
+    assert record["chronology"]["attempt_0004"]["status"] == "INTERPRETABLE"
 
 
 def test_runner_checks_the_committed_artifacts_without_pythonpath() -> None:

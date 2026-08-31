@@ -5,39 +5,63 @@
 Attempt 0001 is void. The first freeze pinned the external table coordinate to
 bytes, while the pinned software development kit and the table itself prove
 that coordinate is an element count. The run stopped before regime selection,
-fitting or implementation. The fatal axis guard worked as designed, and no
-result from that attempt contributes here.
+fitting or implementation. The fatal axis guard worked as designed.
 
-The second freeze corrected only the axis. The corrected configuration converts
-elements to true bytes before fitting, freezes all six boundary sets from the
-63 training cells, and retains every original fatal guard, scored family and
-band. Attempt 0002 ran that configuration twice in fresh processes. The two
-records were byte-identical after excluding only the field named
-`wall_time_seconds`.
+No attempt-0001 directory exists by construction. The worker stopped before
+creating any artifact, so the worker report is its only evidence.
+
+The second freeze corrected the source axis. Attempt 0002 is superseded because
+its publication made four mistakes: D8 doubled the physical endpoint byte count
+instead of querying the matched operation-buffer coordinate, Family B compared
+two post-wave all-remote paths instead of the pre-wave mixed-locality path,
+Family H mislabeled a bare physical floor as the current ring implementation,
+and the production consumer accepted transferred-at-use timing without an
+explicit acknowledgement.
+
+The third freeze, commit `6df3688`, pins the D8 coordinate mapping without
+changing its `[0.90, 1.10]` band. The MiniMax arm passes
+`tokens_per_rank * hidden * width` elements to the NCCL table. At expert
+parallel width 8 that is 98,304 half elements, or 196,608 operation-buffer
+bytes per phase. The 172,032-byte physical endpoint reading remains a useful
+unscored diagnostic.
+
+Attempt 0003 is void. Its second fresh evaluation took 657.147230 seconds,
+above the unchanged 600-second Family W ceiling, while its first took
+564.127896 seconds. W therefore failed and FG-6 also differed. The corrected
+H, B, D8 and M findings from that attempt cannot support publication.
+
+Attempt 0004 is the corrected publication. It uses all three freezes, the
+generated pre-wave golden, the consumer transfer fence and parallel execution
+of the two independent native semantic halves. Both fresh evaluations are
+deterministically identical after excluding only `wall_time_seconds`.
 
 ## Outcome
 
-What ran: attempt 0002 fit six half-precision H200 NCCL curves on the corrected
-byte axis, exercised the live aggregate-floor seam and exact bypass, ran all
-five frozen families, and repeated the complete evaluation in a fresh process.
+What ran: attempt 0004 fit six half-precision H200 NCCL curves on the corrected
+byte axis, exercised the live aggregate-floor seam and the pre-wave bypass
+golden, ran all five frozen families, and repeated the complete evaluation in
+a fresh process.
 
-What came out: the run is interpretable because all seven fatal guards held,
-but Family H refuted the requested precision with 51 of 63 held-out cells
-inside the 10 percent band. The calibrated median error is 3.2671 percent,
-down from 88.1114 percent for bare serialization, while the calibrated p95 is
-19.7972 percent and therefore fails the unchanged band. Families B, D8, M and
-W pass.
+What came out: the run is interpretable because all seven fatal guards held.
+Family H refuted the requested precision with 51 of 63 held-out cells inside
+the 10 percent band. Its calibrated median error is 3.267106 percent, down from
+91.616079 percent for the actual current ring path, while calibrated p95 is
+19.797218 percent. Family D8 also refuted its unchanged band: the matched
+196,608-byte query costs 2.131828400 ms, or 1.109143050 of the external arm.
+Families B, M and W pass.
 
 What it changes: TRAF-76 narrows from an absent aggregate collective cost to a
-selectable, source-identified aggregate authority with an exact off path. It
-remains open on the 12-cell held-out residual and on the packet-mechanism work
+selectable, source-identified aggregate authority with an exact pre-wave off
+path and a consumer fence on transferred timing. It remains open on the
+12-cell held-out residual, the refuted D8 coordinate, and packet-mechanism work
 for credits, geometry, switch behavior, arbitration and nonzero-fan-in
 integration. No task closes and no milestone moves to complete.
 
 What it does not change: TRAF-77 is untouched; the EP-32 and EP-128 mixed-width
 rows remain unscored transfers with unchanged fabric service; no A100 packet
 candidate enters an H200 calibrated value; and the default disabled path keeps
-the accepted timestamps, bytes, ordering and random state exactly.
+the pre-wave timestamps, application and wire bytes, ordering and random state
+exactly.
 
 ## Corrected axis and source identity
 
@@ -58,6 +82,13 @@ At an equal physical size of 512 bytes, the half query resolves source element
 0.00519 ms. They are distinct measured cells. The probe's section-4 half
 intercepts remain zero-size floors, but its slopes and bandwidths were
 element-axis artifacts and are not used here.
+
+[expectations_v3.md](expectations_v3.md) pins a separate coordinate mapping for
+D8. The scored coordinate is the MiniMax operation buffer, not the bytes sent
+by one physical endpoint. Its arithmetic is `12 * 4096 * 2 = 98,304` half
+elements and `98,304 * 2 = 196,608` bytes per operation per phase. The
+172,032-byte physical endpoint coordinate and the incorrect attempt-0002
+344,064-byte query are not scored.
 
 The source is NVIDIA AIConfigurator 0.11.0, `h200_sxm`, NCCL database 2.26.2,
 row version 2.29.2, artifact
@@ -103,16 +134,17 @@ lists are in [record.json](record.json).
 |---|---|---|
 | FG-1, no invented terms | PASS | The authority contains only source identity, frozen boundaries, fitted floors, fitted byte slopes and derived bandwidth; the equal-byte axis guard also passed. |
 | FG-2, no double counting | PASS | Constructed semantic-base, registration, host-launch and second-NVLink-rate selections were rejected; the active projection carried zero duplicate charge. |
-| FG-3, evidence classes | PASS | Exact-domain use was calibrated, while operation, dtype, rank and range transfers all downgraded with reasons. |
-| FG-4, exact bypass | PASS | The generated feature-absent and explicit-off records had the same `ef294263694dfc1a0475f32fd129416bde7933e4cc86cc6d0083959b8be9e0ab` digest. |
+| FG-3, evidence classes | PASS | Exact-domain use was calibrated, while operation, dtype, rank and range transfers all downgraded with reasons. The consumer refused a transfer by default and stamped the explicitly acknowledged outcome. |
+| FG-4, exact bypass | PASS | The pre-wave golden and post-wave default-off records had the same `ac952c0c0f3e9f427fb892711d716c1f93d826a86faabca70221b7b767f03f2d` digest. |
 | FG-5, A100 fence | PASS | No geometry, credit, link, buffer, arbitration or A100 candidate field appears in the calibration input surface. |
-| FG-6, determinism | PASS | Two fresh-process deterministic records both hashed to `d85e56ee7de9a3622c38d6c1ce0a3789375308e7121afebc40d1092719e06ee9`. |
-| FG-7, chronology | PASS | Configuration commit `fdffaec` precedes implementation commit `a983c8c`; the fit module is absent before the configuration and present at implementation. |
+| FG-6, determinism | PASS | Two fresh-process deterministic records both hashed to `0898dba617af210034deccc34c2edf18ea845897edea20d4a763af88b5df970e`. |
+| FG-7, chronology | PASS | Configuration commit `fdffaec` precedes implementation commit `a983c8c`, and coordinate freeze commit `6df3688` precedes repair commit `b3913e0`. |
 
-No guard was skipped. The bypass comparison executed four backend calls over
-two steps, inspected four GOAL and four completion artifacts, and conserved
-532,480 application send bytes. Its completion order, backend order, segment
-tuples and random-generator state were identical.
+No guard was skipped. The bypass comparison executed 24 backend calls over two
+steps and inspected a scenario containing both intra-node NVLink segments and
+fabric segments. Its completion order, backend order, phase and step
+timestamps, local and fabric segment tuples, application and wire bytes, and
+random-generator state were identical to the pre-wave golden.
 
 ## Family H: held-out reproduction
 
@@ -129,11 +161,14 @@ Family H is refuted: 51 of 63 cells pass, not 63 of 63.
 
 | Error view over the same 63 cells | Median | Nearest-rank p95 |
 |---|---:|---:|
-| Bare 450 GB/s serialization | 88.1114% | 99.9779% |
+| Actual current ring path | 91.6161% | 99.9579% |
 | Corrected aggregate calibration | 3.2671% | 19.7972% |
 
-The median improves by 26.9692 times, exceeding the frozen order-of-magnitude
-direction, but 12 individual cells still exceed 10 percent. The largest miss
+The before column prices the current implementation as payload divided by
+world-size chunks over `world - 1` rounds for each semantic half. It is not a
+bare physical floor. The median improves by 28.0420 times, exceeding the frozen
+order-of-magnitude direction, but 12 individual cells still exceed 10 percent.
+The largest miss
 is all-gather rank 8 at 65,536 bytes: 21.015954 us modeled against 14.820000 us
 measured, a 41.8081 percent error in the first regime. Curve tallies are 9/10,
 8/10 and 6/10 for all-gather ranks 2, 4 and 8; and 11/11, 9/11 and 8/11 for
@@ -146,9 +181,20 @@ Physical sanity before the score: a disabled timing feature has a zero drift
 floor and a zero drift ceiling. Any nonzero timestamp, byte, order or random
 state difference is a defect.
 
-Family B passes. The feature-absent and explicit-off records are byte-identical
-across every frozen field and generated artifact. Both calibrated-outcome
-lists remain empty.
+Family B passes. The golden was generated by executing pre-wave commit
+`06fc199783e364c2eaa6a7c917a1f9f2c84d79ac` over a two-step scenario with both
+intra-node NVLink segments and fabric segments. The tracked golden file hashes
+to `1303b6bffa6f345dad6b374e1507314fe18c9b895cc03c85f12aa16e76a2616b`.
+Its canonical record and the post-wave default-off record both hash to
+`ac952c0c0f3e9f427fb892711d716c1f93d826a86faabca70221b7b767f03f2d`.
+
+The first step carries 1,572,864 application bytes, split equally into 786,432
+local and 786,432 fabric bytes. The second carries 24,576 application bytes,
+split equally into 12,288 local and 12,288 fabric bytes. The GOAL files carry
+798,720 fabric wire send bytes across 24 backend invocations. Phase and step
+timestamps, local and fabric segment tuples, application and wire byte counts,
+completion order `[0, 1]`, backend invocation order and random-generator state
+are byte-identical. There is no first divergent field.
 
 ## Family D8: zero-fan-in repricing
 
@@ -158,10 +204,18 @@ layers therefore cannot beat 0.049698 ms; the accepted current path is
 0.049790 ms. The source exposes no finite algorithm progress bound, so the
 upper completion bound is unbounded.
 
-Family D8 passes. The calibrated aggregate path prices 1.824983875 ms against
-the fixed 1.92205 ms external arm, a quotient of 0.949498647 inside
-[0.90, 1.10]. The corrected query uses 172,032 source elements, hence 344,064
-true half bytes. The old quotient remains 0.025904633.
+Family D8 refutes the unchanged `[0.90, 1.10]` band. The two readings are:
+
+| Coordinate interpretation | Query bytes per phase | Calibrated dispatch plus combine | Quotient to 1.922050 ms | Scored |
+|---|---:|---:|---:|---|
+| Physical per-endpoint bytes | 172,032 | 2.060523530 ms | 1.072044707 | No |
+| Matched operation-buffer coordinate | 196,608 | 2.131828400 ms | 1.109143050 | Yes, refuted |
+
+The matched query follows the frozen MiniMax call coordinate: 98,304 half
+elements times two bytes per element. Attempt 0002 instead doubled the already
+physical 172,032-byte count and queried 344,064 bytes. That mistake produced
+the unearned 1.824983875 ms and 0.949498647 pass. The original current-path
+quotient remains 0.025904633.
 
 The unscored mixed-width publications keep their native fabric service
 unchanged. EP 32 moves from 6.997536 to 8.64087354 ms, with 53.8272 us fabric
@@ -191,13 +245,21 @@ ps, equal to the TTFT delta. Each of the two decode steps adds exactly
 731,433,664 ps, so their mean is the observed TPOT delta. The projection
 carries zero semantic base, zero registration and zero host launch floor.
 
+The production consumer refuses any `transferred-at-use` estimate by default
+with `CollectiveFloorTransferError`, before publishing an outcome into the
+metric chain. A deliberate run must set
+`acknowledge_collective_floor_transfer=True`; every accepted transferred
+outcome then stamps `transferred_at_use_acknowledged=True`. FG-3 and the unit
+tests exercise both the refusal and acknowledgement paths.
+
 ## Family W: wall time
 
 Physical sanity before the score: elapsed evaluation time has a zero-second
 floor and the frozen 600-second ceiling.
 
-Family W passes at 592.484152 seconds for the slower fresh-process evaluation,
-7.515848 seconds below the ceiling. Wall time is excluded by name from the
+Family W passes at 358.232721 seconds for the slower fresh-process evaluation,
+241.767279 seconds below the ceiling. The first evaluation took 355.702865
+seconds. Wall time is excluded by name from the
 determinism comparison and is never added to another evidence denominator.
 
 ## Artifacts and reproduction
@@ -206,13 +268,18 @@ The portable tracked artifacts are:
 
 - [study_config.json](study_config.json), SHA-256
   `83de9c82dea918d09e9bb474529f33b146b3a14a6f010b8d85ea1cfa83b35f57`;
+- [pre_wave_bypass_golden.json](pre_wave_bypass_golden.json), generated by
+  commit `06fc199783e364c2eaa6a7c917a1f9f2c84d79ac`, SHA-256
+  `1303b6bffa6f345dad6b374e1507314fe18c9b895cc03c85f12aa16e76a2616b`;
 - [record.json](record.json), SHA-256
-  `9a65bfb520d6cedac8710b36b556ae46277c6cc2a62a5a93c60646fb7dfed28b`;
+  `3e41e6ec80e67eed851ca68884da0244ac8f79c338bef06272d8ccb97113026f`;
 - [results.csv](results.csv), SHA-256
-  `bbc96f433eb107d501a986551bf8c4a3573913c96792a6a5bdc045b20e4e521e`.
+  `9dc7e5abfb955e6fc731e86fd51c9cc44e24d8b921506e76063f0e9ca723d3e5`.
 
-Run artifacts remain under append-only `attempt-0002`; attempt 0001 remains
-the recorded void. Reproduce into a new attempt directory with:
+Bulk artifacts remain append-only. Attempt 0002 is the superseded publication,
+attempt 0003 is the retained void run, and attempt 0004 is the corrected
+publication. There is no attempt-0001 directory by construction. Reproduce
+into a new attempt directory with:
 
 ```bash
 python examples/collective_floor_calibration_v1/run_study.py \
