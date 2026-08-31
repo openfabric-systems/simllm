@@ -5,9 +5,11 @@ peer transfer into three independently parameterized services: TX, switch and
 RX. This note records the merged model, its exact analytic bypass, the frozen
 A100 case-to-parameter identification map and the evidence class of every
 current claim. It also records the physical credit ownership and the declared
-arbitration alternatives that TRAF-73 measures. Public architecture background
-does not promote a candidate or substitute for a run on this repository's
-NV4 node.
+arbitration alternatives that TRAF-73 measures. The public-document mechanism
+and the parameter-by-parameter correction boundary are established in
+[NVLink mechanism reverse-engineered from public documents](nvlink-mechanism-reverse-engineering.md).
+Public architecture evidence does not promote an undocumented numeric
+candidate or substitute for a run on this repository's NV4 node.
 
 ## Model and evidence at a glance
 
@@ -126,20 +128,26 @@ observation from the void hardware capture.
 
 ### Link and virtual-channel credits
 
-The physical ownership is per link and per link-layer virtual channel. A
-receiver hard allocates buffers to each such domain, and the transmitter on
-that link tracks only those credits. One sender cannot drain another sender's
-credits. The model carries one implicit virtual channel and applies the
-unchanged candidate of 256 credit slots, each covering one 272-byte maximum
-wire packet, separately to every physical link in a bonded ordered pair.
-Packet visits on one link select slots modulo 256, so reuse on a different
-link does not consume that link's pool.
+Public documents confirm link flow control and multiple virtual channels, but
+they do not publish the A100 virtual-channel count, credit quantum, pool depth,
+or return encoding. A public NVIDIA switch embodiment uses independent
+destination-per-virtual-channel credits and makes capacity returnable when the
+destination buffer frees. It does not identify the A100 link-credit numbers.
+
+The model carries one implicit virtual channel and applies the unchanged
+candidate of 256 credit slots, each covering one 272-byte maximum-packet
+surrogate, separately to every physical link in a bonded ordered pair. Packet
+visits on one link select slots modulo 256, so reuse on a different link does
+not consume that link's pool. The 272-byte surrogate represents one 17-flit
+`16 + 256` case. The documented protocol permits one-to-eighteen 16-byte flits
+and optional control flits, so the surrogate is not a universal packet or
+credit unit.
 
 The v1 abstraction makes a slot reusable at `tx_finished_at_ps + 200,000 ps`.
 It does not create a credit packet, wait on the modeled RX finish or expose a
-separate reverse-link serialization. The blue return path in Figure 1 names
-the causal ownership without claiming a more detailed protocol than the code
-implements.
+separate reverse-link serialization. Public switch evidence instead ties
+returnable capacity to receiver-buffer release. TRAF-80 owns that structural
+alignment; the exact link return latency and transport remain undocumented.
 
 These values and the one-modeled-virtual-channel scope are not hardware
 measurements. With four links, the declared aggregate window is 278,528 wire
@@ -157,11 +165,14 @@ the crossbar output port is an additional contended service.
 
 The declared default candidate is release-aware round robin because independent
 per-link credits feed a shared downstream service and round-robin or dual
-round-robin scheduling is a physically plausible crossbar mechanism. Static
-interleave remains the deterministic fixed-cycle alternative. Greedy capture
-is the unfair work-conserving alternative in which the first full-rate input
-wins whenever it is ready. All three policies are selectable. Their evidence
-classes are declared candidates, not measurements.
+round-robin scheduling is a physically plausible crossbar mechanism. NVIDIA
+patent disclosures include round-robin and least-recently-used arbiters, but
+they do not bind one algorithm to the direct A100 receiver or a named NVSwitch
+generation. Static interleave remains the deterministic fixed-cycle
+alternative. Greedy capture is the unfair work-conserving alternative in which
+the first full-rate input wins whenever it is ready. All three policies are
+selectable. Their product-specific evidence classes remain declared
+candidates, not measurements.
 
 The frozen simulation matrix passes all 15 policy and degree instances with
 all 105 fatal guards intact. At physical degree 3, release-aware round robin
@@ -170,14 +181,13 @@ predicts 60.000 GB/s per source with unused receiver service; greedy capture
 predicts 99.760, 53.621 and 53.621 GB/s. These are behavioral predictions for
 the registered hardware discriminator, not policy-identification evidence.
 
-The background sources are NVIDIA's vendor
-[NVLink overview](https://www.nvidia.com/en-us/data-center/nvlink/), NVIDIA's
-[NVSwitch technical overview](https://images.nvidia.com/content/pdf/nvswitch-technical-overview.pdf),
-and WikiChip's encyclopedic
-[NVLink description](https://en.wikichip.org/wiki/nvidia/nvlink). They motivate
-the structure only. No value from those descriptions is recorded as a captured
-value, and TRAF-73's registered NV4 cells decide the effective window, pool
-scope and arbitration policy on the actual node.
+The cited source chain and the boundary between vendor disclosure, patent
+embodiment, academic assumption, and repository measurement live in the
+[reverse-engineering document](nvlink-mechanism-reverse-engineering.md). No
+public value is recorded as a captured value. TRAF-80 first aligns the model
+with the documented structure; TRAF-73's registered NV4 cells then decide the
+remaining effective window, pool scope and arbitration policy on the actual
+node.
 
 ### Four-link bonding
 
@@ -190,7 +200,9 @@ cursor advances by serialization at 300 GB/s.
 
 This is earliest-available packet striping. It is not round-robin striping,
 and the four physical links are scoped per directed peer pair rather than
-globally across the endpoint.
+globally across the endpoint. Public documents confirm four links per peer,
+25 GB/s in each direction per link, and spraying over ganged links. They do
+not identify earliest-available selection or the low-index tie break.
 
 ## Switch module
 
@@ -228,8 +240,10 @@ does not maintain a time-varying switch-buffer occupancy ledger.
 
 This is the parameterization seam for H100 and GH200 NVSwitch-class paths.
 No H100 or GH200 queued profile, buffer value, arbitration measurement or
-service value is shipped here. Those architectures must supply their own
-profile rather than inherit an A100 number.
+service value is shipped here. Public NVIDIA switch disclosures require a
+deeper port, virtual-output-queue, virtual-channel and crossbar-grant structure
+than the v1 flat FIFO. Those architectures must supply their own profile rather
+than inherit an A100 number, and TRAF-80 owns the structural seam.
 
 ## RX module
 
@@ -305,10 +319,10 @@ capture is `COMPLETE_VOID_86_OF_86` and identifies no TX or RX parameter.
 
 | Surface | Current value or claim | Evidence class today | Consequence |
 |---|---|---|---|
-| TX packet geometry and direction | 256-byte maximum payload; 16-byte header; write data in request; read control in request and read data in response | **DECLARED CANDIDATE**, `declared_candidate_not_hardware_measurement` | No packet-format or direction parameter is calibrated |
-| TX bond and rates | Four links per peer; 25 GB/s per link; 300 GB/s endpoint egress; earliest-available packet striping | **DECLARED CANDIDATE**, `declared_candidate_not_hardware_measurement` | The published rates constrain an envelope but do not identify bonding |
-| TX credits | 256 per physical link per implicit modeled virtual channel; 272 bytes per credit | **PUBLIC ARCHITECTURE STRUCTURE plus DECLARED NUMERIC CANDIDATES**, not our measurement | Effective unit, window, return and physical virtual-channel count remain unmeasured |
-| Incast arbitration | Release-aware round robin default; static interleave and greedy capture alternatives | **DECLARED POLICY CANDIDATES plus BEHAVIORAL SIMULATION PREDICTIONS**, not our measurement | All 15 simulated instances pass; TRAF-73 registers a sustained unequal-offer hardware discriminator |
+| TX packet geometry and direction | 256-byte maximum payload; 16-byte header; write data in request; read control in request and read data in response | **PUBLIC PASCAL FORMAT plus DECLARED A100 GENERATION BINDING**; measured direction evidence remains separate | Optional control flits contradict the universal `payload + header` wire equation; NVLink 3 field continuity stays open |
+| TX bond and rates | Four links per peer; 25 GB/s per link; effective endpoint egress; earliest-available packet striping | **PUBLIC PHYSICAL LINK COUNT AND RATE plus MEASURED EFFECTIVE ENDPOINT RATE plus DECLARED BOND POLICY** | Public evidence fixes physical bounds but not the internal endpoint service or stripe selector |
+| TX credits | 256 per physical link per implicit modeled virtual channel; 272-byte maximum-packet surrogate | **CONTRADICTED CONSTANT-OCCUPANCY REPRESENTATION plus UNDOCUMENTED NUMERIC CANDIDATES**, not a public hardware value | Separate variable flit occupancy from credit count, quantum, virtual-channel map and return transport |
+| Incast arbitration | Release-aware round robin default; static interleave and greedy capture alternatives | **PUBLIC PATENT DESIGN SPACE plus DECLARED PRODUCT POLICY CANDIDATES**, not product identification | TRAF-80 aligns the queue and crossbar seam; TRAF-73 retains the sustained unequal-offer discriminator |
 | A100 switch | Exact pass-through with zero byte and time effect | **STRUCTURAL DIRECT-MESH INVARIANT, NOT MEASURED** | It stands because the selected topology has no switch, not because TRAF-65 measured it |
 | NVSwitch-class switch | Queued interface with input, output or shared placement, FIFO arbitration and optional head-of-line partitioning | **PARAMETERIZED INTERFACE, NO SHIPPED PROFILE VALUES** | H100 and GH200 need architecture-specific queue and service evidence |
 | RX ingress and delivery | 300 GB/s ingress; 1 MiB capacity; 200,000 ps credit return; extent-sequence reassembly; per-extent delivery | **DECLARED CANDIDATE**, `declared_candidate_not_hardware_measurement` | No RX rate, capacity, return or ordering parameter is calibrated |
@@ -331,9 +345,10 @@ declared policies and preserves every fatal guard. It does not change TRAF-65,
 TRAF-70 or the candidate profile. It also does not treat the H100 or GH200
 switch path as populated.
 
-TRAF-73 owns the remaining credit-window, pool-scope and arbitration
-identification. Its simulation arms are predictions only, while its three
-hardware families are the promotion gate. Later integration must also preserve
-the analytic identity bypass and connect packet-domain timestamps to the
-repository's shared queue-visit and live-metric contracts before the mechanism
-can support a TTFT or TPOT precision claim.
+TRAF-80 owns the public-document structural alignment. TRAF-73 then owns the
+remaining credit-window, pool-scope and product-arbitration identification. Its
+simulation arms are predictions only, while its three hardware families are
+the promotion gate. Later integration must also preserve the analytic identity
+bypass and connect packet-domain timestamps to the repository's shared
+queue-visit and live-metric contracts before the mechanism can support a TTFT
+or TPOT precision claim.
