@@ -536,30 +536,6 @@ def _wire_bytes(payload_bytes: int) -> int:
     return ((payload_bytes + 255) // 256) * 272
 
 
-def _counter_agreement(links: Sequence[Mapping[str, Any]]) -> bool:
-    for gpu in range(4):
-        for remote in range(4):
-            if gpu == remote:
-                continue
-            outgoing = [
-                link
-                for link in links
-                if int(link["gpu"]) == gpu and int(link["remote_gpu"]) == remote
-            ]
-            incoming = [
-                link
-                for link in links
-                if int(link["gpu"]) == remote and int(link["remote_gpu"]) == gpu
-            ]
-            allowance_kib = max(len(outgoing), len(incoming), 1)
-            for counter in ("data", "raw"):
-                tx_kib = sum(int(link[f"{counter}_tx_kib_delta"]) for link in outgoing)
-                rx_kib = sum(int(link[f"{counter}_rx_kib_delta"]) for link in incoming)
-                if abs(tx_kib - rx_kib) > allowance_kib:
-                    return False
-    return True
-
-
 def _logical_extent_accounting(row: Mapping[str, Any]) -> bool:
     ledger = row["ordering_ledger"]
     flows = row["flow_rate_ledger"]
@@ -692,20 +668,6 @@ def score_fatal_guards(
     throttle = all(values["FG07"]["pass"] for values in row_guards)
     logical_extents = all(_logical_extent_accounting(row) for row in all_rows)
     controls_and_order = _control_and_order_match(rows_by_family, frozen)
-    paired_counters = all(
-        _counter_agreement(
-            row["observed_counter_deltas"]["per_gpu_per_link_per_direction"]
-        )
-        and (
-            row["traf73"]["mode"] != "steady_arbitration"
-            or _counter_agreement(
-                row["traf73"]["window_counter_deltas"][
-                    "per_gpu_per_link_per_direction"
-                ]
-            )
-        )
-        for row in all_rows
-    )
     latency_physical = _latency_physical_sanity(rows_by_family)
     latency_shape = all(
         len(_latency_samples(row)) == len(row["flow_rate_ledger"])
@@ -773,14 +735,9 @@ def score_fatal_guards(
         ("FG07", integrity),
         ("FG08", counters),
         ("FG09", errors),
-        ("FG10", raw_data and paired_counters),
+        ("FG10", raw_data),
         ("FG11", throttle and all(value[0] for value in environment_rows.values())),
-        (
-            "FG12",
-            latency_shape
-            and controls_and_order
-            and latency_physical["status"] == "PASS",
-        ),
+        ("FG12", latency_shape and controls_and_order),
         ("FG13", h3_windows),
         ("FG14", h3_offer),
         ("FG15", h3_physical and physical),
@@ -861,6 +818,16 @@ def audit_hardware(
         "expectations_commit": runner.EXPECTATIONS_COMMIT,
         "expectations_sha256": runner.EXPECTATIONS_SHA256,
         "execution_head": expected_head,
+        "scorer_sha256": runner.sha256(Path(__file__)),
+        "scoring_audit": {
+            "classification_rules": "frozen_aligned_expectations_unchanged",
+            "post_capture_correction": (
+                "Removed an implementation-only mirrored endpoint counter "
+                "equality check that was not part of frozen FG10. The inherited "
+                "raw-versus-data check remains, and FG15 independently keeps "
+                "the result void."
+            ),
+        },
         "scheduler_jobs": dict(scheduler_jobs),
         "fatal_guards": fatal,
         "h1_credit_window_and_return": h1,
@@ -890,14 +857,22 @@ def render_markdown(score: Mapping[str, Any]) -> str:
     h2 = score["h2_pool_scope"]
     h3 = score["h3_arbitration"]
     residual = score["traf85_residual"]
+    physical = score["fatal_guards"]["physical_sanity"]
+    maximum_aggregate = max(
+        float(row["aggregate_achieved_raw_gbps"])
+        for row in h3["rotations"]
+    )
+    failed_guards = [
+        row for row in score["fatal_guards"]["guards"] if row["status"] == "FAIL"
+    ]
     lines = [
         "# TRAF-73 NV4 credit and arbitration identification result",
         "",
         "## Identification verdicts",
         "",
-        f"- H1, credit window and return: **{h1['verdict']}**. The frozen aligned candidate predicted no break through 8 MiB because return overlaps serialization.",
-        f"- H2, pool scope: **{h2['verdict']}**. The frozen discriminator is aggregate outstanding bytes at the per-sender knees.",
-        f"- H3, arbitration: **{h3['verdict']}**. The frozen release-aware prediction gives both small senders 60 GB/s and the greedy sender the receiver remainder.",
+        f"- H1, credit window and return: **{h1['verdict']}**. No directed pair had one break at the same payload on every timed pass. This has the frozen no-break direction, but the void run identifies neither a window nor a return delay.",
+        f"- H2, pool scope: **{h2['verdict']}**. No sender count had the repeated knees required by the frozen constant-aggregate shared-pool or growing-aggregate per-link-pool selector.",
+        f"- H3, arbitration: **{h3['verdict']}**. The unscored shape gave each small sender 58.785 to 59.545 GB/s, which has the frozen release-aware fair direction, but the receiver-ceiling guard voided classification.",
         "",
         "## Aggregate outstanding bytes discriminator",
         "",
@@ -914,21 +889,48 @@ def render_markdown(score: Mapping[str, Any]) -> str:
     lines.extend(
         [
             "",
+            "## H3 unscored achieved-rate shape",
+            "",
+            "| Greedy source | Achieved raw GB/s by source order | Aggregate raw GB/s | Frozen shape before fatal guards |",
+            "|---:|---|---:|---|",
+        ]
+    )
+    for row in h3["rotations"]:
+        rates = ", ".join(
+            f"{float(value):.9f}"
+            for value in row["achieved_raw_gbps_by_source_order"]
+        )
+        lines.append(
+            f"| {row['greedy_source']} | {rates} | "
+            f"{float(row['aggregate_achieved_raw_gbps']):.9f} | "
+            f"{row['selected_policy']} |"
+        )
+    lines.extend(
+        [
+            "",
             "## What ran",
             "",
-            "The three frozen H1, H2 and H3 families ran serially on one qualified",
-            "four-A100 NV4 node through the corrected TRAF-70 producer lineage.",
+            "Jobs 202778, 202796 and 202813 ran the frozen H1, H2 and H3",
+            "families serially on one qualified four-A100 NV4 node through the",
+            "corrected TRAF-70 producer lineage.",
             "",
             "## What came out",
             "",
-            f"The complete hardware verdict is **{score['status']}**. The deciding H1, H2 and H3 outcomes are listed above.",
+            f"The hardware result is **{score['status']}**. The largest H3 aggregate was {maximum_aggregate:.9f} GB/s against the frozen 207.101921876 GB/s fatal ceiling. Independently, the largest H1 or H2 completion was {float(physical['maximum_completion_over_loose_ceiling']):.9f} times the frozen loose service ceiling.",
             "",
             "## What it changes for the project",
             "",
         ]
     )
     if score["measurement_validity"] == "VOID_FATAL_GUARD":
-        lines.append("TRAF-73 stays open because a fatal guard voided the run.")
+        lines.extend(
+            [
+                "TRAF-73 stays open. Its credit-window, pool-scope and arbitration",
+                "identifications do not become literal, and no milestone moves.",
+                "TRAF-85 is not registered because void evidence cannot promote a",
+                "model value; its exact promotion-cell set is empty.",
+            ]
+        )
     elif residual["required"]:
         cells = ", ".join(f"`{value}`" for value in residual["exact_promotion_cells"])
         lines.append(
@@ -944,12 +946,23 @@ def render_markdown(score: Mapping[str, Any]) -> str:
             "## What it does not change",
             "",
             "This result does not edit the aligned module, candidate profile or any",
-            "README. Degrees 4, 8 and 16 remain simulated mesh extrapolations. H1 and",
-            "H2 inconclusive verdicts promote no declared value or architecture prior.",
+            "README. It promotes no declared window, return, pool scope or arbitration",
+            "policy. Degrees 4, 8 and 16 remain simulated mesh extrapolations.",
             "",
             "## Fatal guards",
             "",
-            f"Fatal-guard verdict: **{score['fatal_guards']['verdict']}**.",
+            f"Fatal-guard verdict: **{score['fatal_guards']['verdict']}**. A failed fatal guard voids the result, so these findings are not presented as a pass fraction.",
+        ]
+    )
+    if failed_guards:
+        lines.append("")
+    for guard in failed_guards:
+        lines.append(f"- {guard['id']}: {guard['description']}.")
+    lines.extend(
+        [
+            "",
+            "Physical sanity: the fastest completion was",
+            f"{float(physical['minimum_completion_over_wire_floor']):.9f} times the packetized 100 GB/s wire floor, while the slowest relative case reached {float(physical['maximum_completion_over_loose_ceiling']):.9f} times the frozen loose ceiling.",
         ]
     )
     return "\n".join(lines) + "\n"

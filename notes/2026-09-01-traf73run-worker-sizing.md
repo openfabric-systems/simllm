@@ -83,6 +83,31 @@
   health, queue occupancy, serial allocation delay, CUDA compilation, three
   short captures, clean signal handling, lean evidence retrieval and scheduler
   accounting.
+
+### Completion actuals
+
+- Outcome: jobs 202778, 202796 and 202813 completed the three serial hardware
+  families from execution head `f39d24cfec081e3ef17cf0fbe990a92706a18dec`.
+  Frozen guard FG15 voided the result, so TRAF-73 stays open and no TRAF-85
+  promotion residual is registered.
+- Actual raw repository delta from base `4073b4e762d2a209e8f9f642e360054290d41465`:
+  15 touched files, 5,832 added lines and zero deleted lines.
+- Actual handwritten production lines: zero.
+- Actual tests and fixtures: 803 lines across three focused test files. This is
+  53 lines above the estimated upper bound because the void result required a
+  separate publication regression that proves the failed guard, unscored H3
+  shape and empty promotion set remain coupled.
+- Actual handwritten studies, configuration and documentation: 3,504 lines.
+  This is within the estimated range. The count uses the 730 changed producer
+  lines carried by the overlay, not the overlay's repeated unified-diff
+  context.
+- Mechanically generated aligned and hardware JSON plus the CSV have 1,343
+  lines and count as zero handwritten lines. The overlay's 182 context and
+  diff-control lines also count as zero handwritten lines.
+- The dominant uncertainty resolved as a refutation rather than an
+  identification: the measured H3 aggregate reached 213.109096448 GB/s, above
+  the frozen 207.101921876 GB/s receiver ceiling, while the latency producer's
+  slowest relative case reached 7.587253223 times its frozen loose ceiling.
 - Scope-change rule: update this section before continuing if the frozen cells
   require a new producer, any `simllm/` edit, a candidate-profile mutation, an
   additional hardware family, or files outside the bounded families above.
