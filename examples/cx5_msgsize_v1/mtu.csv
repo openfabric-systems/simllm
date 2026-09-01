@@ -1,0 +1,3 @@
+mtu_bytes,size_bytes,goodput_gbps,dropped_packets
+4096,1048576,92.9356,0
+1024,1048576,88.8586,0

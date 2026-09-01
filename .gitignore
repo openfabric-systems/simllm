@@ -35,6 +35,11 @@ runs/
 !examples/merlin_collective_capture_v1/results.csv
 !examples/matched_seam_frontier_v1/deploy12_results.csv
 !examples/surrogate_conformance_v1/results.csv
+!examples/cx5_msgsize_v1/summary.csv
+!examples/cx5_msgsize_v1/latency.csv
+!examples/cx5_msgsize_v1/msg.csv
+!examples/cx5_msgsize_v1/mtu.csv
+!examples/cx5_msgsize_v1/incast.csv
 
 # Local agent rule files (kept out of the public repo on purpose)
 CLAUDE.md

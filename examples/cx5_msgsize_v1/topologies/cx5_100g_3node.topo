@@ -1,0 +1,27 @@
+Nodes 3
+Tiers 2
+Podsize 3
+
+# One leaf switch with three directly attached RNIC nodes and one uplink to
+# each of the three spine switches. Every experiment in this study is
+# same-leaf, so the spines carry no traffic: the measured fabric is a single
+# switch hop, and a same-leaf pair reproduces it exactly. Three nodes is the
+# smallest node count that still expresses a 2 to 1 fan-in.
+#
+# The rate is the profile goodput asymptote rounded to whole Gbit/s, which is
+# what the loader parses and what the runtime requires -link_bps to match.
+# 515 ns per hop puts a 2 B message's round trip (four pipe traversals plus
+# four store-and-forward serializations) at 2.081 us, the measured floor.
+Tier 0
+Downlink_speed_Gbps 97
+Radix_Down 3
+Radix_Up 3
+Downlink_Latency_ns 515
+Switch_Latency_ns 0
+
+# Three spine switches, each with one link to the leaf.
+Tier 1
+Downlink_speed_Gbps 97
+Radix_Down 1
+Downlink_Latency_ns 515
+Switch_Latency_ns 0
