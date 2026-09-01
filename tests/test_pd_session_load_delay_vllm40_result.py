@@ -162,7 +162,7 @@ def test_vllm40_historical_result_and_current_registry_are_literal():
     assert "- VLLM-39 " not in module
     assert "- VLLM-40 " not in module
     assert "- VLLM-41 " not in module
-    assert "- VLLM-42 " in module
+    assert "- VLLM-42 " not in module
     assert report.startswith("# VLLM-40 clean load-delay qualification\n")
     assert "Frozen qualification status: **REFUTED**" in report
     assert "Monotonic-delay claim: **VALIDATED**" in report
