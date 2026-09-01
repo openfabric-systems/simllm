@@ -17,6 +17,7 @@ import subprocess
 import sys
 import time
 from collections import defaultdict
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
@@ -36,8 +37,12 @@ BULK_ROOT_ENV = "SIMLLM_MINIMAX_FIX_BULK_ROOT"
 EXTERNAL_VENV_ENV = "SIMLLM_EXTERNAL_AIC_VENV"
 HTSIM_ENV = "SIMLLM_HTSIM_RNIC"
 TXT2BIN_ENV = "SIMLLM_TXT2BIN"
-SCHEMA = "simllm-minimax-ep-scaling-record-v2"
+SCHEMA = "simllm-minimax-ep-scaling-record-v3"
 LEGACY_SCHEMA = "simllm-minimax-ep-scaling-record-v1"
+SUPPORTED_RECORD_SCHEMAS = {
+    "simllm-minimax-ep-scaling-record-v2",
+    SCHEMA,
+}
 WALL_BOUND_SECONDS = 3600.0
 EXPECTED_FREEZE_COMMITS = ("61b66c4", "5a29bb0", "4d1e41c")
 PDF_TEXT_TOOL = "pdftotext"
@@ -132,6 +137,10 @@ def _load_config() -> dict[str, Any]:
         "dense_widest_extrapolation_rule", ""
     ):
         raise SystemExit("the post-specified dense diagnostic rule is missing")
+    if "multiply only the EP 128 fabric service" not in sampling.get(
+        "dense_widest_corrected_extrapolation_rule", ""
+    ):
+        raise SystemExit("the corrected component-wise diagnostic rule is missing")
     chronology = config["chronology"]
     if chronology.get("diagnostic_extrapolation_rule_commit") != "a6ba97f":
         raise SystemExit("the diagnostic extrapolation chronology is missing")
@@ -139,7 +148,109 @@ def _load_config() -> dict[str, Any]:
         raise SystemExit("the diagnostic extrapolation must remain explicitly unfrozen")
     if sampling.get("dense_widest_extrapolation_scored") is not False:
         raise SystemExit("the post-specified EP 256 extrapolation cannot be scored")
+    correction = config["collective_floor_correction"]
+    for field in ("source_config", "source_record"):
+        path = ROOT / correction[field]
+        if not path.is_file():
+            raise SystemExit(f"collective-floor {field} does not exist")
+        expected = correction[f"{field}_sha256"]
+        if _sha256_file(path) != expected:
+            raise SystemExit(f"collective-floor {field} digest differs from the pin")
+    if correction.get("acknowledge_transferred_at_use") is not True:
+        raise SystemExit("the transferred collective-floor correction must be explicit")
     return config
+
+
+def _load_collective_floor_calibration(
+    config: dict[str, Any],
+    database: Any,
+) -> Any:
+    """Recreate the landed fitted authority from its immutable training inputs."""
+
+    from simllm.traffic import (
+        CollectiveFloorCell,
+        CollectiveFloorCurveBoundaries,
+        CollectiveFloorSourceIdentity,
+        fit_collective_floor_calibration,
+    )
+
+    correction = config["collective_floor_correction"]
+    calibration_config = json.loads(
+        (ROOT / correction["source_config"]).read_text(encoding="utf-8")
+    )
+    training = []
+    for member in calibration_config["membership"]["training_cells"]:
+        observed = database.query(
+            dtype=member["dtype"],
+            operation=member["operation"],
+            ranks=member["ranks"],
+            message_size=member["source_elements"],
+        )
+        training.append(
+            CollectiveFloorCell(
+                cell_id=member["cell_id"],
+                dtype=member["dtype"],
+                operation=member["operation"],
+                ranks=member["ranks"],
+                source_elements=member["source_elements"],
+                message_bytes=member["true_bytes"],
+                latency_ps=round(observed.latency_ms * 1_000_000_000),
+            )
+        )
+    boundaries = tuple(
+        CollectiveFloorCurveBoundaries(
+            dtype=row["dtype"],
+            operation=row["operation"],
+            ranks=row["ranks"],
+            lower_bounds_of_following_regimes=tuple(
+                row["lower_bounds_of_following_regimes"]
+            ),
+        )
+        for row in calibration_config["fit"]["regime_boundaries_true_bytes"]
+    )
+    byte_range = calibration_config["fit"]["true_byte_range"]
+    return fit_collective_floor_calibration(
+        calibration_id=correction["calibration_id"],
+        source=CollectiveFloorSourceIdentity(**calibration_config["source"]),
+        cells=tuple(training),
+        boundaries=boundaries,
+        fitted_byte_range=(byte_range["minimum"], byte_range["maximum"]),
+    )
+
+
+def _collective_floor_estimate(
+    calibration: Any,
+    *,
+    dtype: str,
+    operation: str,
+    ranks: int,
+    message_bytes: int,
+    donor: tuple[str, str, int] | None,
+    acknowledge_transfer: bool,
+) -> Any:
+    """Serve one estimate and apply the production transfer refusal contract."""
+
+    from simllm.backends import CollectiveFloorTransferError
+    from simllm.traffic import COLLECTIVE_FLOOR_TRANSFERRED
+
+    estimate = calibration.estimate(
+        dtype=dtype,
+        operation=operation,
+        ranks=ranks,
+        message_bytes=message_bytes,
+        donor=donor,
+    )
+    if (
+        estimate.evidence_class == COLLECTIVE_FLOOR_TRANSFERRED
+        and not acknowledge_transfer
+    ):
+        raise CollectiveFloorTransferError(
+            "MiniMax packet pricing refuses transferred-at-use collective-floor "
+            f"timing for {operation}, ranks={ranks}, message_bytes={message_bytes}: "
+            f"{estimate.transfer_reason}. Set acknowledge_transferred_at_use=true "
+            "only for a deliberate transferred study."
+        )
+    return estimate
 
 
 def _run_live_sdk(config: dict[str, Any]) -> dict[str, Any]:
@@ -368,6 +479,65 @@ Switch_Latency_ns 0
     return path
 
 
+def _dense_floor_requests(
+    config: dict[str, Any],
+    *,
+    width: int,
+) -> tuple[dict[str, Any], ...]:
+    correction = config["collective_floor_correction"]
+    tokens_per_rank = config["operating_point"][
+        "local_batch_per_attention_dp_rank"
+    ] * (config["model"]["nextn"] + 1)
+    operation_buffer_bytes = (
+        tokens_per_rank * config["model"]["hidden_size"] * width * 2
+    )
+    return tuple(
+        {
+            "dtype": "half",
+            "operation": operation,
+            "message_bytes": operation_buffer_bytes,
+            "donor": (
+                None
+                if width == correction["donor_ranks"]
+                else ("half", operation, correction["donor_ranks"])
+            ),
+        }
+        for operation in ("all_gather", "reduce_scatter")
+    )
+
+
+def _sparse_floor_requests(
+    config: dict[str, Any],
+    *,
+    width: int,
+) -> tuple[dict[str, Any], ...]:
+    correction = config["collective_floor_correction"]
+    model = config["model"]
+    tokens_per_rank = config["operating_point"][
+        "local_batch_per_attention_dp_rank"
+    ] * (model["nextn"] + 1)
+    elements = tokens_per_rank * model["num_experts_per_tok"] * model["hidden_size"]
+    requests = []
+    for name, byte_width in (
+        ("sparse_dispatch_transfer", 1),
+        ("sparse_combine_transfer", 2),
+    ):
+        mapping = correction[name]
+        requests.append(
+            {
+                "dtype": mapping["requested_dtype"],
+                "operation": mapping["requested_operation"],
+                "message_bytes": elements * byte_width,
+                "donor": (
+                    mapping["donor_dtype"],
+                    mapping["donor_operation"],
+                    correction["donor_ranks"],
+                ),
+            }
+        )
+    return tuple(requests)
+
+
 def _simulate_packet_phases(
     config: dict[str, Any],
     *,
@@ -376,6 +546,8 @@ def _simulate_packet_phases(
     htsim: Path,
     txt2bin: Path,
     phases: tuple[Any, ...],
+    floor_requests: tuple[dict[str, Any], ...],
+    calibration: Any,
 ) -> dict[str, Any]:
     from simllm.backends import HtsimRnicConfig, run_htsim_rnic
     from simllm.goal import to_binary
@@ -398,7 +570,12 @@ def _simulate_packet_phases(
         gpus_per_node=operating["gpus_per_node"],
     )
     results = []
-    for classified in phases:
+    if len(floor_requests) != len(phases):
+        raise ValueError("collective-floor requests must match packet phases")
+    acknowledge_transfer = bool(
+        config["collective_floor_correction"]["acknowledge_transferred_at_use"]
+    )
+    for classified, floor_request in zip(phases, floor_requests, strict=True):
         phase_name = classified.phase.phase_id.replace(":", "-")
         flow_rows = []
         fabric_jct_ps = 0
@@ -435,6 +612,23 @@ def _simulate_packet_phases(
             goal_sha256 = _sha256_file(goal_path)
             goal_binary_sha256 = _sha256_file(goal_bin)
             completion_sha256 = _sha256_file(completion_csv)
+        estimate = _collective_floor_estimate(
+            calibration,
+            dtype=floor_request["dtype"],
+            operation=floor_request["operation"],
+            ranks=width,
+            message_bytes=floor_request["message_bytes"],
+            donor=floor_request["donor"],
+            acknowledge_transfer=acknowledge_transfer,
+        )
+        uncalibrated_phase_duration_ps = max(
+            fabric_jct_ps,
+            classified.nvlink_service_ps,
+        )
+        calibrated_phase_duration_ps = estimate.floor_charge_ps + max(
+            fabric_jct_ps,
+            estimate.serialization_ps,
+        )
         results.append(
             {
                 "phase": phase_name,
@@ -444,9 +638,12 @@ def _simulate_packet_phases(
                 "nvlink_bytes": classified.nvlink_bytes,
                 "nvlink_service_ps": classified.nvlink_service_ps,
                 "fabric_jct_ps": fabric_jct_ps,
-                "phase_duration_ps": max(
-                    fabric_jct_ps,
-                    classified.nvlink_service_ps,
+                "uncalibrated_phase_duration_ps": uncalibrated_phase_duration_ps,
+                "phase_duration_ps": calibrated_phase_duration_ps,
+                "collective_floor_estimate": estimate.as_dict(),
+                "transferred_at_use_acknowledged": (
+                    acknowledge_transfer
+                    and estimate.evidence_class == "transferred-at-use"
                 ),
                 "flow_count": len(flow_rows),
                 "flow_payload_bytes": sum(flow.payload_bytes for flow in flow_rows),
@@ -462,10 +659,17 @@ def _simulate_packet_phases(
             }
         )
     layer_packet_ps = sum(phase["phase_duration_ps"] for phase in results)
+    layer_uncalibrated_packet_ps = sum(
+        phase["uncalibrated_phase_duration_ps"] for phase in results
+    )
     return {
         "topology_sha256": _sha256_file(topology),
         "layer_packet_ps": layer_packet_ps,
         "layer_packet_ms": layer_packet_ps / 1_000_000_000,
+        "layer_uncalibrated_packet_ps": layer_uncalibrated_packet_ps,
+        "layer_uncalibrated_packet_ms": (
+            layer_uncalibrated_packet_ps / 1_000_000_000
+        ),
         "simulated_messages_per_layer": sum(
             phase["fabric_segments"] + phase["nvlink_segments"]
             for phase in results
@@ -484,6 +688,7 @@ def _sparse_packet_width(
     output_dir: Path,
     htsim: Path,
     txt2bin: Path,
+    calibration: Any,
 ) -> dict[str, Any]:
     from simllm.compute import ModelDims
     from simllm.core import RequestPhase, ScheduledRequest, StepRecord
@@ -551,6 +756,8 @@ def _sparse_packet_width(
         htsim=htsim,
         txt2bin=txt2bin,
         phases=plan.phases,
+        floor_requests=_sparse_floor_requests(config, width=width),
+        calibration=calibration,
     )
     dispatch = plan.phases[0]
     combine = plan.phases[1]
@@ -594,6 +801,9 @@ def _sparse_packet_width(
         "represented_messages": simulated["simulated_messages_per_layer"]
         * represented,
         "represented_bytes": simulated["simulated_bytes_per_layer"] * represented,
+        "superseded_packet_dispatch_combine_ms": (
+            simulated["layer_uncalibrated_packet_ms"] * represented
+        ),
         "packet_dispatch_combine_ms": simulated["layer_packet_ms"] * represented,
         "routing_geometry": {
             "expected_distinct_destinations_per_source": expected_destination_count,
@@ -666,6 +876,7 @@ def _dense_packet_width(
     output_dir: Path,
     htsim: Path,
     txt2bin: Path,
+    calibration: Any,
 ) -> dict[str, Any]:
     strategy = config["strategies"]["dense_sm90_general_fallback"]
     sampling = config["packet_sampling"]
@@ -676,6 +887,8 @@ def _dense_packet_width(
         htsim=htsim,
         txt2bin=txt2bin,
         phases=_dense_packet_phases(config, width=width),
+        floor_requests=_dense_floor_requests(config, width=width),
+        calibration=calibration,
     )
     represented = int(sampling["represented_layer_executions"])
     return {
@@ -693,6 +906,9 @@ def _dense_packet_width(
         "represented_messages": simulated["simulated_messages_per_layer"]
         * represented,
         "represented_bytes": simulated["simulated_bytes_per_layer"] * represented,
+        "superseded_packet_dispatch_combine_ms": (
+            simulated["layer_uncalibrated_packet_ms"] * represented
+        ),
         "packet_dispatch_combine_ms": simulated["layer_packet_ms"] * represented,
         "extrapolation": None,
     }
@@ -703,13 +919,14 @@ def _extrapolate_dense_packet_width(
     *,
     width: int,
     anchor: dict[str, Any],
+    calibration: Any,
 ) -> dict[str, Any]:
     strategy = config["strategies"]["dense_sm90_general_fallback"]
     sampling = config["packet_sampling"]
     operating = config["operating_point"]
     anchor_width = int(anchor["expert_parallel"])
     local_width = int(operating["gpus_per_node"])
-    factor = (width - local_width) / (anchor_width - local_width)
+    factor = Fraction(width - local_width, anchor_width - local_width)
     tokens_per_rank = operating["local_batch_per_attention_dp_rank"] * (
         config["model"]["nextn"] + 1
     )
@@ -717,7 +934,51 @@ def _extrapolate_dense_packet_width(
     messages_per_layer = 2 * width * (width - 1)
     bytes_per_layer = messages_per_layer * chunk_bytes
     represented = int(sampling["represented_layer_executions"])
-    layer_packet_ms = anchor["layer_packet_ms"] * factor
+    requests = _dense_floor_requests(config, width=width)
+    acknowledge_transfer = bool(
+        config["collective_floor_correction"]["acknowledge_transferred_at_use"]
+    )
+    projected_phases = []
+    for anchor_phase, request in zip(anchor["phases"], requests, strict=True):
+        estimate = _collective_floor_estimate(
+            calibration,
+            dtype=request["dtype"],
+            operation=request["operation"],
+            ranks=width,
+            message_bytes=request["message_bytes"],
+            donor=request["donor"],
+            acknowledge_transfer=acknowledge_transfer,
+        )
+        extrapolated_fabric_ps = float(
+            Fraction(anchor_phase["fabric_jct_ps"]) * factor
+        )
+        extrapolated_uncalibrated_ps = float(
+            Fraction(anchor_phase["uncalibrated_phase_duration_ps"]) * factor
+        )
+        corrected_phase_ps = estimate.floor_charge_ps + max(
+            estimate.serialization_ps,
+            extrapolated_fabric_ps,
+        )
+        projected_phases.append(
+            {
+                "phase": anchor_phase["phase"].replace(
+                    f"family-d-{anchor_width}",
+                    f"family-d-{width}",
+                ),
+                "anchor_expert_parallel": anchor_width,
+                "anchor_fabric_service_ps": anchor_phase["fabric_jct_ps"],
+                "fabric_jct_ps": extrapolated_fabric_ps,
+                "uncalibrated_phase_duration_ps": extrapolated_uncalibrated_ps,
+                "phase_duration_ps": corrected_phase_ps,
+                "collective_floor_estimate": estimate.as_dict(),
+                "transferred_at_use_acknowledged": True,
+                "projection": "EP 128 fabric service scaled by 31 / 15",
+            }
+        )
+    layer_uncalibrated_packet_ps = sum(
+        phase["uncalibrated_phase_duration_ps"] for phase in projected_phases
+    )
+    layer_packet_ps = sum(phase["phase_duration_ps"] for phase in projected_phases)
     return {
         "expert_parallel": width,
         "strategy": strategy["name"],
@@ -736,16 +997,31 @@ def _extrapolate_dense_packet_width(
         "represented_layer_executions": represented,
         "represented_messages": messages_per_layer * represented,
         "represented_bytes": bytes_per_layer * represented,
-        "layer_packet_ps": round(layer_packet_ms * 1_000_000_000),
-        "layer_packet_ms": layer_packet_ms,
-        "packet_dispatch_combine_ms": layer_packet_ms * represented,
+        "layer_uncalibrated_packet_ps": layer_uncalibrated_packet_ps,
+        "layer_uncalibrated_packet_ms": layer_uncalibrated_packet_ps / 1_000_000_000,
+        "layer_packet_ps": layer_packet_ps,
+        "layer_packet_ms": layer_packet_ps / 1_000_000_000,
+        "superseded_packet_dispatch_combine_ms": (
+            layer_uncalibrated_packet_ps * represented / 1_000_000_000
+        ),
+        "packet_dispatch_combine_ms": (
+            layer_packet_ps * represented / 1_000_000_000
+        ),
         "topology_sha256": None,
-        "phases": [],
+        "phases": projected_phases,
         "extrapolation": {
             "anchor_expert_parallel": anchor_width,
             "anchor_population_status": anchor["population_status"],
-            "cross_node_bytes_per_rank_factor": factor,
-            "rule": sampling["dense_widest_extrapolation_rule"],
+            "cross_node_bytes_per_rank_factor": float(factor),
+            "superseded_rule": sampling["dense_widest_extrapolation_rule"],
+            "superseded_rule_status": sampling[
+                "dense_widest_extrapolation_rule_status"
+            ],
+            "rule": sampling["dense_widest_corrected_extrapolation_rule"],
+            "linearity_break": (
+                "the fixed aggregate floor is additive and must not be multiplied "
+                "by the cross-node byte factor"
+            ),
             "rule_commit": config["chronology"][
                 "diagnostic_extrapolation_rule_commit"
             ],
@@ -770,6 +1046,7 @@ def _run_evaluation(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
     live = _live_sdk_subprocess(config)
     operation_database = ExternalOperationDatabase.load()
     nccl_database = ExternalNcclDatabase.load()
+    collective_floor = _load_collective_floor_calibration(config, nccl_database)
     widths = []
     dense_anchor: dict[str, Any] | None = None
     for frozen in config["widths"]:
@@ -809,6 +1086,7 @@ def _run_evaluation(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
             output_dir=output_dir / f"ep-{width}" / "family-s",
             htsim=htsim,
             txt2bin=txt2bin,
+            calibration=collective_floor,
         )
         if width <= int(
             config["packet_sampling"]["dense_direct_full_population_max_width"]
@@ -819,6 +1097,7 @@ def _run_evaluation(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
                 output_dir=output_dir / f"ep-{width}" / "family-d",
                 htsim=htsim,
                 txt2bin=txt2bin,
+                calibration=collective_floor,
             )
             if width == int(
                 config["packet_sampling"]["dense_widest_anchor_width"]
@@ -831,11 +1110,17 @@ def _run_evaluation(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
                 config,
                 width=width,
                 anchor=dense_anchor,
+                calibration=collective_floor,
             )
         sparse_step = (
             composed.total.latency_ms
             - dispatch
             + sparse_packet["packet_dispatch_combine_ms"]
+        )
+        superseded_sparse_step = (
+            composed.total.latency_ms
+            - dispatch
+            + sparse_packet["superseded_packet_dispatch_combine_ms"]
         )
         fixed_overhead_analysis = None
         if width == 128:
@@ -866,8 +1151,11 @@ def _run_evaluation(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
                 * rank_factor
                 * int(config["packet_sampling"]["represented_layer_executions"])
             )
-            observed_gap_ms = dispatch - dense_packet["packet_dispatch_combine_ms"]
+            observed_gap_ms = dispatch - dense_packet[
+                "superseded_packet_dispatch_combine_ms"
+            ]
             fixed_overhead_analysis = {
+                "status": "superseded by the landed collective-floor binding",
                 "expert_parallel": width,
                 "message_axis_name": "message_bytes",
                 "caller_argument_semantics": "half-precision element count",
@@ -902,10 +1190,20 @@ def _run_evaluation(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
                 "family_d_packet_to_external_ratio": (
                     dense_packet["packet_dispatch_combine_ms"] / dispatch
                 ),
+                "family_d_superseded_packet_dispatch_combine_ms": dense_packet[
+                    "superseded_packet_dispatch_combine_ms"
+                ],
+                "family_d_superseded_packet_to_external_ratio": (
+                    dense_packet["superseded_packet_dispatch_combine_ms"] / dispatch
+                ),
                 "family_d_fixed_overhead_analysis": fixed_overhead_analysis,
                 "family_s_packet_priced_step_ms": sparse_step,
                 "family_s_packet_to_external_step_ratio": (
                     sparse_step / float(frozen["live_decode_step_ms"])
+                ),
+                "family_s_superseded_packet_priced_step_ms": superseded_sparse_step,
+                "family_s_superseded_packet_to_external_step_ratio": (
+                    superseded_sparse_step / float(frozen["live_decode_step_ms"])
                 ),
                 "operation_evidence_classes": {
                     entry.operation: entry.evidence_class for entry in composed.operations
@@ -922,6 +1220,13 @@ def _run_evaluation(config: dict[str, Any], output_dir: Path) -> dict[str, Any]:
         "operation_database_payload_sha256": operation_database.payload_sha256,
         "nccl_database_identity": nccl_database.source.as_dict(),
         "nccl_database_payload_sha256": nccl_database.payload_sha256,
+        "collective_floor_calibration": {
+            "calibration_id": collective_floor.calibration_id,
+            "source": collective_floor.source.as_dict(),
+            "input_surface": list(collective_floor.input_surface),
+            "fitted_byte_range": list(collective_floor.fitted_byte_range),
+            "curve_keys": [list(key) for key in collective_floor.curve_keys],
+        },
     }
 
 
@@ -1000,6 +1305,34 @@ def _family_d_assessment(
     }
 
 
+def _collective_floor_phase_summaries(packet: dict[str, Any]) -> list[dict[str, Any]]:
+    summaries = []
+    for phase in packet["phases"]:
+        estimate = phase["collective_floor_estimate"]
+        summaries.append(
+            {
+                "phase": phase["phase"],
+                "requested_dtype": estimate["requested_dtype"],
+                "requested_operation": estimate["requested_operation"],
+                "requested_ranks": estimate["requested_ranks"],
+                "message_bytes": estimate["message_bytes"],
+                "donor_dtype": estimate["regime"]["dtype"],
+                "donor_operation": estimate["regime"]["operation"],
+                "donor_ranks": estimate["regime"]["ranks"],
+                "aggregate_floor_ps": estimate["floor_charge_ps"],
+                "calibrated_serialization_ps": estimate["serialization_ps"],
+                "fabric_service_ps": phase["fabric_jct_ps"],
+                "composed_phase_ps": phase["phase_duration_ps"],
+                "evidence_class": estimate["evidence_class"],
+                "transfer_reason": estimate["transfer_reason"],
+                "transferred_at_use_acknowledged": phase[
+                    "transferred_at_use_acknowledged"
+                ],
+            }
+        )
+    return summaries
+
+
 def _score(
     config: dict[str, Any],
     evaluation: dict[str, Any],
@@ -1033,6 +1366,9 @@ def _score(
         quotient = composed["composer_decode_step_ms"] / live["decode_step_ms"]
         composition_passed = 0.98 <= quotient <= 1.02
         d_ratio = composed["family_d_packet_to_external_ratio"]
+        d_superseded_ratio = composed[
+            "family_d_superseded_packet_to_external_ratio"
+        ]
         d_assessment = _family_d_assessment(
             width=width,
             gpus_per_node=int(config["operating_point"]["gpus_per_node"]),
@@ -1108,11 +1444,21 @@ def _score(
                 "family_d_packet_pricing_definition": dense[
                     "packet_pricing_definition"
                 ],
+                "family_d_superseded_packet_pricing_definition": dense[
+                    "superseded_packet_pricing_definition"
+                ],
                 "family_d_external_ms": live["dispatch_ms"],
                 "family_d_packet_ms": composed["dense_packet"][
                     "packet_dispatch_combine_ms"
                 ],
                 "family_d_ratio": d_ratio,
+                "family_d_superseded_packet_ms": composed[
+                    "family_d_superseded_packet_dispatch_combine_ms"
+                ],
+                "family_d_superseded_ratio": d_superseded_ratio,
+                "family_d_collective_floor_phases": (
+                    _collective_floor_phase_summaries(composed["dense_packet"])
+                ),
                 "family_d_same_logical_element_count": True,
                 "family_d_contention_comparison": d_assessment[
                     "contention_comparison"
@@ -1146,6 +1492,12 @@ def _score(
                 "family_s_sparse_traffic_definition": sparse[
                     "logical_traffic_definition"
                 ],
+                "family_s_packet_pricing_definition": sparse[
+                    "packet_pricing_definition"
+                ],
+                "family_s_superseded_packet_pricing_definition": sparse[
+                    "superseded_packet_pricing_definition"
+                ],
                 "family_s_sparse_dispatch_bytes_per_element": sparse[
                     "dispatch_bytes_per_element"
                 ],
@@ -1164,6 +1516,18 @@ def _score(
                 "family_s_sparse_to_dense_step_ratio": composed[
                     "family_s_packet_to_external_step_ratio"
                 ],
+                "family_s_superseded_packet_dispatch_combine_ms": composed[
+                    "sparse_packet"
+                ]["superseded_packet_dispatch_combine_ms"],
+                "family_s_superseded_packet_step_ms": composed[
+                    "family_s_superseded_packet_priced_step_ms"
+                ],
+                "family_s_superseded_sparse_to_dense_step_ratio": composed[
+                    "family_s_superseded_packet_to_external_step_ratio"
+                ],
+                "family_s_collective_floor_phases": (
+                    _collective_floor_phase_summaries(composed["sparse_packet"])
+                ),
                 "family_s_population_status": composed["sparse_packet"][
                     "population_status"
                 ],
@@ -1240,6 +1604,9 @@ def _score(
                     "sparse_to_dense_step_ratio": row[
                         "family_s_sparse_to_dense_step_ratio"
                     ],
+                    "superseded_sparse_to_dense_step_ratio": row[
+                        "family_s_superseded_sparse_to_dense_step_ratio"
+                    ],
                     "population_status": row["family_s_population_status"],
                 }
                 for row in rows
@@ -1281,6 +1648,17 @@ def _score(
         or "measured full" in row["dense_packet"]["population_status"]
         for row in evaluation["widths"]
     )
+    collective_floor_guard = all(
+        phase["collective_floor_estimate"]["evidence_class"]
+        in {"calibrated", "transferred-at-use"}
+        and (
+            phase["collective_floor_estimate"]["evidence_class"] != "transferred-at-use"
+            or phase["transferred_at_use_acknowledged"]
+        )
+        for row in evaluation["widths"]
+        for packet in (row["dense_packet"], row["sparse_packet"])
+        for phase in packet["phases"]
+    )
     fatal_guards = {
         "FG-1": adjustments_are_sourced
         and all(
@@ -1291,7 +1669,8 @@ def _score(
             set(row["operation_evidence_classes"].values()) == {"MEASURED-EXTERNAL"}
             and row["packet_evidence_class"] == "SIM-DERIVED"
             for row in evaluation["widths"]
-        ),
+        )
+        and collective_floor_guard,
         "FG-3": config["model"]["nextn"] == 3,
         "FG-4": False,
         "FG-5": all(
@@ -1540,7 +1919,8 @@ def _inspect_artifact_disclosures(
     metadata_path = figures_dir / "minimax_ep_scaling.metadata.json"
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     series = metadata.get("series")
-    if not isinstance(series, list) or len(series) != 5:
+    expected_series_count = 8 if record.get("schema") == SCHEMA else 5
+    if not isinstance(series, list) or len(series) != expected_series_count:
         raise RuntimeError("FG-4 figure metadata has an incomplete series inventory")
     for index, item in enumerate(series):
         if any(
@@ -1553,6 +1933,10 @@ def _inspect_artifact_disclosures(
         "sparse routed FP8 BF16 " + caption
     ):
         raise RuntimeError("FG-4 figure caption omits dense or sparse traffic")
+    if record.get("schema") == SCHEMA and (
+        "corrected ratios" not in caption or "superseded" not in caption
+    ):
+        raise RuntimeError("FG-4 figure caption hides the correction history")
 
     results_rows_inspected = _inspect_results_table_disclosures(results_path)
     pdf_path = figures_dir / "minimax_ep_scaling.pdf"
@@ -1667,6 +2051,12 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
         "operating_point": config["operating_point"],
         "sampling": config["packet_sampling"],
         "strategies": config["strategies"],
+        "collective_floor_binding": {
+            **first["collective_floor_calibration"],
+            "configuration": config["collective_floor_correction"],
+            "transferred_at_use_acknowledged": True,
+            "composition": config["collective_floor_correction"]["composition"],
+        },
         "void_first_run": config["void_first_run"],
         "physical_sanity": {
             "widest_expert_parallel": widest_width,
@@ -1706,13 +2096,16 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
         },
         "traffic_model_disclosure": {
             "family_d": (
-                "same requested dense logical element count in both arms, but "
-                "different physical realizations and cost models; the ratio is "
-                "not contention isolation"
+                "same requested dense logical element count in both arms; the "
+                "packet arm composes acknowledged aggregate collective floors "
+                "and byte slopes with direct fabric service, while the external "
+                "arm remains an opaque NCCL-table cost model; the ratio is not "
+                "contention isolation"
             ),
             "family_s": (
                 "dense SM90 general fallback versus sparse routed FP8 dispatch "
-                "and BF16 combine; unscored strategy comparison"
+                "and BF16 combine with transferred aggregate collective timing; "
+                "unscored strategy comparison"
             ),
             "deployment_strategy_selection": "unknown to this study",
         },
@@ -1727,7 +2120,9 @@ def _coordinator(bulk_root: Path, *, write_tracked: bool) -> dict[str, Any]:
         "family_d_fixed_overhead_analysis": fixed_overhead_analysis,
         "evidence_classes": {
             "compute_and_external_dispatch": "MEASURED-EXTERNAL",
-            "packet_dispatch_and_combine": "SIM-DERIVED",
+            "packet_fabric_dispatch_and_combine": "SIM-DERIVED",
+            "collective_floor_exact_domain": "calibrated",
+            "collective_floor_rank_or_semantic_transfer": "transferred-at-use",
         },
         "source_artifacts": {
             "operation_database": {
@@ -1816,7 +2211,7 @@ def _validate_record(path: Path) -> tuple[dict[str, Any], dict[str, Any] | None]
     record = json.loads(path.read_text(encoding="utf-8"))
     if record.get("schema") == LEGACY_SCHEMA:
         return record, None
-    if record.get("schema") != SCHEMA:
+    if record.get("schema") not in SUPPORTED_RECORD_SCHEMAS:
         raise SystemExit("record has an unsupported schema")
     if len(record.get("rows", ())) != 4:
         raise SystemExit("record must contain four expert-parallel rows")
@@ -1838,16 +2233,27 @@ def _validate_record(path: Path) -> tuple[dict[str, Any], dict[str, Any] | None]
         )
         results_text = (STUDY / "RESULTS.md").read_text(encoding="utf-8")
         opening = " ".join(results_text[:8000].split())
-        for required in (
+        required_opening = [
             "VOID against FG-4",
             "0.2742607736975033",
             "strategy comparison",
             "does not know which strategy",
             "two cost models",
             "NOT evidence",
-            "0 of 3",
             "UNSCORED DIAGNOSTIC",
-        ):
+        ]
+        if record.get("schema") == SCHEMA:
+            required_opening.extend(
+                (
+                    "1 of 3",
+                    "42.816396866840726",
+                    "component-wise",
+                    "superseded",
+                )
+            )
+        else:
+            required_opening.append("0 of 3")
+        for required in required_opening:
             if required not in opening:
                 raise SystemExit(f"RESULTS.md opening omits {required!r}")
     return record, disclosure_inspection

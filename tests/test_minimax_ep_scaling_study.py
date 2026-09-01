@@ -16,11 +16,11 @@ ROOT = Path(__file__).resolve().parents[1]
 STUDY = ROOT / "examples/minimax_ep_scaling_v1"
 RECORD = STUDY / "record.json"
 RESULTS_CSV = STUDY / "results.csv"
-RECORD_SHA256 = "e83424281b85990a9dbd17b454ba801c4aa5941b8b0cfa5089e2c3899ba6be65"
-RESULTS_CSV_SHA256 = "c59b185eaac7895fd5eb7eef8224a1362d62ba25454166b6e4db726faadacfbb"
-PNG_SHA256 = "13c080a3a2608da2b283f9d14b6bbf10716ac667c48d7ac3adcd7fb9e303669d"
-PDF_SHA256 = "9f8d529e4230967cf83c33066db222788b8cc32aa956b1925023d800587fea4d"
-METADATA_SHA256 = "2abe27ce621898c6a35438f5c41faec50fa496e8d6e126eefec62b7ebe925dcd"
+RECORD_SHA256 = "7f8a3a07867faf18a4f7f307889a9f90e6780eb7c06591a05fad6163ca381f02"
+RESULTS_CSV_SHA256 = "0fe423d2e0639791864eb69ffec5e1da2ec45e2dc2d3cf813a8aadfca3d8ecad"
+PNG_SHA256 = "babc1559c8e5baa60dc8d76aee93d49b5db0e3152d433190110f910f215370a3"
+PDF_SHA256 = "ee0d12bb8e21f5a7e644fc36f573617a849d44d3daac6bad2c19cb8c31db66c2"
+METADATA_SHA256 = "7050def9357ba24b20cbbc9719d0f5944c1bc1d7bf6e638c5e4758f53372d1e5"
 WIDTHS = (8, 32, 128, 256)
 FIRST_FREEZE_SHA256 = "9b355278c779c7834d18eaf3b19d16929f7b1800926e0ba1ba271f14a5d613ed"
 CORRECTED_FREEZE_SHA256 = "b237945a945e1b1500ab299cf81faf20e704541f6c3e591b1cf90c418b5bb116"
@@ -45,14 +45,24 @@ def _runner():
     return module
 
 
+def _calibration(runner):
+    from simllm.calibration.external_nccl import ExternalNcclDatabase
+
+    config = runner._load_config()
+    return config, runner._load_collective_floor_calibration(
+        config,
+        ExternalNcclDatabase.load(),
+    )
+
+
 def test_both_expectation_freezes_are_immutable() -> None:
     assert _sha256(STUDY / "expectations.md") == FIRST_FREEZE_SHA256
     assert _sha256(STUDY / "expectations_v2.md") == CORRECTED_FREEZE_SHA256
 
 
-def test_corrected_dense_population_and_extrapolation_are_predeclared() -> None:
+def test_corrected_dense_population_and_component_extrapolation_are_declared() -> None:
     runner = _runner()
-    config = runner._load_config()
+    config, calibration = _calibration(runner)
     assert config["chronology"]["corrected_expectations_commit"] == "4d1e41c"
     assert config["void_first_run"]["published_headline_ratio"] == 0.2742607736975033
 
@@ -72,11 +82,30 @@ def test_corrected_dense_population_and_extrapolation_are_predeclared() -> None:
         width=256,
         anchor={
             "expert_parallel": 128,
-            "layer_packet_ms": 0.5,
+            "phases": [
+                {
+                    "phase": "family-d-dense-all-gather",
+                    "fabric_jct_ps": 227_075_200,
+                    "uncalibrated_phase_duration_ps": 227_075_200,
+                },
+                {
+                    "phase": "family-d-dense-reduce-scatter",
+                    "fabric_jct_ps": 227_075_200,
+                    "uncalibrated_phase_duration_ps": 227_075_200,
+                },
+            ],
             "population_status": "measured full rank and message population",
         },
+        calibration=calibration,
     )
-    assert extrapolated["layer_packet_ms"] == 0.5 * 31 / 15
+    assert extrapolated["superseded_packet_dispatch_combine_ms"] == pytest.approx(
+        61.00753706666667,
+        abs=1e-14,
+    )
+    assert extrapolated["packet_dispatch_combine_ms"] == pytest.approx(
+        62.65087460666667,
+        abs=1e-14,
+    )
     assert extrapolated["simulated_messages_per_layer"] == 0
     assert extrapolated["represented_messages"] == 2 * 256 * 255 * 65
     assert extrapolated["extrapolation"]["anchor_expert_parallel"] == 128
@@ -84,6 +113,65 @@ def test_corrected_dense_population_and_extrapolation_are_predeclared() -> None:
     assert extrapolated["extrapolation"]["rule_commit"] == "a6ba97f"
     assert extrapolated["extrapolation"]["frozen_before_implementation"] is False
     assert extrapolated["extrapolation"]["scored"] is False
+    assert "fixed aggregate floor is additive" in extrapolated["extrapolation"][
+        "linearity_break"
+    ]
+    assert [
+        phase["collective_floor_estimate"]["floor_charge_ps"]
+        for phase in extrapolated["phases"]
+    ] == [13_201_426, 12_080_690]
+
+
+def test_collective_floor_binding_uses_matched_coordinates_and_refuses_transfers() -> None:
+    from simllm.backends import CollectiveFloorTransferError
+
+    runner = _runner()
+    config, calibration = _calibration(runner)
+    dense = runner._dense_floor_requests(config, width=8)
+    assert [request["message_bytes"] for request in dense] == [196_608, 196_608]
+    estimates = [
+        runner._collective_floor_estimate(
+            calibration,
+            dtype=request["dtype"],
+            operation=request["operation"],
+            ranks=8,
+            message_bytes=request["message_bytes"],
+            donor=request["donor"],
+            acknowledge_transfer=False,
+        )
+        for request in dense
+    ]
+    assert sum(estimate.completion_ps for estimate in estimates) * 65 == 2_131_828_400
+    assert all(estimate.evidence_class == "calibrated" for estimate in estimates)
+
+    transferred = runner._dense_floor_requests(config, width=32)[0]
+    with pytest.raises(CollectiveFloorTransferError, match="refuses transferred-at-use"):
+        runner._collective_floor_estimate(
+            calibration,
+            dtype=transferred["dtype"],
+            operation=transferred["operation"],
+            ranks=32,
+            message_bytes=transferred["message_bytes"],
+            donor=transferred["donor"],
+            acknowledge_transfer=False,
+        )
+    accepted = runner._collective_floor_estimate(
+        calibration,
+        dtype=transferred["dtype"],
+        operation=transferred["operation"],
+        ranks=32,
+        message_bytes=transferred["message_bytes"],
+        donor=transferred["donor"],
+        acknowledge_transfer=True,
+    )
+    assert accepted.evidence_class == "transferred-at-use"
+
+    sparse = runner._sparse_floor_requests(config, width=8)
+    assert [request["message_bytes"] for request in sparse] == [98_304, 196_608]
+    assert [request["operation"] for request in sparse] == [
+        "moe_dispatch",
+        "moe_combine",
+    ]
 
 
 def test_family_d_generator_classifies_cost_models_and_diagnostic() -> None:
@@ -91,7 +179,7 @@ def test_family_d_generator_classifies_cost_models_and_diagnostic() -> None:
     measured = runner._family_d_assessment(
         width=128,
         gpus_per_node=8,
-        ratio=0.8026183885459625,
+        ratio=0.8472993823377812,
         population_scored=True,
     )
     assert measured == {
@@ -106,7 +194,7 @@ def test_family_d_generator_classifies_cost_models_and_diagnostic() -> None:
     diagnostic = runner._family_d_assessment(
         width=256,
         gpus_per_node=8,
-        ratio=1.187022158460092,
+        ratio=1.2189965368336635,
         population_scored=False,
     )
     assert diagnostic == {
@@ -255,30 +343,30 @@ def test_tracked_minimax_record_is_locked_and_nonvoid() -> None:
     assert b"\r" not in RESULTS_CSV.read_bytes()
 
     record = _record()
-    assert record["schema"] == "simllm-minimax-ep-scaling-record-v2"
+    assert record["schema"] == "simllm-minimax-ep-scaling-record-v3"
     assert record["run_state"] == "nonvoid"
-    assert record["attempt"] == "attempt-0001"
-    assert record["run_commit"] == "66687d57275c336c11cbab048c678a1fb92e34ae"
+    assert record["attempt"] == "attempt-0002"
+    assert record["run_commit"] == "af9b82a18e5f23f951df683777f7b548e9447bd8"
     assert record["freeze_commits"] == ["61b66c4", "5a29bb0", "4d1e41c"]
     assert all(record["fatal_guards"].values())
     assert record["fresh_evaluations"] == {
         "bit_equal": True,
         "count": 2,
-        "first_sha256": "e2da060655f9efa73f87cf126728e1ec731628ebe43c21dd3a0765b28fd45f33",
-        "second_sha256": "e2da060655f9efa73f87cf126728e1ec731628ebe43c21dd3a0765b28fd45f33",
+        "first_sha256": "0f4f6b5f2a37def38fd4de0dc96a58ba03765dd972fd9bcd960cccd0a82076e0",
+        "second_sha256": "0f4f6b5f2a37def38fd4de0dc96a58ba03765dd972fd9bcd960cccd0a82076e0",
     }
 
     families = record["family_tallies"]
     assert {
         name: (families[name]["passed"], families[name]["denominator"])
         for name in ("E", "C", "D", "W")
-    } == {"E": (4, 4), "C": (4, 4), "D": (0, 3), "W": (1, 1)}
+    } == {"E": (4, 4), "C": (4, 4), "D": (1, 3), "W": (1, 1)}
     assert families["S"]["scored"] is False
-    assert families["W"]["elapsed_seconds"] == 1039.514329513535
+    assert families["W"]["elapsed_seconds"] == 803.6440525054932
     assert record["artifact_disclosure_inspection"] == {
         "csv_rows_inspected": 4,
         "figure_caption_inspected": True,
-        "figure_series_inspected": 5,
+        "figure_series_inspected": 8,
         "pdf_text_inspection": {
             "performed": True,
             "skip_reason": None,
@@ -340,11 +428,17 @@ def test_frozen_dispatch_and_composition_cells_are_locked() -> None:
     )
 
 
-def test_corrected_dense_refutations_and_sparse_geometry_are_locked() -> None:
+def test_corrected_dense_outcomes_and_sparse_geometry_are_locked() -> None:
     record = _record()
     rows = record["rows"]
     assert [row["expert_parallel"] for row in rows] == list(WIDTHS)
     assert [row["family_d_ratio"] for row in rows] == [
+        1.1091430503889075,
+        0.4359189379766115,
+        0.8472993823377812,
+        1.2189965368336635,
+    ]
+    assert [row["family_d_superseded_ratio"] for row in rows] == [
         0.02590463307406155,
         0.3530150565741419,
         0.8026183885459625,
@@ -363,12 +457,18 @@ def test_corrected_dense_refutations_and_sparse_geometry_are_locked() -> None:
         "unscored post-specified diagnostic",
     ]
     assert [row["family_d_outcome"] for row in rows] == [
-        "REFUTED",
+        "PASS",
         "REFUTED",
         "REFUTED",
         "UNSCORED DIAGNOSTIC",
     ]
     assert [row["family_d_packet_ms"] for row in rows] == [
+        2.1318284,
+        8.640873540000001,
+        31.163113539999998,
+        62.65087460666667,
+    ]
+    assert [row["family_d_superseded_packet_ms"] for row in rows] == [
         0.04979,
         6.997536,
         29.519776,
@@ -387,7 +487,7 @@ def test_corrected_dense_refutations_and_sparse_geometry_are_locked() -> None:
         8_486_400,
     ]
     assert [cell["passed"] for cell in record["family_tallies"]["D"]["cells"]] == [
-        False,
+        True,
         False,
         False,
         None,
@@ -397,6 +497,12 @@ def test_corrected_dense_refutations_and_sparse_geometry_are_locked() -> None:
     )
     assert rows[-1]["family_d_extrapolation"]["frozen_before_implementation"] is False
     assert rows[-1]["family_d_extrapolation"]["scored"] is False
+    assert "for each semantic half, multiply only" in rows[-1][
+        "family_d_extrapolation"
+    ]["rule"]
+    assert "whole phase" in rows[-1]["family_d_extrapolation"][
+        "superseded_rule_status"
+    ]
 
     assert [row["family_s_simulated_messages_per_layer"] for row in rows] == [
         112,
@@ -414,6 +520,18 @@ def test_corrected_dense_refutations_and_sparse_geometry_are_locked() -> None:
         285_696.0,
         292_608.0,
         293_760.0,
+    ]
+    assert [row["family_s_packet_step_ms"] for row in rows] == [
+        15.004019082232176,
+        13.47648820617192,
+        15.084328309693262,
+        18.479345844976933,
+    ]
+    assert [row["family_s_superseded_packet_step_ms"] for row in rows] == [
+        12.099457942232176,
+        12.11192000117192,
+        13.719760104693265,
+        17.114777639976932,
     ]
     widest_geometry = rows[-1]["family_s_routing_geometry"]
     assert widest_geometry == {
@@ -454,8 +572,9 @@ def test_physical_ledger_and_portable_paths_are_locked() -> None:
     assert record["external_table_identification"] == {
         "caller_argument_interpretation": (
             "the caller passes tokens times hidden times expert-parallel width as "
-            "an element count, so the table axis unit is unresolved between its "
-            "byte name and the caller's element semantics"
+            "an element count; the calibration study proved that the raw table "
+            "coordinate is ELEMENTS despite the message_bytes interpolation label, "
+            "and converts it to true bytes using the dtype width"
         ),
         "dtype_identifier": "half",
         "dtype_interpretation": (
@@ -478,8 +597,9 @@ def test_physical_ledger_and_portable_paths_are_locked() -> None:
         "inflated_residual_ms_over_65_layers": 28.664346541071428,
         "message_axis_name": "message_bytes",
         "rank_factor": 10.205357142857142,
+        "status": "superseded by the landed collective-floor binding",
     }
-    assert record["bulk_evidence"] == "${SIMLLM_MINIMAX_FIX_BULK_ROOT}/attempt-0001"
+    assert record["bulk_evidence"] == "${SIMLLM_MINIMAX_FIX_BULK_ROOT}/attempt-0002"
     text = RECORD.read_text(encoding="utf-8")
     slash = chr(47)
     for forbidden in (
@@ -506,7 +626,7 @@ def test_physical_ledger_and_portable_paths_are_locked() -> None:
         "False",
     ]
     assert [row["family_d_outcome"] for row in rows] == [
-        "REFUTED",
+        "PASS",
         "REFUTED",
         "REFUTED",
         "UNSCORED DIAGNOSTIC",
@@ -520,9 +640,10 @@ def test_physical_ledger_and_portable_paths_are_locked() -> None:
         )
     )
     assert metadata["point_annotations"] == {
-        "ep8": "not a contention comparison: no cross-node traffic",
-        "ep256": "unscored post-specified diagnostic",
+        "ep8": "zero cross-node traffic; corrected floor-bound ratio",
+        "ep256": "unscored post-specified component-wise diagnostic",
     }
+    assert len(metadata["series"]) == 8
     assert metadata["series"][-1]["panel"] == "family-d-cost-model-ratio"
 
 

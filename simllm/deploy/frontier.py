@@ -27,6 +27,7 @@ from simllm.deploy.candidate import (
 from simllm.deploy.estimator import (
     PICOSECONDS_PER_SECOND,
     EstimateStamp,
+    EstimatorClass,
     EstimatorInputs,
     estimate_decode_step,
     estimate_stamp_from_json,
@@ -57,6 +58,7 @@ class PointClass(str, Enum):
     """Authority class represented by one frontier coordinate."""
 
     ESTIMATE = "ESTIMATE"
+    ESTIMATE_LOOP = "ESTIMATE-LOOP"
     SIMULATED = "SIMULATED"
     MEASURED = "MEASURED"
 
@@ -152,9 +154,13 @@ class FrontierPoint:
         if stamped_step != step:
             raise ValueError("point.step_ps: does not match stamped floor composition")
         expected_class = (
-            PointClass.SIMULATED
-            if self.stamp.consumes_sim_derived
-            else PointClass.ESTIMATE
+            PointClass.ESTIMATE_LOOP
+            if self.stamp.estimator_class is EstimatorClass.ESTIMATE_LOOP
+            else (
+                PointClass.SIMULATED
+                if self.stamp.consumes_sim_derived
+                else PointClass.ESTIMATE
+            )
         )
         if self.point_class is not expected_class:
             raise ValueError(
