@@ -90,5 +90,19 @@ the study and configuration range.
 
 ## Completion accounting
 
-Pending. Record the actual touched-file and handwritten line delta here before
-the task is handed off, with an explanation for every estimate miss.
+- Completion baseline: the final working tree based on `8825e46`, before the
+  held-out and combined publication commit.
+- Actual tracked delta: 25 files, 16,272 added lines and 3 deleted lines.
+- Handwritten production and study logic: 2,575 lines, above the planned 700 to
+  1,200 lines.
+- Tests: 704 lines, 54 lines above the planned upper bound.
+- Handwritten study configuration and documentation: 154 lines, below the
+  planned 450 to 850 lines.
+- Mechanically generated expectations, result JSON, and result Markdown:
+  12,839 added lines with zero handwritten line count.
+- The dominant estimate miss was the inherited virtual harness throughput. The
+  sequential runner was valid but too slow for the 48-cell split, so closure
+  required the VLLM-41 local one-process-per-cell seam, a strict shard merger,
+  and their tests. The reader and final self-contained publisher were also
+  larger than anticipated. Generated reports carried the expected study prose,
+  leaving fewer separately handwritten documentation lines than estimated.
