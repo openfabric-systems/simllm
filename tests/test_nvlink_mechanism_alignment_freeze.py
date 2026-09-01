@@ -1,11 +1,13 @@
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 STUDY = ROOT / "examples" / "nvlink_mechanism_alignment_v1"
 EXPECTATIONS = STUDY / "expectations.json"
 EXPECTATIONS_SHA256 = "fafe9bbe730d9c424f7d4f72fd2df3d5fa2cdd8ad9f370f63ff60194374c58cc"
+EXPECTATIONS_COMMIT = "c589abadcfe7d142ffeee3a38db9f9d0a1dc23c8"
 
 
 def _frozen() -> dict[str, object]:
@@ -23,9 +25,16 @@ def test_freeze_is_expectations_only_and_precedes_behavior() -> None:
     assert "before the aligned mechanism implementation" in frozen["study"][
         "chronology"
     ]
-    assert not (STUDY / "results.json").exists()
-    assert not (STUDY / "RESULTS.md").exists()
-    assert not (STUDY / "run_study.py").exists()
+    tree = subprocess.run(
+        ["git", "ls-tree", "-r", "--name-only", EXPECTATIONS_COMMIT],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.splitlines()
+    assert "examples/nvlink_mechanism_alignment_v1/results.json" not in tree
+    assert "examples/nvlink_mechanism_alignment_v1/RESULTS.md" not in tree
+    assert "examples/nvlink_mechanism_alignment_v1/run_study.py" not in tree
 
 
 def test_minimum_physical_oracles_are_exactly_frozen() -> None:
@@ -110,6 +119,7 @@ def test_all_root_consumer_pins_are_byte_identical() -> None:
 
 
 def test_freeze_and_report_language_are_portable() -> None:
+    compact_plus_minus = "+/" + "-"
     for path in (EXPECTATIONS, STUDY / "expectations.md"):
         payload = path.read_bytes()
         text = payload.decode("utf-8")
@@ -117,4 +127,4 @@ def test_freeze_and_report_language_are_portable() -> None:
         assert "\N{EM DASH}" not in text
         assert "/data3/" not in text
         assert "/home/" not in text
-        assert "+/-" not in text
+        assert compact_plus_minus not in text

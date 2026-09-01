@@ -1,12 +1,14 @@
 # NVLink domain model
 
-The candidate NVLink domain is a queue-level decomposition of one directed
-peer transfer into three independently parameterized services: TX, switch and
-RX. This note records the merged model, its exact analytic bypass, the frozen
-A100 case-to-parameter identification map and the evidence class of every
-current claim. It also records the physical credit ownership and the declared
-arbitration alternatives that TRAF-73 measures. The public-document mechanism
-and the parameter-by-parameter correction boundary are established in
+The NVLink domain decomposes one directed peer transfer into three services:
+TX, switch and RX. It exposes two mutually exclusive authorities. The v1
+compatibility authority preserves every merged consumer byte. The v2 aligned
+authority models generation-scoped flits, link acknowledgement and replay,
+explicit traffic classes and virtual channels, receiver-owned credit release,
+ordered visibility, and NVSwitch input ports, virtual output queues and
+crossbar outputs. This note records both authorities, the exact analytic and
+direct-mesh bypasses, the frozen A100 identification map and the evidence class
+of every claim. The public-document mechanism boundary is established in
 [NVLink mechanism reverse-engineered from public documents](nvlink-mechanism-reverse-engineering.md).
 Public architecture evidence does not promote an undocumented numeric
 candidate or substitute for a run on this repository's NV4 node.
@@ -15,13 +17,11 @@ candidate or substitute for a run on this repository's NV4 node.
 
 ![Queue-level TX, switch and RX NVLink domain model](../../resources/figures/nvlink-domain-model.png)
 
-*Figure 1. The queue-level domain in `simllm.backends.htsim_nvlink`. Every
-numeric module parameter is a DECLARED CANDIDATE. The two rates at the bottom
-are PUBLISHED-MEASUREMENT CHECKS against the earlier A100 envelope, not
-parameter-identification evidence. The first TRAF-65 hardware run voided its
-capture procedure, so it promoted nothing. The corrected TRAF-70 capture is in
-progress and is the gate before any candidate value or evidence class may be
-promoted.*
+*Figure 1. The stable TX, switch and RX module boundary in
+`simllm.backends.htsim_nvlink`. The aligned authority deepens these same boxes;
+it does not create a parallel timing surface. Numeric credit, buffer, endpoint
+and arbitration defaults remain DECLARED CANDIDATES unless their existing
+parameter-specific evidence says otherwise.*
 
 The diagram uses the same module palette as the README device view: green for
 the endpoint TX side, orange for the intervening fabric service and blue for
@@ -30,13 +30,16 @@ selected A100 mode is an identity operation rather than an omitted box.
 
 ## Authorities and scope
 
-Two merged files are authoritative for this study:
+Three merged surfaces are authoritative for this domain:
 
 - `simllm/backends/htsim_nvlink.py` defines the TX, switch and RX contracts,
   their composition, the timestamps and the analytic bypass.
 - `examples/a100_nvlink_packet_v1/candidate-profile.json` binds the A100
   candidate values and preserves the frozen expectations digest
   `212a7a26f54e444c9b18f1e528bd0d00b5a28e4f9e005b0dc137f477ad642571`.
+- `examples/nvlink_mechanism_alignment_v1/expectations.json` freezes the
+  aligned physical oracles, consumer pins and void rules before the v2
+  implementation and first run.
 
 The profile schema is `simllm-htsim-nvlink-candidate-profile-v1`. The scored
 profile carries parameter-specific TRAF-70 evidence: the two endpoint rates
@@ -52,14 +55,15 @@ TPOT chain.
 
 ## Composition and queue boundaries
 
-`NvlinkDomainService.serve` applies the modules in one fixed order:
+`NvlinkDomainService.serve` applies the modules in one fixed order and selects
+one authority for the whole run:
 
 ```text
 NvlinkTransfer
-    -> TX packetization, staging, credits and bonded-link service
-    -> switch pass-through or queued service
-    -> RX ingress buffering, reassembly and delivery
-    -> NvlinkDomainResult
+    -> TX packetization, link reliability and bonded-link service
+    -> switch pass-through or port, VOQ and crossbar service
+    -> RX ingress buffering, credit release and ordered visibility
+    -> NvlinkDomainResult or NvlinkAlignedDomainResult
 ```
 
 The result carries a stable packet ledger, request and response payload and
@@ -68,13 +72,20 @@ occupancy. Logical bytes are counted from the input extents. Wire bytes are
 counted after packet headers have been added. This separation prevents a
 packet overhead hypothesis from silently changing the application payload.
 
-`serve` is the explicitly pinned compatibility entry for every merged study.
+`serve` defaults to the explicitly pinned compatibility authority for every
+merged study.
 Its default is the former static-interleave behavior, named by
 `LEGACY_NVLINK_FLOW_POLICY`. New incast studies use `serve_arbitrated`, whose
 explicit default is `DEFAULT_NVLINK_ARBITRATION_POLICY`, release-aware round
 robin. It accepts static interleave and greedy capture as alternatives. This
 separation keeps the merged ledger byte-identical while making the physical
 contention policy visible at every new call site.
+
+`serve_aligned`, or `serve` with `NvlinkMechanismAuthority.ALIGNED`, selects
+the v2 authority. A run cannot select both. The compatibility ledger remains
+the sole mutable authority when v2 is disabled; the receiver-buffer, link,
+ordering and switch ledgers are the sole mutable authorities when v2 is
+enabled.
 
 The module timestamps are htsim-style local evidence, not core `QueueVisit`
 records. Their mapping is:
@@ -84,9 +95,12 @@ records. Their mapping is:
 | Logical release | `released_at_ps` | The extent, and then each packet, may enter TX |
 | TX grant | `tx_started_at_ps` | Destination credit, selected link and endpoint egress are all available |
 | TX release | `tx_finished_at_ps` | Wire serialization on the selected bonded link completes |
+| Link acknowledgement | `acknowledged_at_ps` | The final error-free transmission is acknowledged and its replay buffer entry can release |
 | Switch grant and release | `switch_started_at_ps`, `switch_finished_at_ps` | Present only for the queued mode; absent under pass-through |
-| RX grant | `rx_started_at_ps` | The destination ingress cursor can accept the arrived packet |
-| RX release and visibility | `rx_finished_at_ps`, `delivered_at_ps` | Ingress serialization finishes and that packet becomes visible |
+| RX buffer admission | `rx_buffer_accepted_at_ps` | Receiver-owned capacity accepts the packet |
+| RX release | `rx_buffer_released_at_ps` | Downstream ingress frees the owned buffer capacity |
+| Credit availability | `credit_available_at_ps` | The receiver release plus the declared return transport reaches the sender |
+| Ordered visibility | `visible_at_ps` | The packet and all required prior sequence members are consumer-visible |
 
 There is no separate `eligible_at` field and no emitted core `QueueVisit` in
 this candidate module. Downstream work must map these boundaries to the shared
@@ -94,8 +108,10 @@ queue-visit contract before using them in an additive critical-path metric.
 
 ## TX module
 
-The TX service is per endpoint. It owns staging, packetization, credit gating,
-the shared endpoint egress cursor and the physical-link bond.
+The TX service is per endpoint. It owns staging, packetization, the shared
+endpoint egress cursor, physical-link selection, acknowledgement and replay
+state. Under the aligned authority, credit capacity is consumed here but is
+released only by the owning downstream receiver buffer.
 
 ### Per-destination staging
 
@@ -111,9 +127,14 @@ window while still contending for the source endpoint's total egress service.
 
 ### Packetization and direction
 
-The maximum payload is 256 bytes and every packet adds a 16-byte header. A
-short final packet keeps the same header. The resulting wire count is always
-`payload_bytes + header_bytes` and construction rejects any disagreement.
+The compatibility authority retains the merged maximum payload of 256 bytes
+and the exact `payload_bytes + 16` wire equation. The aligned authority uses a
+generation-scoped 16-byte flit. It records the header, optional address
+extension, optional byte enable, payload flits and padding separately. A
+256-byte packet occupies 17 flits without an optional field and 18 flits with
+one optional field. Short final payloads round to whole flits. The documented
+Pascal family format anchors this structure; its continuity to A100 remains a
+declared candidate, not a product fact.
 
 Direction is a transaction property, separate from endpoint orientation:
 
@@ -134,20 +155,24 @@ or return encoding. A public NVIDIA switch embodiment uses independent
 destination-per-virtual-channel credits and makes capacity returnable when the
 destination buffer frees. It does not identify the A100 link-credit numbers.
 
-The model carries one implicit virtual channel and applies the unchanged
-candidate of 256 credit slots, each covering one 272-byte maximum-packet
-surrogate, separately to every physical link in a bonded ordered pair. Packet
-visits on one link select slots modulo 256, so reuse on a different link does
-not consume that link's pool. The 272-byte surrogate represents one 17-flit
-`16 + 256` case. The documented protocol permits one-to-eighteen 16-byte flits
-and optional control flits, so the surrogate is not a universal packet or
-credit unit.
+The compatibility authority retains one implicit virtual channel and the
+unchanged 256-slot, 272-byte surrogate on every physical link. The aligned
+authority instead carries a traffic-class enum, a named virtual channel and an
+ordering domain on every packet. It separates variable wire-flit occupancy
+from credit consumption. Its default one-packet credit accounting, one active
+`vc0`, link-destination-virtual-channel pool scope, 256-slot depth and 272-byte
+candidate quantum are all labeled `DECLARED_CANDIDATE` with TRAF-79 provenance.
+None claims the physical A100 virtual-channel count or wire-credit encoding.
 
-The v1 abstraction makes a slot reusable at `tx_finished_at_ps + 200,000 ps`.
-It does not create a credit packet, wait on the modeled RX finish or expose a
-separate reverse-link serialization. Public switch evidence instead ties
-returnable capacity to receiver-buffer release. TRAF-80 owns that structural
-alignment; the exact link return latency and transport remain undocumented.
+The v1 compatibility abstraction keeps its original timer so inherited study
+bytes do not move. The aligned authority never frees sender capacity from TX.
+It records RX buffer admission and release, then makes the corresponding
+credit sender-visible only after the declared return transport. The coupled
+solver advances until TX choices and receiver releases reach a fixed point.
+Error-free link acknowledgement adds zero bytes and time. Explicit injected
+errors retain the packet in the replay buffer and add nonnegative retransmit
+bytes and delay. The acknowledgement encoding, timer and replay-buffer depth
+remain unidentified product parameters.
 
 These values and the one-modeled-virtual-channel scope are not hardware
 measurements. With four links, the declared aggregate window is 278,528 wire
@@ -174,6 +199,15 @@ the first full-rate input wins whenever it is ready. All three policies are
 selectable. Their product-specific evidence classes remain declared
 candidates, not measurements.
 
+That three-policy seam belongs to the compatibility NV4 receiver studies. The
+aligned NVSwitch seam has a separate identity off policy and a declared
+round-robin candidate policy object. Mandatory route legality, output
+availability and virtual-output-queue head selection happen before the policy.
+Identity ignores traffic-class labels and chooses the first legal candidates
+in baseline order. A grant interval uses any input port and any output port at
+most once. Permuting class labels under identity changes no timestamp, byte,
+random draw or completion order.
+
 The frozen simulation matrix passes all 15 policy and degree instances with
 all 105 fatal guards intact. At physical degree 3, release-aware round robin
 predicts raw wire shares of 87.159, 59.921 and 59.921 GB/s; static interleave
@@ -184,10 +218,9 @@ the registered hardware discriminator, not policy-identification evidence.
 The cited source chain and the boundary between vendor disclosure, patent
 embodiment, academic assumption, and repository measurement live in the
 [reverse-engineering document](nvlink-mechanism-reverse-engineering.md). No
-public value is recorded as a captured value. TRAF-80 first aligns the model
-with the documented structure; TRAF-73's registered NV4 cells then decide the
-remaining effective window, pool scope and arbitration policy on the actual
-node.
+public value is recorded as a captured value. TRAF-80 aligns the model with
+the documented structure. TRAF-73's registered NV4 cells decide the remaining
+effective window, pool scope and arbitration policy on the actual node.
 
 ### Four-link bonding
 
@@ -223,41 +256,42 @@ hardware measurement.
 
 ### NVSwitch-class queued parameterization
 
-The same `NvlinkSwitch` box also supports `queued`. The input-placement form
-shown in Figure 1 has one cursor per source port feeding a contention point.
-The implementation may instead key the cursor by output destination or use one
-shared cursor. Its internal v1 queue discipline is FIFO. Enabling or disabling
-head-of-line blocking controls whether an extent receives a separate cursor
-under the selected placement. The TRAF-73 selectable policies sit at the
-downstream destination-service seam used by the direct NV4 receiver. A future
-NVSwitch-class profile must locate that arbitration at its physical crossbar
-output rather than infer it from this direct-mesh profile.
+The same `NvlinkSwitch` box supports `queued`. The compatibility call retains
+the old flat placement cursor only for its pinned authority. The aligned call
+maps source and destination endpoint identities to input and output ports. It
+queues each `(input port, virtual channel, output port)` combination in a
+separate virtual output queue. Queue occupancy is explicit and bounded by the
+declared candidate capacity.
 
-A queued profile must supply placement, service rate, buffer capacity,
-arbitration and head-of-line policy together. V1 verifies that an individual
-packet fits the declared switch buffer and serializes the selected cursor; it
-does not maintain a time-varying switch-buffer occupancy ledger.
+At each event time, the switch exposes only legal, arrived queue heads whose
+input and output are free. The policy object chooses a maximal two-sided
+crossbar match. Every grant records input, output, virtual channel, start,
+finish and policy. Independent input-output pairs can serialize concurrently;
+one input or output cannot appear twice in the same grant interval. This
+structure prevents a packet blocked on one destination from hiding a ready
+packet for another destination behind a flat input FIFO.
 
-This is the parameterization seam for H100 and GH200 NVSwitch-class paths.
-No H100 or GH200 queued profile, buffer value, arbitration measurement or
-service value is shipped here. Public NVIDIA switch disclosures require a
-deeper port, virtual-output-queue, virtual-channel and crossbar-grant structure
-than the v1 flat FIFO. Those architectures must supply their own profile rather
-than inherit an A100 number, and TRAF-80 owns the structural seam.
+No H100 or GH200 queue depth, grant interval, route table or product arbiter is
+shipped. Service rate and capacity remain explicit profile inputs. The
+round-robin implementation is a declared discriminator, while identity is the
+off policy. Architecture-specific profiles must identify their values instead
+of inheriting the A100 direct-mesh candidates.
 
 ## RX module
 
 The RX service is per endpoint and keyed by packet destination. It owns ingress
-serialization, the finite buffer ledger, sequence enforcement and delivery.
+serialization, the finite buffer ledger, credit release, sequence enforcement
+and consumer visibility.
 
 ### Ingress FIFO and occupancy
 
-Each destination has one ingress cursor at a declared 300 GB/s and one
-occupancy queue. On packet arrival, RX first retires buffered wire bytes whose
-ingress service has finished, then admits the new packet. Admission rejects a
-single packet larger than the declared 1 MiB capacity and rejects aggregate
-live occupancy above that capacity. The domain result reports the maximum
-occupancy observed across destinations.
+The compatibility authority retains its one destination occupancy queue. The
+aligned authority keys occupancy by destination and virtual channel. On
+arrival, it retires only capacity whose receiver-owned release has occurred.
+When the buffer is full, admission waits for the earliest owning release. A
+release record names the packet, physical link, virtual channel, capacity
+units, buffer-release time and later sender-visible credit time. The result
+reports maximum occupancy across these explicit pools.
 
 RX rate and capacity are independent declarations. Equal TX and RX endpoint
 rates do not make them one parameter and do not let evidence for one identify
@@ -265,15 +299,17 @@ the other.
 
 ### Extent sequence and delivery
 
-For each extent, packet sequence numbers must be strictly increasing in the
-stream presented to RX. The destination ingress cursor then serializes packets
-in that order. Each packet becomes visible at its RX finish, and the result's
-completion is the latest visible packet. The policy names are
-`extent_sequence` reassembly and `per_extent` delivery.
+The compatibility authority preserves its exact extent-sequence delivery. The
+aligned authority may accept packets in physical arrival order, then groups
+them by destination and ordering domain. Consumer visibility advances in
+sequence order and cannot precede RX finish. A packet that arrives early waits
+at the visibility boundary for every required earlier sequence member. The
+domain completion is the latest visibility event.
 
-The candidate does not expose a separate completed-extent object. Its exact
-packet ledger, sequence check, separate direction totals and final completion
-time are the current conservation surface.
+The aligned result exposes packet, credit-release, switch-grant and visibility
+projections. Logical payload, original request and response wire bytes, replay
+wire bytes, acknowledgement count and total wire bytes form its conservation
+surface. These projections never become a second timing authority.
 
 ## Analytic-bypass contract
 
@@ -281,12 +317,14 @@ No profile means no packet-domain side effect. `NvlinkDomainService` returns
 the caller's `analytic_result` by Python object identity, not a copy or a
 numerically reconstructed equivalent. Thus enabling the service seam with no
 candidate selected cannot change bytes, timestamps, ordering, provenance or
-any other field held by the analytic result.
+any other field held by the analytic result. This holds for both authority
+selectors.
 
 With a profile selected, `include_switch=False` is a module-level diagnostic
 bypass. It passes the transmitted packet tuple directly to RX. For the A100
 pass-through profile, including or excluding the switch is exact tuple
-identity. This is distinct from the profile-absent analytic bypass, which
+identity under compatibility and exact canonical-result identity under the
+aligned policy seam. This is distinct from the profile-absent analytic bypass, which
 returns before packetization and preserves the caller's original result.
 
 ## Frozen case-to-parameter identification map
@@ -319,13 +357,13 @@ capture is `COMPLETE_VOID_86_OF_86` and identifies no TX or RX parameter.
 
 | Surface | Current value or claim | Evidence class today | Consequence |
 |---|---|---|---|
-| TX packet geometry and direction | 256-byte maximum payload; 16-byte header; write data in request; read control in request and read data in response | **PUBLIC PASCAL FORMAT plus DECLARED A100 GENERATION BINDING**; measured direction evidence remains separate | Optional control flits contradict the universal `payload + header` wire equation; NVLink 3 field continuity stays open |
+| TX packet geometry and direction | Generation-scoped 16-byte flits; explicit header, optional fields, payload flits and padding; write data in request; read control in request and read data in response | **PUBLIC PASCAL FORMAT plus DECLARED A100 GENERATION BINDING**; measured direction evidence remains separate | A100 field continuity and optional-field selection stay open without weakening the explicit mechanism |
 | TX bond and rates | Four links per peer; 25 GB/s per link; effective endpoint egress; earliest-available packet striping | **PUBLIC PHYSICAL LINK COUNT AND RATE plus MEASURED EFFECTIVE ENDPOINT RATE plus DECLARED BOND POLICY** | Public evidence fixes physical bounds but not the internal endpoint service or stripe selector |
-| TX credits | 256 per physical link per implicit modeled virtual channel; 272-byte maximum-packet surrogate | **CONTRADICTED CONSTANT-OCCUPANCY REPRESENTATION plus UNDOCUMENTED NUMERIC CANDIDATES**, not a public hardware value | Separate variable flit occupancy from credit count, quantum, virtual-channel map and return transport |
-| Incast arbitration | Release-aware round robin default; static interleave and greedy capture alternatives | **PUBLIC PATENT DESIGN SPACE plus DECLARED PRODUCT POLICY CANDIDATES**, not product identification | TRAF-80 aligns the queue and crossbar seam; TRAF-73 retains the sustained unequal-offer discriminator |
+| TX and RX credits | Variable packet occupancy; explicit virtual channel and pool scope; receiver-owned release before return transport; 256 slots and one-packet accounting remain defaults | **PUBLIC RECEIVER-OWNERSHIP MECHANISM plus UNDOCUMENTED NUMERIC CANDIDATES**, not a public A100 value | TRAF-73 identifies effective quantum, scope, depth and return behavior |
+| Incast arbitration | Compatibility receiver policies plus aligned identity and round-robin NVSwitch policy objects | **PUBLIC PATENT DESIGN SPACE plus DECLARED PRODUCT POLICY CANDIDATES**, not product identification | TRAF-73 retains the sustained unequal-offer discriminator |
 | A100 switch | Exact pass-through with zero byte and time effect | **STRUCTURAL DIRECT-MESH INVARIANT, NOT MEASURED** | It stands because the selected topology has no switch, not because TRAF-65 measured it |
-| NVSwitch-class switch | Queued interface with input, output or shared placement, FIFO arbitration and optional head-of-line partitioning | **PARAMETERIZED INTERFACE, NO SHIPPED PROFILE VALUES** | H100 and GH200 need architecture-specific queue and service evidence |
-| RX ingress and delivery | 300 GB/s ingress; 1 MiB capacity; 200,000 ps credit return; extent-sequence reassembly; per-extent delivery | **DECLARED CANDIDATE**, `declared_candidate_not_hardware_measurement` | No RX rate, capacity, return or ordering parameter is calibrated |
+| NVSwitch-class switch | Input ports, destination and virtual-channel VOQs, output ports, two-sided crossbar grants and persistent policy state | **PUBLIC STRUCTURAL MECHANISM, NO SHIPPED PRODUCT VALUES** | H100 and GH200 still need architecture-specific queue, route, service and arbiter evidence |
+| RX ingress and delivery | Effective ingress, explicit buffer ownership and release, return transport, reorder and visibility events | **MEASURED RATE plus PUBLIC STRUCTURE plus DECLARED NUMERIC CANDIDATES** | Buffer depth, return encoding and exact visibility latency remain unidentified |
 | Ordered-pair envelope | 94.056 GB/s composed candidate against 94.00 to 94.07 GB/s measured | **PUBLISHED-MEASUREMENT CHECK, NOT IDENTIFICATION** | Passes the registered envelope check; cannot distinguish packet overhead from copy-engine coalescing |
 | Three-way fan-out envelope | 281.699 GB/s composed candidate against 281.65 GB/s measured | **PUBLISHED-MEASUREMENT CHECK, NOT IDENTIFICATION** | Passes the registered envelope check; does not identify endpoint or ingress queue service |
 | TRAF-65 hardware capture | `COMPLETE_VOID_86_OF_86` | **VOID CAPTURE, NO MEASUREMENT EVIDENCE** | Candidate values and classes remain unchanged; TRAF-65 remains open |
@@ -345,10 +383,16 @@ declared policies and preserves every fatal guard. It does not change TRAF-65,
 TRAF-70 or the candidate profile. It also does not treat the H100 or GH200
 switch path as populated.
 
-TRAF-80 owns the public-document structural alignment. TRAF-73 then owns the
-remaining credit-window, pool-scope and product-arbitration identification. Its
-simulation arms are predictions only, while its three hardware families are
-the promotion gate. Later integration must also preserve the analytic identity
-bypass and connect packet-domain timestamps to the repository's shared
-queue-visit and live-metric contracts before the mechanism can support a TTFT
-or TPOT precision claim.
+The TRAF-80 sanity result selects the aligned authority for one fixed 1 MiB
+job. Repeated 17-flit packets reach the exact 94.117647 GB/s four-link payload
+ceiling and repeated 18-flit packets reach 88.888889 GB/s. The optional flit
+raises the link serialization term by 5.882352941176471 percent at both link
+rates. Every conservation, receiver-ownership, replay, ordering and identity
+guard passes. All inherited consumers remain on their explicit compatibility
+or analytic authority with signed shift +0 at every published coordinate.
+
+This alignment does not identify the A100 credit quantum, pool scope,
+virtual-channel count, buffer depth, credit-return encoding, stripe selector or
+product arbiter. TRAF-73 remains their measurement owner. H200 packet
+integration and architecture-specific NVSwitch profiles remain separately
+registered work; the A100 structural alignment does not close them.

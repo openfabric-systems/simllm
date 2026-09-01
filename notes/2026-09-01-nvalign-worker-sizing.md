@@ -41,6 +41,22 @@ Confidence: low. The dominant uncertainty is preserving the legacy TX and RX eve
 
 Update this note before continuing if implementation needs a new repository interface, touches a fenced module family, cannot preserve a frozen consumer byte for byte, or moves any handwritten category outside its range.
 
+## Scope update, 2026-09-01
+
+The production surface is now expected to be 1,150 to 1,400 handwritten lines. The aligned authority required explicit immutable packet, credit-release, switch-grant and visibility records plus a fixed-point adapter that keeps the compatibility authority unchanged. This remains inside the existing `simllm.backends` interface and does not touch a fenced module family.
+
+The studies, configuration and documentation surface is now expected to be 1,300 to 1,550 handwritten lines. The freeze expanded each of the six inherited consumer roots into its recursive preservation locks, and the runner records both the preserved historical source identity and the current result and figure identities. The mechanically emitted `results.json` remains excluded from handwritten lines.
+
+The tests and fixtures range remains 550 to 1,000 handwritten lines. All frozen consumer records remain byte-identical, so the task has not crossed the stop condition.
+
 ## Completion actuals
 
-Pending. Record the final touched-file count, handwritten and generated line deltas, and explain any range miss before the final delivery commit.
+- Final scope: 15 tracked files, with nine created and six materially
+  modified.
+- Production: 1,251 handwritten lines added and 5 removed.
+- Tests and fixtures: 688 handwritten lines added and none removed.
+- Studies, configuration and documentation: 1,390 handwritten lines added and
+  103 removed.
+- Generated output: one 308-line `results.json`, excluded from handwritten totals.
+- The production range moved 51 lines above its original ceiling because the
+  four authority ledgers and their validation records stayed explicit.
