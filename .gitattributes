@@ -220,6 +220,7 @@ simllm/backends/htsim_nvlink.py text eol=lf
 tests/test_htsim_nvlink.py text eol=lf
 examples/collective_floor_calibration_v1/expectations_v4.md text eol=lf
 examples/collective_floor_calibration_v1/study_config_v2.json text eol=lf
+examples/collective_floor_calibration_v1/ATTEMPT_0005.md text eol=lf
 tests/test_a100_nvlink_packet_study.py text eol=lf
 examples/nvlink_rnic_comparison_v1/*.json text eol=lf
 examples/nvlink_rnic_comparison_v1/*.md text eol=lf
