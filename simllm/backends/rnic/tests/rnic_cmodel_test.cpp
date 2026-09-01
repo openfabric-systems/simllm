@@ -1364,8 +1364,10 @@ void testReceiveFacade(TestRunner& test) {
             && result.reply_kind == RNIC_CM_PACKET_ACK,
         "the receive entry point delivers and acknowledges an in-sequence packet");
     packet.psn = 4;
+    // Half a microsecond later, which is above the profile's per-NIC receive
+    // packet interval, so the sequence check is what decides this packet.
     test.check(
-        rnic_cm_rx_packet(device, &packet, 1, &result) == RNIC_CM_OK
+        rnic_cm_rx_packet(device, &packet, 500000, &result) == RNIC_CM_OK
             && result.outcome == RNIC_CM_RX_DISCARDED_OUT_OF_SEQUENCE
             && result.reply_kind == RNIC_CM_PACKET_NAK
             && result.reply_psn == 1,

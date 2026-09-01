@@ -1525,13 +1525,14 @@ created" statement stands and refers to different, never-registered work.
   landed: the facade reproduces the C++ device timestamps exactly, two
   identical stimulus sequences trace byte-identically, the rendered anomaly
   table equals the committed projection byte for byte, and the profile record
-  hashes reproducibly and separately from the effective-hardware record. What
-  remains is `rnic_cm_rx_packet` and the control-event kinds, which fail
-  closed with an unsupported status today because the pipelines behind them
-  are BACK-57 and BACK-58. Acceptance: a delivered wire packet advances the
-  receive side through the facade with the same timestamps the C++ device
-  produces, and a control event reaches the rate-control gate, both under the
-  same trace-determinism guard.
+  hashes reproducibly and separately from the effective-hardware record.
+  `rnic_cm_rx_packet` now lands a data packet on the receive pipeline and an
+  ACK or a NAK on the requester transport, and `rnic_cm_nic_counters` reads
+  the NIC-named observable state without moving a field of the existing
+  counter set. What remains is the control-event kinds, which still fail
+  closed with an unsupported status because the rate control behind them is
+  BACK-58. Acceptance: a control event reaches the rate-control gate under the
+  same trace-determinism guard the receive entry point already runs under.
 - BACK-56 (Completeness; P1; M) (remaining half): reconcile the transmit
   pipeline's depth-ratio residual and extend it past one QP. The packetizer,
   the outstanding-work window and the pacer are landed behind an opt-in whose
@@ -1541,31 +1542,42 @@ created" statement stands and refers to different, never-registered work.
   7.62 against the measured 5.9, because a lossless pipeline saturates at the
   goodput ceiling where the silicon sat in the loss equilibrium BACK-57 owns.
   The model-internal ratio check passes at the same cell, which localizes the
-  disagreement to the missing mechanism. What remains here: re-run the frozen
-  grid once the ingress meter exists and close the measured band, and give the
-  pacer real per-NIC arbitration across several QPs, which one QP cannot
-  exercise. Acceptance: the 8 KiB measured-ratio row passes with the ingress
-  meter enabled and the lossless numbers stay byte-identical with it disabled,
-  and a multi-QP cell shows the per-NIC ceiling binding while each per-QP
-  ceiling does not.
-- BACK-57 (Completeness; P1; L): land the receive pipeline: a finite ingress
-  meter drained at a service rate whose overflow discards at the PHY with no
-  transport signal, a receive processor with a per-QP receive packet-rate cap,
-  an RC responder PSN check with ACK and NAK and UD delivery that drops
-  silently beyond the cap, and a requester transport with PSN and ACK
-  tracking, go-back-N recovery on NAK or timeout and the retransmission
-  counters whose semantics differ by firmware variant. This is the mechanism
-  that turns a lossless transmit pipeline into the measured saturated
-  equilibrium, so it also owns the depth-ratio residual BACK-56 reports.
-  Acceptance: a saturated single RC QP settles inside the measured 78 to
-  92 Gb/s window; the gap sweep at 8 KiB and 64 KiB drives discards to zero
-  across the measured threshold and matches the duty model within 15 percent;
-  a single UD QP offered above its cap delivers and discards within 10 percent
-  of the measured split; and the bidirectional pair stays cleaner than the
-  unidirectional one. HTSIM-35 and HTSIM-36 are the fabric-model counterparts
-  of this native receive pipeline, expressing the same finite outstanding
-  work, responder ingress meter and packets-per-second resource in htsim
-  rather than in the endpoint.
+  disagreement to the missing mechanism. The ingress meter has since landed
+  and
+  [the slice-C study](../../examples/rnic_cmodel_rx_v1/RESULTS.md) closes that
+  band: the ratio is 6.23 with the meter enabled, and the slice-B rows are
+  byte-identical with it disabled. What remains here is the second half only:
+  give the pacer real per-NIC arbitration across several QPs, which one QP
+  cannot exercise. Acceptance: a multi-QP cell shows the per-NIC ceiling
+  binding while each per-QP ceiling does not.
+- BACK-57 (Completeness; P1; L) (remaining half): place the responder's
+  discard threshold. The ingress meter, the receive processor and the go-back-N
+  requester transport are landed behind an opt-in whose off path is the
+  unchanged slice-B code, and
+  [the slice-C study](../../examples/rnic_cmodel_rx_v1/RESULTS.md) meets most
+  of the bar with one fitted drain rate: the saturated single RC QP settles at
+  79.25 Gb/s inside the measured 78 to 92 window, the gap sweep reproduces the
+  measured clean and dirty pattern at 8 KiB and 64 KiB exactly with paced
+  goodput inside 1 percent, a single UD QP delivers 3.070 Mpps against a
+  measured 3.07 with the excess discarded silently and no transport counter
+  moving, and the two sequence counters agree exactly in every cell. Two
+  clauses remain. The first is the bidirectional pair: the measured 93.4
+  against 91.8 split implies a discard threshold between 93.23 and 94.86 Gb/s
+  of wire, which is incompatible with the 95.7 to 97.9 the equilibrium window
+  requires, so the model reports 93.4 Gb/s clean where the silicon reported
+  43040 discards. That needs a second limiter in the receive path, and the
+  candidate is the per-QP receive packet-rate ceiling the internal arbiter of
+  BACK-58 also feeds. The second is the incast, which BACK-58 owns outright:
+  without a reaction point a go-back-N requester answers loss by raising its
+  own offered load, so two senders sharing a saturated bottleneck collapse
+  rather than settling, while the measured run was congestion-controlled
+  (78058 CNPs sent, 179746 handled). Acceptance: the unidirectional cell
+  reports a nonzero discard counter at 93.4 Gb/s while the duplex cell at 91.8
+  stays clean, without moving the saturated equilibrium outside its window.
+  HTSIM-35 and HTSIM-36 are the fabric-model counterparts of this native
+  receive pipeline, expressing the same finite outstanding work, responder
+  ingress meter and packets-per-second resource in htsim rather than in the
+  endpoint.
 - BACK-58 (Completeness; P2; L): land rate control and the internal arbiter.
   Rate control is the DCQCN notification point that emits a CNP on a
   congestion experienced mark, the reaction point whose per-QP state persists
@@ -1579,7 +1591,11 @@ created" statement stands and refers to different, never-registered work.
   holds within 25 percent and the fair-share split within 2 percentage points.
   HTSIM-5 remains the owner of the policy-side DCQCN state in the backend
   repo; this task owns only the hardware notification point, reaction gate and
-  stamp.
+  stamp. The slice-C study makes the incast half of that acceptance a
+  prerequisite rather than a nicety: with the reaction point absent, two
+  senders into one responder collapse to a 98.8 percent tax instead of the
+  measured 26.9, while the same transport with headroom recovers correctly at
+  62 recovery episodes for 45 losses.
 - BACK-59 (Completeness; P2; M): make the golden model usable as an RTL
   reference from a UVM testbench. The facade trace is the expected-result file
   and the DPI-C import declarations plus a stimulus reader are the missing

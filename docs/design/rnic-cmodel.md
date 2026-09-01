@@ -182,7 +182,24 @@ counter monotonicity) void a run rather than costing a point.
 ## Status
 
 The queue core, PCIe fabric, host memory and submission models exist and are
-validated. The golden-model blocks, the profile, the C facade and the anomaly
-table are registered as open tasks in `docs/modules/backends.md`; the
-ConnectX-5 profile study in `examples/cx5_msgsize_v1` establishes the
-measured curves the blocks are validated against.
+validated. The profile, the anomaly table, the C facade and the packetizer,
+outstanding-work window and pacer are landed and validated, and so are the
+ingress meter, the receive processor and the go-back-N requester transport.
+Rate control and the internal arbiter are not. The remaining blocks and the
+two clauses the receive slice did not close are registered as open tasks in
+`docs/modules/backends.md`; the ConnectX-5 profile study in
+`examples/cx5_msgsize_v1` establishes the measured curves the blocks are
+validated against.
+
+Two rows of the anomaly table need a correction the receive slice earned.
+ANOM-03 attributes the saturated loss equilibrium to the ingress meter alone;
+the campaign's own P4 counters show only a few thousand PHY discards over a
+30 s window at that point, which is far too few to explain a 20 percent
+goodput deficit by loss, so the meter reproduces the equilibrium at a fitted
+drain rate rather than explaining it. ANOM-11 is listed as emergent from the
+packetizer plus go-back-N with fabric loss; the slice-C study shows that
+without the DCQCN reaction point the same mechanism collapses rather than
+settling at the measured tax, so the row depends on rate control as well.
+Neither correction is applied to the table here: the table is data with a
+generated projection and a byte-comparison test, and a row is edited when the
+task that owns it lands, not when a study reads it.

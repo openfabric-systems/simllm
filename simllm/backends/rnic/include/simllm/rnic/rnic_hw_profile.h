@@ -221,15 +221,22 @@ constexpr RnicHwProfile connectX5_100G() {
     profile.tx_pps_per_nic = 16700000;
     profile.rx_pps_per_qp_rc = 0;
     profile.rx_pps_per_qp_ud = 3070000;
-    profile.rx_pps_per_nic = 0;
+    // Sixteen unreliable queue pairs together delivered 9.65 Mpps where four
+    // times the per-QP ceiling would have allowed far more, so the per-NIC
+    // ceiling is the one that binds above a handful of queue pairs.
+    profile.rx_pps_per_nic = 9650000;
     profile.evidence.tx_pps_per_qp = EvidenceClass::CalibratedOpaque;
     profile.evidence.tx_pps_per_nic = EvidenceClass::CalibratedOpaque;
     profile.evidence.rx_pps_per_qp_rc = EvidenceClass::Declared;
     profile.evidence.rx_pps_per_qp_ud = EvidenceClass::CalibratedOpaque;
-    profile.evidence.rx_pps_per_nic = EvidenceClass::Declared;
+    profile.evidence.rx_pps_per_nic = EvidenceClass::CalibratedOpaque;
 
     profile.rx_ingress_bytes = 262016;
-    profile.rx_drain_bps = 92000000000ULL;
+    // Fitted by the slice-C study against the two measured drain-window
+    // thresholds and the measured saturated equilibrium, over a declared
+    // candidate grid. It is a wire-bit rate: the meter drains headers as well
+    // as payload.
+    profile.rx_drain_bps = 96600000000ULL;
     profile.internal_budget_bps = 197000000000ULL;
     profile.loopback_priority = false;
     profile.evidence.rx_ingress_bytes = EvidenceClass::Documented;
