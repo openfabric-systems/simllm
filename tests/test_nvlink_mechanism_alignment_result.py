@@ -83,8 +83,8 @@ def test_report_publishes_handoff_limits_and_every_signed_shift() -> None:
     assert "+1,311,097 ps" in report
     assert report.count("+0") >= 6
     assert "TRAF-73 stays open" in report
-    assert "- TRAF-80 (" in traffic
-    assert "TRAF-80" not in ledger["closed"]
+    assert "- TRAF-80 (" not in traffic
+    assert "TRAF-80" in ledger["closed"]
     assert "integrator-owned" in report
     assert b"\r" not in payload
     assert "\N{EM DASH}" not in report
