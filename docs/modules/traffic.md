@@ -1150,6 +1150,29 @@ arbitration parameters after that structure lands.
 
 ### Precision
 
+- TRAF-81 (Precision; P1; L): validate the aggregate collective-floor
+  authority's fit-small-extrapolate-wide rule on independent silicon. Measure
+  half-precision NCCL all-gather and reduce-scatter completion over one frozen
+  operation-buffer byte grid at ranks 2 and 4 inside one Merlin A100 `NV4`
+  node and ranks 8 and 16 across two and four nodes. Fit the authority's
+  positive floor-plus-byte-slope form from ranks 2 and 4 only, use the rank-4
+  donor with the source resolver's rank-shape and A100-locality ceiling rule,
+  and score ranks 8 and 16 without fitting either scored rank. Cross-architecture
+  evidence is shape-only: normalized efficiency, the floor-versus-slope
+  decomposition, the sign and growth of held-out error with width, and the
+  densely sampled transition around 1 MiB. No H200 absolute latency or
+  bandwidth band may enter an A100 verdict. Physical sanity first requires
+  every intra-node rate to remain within the measured NV4 link envelope and
+  every cross-node rate to remain within the observed port envelope. Freeze
+  the grid, warmups, repetition count, median rule, fit, score bands, fatal
+  guards and blocked-state handling before the harness or first measurement.
+  If a multi-node allocation cannot start or NCCL cannot initialize, publish
+  the affected cell as `BLOCKED` with its exact scheduler or NCCL diagnostic;
+  never estimate or substitute it. Acceptance publishes measured floors and
+  slopes for every available rank and operation, rank-2 and rank-4 fits,
+  rank-8 and rank-16 extrapolation errors, the dip location and depth, and the
+  confidence consequence for every rank-8 donor transfer. This study changes
+  no installed authority or signature metric by itself.
 - TRAF-80 (Precision; P1; L): align the three-module NVLink packet, credit and
   switch domain with the public mechanism boundary established by TRAF-79.
   The surrogate being replaced treats one fixed 272-byte extent as the packet
