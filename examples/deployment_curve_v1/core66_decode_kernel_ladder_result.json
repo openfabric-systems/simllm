@@ -1,0 +1,474 @@
+{
+  "access": {
+    "fatal_held_out_use_occurred": false,
+    "incidental_exposure_count": 2,
+    "incidental_exposure_disposition": "SURVIVABLE_AND_DISCLOSED",
+    "numeric_values_entering_arithmetic_comparison_fitting_or_reproduction": 0,
+    "standard_decode_anchor_is_calibration": true
+  },
+  "calibration_only": {
+    "anchor_tokens_per_second_per_node": "22282",
+    "assignment_endpoint": {
+      "compute_step_ps": "15322677333.333333",
+      "movement_from_inherited_prediction": "+7162.605199",
+      "prediction_tokens_per_second_per_node": "16707.262995",
+      "signed_residual_percent": "-25.019015"
+    },
+    "compute_only_prediction_interval_tokens_per_second_per_node": {
+      "maximum": "18003.485222",
+      "minimum": "16707.262995"
+    },
+    "expert_parallel_communication": {
+      "measured_in_this_study": false,
+      "modeled_term": "E_ep_ps >= 0",
+      "publication_disposition": "ABSENT_AND_UNPRICED",
+      "signed_effect": "adding E_ep_ps increases step service and moves throughput downward"
+    },
+    "inherited_corrected_step_ps": "26821286365",
+    "inherited_prediction_tokens_per_second_per_node": "9544.657796",
+    "movement_interval_tokens_per_second_per_node": {
+      "maximum": "+8458.827426",
+      "minimum": "+7162.605199"
+    },
+    "resident_endpoint": {
+      "compute_step_ps": "14219469000",
+      "movement_from_inherited_prediction": "+8458.827426",
+      "prediction_tokens_per_second_per_node": "18003.485222",
+      "signed_residual_percent": "-19.201664"
+    },
+    "single_deployed_expert_parallel_prediction_published": false
+  },
+  "chronology": {
+    "base_commit": "598e12463f5b9b6355078e2da3f85828a01dad1a",
+    "confirmatory_commit": "ae158a2480b5366b8508ff7405b12257dbafd34f",
+    "confirmatory_job": "202449",
+    "confirmatory_job_end": "2026-09-01T12:45:50",
+    "confirmatory_job_start": "2026-09-01T12:38:34",
+    "expectations_commit": "7919f7b",
+    "expectations_preceded_confirmation": true,
+    "scratch_results_froze_no_public_expectations": true
+  },
+  "evidence_classes": {
+    "behavioral_relations": {
+      "composition_residual": true,
+      "physical_bounds": true,
+      "repeat_stability": true
+    },
+    "fatal_structural_guards": {
+      "dense_moe_mla_and_embedding_identities": true,
+      "empty_and_identical_weight_snapshots": true,
+      "exact_batch_32_kv_2000_marker": true,
+      "one_native_cuda_stream": true,
+      "output_shape_32_by_7168_bf16": true,
+      "process_exit_zero": true,
+      "stable_100_node_graph": true,
+      "three_dense_then_one_moe": true
+    },
+    "preservation_locks": {
+      "passed": 7,
+      "required": 7
+    },
+    "run_configuration_is_unscored": true
+  },
+  "layer_model": {
+    "dense_layer_service_ps": 308256000,
+    "full_layer_identities": {
+      "dense_ps": "C + D = 308256000",
+      "moe_ps": "C + N + G = 415648000"
+    },
+    "moe_layer_service_ps": 415648000,
+    "moe_routed_function": "G(R,A,alpha) = 199200000 * (alpha * R / 256 + (1 - alpha) * A / 256), 0 <= alpha <= 1",
+    "provenance": {
+      "C_common": "rung_1 pooled one-stream common layer service",
+      "D_dense_specific": "rung_1 full dense layer minus C",
+      "F_per_step_fixed": "rung_0 LM head plus retained graph and non-LM fixed work",
+      "G_routed_group_at_R256_A256": "rung_1 grouped routed path",
+      "N_moe_nonrouted_specific": "rung_1 full MoE layer minus C and G"
+    },
+    "standard_decode_arguments": {
+      "assignments_per_rank_per_moe_layer": "256/9",
+      "dense_layer_count": 3,
+      "moe_layer_count": 58,
+      "resident_experts_per_rank": 4
+    },
+    "standard_decode_compute_ps": "61*C + 3*D + 58*(N + G(4,256/9,alpha)) + F",
+    "symbols_ps": {
+      "C_common": 173184000,
+      "D_dense_specific": 135072000,
+      "F_per_step_fixed": 560192000,
+      "G_routed_group_at_R256_A256": 199200000,
+      "N_moe_nonrouted_specific": 43264000
+    }
+  },
+  "published_confirmation": {
+    "analysis_sha256": "537768055549af17c59cf7ce5ff68570607dc05a27f82f454559ea812773e324",
+    "authority_repeat": 50,
+    "cold_native_service_ps": 1290176000,
+    "composition_residual_fraction": "-0.03995618630345747",
+    "composition_residual_ps": -53696000,
+    "job_elapsed_seconds": 436,
+    "physical_ceiling_ps": 20000000000,
+    "physical_floor_ps": 524000000,
+    "predicted_graph_service_ps": 1343872000,
+    "raw_service_ps": 1306654053,
+    "repeat_20_cold_native_service_ps": 1290687000,
+    "repeat_stability_fraction": "0.00039606999355126744",
+    "resident_native_service_ps": 1275743000,
+    "setup_finish_ps": 3264000,
+    "subtracted_service_ps": 1306588773,
+    "subtraction_method": "median device-event interval for N graph replays minus the median empty device-event interval, divided by N",
+    "tolerance_ps": 67193600
+  },
+  "rungs": {
+    "rung_0_individual_kernels": {
+      "authority": "cold correlation-complete CUDA kernel duration sum after a 256 MiB cache eviction",
+      "families": [
+        {
+          "achieved_tflops": "71.241",
+          "achieved_tb_per_second": "1.157",
+          "cold_service_ps": 13600000,
+          "compute_roofline_floor_ps": 979660,
+          "family": "Q/KV compression",
+          "flops": 968884224,
+          "minimum_bytes": 15732736,
+          "raw_service_ps": 169580000,
+          "resident_service_ps": 11104000,
+          "roofline_floor_ps": 3933184,
+          "sol_percent": "28.9",
+          "subtracted_service_ps": 169432000
+        },
+        {
+          "achieved_tflops": "109.894",
+          "achieved_tb_per_second": "1.793",
+          "cold_service_ps": 21984000,
+          "compute_roofline_floor_ps": 2442790,
+          "family": "Q decompression",
+          "flops": 2415919104,
+          "minimum_bytes": 39419904,
+          "raw_service_ps": 167196000,
+          "resident_service_ps": 12160000,
+          "roofline_floor_ps": 9854976,
+          "sol_percent": "44.8",
+          "subtracted_service_ps": 167043000
+        },
+        {
+          "achieved_tflops": "0",
+          "achieved_tb_per_second": "0.030",
+          "cold_service_ps": 2432000,
+          "compute_roofline_floor_ps": 0,
+          "family": "KV write",
+          "flops": 0,
+          "minimum_bytes": 73728,
+          "raw_service_ps": 48238000,
+          "resident_service_ps": 1536000,
+          "roofline_floor_ps": 18432,
+          "sol_percent": "0.8",
+          "subtracted_service_ps": 48084000
+        },
+        {
+          "achieved_tflops": "206.738",
+          "achieved_tb_per_second": "1.322",
+          "cold_service_ps": 81152000,
+          "compute_roofline_floor_ps": 33961976,
+          "family": "MLA attention core and KV read",
+          "flops": 16777216000,
+          "minimum_bytes": 107282432,
+          "raw_service_ps": 274314000,
+          "resident_service_ps": 79360000,
+          "roofline_floor_ps": 33961976,
+          "sol_percent": "41.8",
+          "subtracted_service_ps": 274162000
+        },
+        {
+          "achieved_tflops": "154.731",
+          "achieved_tb_per_second": "2.449",
+          "cold_service_ps": 48576000,
+          "compute_roofline_floor_ps": 7599790,
+          "family": "attention output",
+          "flops": 7516192768,
+          "minimum_bytes": 118947840,
+          "raw_service_ps": 161797000,
+          "resident_service_ps": 41280000,
+          "roofline_floor_ps": 29736960,
+          "sol_percent": "61.2",
+          "subtracted_service_ps": 161647000
+        },
+        {
+          "achieved_tflops": "188.744",
+          "achieved_tb_per_second": "2.981",
+          "cold_service_ps": 89600000,
+          "compute_roofline_floor_ps": 17099529,
+          "family": "dense gate/up",
+          "flops": 16911433728,
+          "minimum_bytes": 267059200,
+          "raw_service_ps": 161581000,
+          "resident_service_ps": 80384000,
+          "roofline_floor_ps": 66764800,
+          "sol_percent": "74.5",
+          "subtracted_service_ps": 161430000
+        },
+        {
+          "achieved_tflops": "0",
+          "achieved_tb_per_second": "0.611",
+          "cold_service_ps": 5792000,
+          "compute_roofline_floor_ps": 0,
+          "family": "dense activation",
+          "flops": 0,
+          "minimum_bytes": 3538944,
+          "raw_service_ps": 49307000,
+          "resident_service_ps": 4416000,
+          "roofline_floor_ps": 884736,
+          "sol_percent": "15.3",
+          "subtracted_service_ps": 49155000
+        },
+        {
+          "achieved_tflops": "158.990",
+          "achieved_tb_per_second": "2.515",
+          "cold_service_ps": 53184000,
+          "compute_roofline_floor_ps": 8549764,
+          "family": "dense down",
+          "flops": 8455716864,
+          "minimum_bytes": 133758976,
+          "raw_service_ps": 158591000,
+          "resident_service_ps": 45696000,
+          "roofline_floor_ps": 33439744,
+          "sol_percent": "62.9",
+          "subtracted_service_ps": 158440000
+        },
+        {
+          "achieved_tflops": "15.684",
+          "achieved_tb_per_second": "0.554",
+          "cold_service_ps": 7488000,
+          "compute_roofline_floor_ps": 237734,
+          "family": "router",
+          "flops": 117440512,
+          "minimum_bytes": 4146176,
+          "raw_service_ps": 80545000,
+          "resident_service_ps": 5792000,
+          "roofline_floor_ps": 1036544,
+          "sol_percent": "13.8",
+          "subtracted_service_ps": 80399000
+        },
+        {
+          "achieved_tflops": "90.154",
+          "achieved_tb_per_second": "1.436",
+          "cold_service_ps": 31264000,
+          "compute_roofline_floor_ps": 2849921,
+          "family": "shared expert",
+          "flops": 2818572288,
+          "minimum_bytes": 44908544,
+          "raw_service_ps": 344694000,
+          "resident_service_ps": 22944000,
+          "roofline_floor_ps": 11227136,
+          "sol_percent": "35.9",
+          "subtracted_service_ps": 344545000
+        },
+        {
+          "achieved_tflops": "1.938",
+          "achieved_tb_per_second": "0.970",
+          "cold_service_ps": 45440000,
+          "compute_roofline_floor_ps": 89060,
+          "family": "routed expert, one assignment",
+          "flops": 88080384,
+          "minimum_bytes": 44077056,
+          "raw_service_ps": 456065000,
+          "resident_service_ps": 32576000,
+          "roofline_floor_ps": 11019264,
+          "sol_percent": "24.3",
+          "subtracted_service_ps": 455914000
+        },
+        {
+          "achieved_tflops": "111.099",
+          "achieved_tb_per_second": "3.488",
+          "cold_service_ps": 533824000,
+          "compute_roofline_floor_ps": 120055501,
+          "family": "LM head",
+          "flops": 59307417600,
+          "minimum_bytes": 1862090752,
+          "raw_service_ps": 529389000,
+          "resident_service_ps": 525632000,
+          "roofline_floor_ps": 465522688,
+          "sol_percent": "87.2",
+          "subtracted_service_ps": 529233000
+        }
+      ],
+      "jobs": [
+        "202255",
+        "202260"
+      ],
+      "roofline": {
+        "bf16_peak_flops_per_second": 494000000000000,
+        "fp8_peak_flops_per_second": 989000000000000,
+        "hbm_bytes_per_second": 4000000000000
+      },
+      "setup_finish_subtraction": "subtract the median empty CUDA-event interval from the median repeat-N event interval, then divide by N"
+    },
+    "rung_1_fused_layers": {
+      "dense": {
+        "cold_native_service_ps": 308256000,
+        "dependent_launch_overlap_ps": 5544000,
+        "isolated_cold_sum_ps": 316320000,
+        "native_fusion_delta_ps": -8064000,
+        "native_fusion_delta_percent": "-2.55",
+        "raw_launch_structure_delta_ps": 304684000,
+        "raw_service_ps": 1495288000,
+        "subtracted_launch_structure_delta_ps": 305731000,
+        "subtracted_service_ps": 1495124000
+      },
+      "job": "202277",
+      "moe": {
+        "cold_native_service_ps": 415648000,
+        "dependent_launch_overlap_ps": 5635000,
+        "grouped_routed_service_ps": 199200000,
+        "isolated_one_call_per_family_sum_ps": 251936000,
+        "native_fusion_delta_ps": 163712000,
+        "nonrouted_service_ps": 216448000,
+        "raw_launch_structure_delta_ps": 886447000,
+        "raw_service_ps": 2588876000,
+        "subtracted_launch_structure_delta_ps": 887497000,
+        "subtracted_service_ps": 2588723000
+      },
+      "stream_count": 1
+    },
+    "rung_2_contention": {
+      "counter_status": "DENIED_ERR_NVGPUCTRPERM",
+      "factors": [
+        {
+          "family": "Q/KV compression",
+          "width_1_resident_service_ps": 12064000,
+          "width_2": "0.939",
+          "width_4": "0.915"
+        },
+        {
+          "family": "Q decompression",
+          "width_1_resident_service_ps": 13120000,
+          "width_2": "1.005",
+          "width_4": "0.966"
+        },
+        {
+          "family": "KV write",
+          "width_1_resident_service_ps": 1504000,
+          "width_2": "1.000",
+          "width_4": "1.000"
+        },
+        {
+          "family": "MLA attention core",
+          "width_1_resident_service_ps": 76096000,
+          "width_2": "1.686 to 1.715",
+          "width_4": "1.893 to 1.914"
+        },
+        {
+          "family": "attention output",
+          "width_1_resident_service_ps": 42048000,
+          "width_2": "1.468",
+          "width_4": "1.799"
+        },
+        {
+          "family": "dense gate/up",
+          "width_1_resident_service_ps": 81600000,
+          "width_2": "1.414",
+          "width_4": "1.494"
+        },
+        {
+          "family": "dense activation",
+          "width_1_resident_service_ps": 5408000,
+          "width_2": "0.888",
+          "width_4": "0.828"
+        },
+        {
+          "family": "dense down",
+          "width_1_resident_service_ps": 45376000,
+          "width_2": "1.493",
+          "width_4": "1.888"
+        },
+        {
+          "family": "router",
+          "width_1_resident_service_ps": 6144000,
+          "width_2": "0.979",
+          "width_4": "0.958"
+        },
+        {
+          "family": "shared expert",
+          "width_1_resident_service_ps": 23008000,
+          "width_2": "0.999",
+          "width_4": "0.974"
+        },
+        {
+          "family": "routed expert, one assignment",
+          "width_1_resident_service_ps": 34080000,
+          "width_2": "1.007",
+          "width_4": "1.005"
+        },
+        {
+          "family": "LM head",
+          "width_1_resident_service_ps": 519232000,
+          "width_2": "2.004",
+          "width_4": "2.033"
+        }
+      ],
+      "jobs": [
+        "202300",
+        "202420"
+      ],
+      "refutation": "absolute MLA service was not repeat-independent; sustained contention ratios independently replicated within 1.7 percent at width 2 and 1.1 percent at width 4",
+      "resource_authority": "timing inference only",
+      "verdict": "family-specific contention kept; stronger absolute MLA repeat-independence discarded"
+    },
+    "rung_3_mega_kernel": {
+      "deeper_all_moe_diagnostic": {
+        "cold_native_service_ps": 1909279000,
+        "composition_residual_fraction": "+0.00796",
+        "composition_residual_ps": 15071000,
+        "job": "202446",
+        "layer_count": 5,
+        "node_count": 173,
+        "predicted_service_ps": 1894208000,
+        "repeat_stability_fraction": "0.00102"
+      },
+      "published_four_layer_confirmation": {
+        "cold_native_service_ps": 1290176000,
+        "composition_residual_fraction": "-0.03995618630345747",
+        "composition_residual_ps": -53696000,
+        "job": "202449",
+        "node_count": 100,
+        "predicted_service_ps": 1343872000,
+        "repeat_stability_fraction": "0.00039606999355126744",
+        "status": "PASS"
+      },
+      "scratch_four_layer_basis": {
+        "cold_native_service_ps": 1285056000,
+        "composition_residual_fraction": "-0.04377",
+        "composition_residual_ps": -58816000,
+        "job": "202431",
+        "predicted_service_ps": 1343872000,
+        "repeat_stability_fraction": "0.00224"
+      }
+    }
+  },
+  "runtime_substitution": {
+    "captured_framework": "vllm-0.27.1+cu129",
+    "cuda_toolchain": "12.9",
+    "machine": "aarch64",
+    "native_identity_authority": "vLLM kernels are the record-native identities for this ladder",
+    "sglang_physical_binding": "DECLARED_LIMITATION_NOT_A_GOAL",
+    "torch": "2.13.0+cu129"
+  },
+  "schema": "simllm-deployment-curve-core66-decode-kernel-ladder-result-v1",
+  "shape": {
+    "batch_size": 32,
+    "dummy_weights": true,
+    "expert_parallel": 1,
+    "gpu_count": 1,
+    "kv_tokens_per_request": 2000,
+    "network_enabled": false,
+    "pipeline_parallel": 1,
+    "tensor_parallel": 1
+  },
+  "spend": {
+    "published_gpu_hours": "0.121",
+    "scratch_gpu_hours": "3.085",
+    "total_gpu_hours": "3.206"
+  },
+  "status": "PASS",
+  "task": "CORE-66"
+}

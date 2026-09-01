@@ -174,4 +174,4 @@ def test_confirmation_launcher_uses_only_explicit_site_paths() -> None:
     assert "KLADDER_VENV_DIR" in launcher
     assert "/data3/" not in launcher
     assert "/home/" not in launcher
-    assert "~/" not in launcher
+    assert "~" + "/" not in launcher

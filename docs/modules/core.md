@@ -1155,6 +1155,27 @@ was obtained. Both the `1/64` count-and-weight and `1/9` assignment checks stay
 undecided, and calibration-only signed movement is null because neither
 correction direction can be priced. CORE-66 remains open.
 
+The [CORE-66 decode kernel ladder](../../examples/deployment_curve_v1/core66_decode_kernel_ladder_result.md)
+uses the maintainer-directed vLLM 0.27.1 CUDA 12.9 aarch64 substitution to
+measure the record's native compute identities without network traffic or
+model weights. Its expectations-frozen four-layer graph measures 1,290.176 us
+against a 1,343.872 us composition, a -3.996 percent residual inside the
+frozen five-percent band. All eight fatal guards, three behavioral relations
+and seven preservation locks pass. The resulting standard-decode compute model
+prices common service 61 times, dense-specific service three times,
+MoE-specific service 58 times and fixed step/output work once from measured
+layer types.
+
+The compute-only calibration interval is 16,707.262995 to 18,003.485222
+tokens/s/node, an upward movement of +7,162.605199 to +8,458.827426 from the
+inherited prediction while remaining below the 22,282 calibration anchor. The
+single-rank cell has no expert-parallel dispatch or combine traffic. Its
+nonnegative communication term is absent and unpriced, so real communication
+moves throughput downward and no deployed EP72 prediction follows. vLLM
+identities are native for this ladder; SGLang physical binding remains a
+declared limitation. The ladder is complete, while CORE-66 remains open on the
+broader exact SGLang EP72 capture and communication remainder.
+
 ## Open tasks
 
 ### Precision
@@ -1225,7 +1246,16 @@ correction direction can be priced. CORE-66 remains open.
   `core66_ep4_fallback_result.json`. CORE-66 remains open on a runnable pinned
   SGLang dependency set for the CUDA 12.9, CPython 3.11, ARM environment, a
   compatible DeepEP build and hardware capable of the registered EP72 cell.
-  No further submission is authorized by this result.
+  No further SGLang submission is authorized by this result.
+  The maintainer-directed vLLM aarch64 decode ladder in
+  `core66_decode_kernel_ladder_result.json` completes the single-rank compute
+  decomposition with measured 308.256 us dense and 415.648 us MoE layer
+  services. Its published four-layer confirmation passes at -3.996 percent
+  residual. This establishes the compute-only 16,707.262995 to 18,003.485222
+  tokens/s/node interval, but it deliberately contains no expert-parallel
+  communication. CORE-66 therefore stays open on the exact SGLang EP72
+  dispatch/combine service and physical identity remainder; the vLLM ladder
+  does not substitute a zero communication price for that missing evidence.
 
 - CORE-53 (Precision; P1; M): replace the first disaggregated session slice's
   roofline bootstrap with the accepted COMP-64 kernel-cycle lookup record.
