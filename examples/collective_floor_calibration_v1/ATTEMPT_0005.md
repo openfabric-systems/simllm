@@ -99,5 +99,5 @@ At 196,608 operation-buffer bytes, reduce-scatter contributes 13.186667 us
 and all-gather contributes 14.808334 us per layer. Across 65 layers the model
 gives 1.819675065 ms against the unchanged 1.922050 ms external arm. The
 quotient is 0.946736591, so Leg B's model-form-bias hypothesis passes without
-a D8-specific constant. The physical endpoint floor is 0.341333 us per phase,
+a D8-specific constant. The physical endpoint floor is 0.382293 us per phase,
 and both contributions are above it.

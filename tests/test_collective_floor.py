@@ -39,6 +39,8 @@ from simllm.core import RequestPhase, ScheduledRequest, StepRecord
 from simllm.placement import PlacementManifest, RankPlacement
 from simllm.traffic import (
     B200_NCCL_2_27_LOCAL_PROFILE,
+    COLLECTIVE_COMPLETION_GEOMETRIC_TRANSITION,
+    COLLECTIVE_COMPLETION_SYMMETRIC_TRANSITION,
     COLLECTIVE_FLOOR_CALIBRATED,
     COLLECTIVE_FLOOR_TRANSFERRED,
     CollectiveCompletionCalibration,
@@ -204,6 +206,34 @@ def completion_calibration(calibration) -> CollectiveCompletionCalibration:
         cells=_training_cells(),
         fitted_byte_range=(byte_range["minimum"], byte_range["maximum"]),
         compatibility_calibration=calibration,
+    )
+
+
+@pytest.fixture(scope="module")
+def second_completion_calibration(calibration) -> CollectiveCompletionCalibration:
+    byte_range = CONFIG["fit"]["true_byte_range"]
+    return build_collective_completion_calibration(
+        calibration_id="h200-nccl-2.26.2-aggregate-anchor-v3",
+        source=_source(),
+        cells=_training_cells(),
+        fitted_byte_range=(byte_range["minimum"], byte_range["maximum"]),
+        compatibility_calibration=calibration,
+        model_form=COLLECTIVE_COMPLETION_SYMMETRIC_TRANSITION,
+    )
+
+
+@pytest.fixture(scope="module")
+def qualifying_completion_calibration(
+    calibration,
+) -> CollectiveCompletionCalibration:
+    byte_range = CONFIG["fit"]["true_byte_range"]
+    return build_collective_completion_calibration(
+        calibration_id="h200-nccl-2.26.2-aggregate-anchor-v4",
+        source=_source(),
+        cells=_training_cells(),
+        fitted_byte_range=(byte_range["minimum"], byte_range["maximum"]),
+        compatibility_calibration=calibration,
+        model_form=COLLECTIVE_COMPLETION_GEOMETRIC_TRANSITION,
     )
 
 
@@ -377,7 +407,7 @@ def test_completion_authority_keeps_legacy_transfer_byte_identical(
         assert _json_bytes(observed.as_dict()) == _json_bytes(expected.as_dict())
 
 
-def test_completion_authority_meets_all_frozen_family_h_cells(
+def test_first_completion_authority_reproduces_attempt_0005_refutation(
     completion_calibration,
 ):
     database = ExternalNcclDatabase.load()
@@ -424,11 +454,69 @@ def test_completion_authority_meets_all_frozen_family_h_cells(
     ]
 
 
+def test_second_completion_authority_reproduces_postspecified_pass(
+    second_completion_calibration,
+):
+    database = ExternalNcclDatabase.load()
+    failed = []
+    for member in CONFIG["membership"]["holdout_cells"]:
+        estimate = second_completion_calibration.estimate(
+            dtype=member["dtype"],
+            operation=member["operation"],
+            ranks=member["ranks"],
+            message_bytes=member["true_bytes"],
+        )
+        measured_ps = round(
+            database.query(
+                dtype=member["dtype"],
+                operation=member["operation"],
+                ranks=member["ranks"],
+                message_size=member["source_elements"],
+            ).latency_ms
+            * 1_000_000_000
+        )
+        relative_error = abs(estimate.completion_ps - measured_ps) / measured_ps
+        if relative_error > 0.10:
+            failed.append((member["cell_id"], relative_error))
+        assert estimate.serialization_ps == 0
+        assert estimate.training_cell_ids
+    assert failed == []
+
+
+def test_qualifying_completion_authority_meets_all_frozen_family_h_cells(
+    qualifying_completion_calibration,
+):
+    database = ExternalNcclDatabase.load()
+    failed = []
+    for member in CONFIG["membership"]["holdout_cells"]:
+        estimate = qualifying_completion_calibration.estimate(
+            dtype=member["dtype"],
+            operation=member["operation"],
+            ranks=member["ranks"],
+            message_bytes=member["true_bytes"],
+        )
+        measured_ps = round(
+            database.query(
+                dtype=member["dtype"],
+                operation=member["operation"],
+                ranks=member["ranks"],
+                message_size=member["source_elements"],
+            ).latency_ms
+            * 1_000_000_000
+        )
+        relative_error = abs(estimate.completion_ps - measured_ps) / measured_ps
+        if relative_error > 0.10:
+            failed.append((member["cell_id"], relative_error))
+        assert estimate.serialization_ps == 0
+        assert estimate.training_cell_ids
+    assert failed == []
+
+
 def test_completion_authority_resolves_d8_without_a_specific_constant(
-    completion_calibration,
+    qualifying_completion_calibration,
 ):
     estimates = [
-        completion_calibration.estimate(
+        qualifying_completion_calibration.estimate(
             dtype="half",
             operation=operation,
             ranks=8,
@@ -570,13 +658,13 @@ def test_live_seam_charges_each_aggregate_half_once_outside_composition(
 
 def test_live_seam_charges_each_opaque_completion_once(
     tmp_path,
-    completion_calibration,
+    qualifying_completion_calibration,
 ):
     on = HtsimStepSink(
         _sink_config(
             tmp_path / "opaque-on",
             ("node",) * 8,
-            collective_floor_calibration=completion_calibration,
+            collective_floor_calibration=qualifying_completion_calibration,
             collective_floor_dtype="half",
         )
     )
