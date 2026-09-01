@@ -22,12 +22,12 @@ BASE_RECORD_PATH = STUDY_DIR / "record.json"
 SCHEMA = "simllm-matched-seam-aggregate-record-v1"
 
 SERIES_LABELS = {
-    "external-agg": "AIC agg: co-located request mix",
-    "external-disagg": "AIC disagg: split P/D traffic",
-    "simllm-disagg-unpriced": "SimLLM disagg: unpriced P/D handoff",
-    "simllm-disagg-packet": "SimLLM disagg: packet P/D handoff",
-    "simllm-agg-unpriced": "SimLLM agg: unpriced zero-byte handoff",
-    "simllm-agg-packet": "SimLLM agg: packet zero-byte handoff",
+    "external-agg": "AIC agg: co-located mix",
+    "external-disagg": "AIC disagg: split P/D",
+    "simllm-disagg-unpriced": "SimLLM disagg: unpriced P/D",
+    "simllm-disagg-packet": "SimLLM disagg: packet P/D",
+    "simllm-agg-unpriced": "SimLLM agg: unpriced zero-byte P/D",
+    "simllm-agg-packet": "SimLLM agg: packet zero-byte P/D",
 }
 
 AGGREGATE_STYLES = (

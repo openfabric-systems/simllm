@@ -83,7 +83,16 @@ def test_aggregate_plot_contract_names_strategy_and_traffic() -> None:
         labels = [series["label"] for series in projection["series"]]
         assert all("agg" in label or "disagg" in label for label in labels)
         assert all(
-            any(word in label for word in ("request mix", "traffic", "handoff"))
+            any(
+                word in label
+                for word in (
+                    "co-located mix",
+                    "split P/D",
+                    "unpriced P/D",
+                    "packet P/D",
+                    "zero-byte P/D",
+                )
+            )
             for label in labels
         )
     assert study["series"][-2]["points"] == study["series"][-1]["points"]
