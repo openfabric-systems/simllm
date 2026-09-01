@@ -69,7 +69,8 @@ def test_freeze_is_reproducible_from_its_recorded_inventory(
         EXPECTATIONS_MARKDOWN_SHA256
     )
     traffic = TRAFFIC_DOC.read_text(encoding="utf-8")
-    assert "- TRAF-74 (Precision; P1; L): validate the scored" in traffic
+    assert "TRAF-74 closes as a literal non-void validation" in traffic
+    assert "- TRAF-86 (Precision; P1; L): replace the NVLink" in traffic
     assert "frozen artifacts keep the\n  original string" in traffic
     encoded = json.dumps(frozen, sort_keys=True).lower()
     assert "hardware_result" not in encoded

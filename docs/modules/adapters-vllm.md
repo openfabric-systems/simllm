@@ -780,17 +780,6 @@ is scoped to this scheduler pin and must be re-earned after every pin bump.
   matrix. Hold out at least one model and group size; require modeled median
   and p95 call cost within a pre-registered relative or additive band, then
   verify the signed TTFT/TPOT effect and the exact zero-cost bypass baseline.
-- VLLM-42 (Precision; P1; M): replace the batching-service component-band
-  model refuted by the VLLM-41 lower-load study. All 30 scheduler-wait bands
-  held, but only 14 of 30 separately scored batching-service bands held. The
-  misses are load 240 for both prompts in the 1:1 and 1:2 ratios, plus loads
-  225 through 250 for both prompts in the held-out 2:1 ratio. Freeze a new
-  service-only predictor before collecting successor evidence, derive it from
-  independently measured batch-service and arrival inputs without fitting the
-  VLLM-41 curve, hold out at least one batch-transition load and one pool
-  ratio, and publish the same separate arrival-to-prefill, handoff-to-decode
-  and batching-service fields. Do not reopen the common 210 to 220 requests/s
-  onset or the validated monotonic direction over 250 to 8,000 requests/s.
 - VLLM-44 (Precision; P1; M): add framework-native correlation and capacity
   decision identity beyond the sidecar's row ordinal. The first slice gives
   each projected operation a deterministic source-row ID, leaves

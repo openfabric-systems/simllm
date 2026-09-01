@@ -84,6 +84,161 @@ def test_prefill_binding_matches_frozen_external_sdk_hex(
     assert value.evidence_class == "MEASURED-EXTERNAL"
 
 
+@pytest.mark.parametrize(
+    ("tensor_parallel", "batch_size", "context_tokens", "expected"),
+    [
+        (
+            4,
+            20,
+            4000,
+            {
+                "mix_step_ms": "0x1.930ef1cf9a0acp+6",
+                "genonly_step_ms": "0x1.b2d5e30b1530dp+2",
+                "ttft_ms": "0x1.1f2dd9171dc14p+8",
+                "tpot_ms": "0x1.404649d1fdc92p+3",
+                "tokens_per_second_per_gpu": "0x1.d8d89afe85591p+8",
+                "tokens_per_second_per_user": "0x1.8fa83701baa5ep+6",
+            },
+        ),
+        (
+            8,
+            5,
+            8000,
+            {
+                "mix_step_ms": "0x1.fd75869548572p+6",
+                "genonly_step_ms": "0x1.1ae441da7bb4bp+2",
+                "ttft_ms": "0x1.fd75869548572p+7",
+                "tpot_ms": "0x1.2ab115b9508b7p+2",
+                "tokens_per_second_per_gpu": "0x1.e3ba8fb75ace2p+6",
+                "tokens_per_second_per_user": "0x1.ac8913a3318a4p+7",
+            },
+        ),
+    ],
+)
+def test_aggregate_binding_matches_frozen_external_composition_hex(
+    binding: ExternalQwen32BDeploymentBinding,
+    tensor_parallel: int,
+    batch_size: int,
+    context_tokens: int,
+    expected: dict[str, str],
+) -> None:
+    point = binding.aggregate_point(
+        tensor_parallel=tensor_parallel,
+        batch_size=batch_size,
+        isl=4000,
+        osl=500,
+        prefix=500,
+        context_tokens=context_tokens,
+    )
+
+    assert {
+        name: getattr(point, name).hex()
+        for name in expected
+    } == expected
+    assert point.evidence_class == "MEASURED-EXTERNAL"
+    assert point.mix_steps < point.osl
+    assert point.tpot_mix_steps == max(1, point.mix_steps - 3)
+    assert point.generation_requests == point.batch_size - point.context_requests
+    assert point.scheduled_tokens == point.context_tokens + point.generation_requests
+
+
+def test_aggregate_adjustments_have_narrow_independent_seams(
+    binding: ExternalQwen32BDeploymentBinding,
+) -> None:
+    arguments = {
+        "tensor_parallel": 4,
+        "batch_size": 20,
+        "isl": 4000,
+        "osl": 500,
+        "prefix": 500,
+        "context_tokens": 4000,
+    }
+    baseline = binding.aggregate_point(**arguments)
+    no_queue = binding.aggregate_point(**arguments, apply_ttft_queueing=False)
+    no_tpot_reduction = binding.aggregate_point(
+        **arguments,
+        tpot_mixed_step_reduction=0,
+    )
+    no_memory_derating = binding.aggregate_point(
+        **arguments,
+        memory_bandwidth_empirical_scale=1.0,
+    )
+    no_memory_constant = binding.aggregate_point(
+        **arguments,
+        memory_empirical_constant_latency_s=0.0,
+    )
+    no_context_correction = binding.aggregate_point(
+        **arguments,
+        context_attention_extra_latency_correction=1.0,
+    )
+
+    assert no_queue.tpot_ms.hex() == baseline.tpot_ms.hex()
+    assert no_queue.ttft_ms == baseline.base_prefill_ms
+    assert no_tpot_reduction.ttft_ms.hex() == baseline.ttft_ms.hex()
+    assert no_tpot_reduction.tpot_ms != baseline.tpot_ms
+    for changed in (
+        no_memory_derating,
+        no_memory_constant,
+        no_context_correction,
+    ):
+        assert changed.tpot_ms != baseline.tpot_ms
+        assert changed.ttft_ms != baseline.ttft_ms
+
+
+def test_aggregate_binding_bypasses_roofline(
+    binding: ExternalQwen32BDeploymentBinding,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import simllm.deploy.estimator as estimator_module
+
+    class UnexpectedRooflineProvider:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            raise AssertionError("RooflineProvider must not price aggregate service")
+
+    monkeypatch.setattr(estimator_module, "RooflineProvider", UnexpectedRooflineProvider)
+
+    point = binding.aggregate_point(
+        tensor_parallel=4,
+        batch_size=20,
+        isl=4000,
+        osl=500,
+        prefix=500,
+        context_tokens=4000,
+    )
+
+    assert point.evidence_class == "MEASURED-EXTERNAL"
+    assert "external-operation-aggregate-composition" in point.source
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"batch_size": 1}, "batch_size greater than one"),
+        ({"osl": 1}, "osl greater than one"),
+        ({"context_tokens": 1}, "mix_steps smaller than osl"),
+        ({"tpot_mixed_step_reduction": -1}, "non-negative integer"),
+        ({"apply_ttft_queueing": 1}, "must be bool"),
+    ],
+)
+def test_aggregate_binding_rejects_unsupported_compositions(
+    binding: ExternalQwen32BDeploymentBinding,
+    overrides: dict[str, object],
+    message: str,
+) -> None:
+    arguments: dict[str, object] = {
+        "tensor_parallel": 4,
+        "batch_size": 20,
+        "isl": 4000,
+        "osl": 500,
+        "prefix": 500,
+        "context_tokens": 4000,
+    }
+    arguments.update(overrides)
+
+    with pytest.raises((TypeError, ValueError), match=message):
+        binding.aggregate_point(**arguments)
+
+
 def _candidate() -> DeploymentCandidate:
     return DeploymentCandidate(
         candidate_id="external-scored-tp4",

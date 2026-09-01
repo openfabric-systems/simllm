@@ -206,6 +206,22 @@ identified only for this TP4-to-TP2 schedule shape. DEPLOY-13 retains the
 rounded-axis residual. DEPLOY-9 through DEPLOY-11 retain their breadth and
 silicon-precision scopes.
 
+The additive
+[aggregate arm](../../examples/matched_seam_frontier_v1/AGG_RESULTS.md) is
+nonvoid: all 11 fatal guards hold, Family AR passes 25 of 25, W passes 1 of 1,
+and the two complete fresh-process evaluations are byte-identical. SimLLM's
+co-located TP4/TP8 composition reproduces the published aggregate TPOT with
+quotients from 0.999930063 to 1.000074536. Its operating-point TTFT is
+decomposed into 74.741222 to 127.620006 ms of pure prefill and 74.741222 to
+186.414499 ms of queueing, leaving only the frozen three-decimal publication
+residual. Both aggregate traffic arms are the exact zero-byte P/D handoff
+identity and the packet arm starts no native process. The complete ten-factor
+sensitivity identifies the three-step mixed-count correction as the dominant
+aggregate-specific TPOT term and the queueing heuristic as the dominant TTFT
+term. Both additive figure pairs pass visual inspection, making the projected
+aggregate counterpart literal and closing DEPLOY-22 without changing any
+protected disaggregated result.
+
 ## Open tasks
 
 ### Precision
