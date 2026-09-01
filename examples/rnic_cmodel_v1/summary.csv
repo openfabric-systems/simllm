@@ -12,7 +12,7 @@ depth1_law,cx7_400g/65536,89.9494,89.9314,15 percent,PASS,
 depth1_law,cx7_400g/262144,212.299,212.274,15 percent,PASS,
 depth1_law,cx7_400g/1048576,321.69,321.676,15 percent,PASS,
 depth_ratio_law,cx5_100g/8192,7.61845,7.6377,2 percent,PASS,the lossless pipeline must saturate at the goodput ceiling
-depth_ratio_measured,cx5_100g/8192,7.61845,5.9,20 percent,FAIL,residual owned by the ingress meter (BACK-56)
+depth_ratio_measured,cx5_100g/8192,7.61845,5.9,20 percent,FAIL,residual owned by the ingress meter (BACK-57)
 depth_ratio_law,cx5_100g/65536,1.82848,1.82971,2 percent,PASS,the lossless pipeline must saturate at the goodput ceiling
 depth_ratio_measured,cx5_100g/65536,1.82848,1.57,20 percent,PASS,
 depth_ratio_law,cx7_400g/8192,27.3665,27.5508,2 percent,PASS,the lossless pipeline must saturate at the goodput ceiling

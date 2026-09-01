@@ -292,7 +292,7 @@ def _evaluate(rows: list[dict[str, int | str]]) -> tuple[list[dict[str, object]]
             if profile == "cx5_100g":
                 measured_reference = MEASURED_DEPTH_RATIO[size]
                 passed = _within(ratio, measured_reference, 0.20)
-                note = "" if passed else "residual owned by the ingress meter (BACK-56)"
+                note = "" if passed else "residual owned by the ingress meter (BACK-57)"
                 checks.append(
                     _check(
                         "depth_ratio_measured",

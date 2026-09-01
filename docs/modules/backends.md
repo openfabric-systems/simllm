@@ -61,9 +61,9 @@ backend submodules.
   drive the same stimulus through DPI-C and compare timestamps, counters and a
   replayable transaction trace; it reproduces the C++ device's completion
   timestamps exactly, and two identical stimulus sequences trace identically.
-  Its receive entry point and control-event kinds fail closed until BACK-56
-  and BACK-57 land.
-- `RnicTxPipeline` (BACK-55): the opt-in transmit slice, selected by
+  Its receive entry point and control-event kinds fail closed until BACK-57
+  and BACK-58 land.
+- `RnicTxPipeline` (BACK-56): the opt-in transmit slice, selected by
   `RnicNetworkConfig::abi_version = 2` with an enabled packetization block.
   The default stays ABI v1 with packetization off, which is the same code path
   as before the field existed, so every accepted v1 timestamp, counter and
@@ -1507,7 +1507,7 @@ created" statement stands and refers to different, never-registered work.
   contention; this landing is contention-free by construction with zero bus
   cost, and the default composition must preserve every accepted artifact
   byte for byte. COMP-49 owns the xPU counterpart, a streaming crossbar.
-- BACK-54 (Completeness; P1; S) (remaining half): complete the golden model's
+- BACK-55 (Completeness; P1; S) (remaining half): complete the golden model's
   C facade on the receive side. The profile, the anomaly table with its
   generated projection, and the transmit and control halves of the facade are
   landed: the facade reproduces the C++ device timestamps exactly, two
@@ -1516,18 +1516,18 @@ created" statement stands and refers to different, never-registered work.
   hashes reproducibly and separately from the effective-hardware record. What
   remains is `rnic_cm_rx_packet` and the control-event kinds, which fail
   closed with an unsupported status today because the pipelines behind them
-  are BACK-56 and BACK-57. Acceptance: a delivered wire packet advances the
+  are BACK-57 and BACK-58. Acceptance: a delivered wire packet advances the
   receive side through the facade with the same timestamps the C++ device
   produces, and a control event reaches the rate-control gate, both under the
   same trace-determinism guard.
-- BACK-55 (Completeness; P1; M) (remaining half): reconcile the transmit
+- BACK-56 (Completeness; P1; M) (remaining half): reconcile the transmit
   pipeline's depth-ratio residual and extend it past one QP. The packetizer,
   the outstanding-work window and the pacer are landed behind an opt-in whose
   off path is the unchanged v1 code, and
   [the slice-B study](../../examples/rnic_cmodel_v1/RESULTS.md) meets every
   registered band except one: the depth-1024 over depth-1 ratio at 8 KiB is
   7.62 against the measured 5.9, because a lossless pipeline saturates at the
-  goodput ceiling where the silicon sat in the loss equilibrium BACK-56 owns.
+  goodput ceiling where the silicon sat in the loss equilibrium BACK-57 owns.
   The model-internal ratio check passes at the same cell, which localizes the
   disagreement to the missing mechanism. What remains here: re-run the frozen
   grid once the ingress meter exists and close the measured band, and give the
@@ -1536,7 +1536,7 @@ created" statement stands and refers to different, never-registered work.
   meter enabled and the lossless numbers stay byte-identical with it disabled,
   and a multi-QP cell shows the per-NIC ceiling binding while each per-QP
   ceiling does not.
-- BACK-56 (Completeness; P1; L): land the receive pipeline: a finite ingress
+- BACK-57 (Completeness; P1; L): land the receive pipeline: a finite ingress
   meter drained at a service rate whose overflow discards at the PHY with no
   transport signal, a receive processor with a per-QP receive packet-rate cap,
   an RC responder PSN check with ACK and NAK and UD delivery that drops
@@ -1544,14 +1544,17 @@ created" statement stands and refers to different, never-registered work.
   tracking, go-back-N recovery on NAK or timeout and the retransmission
   counters whose semantics differ by firmware variant. This is the mechanism
   that turns a lossless transmit pipeline into the measured saturated
-  equilibrium, so it also owns the depth-ratio residual BACK-55 reports.
+  equilibrium, so it also owns the depth-ratio residual BACK-56 reports.
   Acceptance: a saturated single RC QP settles inside the measured 78 to
   92 Gb/s window; the gap sweep at 8 KiB and 64 KiB drives discards to zero
   across the measured threshold and matches the duty model within 15 percent;
   a single UD QP offered above its cap delivers and discards within 10 percent
   of the measured split; and the bidirectional pair stays cleaner than the
-  unidirectional one.
-- BACK-57 (Completeness; P2; L): land rate control and the internal arbiter.
+  unidirectional one. HTSIM-35 and HTSIM-36 are the fabric-model counterparts
+  of this native receive pipeline, expressing the same finite outstanding
+  work, responder ingress meter and packets-per-second resource in htsim
+  rather than in the endpoint.
+- BACK-58 (Completeness; P2; L): land rate control and the internal arbiter.
   Rate control is the DCQCN notification point that emits a CNP on a
   congestion experienced mark, the reaction point whose per-QP state persists
   across WQEs, and the ECT(0) stamp the silicon applies to every RoCEv2
@@ -1565,7 +1568,7 @@ created" statement stands and refers to different, never-registered work.
   HTSIM-5 remains the owner of the policy-side DCQCN state in the backend
   repo; this task owns only the hardware notification point, reaction gate and
   stamp.
-- BACK-58 (Completeness; P2; M): make the golden model usable as an RTL
+- BACK-59 (Completeness; P2; M): make the golden model usable as an RTL
   reference from a UVM testbench. The facade trace is the expected-result file
   and the DPI-C import declarations plus a stimulus reader are the missing
   half. Acceptance: a recorded trace replays through the DPI-C boundary and
@@ -1710,17 +1713,6 @@ model the two flows as separate nodes and say so.
   from co-hosted sources, so no source-side sharing study can run until
   the depth is declarable; registered by the wave-21 recalibration
   alongside HTSIM-32, which it gates.
-- HTSIM-34 (Completeness; P2; M): accept the golden model's per-packet
-  attempts on the composed port. BACK-55 emits one descriptor per packet with
-  an extent index and count, and expects the TX-start, TX-finish, RX-arrival
-  and terminal events per packet that the endpoint's timeline and window are
-  clocked by. The composed wrapper currently relays the ABI v2 vocabulary for
-  flow extents; per-packet attempts have never been driven end to end through
-  it. Acceptance: a composed run segments one WQE into MTU-sized attempts,
-  returns the four-event lifecycle per attempt with stable tokens, terminates
-  the parent extent only after the last attempt, and reproduces the frozen
-  fake-network study numbers within their registered bands. The current
-  flow-extent relay stays the exact off path.
 - HTSIM-35 (Completeness; P1; L): a responder ingress meter at the DCQCN
   endpoint. The packet path drops only at switch queues; the endpoint host
   queue is egress-only and has no discard path, so a measured responder-side
@@ -1751,6 +1743,17 @@ model the two flows as separate nodes and say so.
   reproduced within 20 percent, the single-QP knee appears at the configured
   ceiling with the excess discarded and no sender-visible signal, and an unset
   ceiling preserves every accepted result byte for byte.
+- HTSIM-37 (Completeness; P2; M): accept the golden model's per-packet
+  attempts on the composed port. BACK-56 emits one descriptor per packet with
+  an extent index and count, and expects the TX-start, TX-finish, RX-arrival
+  and terminal events per packet that the endpoint's timeline and window are
+  clocked by. The composed wrapper currently relays the ABI v2 vocabulary for
+  flow extents; per-packet attempts have never been driven end to end through
+  it. Acceptance: a composed run segments one WQE into MTU-sized attempts,
+  returns the four-event lifecycle per attempt with stable tokens, terminates
+  the parent extent only after the last attempt, and reproduces the frozen
+  fake-network study numbers within their registered bands. The current
+  flow-extent relay stays the exact off path.
 - HTSIM-38 (Completeness; P2; M): an endpoint-side congestion-notification
   hook in the DCQCN runtime, and an explicit drop-only switch mode beside it.
   Every congestion notification the packet path can originate comes from a

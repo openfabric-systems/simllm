@@ -3,8 +3,8 @@
 This document is frozen before the transmit pipeline exists and before any
 number is produced by it. It registers the sweep, the closed forms, the bands
 and the fatal guards for slice B of the RNIC golden C model: the packetizer,
-the outstanding-work window and the packet-rate pacer (BACK-55), driven
-through the C facade (BACK-54). No result appears here; results go in
+the outstanding-work window and the packet-rate pacer (BACK-56), driven
+through the C facade (BACK-55). No result appears here; results go in
 `RESULTS.md` and cite this file's commit hash.
 
 ## Scope
@@ -14,7 +14,7 @@ no receive processor, no requester transport, no retransmission, no rate
 control and no internal arbiter, so the modelled wire is lossless and every
 packet is acknowledged. That is a deliberate boundary, and it is the reason
 one registered band below is expected to be missed: the measured depth-1024
-point at 8 KiB sits in a loss equilibrium that only BACK-56 can produce.
+point at 8 KiB sits in a loss equilibrium that only BACK-57 can produce.
 
 The study drives the `extern "C"` facade, not the C++ classes, so the same
 entry points an RTL testbench uses are the ones under test.
@@ -119,7 +119,7 @@ value, its band and a PASS or FAIL verdict.
    ratio is within 20 percent of the measured 5.9 and 1.57. The registered
    prediction is that the 64 KiB row passes (1.830 against a band of 1.256 to
    1.884) and the 8 KiB row fails high (7.638 against a band of 4.720 to
-   7.080). The 8 KiB miss is registered in advance as a BACK-56 residual: at
+   7.080). The 8 KiB miss is registered in advance as a BACK-57 residual: at
    depth 1024 and 8 KiB the silicon sat in the saturated loss equilibrium, and
    a slice with no ingress meter and no loss cannot reproduce it. If that row
    passes instead, the pipeline is not saturating and the failure is in slice

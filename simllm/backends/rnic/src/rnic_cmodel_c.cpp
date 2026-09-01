@@ -613,7 +613,7 @@ int rnic_cm_rx_packet(
     device->note(
         now_ps,
         "rx_packet " + keyValue("psn", packet->psn) + " status=unsupported");
-    // The receive pipeline is BACK-56. Failing closed keeps a testbench from
+    // The receive pipeline is BACK-57. Failing closed keeps a testbench from
     // reading silence as a modelled receive path.
     return RNIC_CM_ERROR_UNSUPPORTED;
 }

@@ -82,7 +82,7 @@ to 92 Gb/s, and this slice has no ingress meter, no loss and no
 retransmission, so it saturates at the 97.1 Gb/s ceiling instead. The
 model-internal `depth_ratio_law` check at the same cell passes at 0.25 percent,
 which localizes the disagreement to the missing mechanism rather than to the
-packetizer, the window or the pacer. BACK-56 owns it.
+packetizer, the window or the pacer. BACK-57 owns it.
 
 The same reading explains why 64 KiB passes both checks: at 64 KiB the
 measured depth-1024 point was already close to the lossless ceiling, so the
