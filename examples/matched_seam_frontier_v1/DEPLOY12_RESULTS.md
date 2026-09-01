@@ -17,9 +17,10 @@ What it changes for the project: DEPLOY-12 closes. The LogGOP arm prices
 2.295758 ms of latency and sender serialization on TP2, while the packet arm
 costs 4.661283 ms. The 2.365525 ms remainder survives at the frontier and is
 specific to the TP4-to-TP2 schedule in this grid. The TP2 receiver must accept
-458,752,000 bytes through two 400 Gbit/s ingress endpoints, whose 4.587520 ms
-floor explains 2.291762 ms of the packet-over-LogGOP remainder before the
-packet leg's final 73.763 microseconds above that floor. No residual task ID is
+458,752,000 bytes through two 400 Gbit/s ingress endpoints, a 4.587520 ms
+serialization floor that sits 2.291762 ms above the LogGOP completion; reaching
+that floor accounts for all but the packet leg's final 73.763 microseconds of
+the packet-over-LogGOP remainder. No residual task ID is
 needed or consumed.
 
 What it does not change: the first publication remains void, the corrected
@@ -68,9 +69,11 @@ TP2 changes the receiving bound. Two destinations each accept half the payload,
 so the receiver floor is 4.587520 ms. The packet service is 4.661283200 ms,
 73.763200 microseconds above that bound. The LogGOP model has no receiver
 per-byte gap and remains sender-limited at 2.295758 ms. Thus
-`4.661283200 - 2.295758000 = 2.365525200` ms survives beyond the priced terms,
-and `4.587520000 - 2.295758000 = 2.291762000` ms of it is required by receiver
-serialization alone.
+`4.661283200 - 2.295758000 = 2.365525200` ms survives beyond the priced terms.
+Of that remainder, `4.587520000 - 2.295758000 = 2.291762000` ms is the
+additional time needed just to reach the 4.587520 ms receiver serialization
+floor from the LogGOP completion; only the final 73.763200 microseconds sit
+above the floor itself.
 
 ### Width scaling
 
