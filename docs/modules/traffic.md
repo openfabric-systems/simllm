@@ -1080,11 +1080,14 @@ requested generic half-precision all-gather plus reduce-scatter element count.
 The external arm is an opaque eight-rank NCCL table measurement scaled by a
 rank factor, with no source, destination, path or message ledger. The packet
 arm is a direct all-pairs realization on a concrete Clos placement. Their
-ratio is not contention isolation. The measured ratios 0.025905, 0.353015 and
-0.802618 at expert-parallel widths 8, 32 and 128 refute all three scored Family
-D cells. The EP 256 ratio 1.187022 is an unscored diagnostic because its
-`31 / 15` rule was specified after the corrected expectations freeze. EP 8 has
-zero cross-node senders per receiver and is not a contention cell.
+ratio is not contention isolation. The aggregate collective authority corrects
+the measured ratios from the superseded 0.025905, 0.353015 and 0.802618 to
+1.109143, 0.435919 and 0.847299 at expert-parallel widths 8, 32 and 128. The
+unchanged lower bound is 1.0, so EP 8 passes while EP 32 and EP 128 remain
+refuted. EP 8 has zero cross-node senders per receiver and is not a contention
+cell. The EP 256 component-wise diagnostic ratio is 1.218997, superseding
+1.187022. It remains unscored because its extrapolation rule was specified
+after the corrected expectations freeze.
 
 The external table identifies its dtype only as `half`, not BF16. Its source
 coordinate is an element count despite the SDK interpolation label
@@ -1100,21 +1103,27 @@ zero-fan-in cell at 2.131828400 ms, 1.109143050 of its 1.922050 ms external
 arm, and refutes the unchanged `[0.90, 1.10]` band. The unscored physical
 endpoint reading at 172,032 bytes is 2.060523530 ms, or 1.072044707 of the
 external arm. The earlier 344,064-byte query doubled already physical bytes
-and does not support a pass. At EP 128 the
-older 55.445 us eight-rank donor latency contains a 43.211613 us fixed and
-algorithmic residual after ideal two-phase ring serialization. The rank
-extrapolator inflates that residual to 28.664347 ms over 65 layers, more than
-the observed 7.259566 ms external-minus-packet gap. Differing fixed-cost
-treatment fully explains the gap, so neither study makes a crossover or
-contention-attribution claim.
+and does not support a pass. The earlier Family D publication omitted this
+aggregate term from its packet arm. Its old EP 8 refutation was therefore an
+artifact of the omission, not a finding about the external planner. The old
+EP 256 rule also multiplied the whole EP 128 phase by `31 / 15`; the corrected
+rule scales only fabric service, queries the EP 256 aggregate byte coordinate,
+and adds each fixed floor once. The corrected sequence is not monotone because
+EP 8 passes before EP 32 and EP 128 refute, while EP 256 is unscored. The
+published single crossover near expert parallelism 200 is withdrawn, and the
+study makes no contention-attribution claim.
 
-The unscored sparse arm simulates every realized message at every width. At EP
-256 it reconstructs 29.78125 cross-node senders per receiver from simulator
-completion rows, against an analytical 29.576912, and carries 97,920 dispatch
-plus 195,840 combine bytes per rank. The isolated-engine default is unchanged.
-The landed NVLink domain from `nvlink_flow_dynamics_v1` and
-`nvlink_rnic_comparison_v1` supplies the intra-node transport authority;
-TRAF-76 owns its packet-arm binding and the fixed collective overheads.
+The unscored sparse arm simulates every realized message at every width and
+uses the same aggregate authority through acknowledged FP8-dispatch and
+BF16-combine donor transfers. Its corrected sparse-to-dense step ratios are
+1.072932, 0.489749, 0.336183 and 0.302797 at widths 8, 32, 128 and 256; its
+floor-omitting values remain labeled superseded. At EP 256 it reconstructs
+29.78125 cross-node senders per receiver from simulator completion rows,
+against an analytical 29.576912, and carries 97,920 dispatch plus 195,840
+combine bytes per rank. The isolated-engine default is unchanged. The
+TRAF-76 MiniMax binding is complete for the three scored dense populations,
+the EP 256 component-wise diagnostic and all four sparse populations. TRAF-76
+remains open for aggregate calibration misses and packet-mechanism precision.
 TRAF-78 owns observed routing geometry, TRAF-75 owns supported-path directional
 precision, TRAF-77 owns hardware transport calibration, and TRAF-26 owns
 complete production peer workloads.
@@ -1264,15 +1273,20 @@ arbitration parameters after that structure lands.
   exceeded 600 seconds and the two fresh runs differed. Replace or extend the
   training-only aggregate surrogate without holdout leakage until all 63 H
   cells meet the larger of 10 percent or two GPU cycles, and resolve the D8
-  operation-buffer refutation without moving its band. Then bind and calibrate
-  the landed NVLink packet domain for credits, geometry, switch behavior and
-  arbitration. Freeze zero-fan-in and nonzero-fan-in widths over at least two
-  payload sizes, retain the one-authority and no-double-count proofs, report
-  before and after phase-completion errors, and preserve every accepted
-  pre-wave timestamp, application and wire byte count, completion order,
-  backend invocation order and random draw exactly. The nonzero-fan-in
-  publication remains an explicit transferred local component until this
-  packet integration lands. TRAF-77 owns cross-node transport calibration,
+  operation-buffer refutation without moving its band. The MiniMax consumer
+  binds this aggregate authority completely at scored widths EP 8, EP 32 and
+  EP 128, at the component-wise EP 256 diagnostic, and for every published
+  Family S population. Its exact rank-8 EP 8 use and acknowledged rank-8 donor
+  transfers at wider ranks charge each floor once outside local byte-slope and
+  fabric maximum service; its floor-omitting rows remain superseded evidence.
+  Complete the packet mechanism for credits, H200 product geometry, switch
+  behavior and arbitration. Freeze zero-fan-in and nonzero-fan-in widths over
+  at least two payload sizes, retain the one-authority and no-double-count
+  proofs, report before and after phase-completion errors, and preserve every
+  accepted pre-wave timestamp, application and wire byte count, completion
+  order, backend invocation order and random draw exactly. The nonzero-fan-in
+  packet mechanism remains an explicit transferred local component until this
+  integration lands. TRAF-77 owns cross-node transport calibration,
   TRAF-78 owns destination geometry, TRAF-75 owns directional precision
   selection, and COMP-89 owns independent calibration of the external NCCL
   extrapolation.
