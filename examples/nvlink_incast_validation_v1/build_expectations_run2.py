@@ -317,7 +317,7 @@ def _launch_skew_arithmetic() -> dict[str, object]:
     }
 
 
-def _verify_model_base() -> None:
+def _base_model_sha256() -> str:
     relative = MODEL_PATH.relative_to(ROOT).as_posix()
     completed = subprocess.run(
         ("git", "show", f"{MODEL_BASE_COMMIT}:{relative}"),
@@ -328,8 +328,11 @@ def _verify_model_base() -> None:
     )
     if completed.returncode:
         raise RuntimeError("the frozen model base commit is unavailable")
-    base_digest = hashlib.sha256(completed.stdout).hexdigest()
-    if base_digest != _sha256(MODEL_PATH):
+    return hashlib.sha256(completed.stdout).hexdigest()
+
+
+def _verify_model_base() -> None:
+    if _base_model_sha256() != _sha256(MODEL_PATH):
         raise RuntimeError("the current NVLink module differs from the frozen base")
 
 
@@ -343,7 +346,8 @@ def build(
         if not isinstance(value, dict):
             raise TypeError("the existing run-two freeze has no preservation lock")
         recorded_preservation = value
-    _verify_model_base()
+    if recorded_preservation is None:
+        _verify_model_base()
     with open(PROFILE_PATH, encoding="utf-8", newline="") as handle:
         profile = json.load(handle)
     with open(TRAF70_SCORE_PATH, encoding="utf-8", newline="") as handle:
@@ -425,7 +429,7 @@ def build(
                 PROFILE_PATH, preservation
             ),
             "model_path": MODEL_PATH.relative_to(ROOT).as_posix(),
-            "model_sha256": _recorded_or_current_sha256(MODEL_PATH, preservation),
+            "model_sha256": _base_model_sha256(),
             "profile_status": profile["status"],
             "profile_evidence_class": profile["evidence_class"],
             "parameter_snapshot": {
