@@ -827,6 +827,33 @@ is scoped to this scheduler pin and must be re-earned after every pin bump.
   queue-onset freeze pre-registered it for differing onset segments and the
   run resolved it unused, so its frozen bytes keep the name and no new task
   may take it.
+- VLLM-48 (Precision; P1; M): observe the wall service of every stock vLLM
+  communicator invocation executed inside a live model-runner step. Bracket
+  GPU calls with CUDA events and CPU calls with a monotonic host clock, then
+  attach the collective kind, payload bytes, world size, group tag, layer
+  metadata, timer and environment identity through an optional versioned
+  `StepRecord` field. An absent field must preserve every accepted capture and
+  byte-locked fixture exactly. Compare captured service with the aggregate
+  collective-floor authority only at matching kind, byte and rank coordinates;
+  refuse a capture/calibration environment mismatch by default and stamp an
+  explicit acknowledgement into every deliberately accepted mismatch. Local
+  closure requires a pinned vLLM 0.27.1 CPU source build running tensor
+  parallel size two over gloo, exact captured-call and metadata conservation
+  against the independently frozen Granite step population, exact shape
+  reproduction over two fresh live runs, strict old-load and new-round-trip
+  schema evidence, mutation controls for every scored family, and both the
+  comparator refusal and acknowledgement paths. Local service values remain
+  environment-labeled and unscored.
+- VLLM-49 (Precision; P1; L): run the VLLM-48 in-situ seam on the A100
+  multi-GPU lane and score real collective service against an aggregate-floor
+  calibration from the same A100 environment. Freeze payload, rank and
+  collective-kind sweeps before capture; state serialization and topology
+  bounds before reading service values; require exact coordinate coverage and
+  explain every floor violation or residual outside the registered band. A
+  cross-environment acknowledgement is diagnostic only and cannot close this
+  task. Carry the accepted service comparison into at least one signed time to
+  first token or time per output token consequence while the capture-disabled
+  baseline remains byte-identical.
 ### Completeness
 
 - VLLM-45 (Completeness; P2; L): normalize stock vLLM offload connector swap
