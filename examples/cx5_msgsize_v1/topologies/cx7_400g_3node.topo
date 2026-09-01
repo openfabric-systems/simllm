@@ -1,0 +1,27 @@
+Nodes 3
+Tiers 2
+Podsize 3
+
+# The cx5_100g_3node topology at the declared ConnectX-7 rate. Geometry and
+# per-hop latency are identical, so the two profiles differ in link rate
+# alone, which is what "the same architecture at a higher rate" has to mean
+# for the two curves to be comparable.
+#
+# The rate is the scaled profile goodput asymptote rounded to whole Gbit/s,
+# which is what the loader parses and what the runtime requires -link_bps to
+# match. At this rate the four store-and-forward serializations shrink by four
+# while the four pipe traversals do not, so the emergent message offset is
+# expected about 11 percent below the 100 G one rather than equal to it.
+Tier 0
+Downlink_speed_Gbps 388
+Radix_Down 3
+Radix_Up 3
+Downlink_Latency_ns 515
+Switch_Latency_ns 0
+
+# Three spine switches, each with one link to the leaf.
+Tier 1
+Downlink_speed_Gbps 388
+Radix_Down 1
+Downlink_Latency_ns 515
+Switch_Latency_ns 0
