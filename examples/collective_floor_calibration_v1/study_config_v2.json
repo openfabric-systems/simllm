@@ -1,0 +1,84 @@
+{
+  "schema": "simllm-collective-floor-completion-study-v2",
+  "study": "collective_floor_calibration_v1",
+  "chronology": {
+    "miss_map_commit": "eb889b9b4ffd97d539e9beddd63d8a8f5e70f346",
+    "miss_map_sha256": "198039465dadcd0a2e505f9736e06b56fa8656ea517ab7a8e32b9173034efd15",
+    "base_config_sha256": "83de9c82dea918d09e9bb474529f33b146b3a14a6f010b8d85ea1cfa83b35f57",
+    "expectations_v1_sha256": "16546e58e515f49678be6fa0aa7fcb437f694cd3009a485f330ccddaf0d256c9",
+    "expectations_v2_sha256": "70d3c6f127351027231dde2043dfb1eb7efd31195e879bc69ebed6bd77eb51d6",
+    "expectations_v3_sha256": "1273b7ae73377ec017c5a7aef5044601d461cd96d2c2a3ae0442e4e0ae724d26",
+    "status": "frozen before implementation, fitting, or result-producing execution"
+  },
+  "membership": {
+    "source": "study_config.json",
+    "training_count": 63,
+    "holdout_count": 63,
+    "identity_rule": "the training_cells and holdout_cells arrays are loaded byte-for-byte from the base config"
+  },
+  "anchor_model": {
+    "model_id": "h200-nccl-2.26.2-aggregate-anchor-v2",
+    "domain": "exact dtype, operation and ranks on a fully intra-node collective",
+    "completion_semantics": "opaque aggregate completion charged once",
+    "exact_rule": "return an exact same-operation, same-rank and same-byte training anchor unchanged",
+    "paired_operation_rule": "when the complementary operation has an exact same-rank and same-byte training anchor, multiply it by the ratio of requested-operation and complementary-operation affine training-only trends at that byte count",
+    "fallback_rule": "affine latency interpolation on true bytes between adjacent same-operation and same-rank training anchors",
+    "lower_extrapolation": "affine latency extrapolation from the two smallest same-curve training anchors",
+    "upper_extrapolation": "affine latency extrapolation from the two largest same-curve training anchors",
+    "holdout_use": "none during construction; Family H is loaded only after the serialized authority hash exists",
+    "paired_operations": {
+      "all_gather": "reduce_scatter",
+      "reduce_scatter": "all_gather"
+    },
+    "transition_prior_disposition": "the GH200 width-2 dip is not used because the H200 misses do not form one transition cluster"
+  },
+  "family_h": {
+    "denominator": 63,
+    "band": "relative error no greater than max(0.10, two H200 GPU cycles divided by measured completion)",
+    "required_passed": 63
+  },
+  "family_d8": {
+    "operation_buffer_elements": 98304,
+    "operation_buffer_bytes": 196608,
+    "physical_endpoint_bytes_diagnostic": 172032,
+    "represented_layers": 65,
+    "external_arm_ms": 1.92205,
+    "band": [0.9, 1.1],
+    "mechanism_hypothesis": "broad positive floor-plus-slope regimes bias the two rank-8 operation neighborhoods; the exact-domain anchor form removes that approximation without a D8-specific term"
+  },
+  "packet_cells": {
+    "payload_bytes_per_sender": [65536, 1048576],
+    "zero_fan_in": [
+      {"participants": 2, "receiver_fan_in": 0},
+      {"participants": 8, "receiver_fan_in": 0}
+    ],
+    "nonzero_fan_in": [
+      {"participants": 4, "receiver_fan_in": 3},
+      {"participants": 8, "receiver_fan_in": 7}
+    ],
+    "error_band": "relative error no greater than max(0.10, two H200 GPU cycles divided by matched observed phase completion)",
+    "required_mechanisms": [
+      "generation-scoped flit packetization",
+      "receiver-owned credits",
+      "explicit traffic class and virtual channel",
+      "link acknowledgement and replay identity",
+      "receive ordering visibility",
+      "H200 product port geometry",
+      "NVSwitch input ports and virtual output queues",
+      "two-sided crossbar arbitration policy"
+    ],
+    "feasibility_rule": "do not execute or score when current evidence cannot independently identify the product parameters or the prerequisite mechanism structure is absent"
+  },
+  "preservation": {
+    "pre_wave_golden": "examples/collective_floor_calibration_v1/pre_wave_bypass_golden.json",
+    "accepted_fields": [
+      "phase and step timestamps",
+      "local and fabric segment tuples",
+      "application and wire byte counts",
+      "completion order",
+      "backend invocation order",
+      "random-generator state"
+    ],
+    "legacy_transfer_rule": "all existing positive floor-plus-slope regimes and published donor queries remain byte-identical"
+  }
+}
