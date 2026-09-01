@@ -112,6 +112,10 @@ def load_measurement(path: Path, freeze: dict[str, Any]) -> tuple[dict[str, Any]
         raise StudyError(f"{path}: NCCL version differs from the freeze")
     if "A100-SXM4-80GB" not in document.get("rank0_device_name", ""):
         raise StudyError(f"{path}: rank-zero GPU identity is not A100 SXM4 80GB")
+    if document.get("tasks_per_node") != rank_config["gpus_per_node"]:
+        raise StudyError(f"{path}: tasks per node differ from the frozen placement")
+    if document.get("visible_device_count_rank0") != rank_config["gpus_per_node"]:
+        raise StudyError(f"{path}: rank zero does not see the frozen GPU count")
 
     expected_keys = {
         (operation, message_bytes)
@@ -360,7 +364,13 @@ def _audit_evidence_cell(
     if ranks in SCORED_RANKS and any(value != 4 for value in cassini_counts.values()):
         raise StudyError(f"rank {ranks} node lacks four Cassini ports")
 
+    debug_paths = sorted(root.glob("nccl_debug.*.log"))
+    if len(debug_paths) != ranks:
+        raise StudyError(f"rank {ranks} does not retain one NCCL log per rank")
     transport_text = (root / "transport_summary.txt").read_text(encoding="utf-8")
+    transport_text += "\n" + "\n".join(
+        path.read_text(encoding="utf-8", errors="replace") for path in debug_paths
+    )
     network_classes = sorted(
         set(re.findall(r"Using network ([A-Za-z0-9_-]+)", transport_text))
     )
@@ -385,6 +395,9 @@ def _audit_evidence_cell(
         "cassini_ports_per_host": cassini_counts,
         "network_classes": network_classes,
         "gdr_states": gdr_states,
+        "nccl_debug_sha256": {
+            path.name: _sha256_path(path) for path in debug_paths
+        },
     }
 
 
@@ -558,6 +571,95 @@ def _summary(values: Sequence[float]) -> dict[str, float]:
         "p95_nearest_rank": float(nearest_rank(values, 0.95)),
         "maximum": float(max(values)),
     }
+
+
+def _fit_summary(
+    regime: CollectiveFloorRegime, fit_role: str
+) -> dict[str, object]:
+    return {
+        **regime.as_dict(),
+        "floor_us": float(regime.floor_ps) / 1_000_000,
+        "slope_ps_per_byte_float": float(regime.slope_ps_per_byte),
+        "effective_bandwidth_gb_per_second": float(
+            regime.effective_bandwidth_bytes_per_second
+        )
+        / 1_000_000_000,
+        "fit_role": fit_role,
+    }
+
+
+def _measurement_summaries(
+    rows: Sequence[MeasurementRow],
+    documents: dict[int, dict[str, Any]],
+    freeze: dict[str, Any],
+    guard_audit: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    audit_by_rank = {
+        cell["ranks"]: cell for cell in (guard_audit or {}).get("cells", [])
+    }
+    compact_rows = []
+    sanity_rows = []
+    for row in sorted(rows, key=lambda item: (item.ranks, item.operation, item.message_bytes)):
+        document = documents[row.ranks]
+        audit = audit_by_rank.get(row.ranks, {})
+        inputs = audit.get("input_sha256", {})
+        compact_rows.append(
+            {
+                "operation": row.operation,
+                "ranks": row.ranks,
+                "operation_buffer_bytes": row.message_bytes,
+                "median_us": row.latency_ps / 1_000_000,
+                "minimum_us": min(row.samples_us),
+                "maximum_us": max(row.samples_us),
+                "p05_us_nearest_rank": nearest_rank(row.samples_us, 0.05),
+                "p95_us_nearest_rank": nearest_rank(row.samples_us, 0.95),
+                "job_id": audit.get("job_id", document.get("slurm_job_id")),
+                "nodelist": audit.get("nodelist", document.get("slurm_nodelist")),
+                "freeze_commit": audit.get("freeze_commit"),
+                "harness_commit": audit.get("harness_commit"),
+                "gpu": freeze["environment"]["gpu"],
+                "cuda_module": freeze["environment"]["cuda_module"],
+                "nccl_version": document["nccl_version"],
+                "network_classes": ";".join(audit.get("network_classes", [])),
+                "gdr_states": ";".join(audit.get("gdr_states", [])),
+                "source_sha256": inputs.get("collective_lane.cu"),
+                "binary_sha256": inputs.get("collective_lane"),
+                "nccl_sha256": inputs.get("libnccl.so.2"),
+            }
+        )
+    for ranks in sorted(documents):
+        rank_config = _rank_config(freeze, ranks)
+        q = Fraction(ranks - 1, ranks)
+        ceiling = rank_config["ceiling_bytes_per_second"]
+        for operation in OPERATIONS:
+            curve = [
+                row
+                for row in rows
+                if row.ranks == ranks and row.operation == operation
+            ]
+            bandwidths = [
+                float(
+                    q
+                    * row.message_bytes
+                    * 1_000_000_000_000
+                    / row.latency_ps
+                )
+                for row in curve
+            ]
+            maximum = max(bandwidths)
+            maximum_index = bandwidths.index(maximum)
+            sanity_rows.append(
+                {
+                    "operation": operation,
+                    "ranks": ranks,
+                    "ceiling_bytes_per_second": ceiling,
+                    "maximum_bus_bandwidth_bytes_per_second": maximum,
+                    "ceiling_fraction": maximum / ceiling,
+                    "maximum_at_operation_buffer_bytes": curve[maximum_index].message_bytes,
+                    "held": maximum <= ceiling * (1.0 + 1e-9),
+                }
+            )
+    return compact_rows, sanity_rows
 
 
 def _score_dips(
@@ -746,6 +848,7 @@ def score_measurements(
                 if row["ranks"] == ranks and row["operation"] == operation
             ]
             absolute_errors = [row["absolute_relative_error"] for row in curve]
+            signed_errors = [row["signed_relative_error"] for row in curve]
             error_summary = _summary(absolute_errors)
             s1_held = (
                 error_summary["median"]
@@ -762,6 +865,7 @@ def score_measurements(
                     "operation": operation,
                     "ranks": ranks,
                     **error_summary,
+                    "signed_median": float(statistics.median(signed_errors)),
                     "held": s1_held,
                 }
             )
@@ -862,22 +966,23 @@ def score_measurements(
         verdict = "FIT-SMALL-EXTRAPOLATE-WIDE REFUTED"
 
     fit_rows = [
-        {
-            **regime.as_dict(),
-            "fit_role": "training" if regime.ranks in TRAINING_RANKS else "descriptive",
-        }
+        _fit_summary(
+            regime,
+            "training" if regime.ranks in TRAINING_RANKS else "descriptive",
+        )
         for regime in calibration.regimes
     ]
     for (operation, ranks), regimes in sorted(wide_fits.items()):
         if regimes is None:
             continue
-        fit_rows.extend(
-            {
-                **regime.as_dict(),
-                "fit_role": "descriptive",
-            }
-            for regime in regimes
-        )
+        fit_rows.extend(_fit_summary(regime, "descriptive") for regime in regimes)
+
+    measurement_summaries, physical_sanity = _measurement_summaries(
+        rows,
+        documents,
+        freeze,
+        guard_audit,
+    )
 
     return {
         "schema": "simllm-collective-floor-extrapolation-result-v1",
@@ -890,6 +995,16 @@ def score_measurements(
             {"ranks": ranks, "reason": blocked[ranks]} for ranks in sorted(blocked)
         ],
         "guard_audit": guard_audit,
+        "measurement_summaries": measurement_summaries,
+        "physical_sanity": physical_sanity,
+        "extrapolation_scales": [
+            {
+                "ranks": ranks,
+                "exact": f"{_scale(freeze, ranks).numerator}/{_scale(freeze, ranks).denominator}",
+                "decimal": float(_scale(freeze, ranks)),
+            }
+            for ranks in SCORED_RANKS
+        ],
         "fit_boundaries": [
             {
                 "operation": operation,
@@ -933,6 +1048,32 @@ def write_outputs(result: dict[str, Any], output_dir: Path) -> None:
         newline="\n",
     )
     _write_csv(
+        output_dir / "measurements.csv",
+        result["measurement_summaries"],
+        (
+            "operation",
+            "ranks",
+            "operation_buffer_bytes",
+            "median_us",
+            "minimum_us",
+            "maximum_us",
+            "p05_us_nearest_rank",
+            "p95_us_nearest_rank",
+            "job_id",
+            "nodelist",
+            "freeze_commit",
+            "harness_commit",
+            "gpu",
+            "cuda_module",
+            "nccl_version",
+            "network_classes",
+            "gdr_states",
+            "source_sha256",
+            "binary_sha256",
+            "nccl_sha256",
+        ),
+    )
+    _write_csv(
         output_dir / "extrapolation.csv",
         result["extrapolation_rows"],
         (
@@ -959,8 +1100,11 @@ def write_outputs(result: dict[str, Any], output_dir: Path) -> None:
             "lower_bytes",
             "upper_bytes",
             "floor_ps",
+            "floor_us",
             "slope_ps_per_byte",
+            "slope_ps_per_byte_float",
             "effective_bandwidth_bytes_per_second",
+            "effective_bandwidth_gb_per_second",
             "fit_role",
         ),
     )
@@ -994,6 +1138,52 @@ def _parse_evidence(values: Sequence[str]) -> dict[int, Path]:
     return evidence
 
 
+def check_tracked_outputs() -> None:
+    expected = json.loads((STUDY_ROOT / "record.json").read_text(encoding="utf-8"))
+    rows = []
+    documents = {}
+    with (STUDY_ROOT / "measurements.csv").open(encoding="utf-8", newline="") as handle:
+        for raw in csv.DictReader(handle):
+            ranks = int(raw["ranks"])
+            latency_ps = round(float(raw["median_us"]) * 1_000_000)
+            rows.append(
+                MeasurementRow(
+                    operation=raw["operation"],
+                    ranks=ranks,
+                    message_bytes=int(raw["operation_buffer_bytes"]),
+                    latency_ps=latency_ps,
+                    samples_us=(float(raw["median_us"]),),
+                )
+            )
+            documents.setdefault(
+                ranks,
+                {
+                    "world": ranks,
+                    "nccl_version": int(raw["nccl_version"]),
+                },
+            )
+    blocked = {
+        int(cell["ranks"]): cell["reason"] for cell in expected["blocked_cells"]
+    }
+    observed = score_measurements(documents, rows, load_freeze(), blocked=blocked)
+    compared_keys = (
+        "verdict",
+        "fit_boundaries",
+        "fits",
+        "wide_fit_errors",
+        "extrapolation_rows",
+        "scores",
+        "physical_sanity",
+    )
+    for key in compared_keys:
+        if observed[key] != expected[key]:
+            raise StudyError(f"tracked TRAF-81 {key} differs from fresh scoring")
+    for name in ("record.json", "measurements.csv", "extrapolation.csv", "fits.csv"):
+        if b"\r" in (STUDY_ROOT / name).read_bytes():
+            raise StudyError(f"tracked TRAF-81 {name} is not LF-only")
+    print("TRAF-81 tracked medians reproduce every fitted and scored quantity")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--measurement", action="append", type=Path, default=[])
@@ -1002,6 +1192,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args(argv)
+    if args.check:
+        if args.measurement or args.evidence or args.blocked or args.output_dir:
+            raise StudyError("--check does not accept campaign inputs or an output path")
+        check_tracked_outputs()
+        return 0
     freeze = load_freeze()
     documents: dict[int, dict[str, Any]] = {}
     measurement_paths: dict[int, Path] = {}
@@ -1027,12 +1222,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         blocked=blocked,
         guard_audit=guard_audit,
     )
-    if args.check:
-        expected = json.loads((STUDY_ROOT / "record.json").read_text(encoding="utf-8"))
-        if result != expected:
-            raise StudyError("tracked TRAF-81 record differs from fresh scoring")
-        print("TRAF-81 tracked record matches fresh scoring")
-        return 0
     if args.output_dir is None:
         print(json.dumps(result, indent=2, sort_keys=True))
     else:

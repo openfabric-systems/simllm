@@ -1150,29 +1150,25 @@ arbitration parameters after that structure lands.
 
 ### Precision
 
-- TRAF-81 (Precision; P1; L): validate the aggregate collective-floor
-  authority's fit-small-extrapolate-wide rule on independent silicon. Measure
-  half-precision NCCL all-gather and reduce-scatter completion over one frozen
-  operation-buffer byte grid at ranks 2 and 4 inside one Merlin A100 `NV4`
-  node and ranks 8 and 16 across two and four nodes. Fit the authority's
-  positive floor-plus-byte-slope form from ranks 2 and 4 only, use the rank-4
-  donor with the source resolver's rank-shape and A100-locality ceiling rule,
-  and score ranks 8 and 16 without fitting either scored rank. Cross-architecture
-  evidence is shape-only: normalized efficiency, the floor-versus-slope
-  decomposition, the sign and growth of held-out error with width, and the
-  densely sampled transition around 1 MiB. No H200 absolute latency or
-  bandwidth band may enter an A100 verdict. Physical sanity first requires
-  every intra-node rate to remain within the measured NV4 link envelope and
-  every cross-node rate to remain within the observed port envelope. Freeze
-  the grid, warmups, repetition count, median rule, fit, score bands, fatal
-  guards and blocked-state handling before the harness or first measurement.
-  If a multi-node allocation cannot start or NCCL cannot initialize, publish
-  the affected cell as `BLOCKED` with its exact scheduler or NCCL diagnostic;
-  never estimate or substitute it. Acceptance publishes measured floors and
-  slopes for every available rank and operation, rank-2 and rank-4 fits,
-  rank-8 and rank-16 extrapolation errors, the dip location and depth, and the
-  confidence consequence for every rank-8 donor transfer. This study changes
-  no installed authority or signature metric by itself.
+- TRAF-81 (Precision; P1; L): complete the blocked rank-16 cell in the
+  [independent collective-floor extrapolation study](../../examples/collective_floor_extrapolation_v1/RESULTS.md).
+  The frozen rank-2 and rank-4 training cells and rank-8 holdout completed on
+  Merlin A100 GPUs with all fatal guards held and every measured rate inside
+  its physical envelope. At the first locality crossing, rank-4 donor
+  extrapolation misses rank-8 all-gather by 62.889 percent median and 155.593
+  percent p95, and reduce-scatter by 61.111 percent median and 144.544 percent
+  p95, against frozen 25 and 50 percent bands. The floor-fraction family also
+  fails both operations. This refutes normalized-efficiency and
+  floor-versus-slope transfer from one NV4 node to two nodes on the measured
+  A100 system. The formal verdict remains `BLOCKED`, not a completed
+  refutation, because Merlin's per-job quality-of-service limits admit no more
+  than eight GPUs while rank 16 needs 16, leaving the frozen error-growth and
+  sign family unevaluated. Obtain a conforming four-node rank-16 allocation,
+  run only the frozen missing cell without substituting another topology or
+  transport, then publish its descriptive fit, byte-level errors and S3
+  result. The evidence remains shape-only across architectures: no A100
+  absolute latency, bandwidth, floor or slope calibrates H200. This study
+  changes no installed authority or signature metric by itself.
 - TRAF-80 (Precision; P1; L): align the three-module NVLink packet, credit and
   switch domain with the public mechanism boundary established by TRAF-79.
   The surrogate being replaced treats one fixed 272-byte extent as the packet
@@ -1302,6 +1298,15 @@ arbitration parameters after that structure lands.
   Family S population. Its exact rank-8 EP 8 use and acknowledged rank-8 donor
   transfers at wider ranks charge each floor once outside local byte-slope and
   fabric maximum service; its floor-omitting rows remain superseded evidence.
+  Independent A100 evidence now tests the shape premise behind that wider-rank
+  transfer. A rank-4 donor misses untouched rank-8 all-gather and
+  reduce-scatter curves by 62.889 and 61.111 percent median respectively, and
+  both floor-fraction decompositions fail their frozen bands at the first
+  locality crossing. TRAF-81 remains formally blocked on rank 16, so it does
+  not supply an error-growth result, but the available rank-8 evidence removes
+  unqualified shape confidence from the EP 32 and EP 128 donor transfers. It
+  neither transfers an A100 absolute band to H200 nor changes the exact H200
+  rank-8 measurements.
   Complete the packet mechanism for credits, H200 product geometry, switch
   behavior and arbitration. Freeze zero-fan-in and nonzero-fan-in widths over
   at least two payload sizes, retain the one-authority and no-double-count
