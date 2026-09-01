@@ -15,6 +15,9 @@ STUDY = ROOT / "examples/collective_floor_calibration_v1"
 RECORD_PATH = STUDY / "completion_record.json"
 CSV_PATH = STUDY / "completion_results.csv"
 RUNNER = STUDY / "run_completion.py"
+RESULTS_PATH = STUDY / "COMPLETION_RESULTS.md"
+CORRECTION_PATH = STUDY / "REVIEW_CORRECTION_2026-09-01.md"
+TRAFFIC_DOC_PATH = ROOT / "docs/modules/traffic.md"
 RECORD_SHA256 = "f784eeb48fdf06cf7e7f7814d2d3554b9394307a0e0311a0c913522f2315f3d5"
 CSV_SHA256 = "2b224e12da10558d1e128560aa4eeae008fb019dcd4302c3a32396401d0e4e08"
 
@@ -23,7 +26,7 @@ def _record() -> dict:
     return json.loads(RECORD_PATH.read_text(encoding="utf-8"))
 
 
-def test_family_h_completion_is_locked() -> None:
+def test_family_h_postspecified_regression_is_locked() -> None:
     family = _record()["families"]["H"]
     assert family["status"] == "PASS"
     assert family["passed"] == family["denominator"] == 63
@@ -37,6 +40,34 @@ def test_family_h_completion_is_locked() -> None:
     assert family["authority_sha256_before_holdout_load"] == (
         "04b694b18c9ccd02963617d71bbdddbed4b0873eab5cc64354126ea3cdb85f09"
     )
+
+
+def test_review_correction_discloses_classification_and_minimax_reversal() -> None:
+    exact_classification = (
+        "post-specified regression on an adaptively reused 63-cell evaluation "
+        "set with training-cell-only numeric evaluation"
+    )
+    for path in (RESULTS_PATH, CORRECTION_PATH, TRAFFIC_DOC_PATH):
+        content = path.read_text(encoding="utf-8")
+        normalized = " ".join(content.split())
+        assert exact_classification in normalized
+        assert "MiniMax Family D is 0 of 3" in normalized
+        assert "TRAF-83" in normalized
+        assert "TRAF-84" in normalized
+        assert "\r" not in content
+
+    results = RESULTS_PATH.read_text(encoding="utf-8")
+    assert (
+        "The existing MiniMax EP 8 PASS holds only under the legacy authority pin"
+        in results
+    )
+    assert "No default binding changes in this correction" in " ".join(results.split())
+
+    traffic_doc = TRAFFIC_DOC_PATH.read_text(encoding="utf-8")
+    assert "- TRAF-82 (Precision; P1; L):" in traffic_doc
+    assert "- TRAF-83 (Precision; P1; M):" in traffic_doc
+    assert "- TRAF-84 (Precision; P1; L):" in traffic_doc
+    assert "This entry's packet scope is unchanged" in " ".join(traffic_doc.split())
 
 
 def test_d8_model_form_bias_is_resolved_without_moving_the_band() -> None:
