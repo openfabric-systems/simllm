@@ -311,9 +311,13 @@ def test_config_and_batch_scripts_lock_every_frozen_cell() -> None:
             assert "all four operations at all\n# 22 payloads, for 88 frozen cells" in text
             expected_tasks = 1 if width == 2 else 4
             assert f"#SBATCH --ntasks-per-node={expected_tasks}" in text
-            assert path.stat().st_mode & stat.S_IXUSR
+            if os.name == "posix":
+                assert path.stat().st_mode & stat.S_IXUSR
 
 
+@pytest.mark.skipif(
+    os.name != "posix", reason="the capture scripts target the Linux cluster runtime"
+)
 def test_shell_entry_points_are_syntactically_valid_and_executable() -> None:
     scripts = [
         HARNESS / "run_capture.sh",
@@ -436,6 +440,9 @@ def test_routing_observation_retains_the_pooled_one_mib_signal_gate() -> None:
     }
 
 
+@pytest.mark.skipif(
+    os.name != "posix", reason="the snapshot tool needs the POSIX monotonic raw clock"
+)
 def test_snapshot_parser_reads_synthetic_sysfs_and_names_sources(tmp_path: Path) -> None:
     net_root = tmp_path / "synthetic-sysfs"
     statistics = net_root / "hsn0" / "statistics"
@@ -516,6 +523,9 @@ def _without_pythonpath() -> dict[str, str]:
     return environment
 
 
+@pytest.mark.skipif(
+    os.name != "posix", reason="the harness entry points target the Linux cluster runtime"
+)
 def test_python_entry_points_run_without_pythonpath(
     synthetic_capture: Path,
     tmp_path: Path,
