@@ -1,0 +1,912 @@
+diff --git a/examples/a100_nvlink_packet_v2/nvlink_packet_lane.cu b/examples/a100_nvlink_packet_v2/nvlink_packet_lane.cu
+index 616cac6..dcf31c4 100644
+--- a/examples/a100_nvlink_packet_v2/nvlink_packet_lane.cu
++++ b/examples/a100_nvlink_packet_v2/nvlink_packet_lane.cu
+@@ -13,6 +13,7 @@
+
+ #include <algorithm>
+ #include <array>
++#include <atomic>
+ #include <chrono>
+ #include <cmath>
+ #include <cstdint>
+@@ -68,6 +69,14 @@ struct Point {
+   int gap_ns = 0;
+   int offered_rate_percent = 100;
+   std::string pattern;
++  int traf73_warmup_repetitions = 0;
++  int traf73_timed_repetitions = 0;
++  int traf73_excluded_repetitions_each_edge = 0;
++  std::string traf73_flow_offered_rate_percents;
++  int traf73_window_warmup_ms = 0;
++  int traf73_window_measurement_ms = 0;
++  int traf73_window_drain_ms = 0;
++  std::uint64_t traf73_ring_bytes = 0;
+ };
+
+ struct Observation {
+@@ -91,6 +100,15 @@ struct Observation {
+   std::string copy_engine_batch_mode = "not_copy_engine";
+   std::string protocol = "transport_observation";
+   std::vector<double> flow_completion_us;
++  std::uint64_t expected_extents = 0;
++  std::vector<std::uint64_t> flow_logical_bytes;
++  std::string traf73_mode;
++  std::vector<std::vector<double>> traf73_repetition_completion_us_by_flow;
++  std::vector<int> traf73_flow_offered_rate_percents;
++  std::vector<std::uint64_t> traf73_window_completed_bytes_by_flow;
++  std::vector<double> traf73_window_device_us_by_flow;
++  double traf73_launch_skew_us = 0.0;
++  double traf73_host_window_us = 0.0;
+ };
+
+ struct LinkDelta {
+@@ -123,6 +141,7 @@ struct DeviceTelemetry {
+ struct CapturedObservation {
+   Observation summary;
+   std::vector<LinkDelta> links;
++  std::vector<LinkDelta> traf73_window_links;
+   std::vector<DeviceTelemetry> telemetry_before;
+   std::vector<DeviceTelemetry> telemetry_after;
+ };
+@@ -193,6 +212,16 @@ std::string control_canonical(const Point& point) {
+       << point.stride << '\n' << point.stream_count << '\n' << point.outstanding << '\n'
+       << point.burst_messages << '\n' << point.gap_ns << '\n'
+       << point.offered_rate_percent << '\n' << point.pattern << '\n';
++  if (point.pattern.rfind("traf73_", 0) == 0) {
++    out << point.traf73_warmup_repetitions << '\n'
++        << point.traf73_timed_repetitions << '\n'
++        << point.traf73_excluded_repetitions_each_edge << '\n'
++        << point.traf73_flow_offered_rate_percents << '\n'
++        << point.traf73_window_warmup_ms << '\n'
++        << point.traf73_window_measurement_ms << '\n'
++        << point.traf73_window_drain_ms << '\n'
++        << point.traf73_ring_bytes << '\n';
++  }
+   return out.str();
+ }
+
+@@ -243,6 +272,11 @@ std::vector<Point> read_points(const std::string& path) {
+     const auto value = [&](const std::string& name) -> const std::string& {
+       return fields.at(index.at(name));
+     };
++    const auto optional = [&](const std::string& name,
++                              const std::string& fallback) -> std::string {
++      const auto found = index.find(name);
++      return found == index.end() ? fallback : fields.at(found->second);
++    };
+     Point point;
+     point.case_name = value("case_name");
+     point.point_id = value("point_id");
+@@ -267,9 +301,48 @@ std::vector<Point> read_points(const std::string& path) {
+     point.offered_rate_percent =
+         parse_int(value("offered_rate_percent"), "offered_rate_percent");
+     point.pattern = value("pattern");
++    point.traf73_warmup_repetitions = parse_int(
++        optional("traf73_warmup_repetitions", "0"),
++        "traf73_warmup_repetitions");
++    point.traf73_timed_repetitions = parse_int(
++        optional("traf73_timed_repetitions", "0"),
++        "traf73_timed_repetitions");
++    point.traf73_excluded_repetitions_each_edge = parse_int(
++        optional("traf73_excluded_repetitions_each_edge", "0"),
++        "traf73_excluded_repetitions_each_edge");
++    point.traf73_flow_offered_rate_percents =
++        optional("traf73_flow_offered_rate_percents", "");
++    point.traf73_window_warmup_ms = parse_int(
++        optional("traf73_window_warmup_ms", "0"),
++        "traf73_window_warmup_ms");
++    point.traf73_window_measurement_ms = parse_int(
++        optional("traf73_window_measurement_ms", "0"),
++        "traf73_window_measurement_ms");
++    point.traf73_window_drain_ms = parse_int(
++        optional("traf73_window_drain_ms", "0"),
++        "traf73_window_drain_ms");
++    point.traf73_ring_bytes = parse_u64(
++        optional("traf73_ring_bytes", "0"), "traf73_ring_bytes");
+     if (point.payload_bytes == 0 || point.message_count == 0) {
+       throw std::runtime_error("payload and message count must be positive");
+     }
++    if (point.pattern == "traf73_latency_batch") {
++      if (point.traf73_warmup_repetitions <= 0 ||
++          point.traf73_timed_repetitions <= 0 ||
++          point.message_count !=
++              static_cast<std::uint64_t>(point.traf73_timed_repetitions)) {
++        throw std::runtime_error("TRAF-73 latency controls are inconsistent");
++      }
++    } else if (point.pattern == "traf73_steady_arbitration") {
++      if (point.traf73_window_warmup_ms <= 0 ||
++          point.traf73_window_measurement_ms <= 0 ||
++          point.traf73_window_drain_ms <= 0 || point.traf73_ring_bytes == 0 ||
++          point.traf73_flow_offered_rate_percents.empty()) {
++        throw std::runtime_error("TRAF-73 steady-window controls are incomplete");
++      }
++    } else if (point.pattern.rfind("traf73_", 0) == 0) {
++      throw std::runtime_error("unknown TRAF-73 producer pattern");
++    }
+     points.push_back(std::move(point));
+   }
+   return points;
+@@ -283,6 +356,26 @@ std::vector<int> parse_devices(const std::string& text) {
+   return devices;
+ }
+
++std::vector<int> traf73_flow_rates(const Point& point, std::size_t flow_count) {
++  auto rates = parse_devices(point.traf73_flow_offered_rate_percents);
++  if (rates.size() != flow_count) {
++    throw std::runtime_error("TRAF-73 per-flow rate count differs from flow count");
++  }
++  for (const int rate : rates) {
++    if (rate <= 0 || rate > 100) {
++      throw std::runtime_error("TRAF-73 per-flow rate must be in 1 through 100");
++    }
++  }
++  return rates;
++}
++
++std::uint64_t traf73_wire_bytes(std::uint64_t payload_bytes) {
++  constexpr std::uint64_t kPayloadBytesPerPacket = 256;
++  constexpr std::uint64_t kWireBytesPerPacket = 272;
++  return ((payload_bytes + kPayloadBytesPerPacket - 1) /
++          kPayloadBytesPerPacket) * kWireBytesPerPacket;
++}
++
+ std::vector<std::pair<int, int>> flows_for(const Point& point) {
+   auto sources = parse_devices(point.sources);
+   auto destinations = parse_devices(point.destinations);
+@@ -348,8 +441,8 @@ CapturedObservation run_mock(const Point& point) {
+   const auto flows = flows_for(point);
+   const auto flow_count = static_cast<std::uint64_t>(flows.size());
+   const auto logical_bytes = point.payload_bytes * point.message_count * flow_count;
+-  const auto synthetic_kib = (logical_bytes + kCounterQuantumBytes - 1) /
+-                             kCounterQuantumBytes;
++  auto synthetic_kib = (logical_bytes + kCounterQuantumBytes - 1) /
++                       kCounterQuantumBytes;
+   CapturedObservation captured;
+   captured.summary.elapsed_us = static_cast<double>(logical_bytes) / 80.0e9 * 1.0e6 + 1.0;
+   captured.summary.completion_us = captured.summary.elapsed_us;
+@@ -367,6 +460,9 @@ CapturedObservation run_mock(const Point& point) {
+   captured.summary.observed_sequence_sha256 =
+       captured.summary.expected_sequence_sha256;
+   captured.summary.terminal_extents = point.message_count * flow_count;
++  captured.summary.expected_extents = point.message_count * flow_count;
++  captured.summary.flow_logical_bytes.assign(
++      flows.size(), point.payload_bytes * point.message_count);
+   if (point.producer == "copy_engine_reference") {
+     captured.summary.copy_engine_host_enqueue_count = flow_count * point.stream_count;
+     captured.summary.copy_engine_batch_mode = "single_contiguous_batch_per_flow_stream";
+@@ -375,6 +471,46 @@ CapturedObservation run_mock(const Point& point) {
+       ? "protocol_validation_only"
+       : "mock_synthetic_no_measurement_claim";
+   captured.summary.flow_completion_us.assign(flows.size(), captured.summary.elapsed_us);
++  if (point.pattern == "traf73_latency_batch") {
++    captured.summary.traf73_mode = "latency_batch";
++    captured.summary.traf73_repetition_completion_us_by_flow.assign(
++        flows.size(),
++        std::vector<double>(
++            static_cast<std::size_t>(point.traf73_timed_repetitions),
++            static_cast<double>(point.payload_bytes) / 80.0e9 * 1.0e6 + 1.0));
++  } else if (point.pattern == "traf73_steady_arbitration") {
++    const auto rates = traf73_flow_rates(point, flows.size());
++    captured.summary.traf73_mode = "steady_arbitration";
++    captured.summary.traf73_flow_offered_rate_percents = rates;
++    captured.summary.traf73_host_window_us =
++        point.traf73_window_measurement_ms * 1000.0;
++    captured.summary.traf73_launch_skew_us = 0.0;
++    captured.summary.traf73_window_device_us_by_flow.assign(
++        flows.size(), point.traf73_window_measurement_ms * 1000.0);
++    captured.summary.traf73_window_completed_bytes_by_flow.clear();
++    captured.summary.flow_logical_bytes.clear();
++    captured.summary.logical_bytes = 0;
++    captured.summary.expected_extents = 0;
++    captured.summary.terminal_extents = 0;
++    for (const int rate : rates) {
++      const auto offered_raw_bytes = static_cast<std::uint64_t>(
++          static_cast<double>(rate) * 1.0e9 *
++          static_cast<double>(point.traf73_window_measurement_ms) / 1000.0);
++      const auto chunks = offered_raw_bytes /
++                          traf73_wire_bytes(point.traf73_ring_bytes);
++      const auto completed = chunks * point.traf73_ring_bytes;
++      captured.summary.traf73_window_completed_bytes_by_flow.push_back(completed);
++      captured.summary.flow_logical_bytes.push_back(completed);
++      captured.summary.logical_bytes += completed;
++      captured.summary.expected_extents += chunks;
++      captured.summary.terminal_extents += chunks;
++    }
++    synthetic_kib =
++        (captured.summary.logical_bytes + kCounterQuantumBytes - 1) /
++        kCounterQuantumBytes;
++    captured.summary.observed_data_bytes = synthetic_kib * kCounterQuantumBytes;
++    captured.summary.observed_raw_bytes = synthetic_kib * kCounterQuantumBytes;
++  }
+   for (std::size_t index = 0; index < flows.size(); ++index) {
+     LinkDelta delta;
+     delta.gpu = flows[index].first;
+@@ -501,6 +637,57 @@ __global__ void mark_order_kernel(unsigned long long* order,
+   }
+ }
+
++__global__ void mark_repetition_kernel(unsigned long long* order,
++                                       std::uint64_t repetition) {
++  if (blockIdx.x == 0 && threadIdx.x == 0) {
++    order[repetition] = repetition + 1;
++  }
++}
++
++__global__ void traf73_start_kernel(unsigned long long* start_cycle,
++                                    volatile int* start_flag) {
++  if (blockIdx.x == 0 && threadIdx.x == 0) {
++    while (*start_flag == 0) {
++    }
++    *start_cycle = clock64();
++    __threadfence();
++  }
++}
++
++__global__ void traf73_ring_stream_kernel(
++    unsigned char* destination,
++    const unsigned char* source,
++    unsigned long long* order,
++    unsigned long long* completion_cycles,
++    const unsigned long long* start_cycle,
++    std::uint64_t ring_bytes,
++    std::uint64_t wire_bytes_per_chunk,
++    std::uint64_t chunk_count,
++    int offered_rate_percent,
++    int clock_rate_khz) {
++  const auto pacing_start = *start_cycle;
++  for (std::uint64_t chunk = blockIdx.x; chunk < chunk_count;
++       chunk += gridDim.x) {
++    const double target_ns =
++        static_cast<double>(chunk * wire_bytes_per_chunk) /
++        static_cast<double>(offered_rate_percent);
++    const auto target_cycles = static_cast<unsigned long long>(
++        target_ns * static_cast<double>(clock_rate_khz) / 1.0e6);
++    while (clock64() - pacing_start < target_cycles) {
++    }
++    for (std::uint64_t offset = threadIdx.x; offset < ring_bytes;
++         offset += blockDim.x) {
++      destination[offset] = source[offset];
++    }
++    __syncthreads();
++    if (threadIdx.x == 0) {
++      order[chunk] = chunk + 1;
++      completion_cycles[chunk] = clock64();
++    }
++    __syncthreads();
++  }
++}
++
+ __global__ void busy_wait_kernel(std::uint64_t cycles) {
+   if (blockIdx.x != 0 || threadIdx.x != 0) return;
+   const std::uint64_t start = clock64();
+@@ -821,6 +1008,452 @@ std::vector<LinkDelta> link_deltas(const std::vector<LinkSnapshot>& before,
+   return deltas;
+ }
+
++void set_observed_counter_totals(CapturedObservation& captured) {
++  std::uint64_t data_tx_kib = 0;
++  std::uint64_t data_rx_kib = 0;
++  std::uint64_t raw_tx_kib = 0;
++  std::uint64_t raw_rx_kib = 0;
++  for (const auto& link : captured.links) {
++    data_tx_kib += positive_delta(link.data_tx_kib_before, link.data_tx_kib_after);
++    data_rx_kib += positive_delta(link.data_rx_kib_before, link.data_rx_kib_after);
++    raw_tx_kib += positive_delta(link.raw_tx_kib_before, link.raw_tx_kib_after);
++    raw_rx_kib += positive_delta(link.raw_rx_kib_before, link.raw_rx_kib_after);
++  }
++  captured.summary.observed_data_bytes =
++      std::max(data_tx_kib, data_rx_kib) * kCounterQuantumBytes;
++  captured.summary.observed_raw_bytes =
++      std::max(raw_tx_kib, raw_rx_kib) * kCounterQuantumBytes;
++}
++
++void set_hardware_throttle_verdict(CapturedObservation& captured) {
++  for (const auto& telemetry : captured.telemetry_before) {
++    captured.summary.throttle_reason_mask |= telemetry.clock_event_reasons;
++  }
++  for (const auto& telemetry : captured.telemetry_after) {
++    captured.summary.throttle_reason_mask |= telemetry.clock_event_reasons;
++  }
++  const std::uint64_t fatal_throttle_mask =
++      nvmlClocksThrottleReasonHwSlowdown |
++      nvmlClocksThrottleReasonSwThermalSlowdown |
++      nvmlClocksThrottleReasonHwThermalSlowdown |
++      nvmlClocksThrottleReasonHwPowerBrakeSlowdown;
++  const auto known_throttle_mask =
++      static_cast<std::uint64_t>(nvmlClocksThrottleReasonAll);
++  const auto unknown_throttle_mask =
++      captured.summary.throttle_reason_mask & ~known_throttle_mask;
++  captured.summary.throttle_verdict =
++      (captured.summary.throttle_reason_mask & fatal_throttle_mask) == 0 &&
++              unknown_throttle_mask == 0
++          ? "CLEAR"
++          : "FATAL_CLOCK_EVENT";
++}
++
++CapturedObservation run_traf73_latency(const Point& point,
++                                       HardwareContext& context) {
++  if (point.producer != "persistent_sm_peer_write" || point.stream_count != 1 ||
++      point.stride != 1) {
++    throw std::runtime_error("TRAF-73 latency mode requires the persistent write identity controls");
++  }
++  const auto flows = flows_for(point);
++  const auto timed = static_cast<std::uint64_t>(point.traf73_timed_repetitions);
++  const auto warmups = static_cast<std::uint64_t>(point.traf73_warmup_repetitions);
++  const std::uint64_t span_per_flow = point.payload_bytes + 512;
++  if (span_per_flow * flows.size() > HardwareContext::kAllocationBytes ||
++      timed * flows.size() > HardwareContext::kOrderEntries) {
++    throw std::runtime_error("TRAF-73 latency point exceeds the fixed producer allocation");
++  }
++
++  std::vector<std::vector<unsigned char>> expected(flows.size());
++  for (std::size_t flow_index = 0; flow_index < flows.size(); ++flow_index) {
++    expected[flow_index].resize(span_per_flow);
++    for (std::uint64_t offset = 0; offset < point.payload_bytes; ++offset) {
++      expected[flow_index][point.source_alignment + offset] =
++          expected_byte(0, offset, flow_index);
++    }
++    const auto [source, destination] = flows[flow_index];
++    const auto region = flow_index * span_per_flow;
++    CUDA_CHECK(cudaSetDevice(source));
++    CUDA_CHECK(cudaMemcpy(context.buffers[source] + region,
++                          expected[flow_index].data(), span_per_flow,
++                          cudaMemcpyHostToDevice));
++    CUDA_CHECK(cudaSetDevice(destination));
++    CUDA_CHECK(cudaMemset(context.buffers[destination] + region, 0,
++                          span_per_flow));
++    CUDA_CHECK(cudaMemset(context.orders[destination] + flow_index * timed, 0,
++                          timed * sizeof(unsigned long long)));
++  }
++  for (int device = 0; device < 4; ++device) {
++    CUDA_CHECK(cudaSetDevice(device));
++    CUDA_CHECK(cudaDeviceSynchronize());
++  }
++
++  const auto launch_copy = [&](std::size_t flow_index) {
++    const auto [source, destination] = flows[flow_index];
++    const auto region = flow_index * span_per_flow;
++    auto stream = context.streams[source][destination][0];
++    CUDA_CHECK(cudaSetDevice(source));
++    const int blocks = std::min(256, std::max(1, point.outstanding));
++    peer_copy_kernel<<<blocks, 256, 0, stream>>>(
++        context.buffers[destination] + region + point.destination_alignment,
++        context.buffers[source] + region + point.source_alignment,
++        context.orders[destination] + flow_index * timed,
++        point.payload_bytes, point.payload_bytes, point.access_width, 1,
++        lane_mask_for(point), 0, 1, 1, 0, 100,
++        context.clock_rate_khz[source], stable_checksum(point.point_id), 0);
++    CUDA_CHECK(cudaGetLastError());
++  };
++
++  for (std::uint64_t repetition = 0; repetition < warmups; ++repetition) {
++    for (std::size_t flow_index = 0; flow_index < flows.size(); ++flow_index) {
++      launch_copy(flow_index);
++    }
++  }
++  for (int device = 0; device < 4; ++device) {
++    CUDA_CHECK(cudaSetDevice(device));
++    CUDA_CHECK(cudaDeviceSynchronize());
++  }
++  for (std::size_t flow_index = 0; flow_index < flows.size(); ++flow_index) {
++    const int destination = flows[flow_index].second;
++    CUDA_CHECK(cudaSetDevice(destination));
++    CUDA_CHECK(cudaMemset(context.orders[destination] + flow_index * timed, 0,
++                          timed * sizeof(unsigned long long)));
++  }
++
++  auto telemetry_before = capture_telemetry(context);
++  const auto counters_before = capture_links(context);
++  const auto batch_started = std::chrono::steady_clock::now();
++  std::vector<std::vector<cudaEvent_t>> starts(
++      flows.size(), std::vector<cudaEvent_t>(timed));
++  std::vector<std::vector<cudaEvent_t>> stops(
++      flows.size(), std::vector<cudaEvent_t>(timed));
++  std::vector<std::chrono::steady_clock::time_point> first_launch(flows.size());
++  for (std::uint64_t repetition = 0; repetition < timed; ++repetition) {
++    for (std::size_t flow_index = 0; flow_index < flows.size(); ++flow_index) {
++      const auto [source, destination] = flows[flow_index];
++      auto stream = context.streams[source][destination][0];
++      CUDA_CHECK(cudaSetDevice(source));
++      CUDA_CHECK(cudaEventCreate(&starts[flow_index][repetition]));
++      CUDA_CHECK(cudaEventCreate(&stops[flow_index][repetition]));
++      if (repetition == 0) first_launch[flow_index] = std::chrono::steady_clock::now();
++      CUDA_CHECK(cudaEventRecord(starts[flow_index][repetition], stream));
++      launch_copy(flow_index);
++      CUDA_CHECK(cudaEventRecord(stops[flow_index][repetition], stream));
++      mark_repetition_kernel<<<1, 1, 0, stream>>>(
++          context.orders[destination] + flow_index * timed, repetition);
++      CUDA_CHECK(cudaGetLastError());
++    }
++  }
++  for (std::size_t flow_index = 0; flow_index < flows.size(); ++flow_index) {
++    const int source = flows[flow_index].first;
++    CUDA_CHECK(cudaSetDevice(source));
++    CUDA_CHECK(cudaEventSynchronize(stops[flow_index].back()));
++  }
++  const auto batch_completed = std::chrono::steady_clock::now();
++  const auto counters_after = capture_links(context);
++  auto telemetry_after = capture_telemetry(context);
++
++  CapturedObservation captured;
++  captured.links = link_deltas(counters_before, counters_after);
++  captured.telemetry_before = std::move(telemetry_before);
++  captured.telemetry_after = std::move(telemetry_after);
++  captured.summary.traf73_mode = "latency_batch";
++  captured.summary.traf73_repetition_completion_us_by_flow.resize(flows.size());
++  captured.summary.flow_completion_us.resize(flows.size());
++  for (std::size_t flow_index = 0; flow_index < flows.size(); ++flow_index) {
++    auto& samples = captured.summary.traf73_repetition_completion_us_by_flow[flow_index];
++    samples.reserve(timed);
++    for (std::uint64_t repetition = 0; repetition < timed; ++repetition) {
++      float elapsed_ms = 0.0f;
++      CUDA_CHECK(cudaSetDevice(flows[flow_index].first));
++      CUDA_CHECK(cudaEventElapsedTime(&elapsed_ms, starts[flow_index][repetition],
++                                      stops[flow_index][repetition]));
++      samples.push_back(static_cast<double>(elapsed_ms) * 1000.0);
++      CUDA_CHECK(cudaEventDestroy(starts[flow_index][repetition]));
++      CUDA_CHECK(cudaEventDestroy(stops[flow_index][repetition]));
++    }
++    captured.summary.flow_completion_us[flow_index] =
++        std::accumulate(samples.begin(), samples.end(), 0.0) / samples.size();
++  }
++  if (first_launch.size() > 1) {
++    const auto bounds = std::minmax_element(first_launch.begin(), first_launch.end());
++    captured.summary.traf73_launch_skew_us =
++        std::chrono::duration<double, std::micro>(*bounds.second - *bounds.first).count();
++  }
++  captured.summary.elapsed_us =
++      std::chrono::duration<double, std::micro>(batch_completed - batch_started).count();
++  captured.summary.completion_us = captured.summary.elapsed_us;
++  captured.summary.drain_us = captured.summary.elapsed_us;
++  captured.summary.logical_bytes = point.payload_bytes * timed * flows.size();
++  captured.summary.expected_extents = timed * flows.size();
++  captured.summary.flow_logical_bytes.assign(flows.size(), point.payload_bytes * timed);
++
++  traf70::Sha256 expected_digest;
++  traf70::Sha256 observed_digest;
++  traf70::Sha256 expected_order_digest;
++  traf70::Sha256 observed_order_digest;
++  for (std::size_t flow_index = 0; flow_index < flows.size(); ++flow_index) {
++    const int destination = flows[flow_index].second;
++    const auto region = flow_index * span_per_flow;
++    std::vector<unsigned char> observed(span_per_flow);
++    std::vector<unsigned long long> order(timed);
++    CUDA_CHECK(cudaSetDevice(destination));
++    CUDA_CHECK(cudaMemcpy(observed.data(), context.buffers[destination] + region,
++                          span_per_flow, cudaMemcpyDeviceToHost));
++    CUDA_CHECK(cudaMemcpy(order.data(),
++                          context.orders[destination] + flow_index * timed,
++                          timed * sizeof(unsigned long long), cudaMemcpyDeviceToHost));
++    for (std::uint64_t offset = 0; offset < point.payload_bytes; ++offset) {
++      const auto expected_value = expected_byte(0, offset, flow_index);
++      expected_digest.update(&expected_value, 1);
++      observed_digest.update(
++          &observed[point.destination_alignment + offset], 1);
++    }
++    for (std::uint64_t repetition = 0; repetition < timed; ++repetition) {
++      const std::uint64_t expected_value = repetition + 1;
++      expected_order_digest.update(&expected_value, sizeof(expected_value));
++      observed_order_digest.update(&order[repetition], sizeof(order[repetition]));
++      if (order[repetition] == 0) ++captured.summary.missing;
++      if (order[repetition] != 0 && order[repetition] != expected_value) {
++        ++captured.summary.out_of_order;
++      }
++    }
++  }
++  captured.summary.expected_sha256 = expected_digest.finish_hex();
++  captured.summary.observed_sha256 = observed_digest.finish_hex();
++  captured.summary.expected_sequence_sha256 = expected_order_digest.finish_hex();
++  captured.summary.observed_sequence_sha256 = observed_order_digest.finish_hex();
++  captured.summary.terminal_extents =
++      captured.summary.expected_extents - captured.summary.missing;
++  captured.summary.protocol = "traf73_latency_observation";
++  set_observed_counter_totals(captured);
++  set_hardware_throttle_verdict(captured);
++  return captured;
++}
++
++CapturedObservation run_traf73_steady(const Point& point,
++                                      HardwareContext& context) {
++  if (point.producer != "persistent_sm_peer_write" || point.stride != 1 ||
++      point.stream_count != 1) {
++    throw std::runtime_error("TRAF-73 steady mode requires the persistent write identity controls");
++  }
++  const auto flows = flows_for(point);
++  const auto rates = traf73_flow_rates(point, flows.size());
++  const auto ring_bytes = point.traf73_ring_bytes;
++  const auto offered_ms = point.traf73_window_warmup_ms +
++                          point.traf73_window_measurement_ms +
++                          point.traf73_window_drain_ms;
++  if (ring_bytes * flows.size() > HardwareContext::kAllocationBytes) {
++    throw std::runtime_error("TRAF-73 steady rings exceed the fixed producer allocation");
++  }
++
++  std::vector<std::uint64_t> chunk_counts;
++  for (const int rate : rates) {
++    const double offered_raw_bytes = static_cast<double>(rate) * 1.0e9 *
++                                     static_cast<double>(offered_ms) / 1000.0;
++    chunk_counts.push_back(
++        static_cast<std::uint64_t>(
++            std::ceil(offered_raw_bytes / traf73_wire_bytes(ring_bytes))));
++  }
++  if (*std::max_element(chunk_counts.begin(), chunk_counts.end()) * 2 + 1 >
++      HardwareContext::kOrderEntries) {
++    throw std::runtime_error("TRAF-73 steady ledgers exceed the fixed producer allocation");
++  }
++
++  std::vector<std::vector<unsigned char>> expected(flows.size());
++  for (std::size_t flow_index = 0; flow_index < flows.size(); ++flow_index) {
++    expected[flow_index].resize(ring_bytes);
++    for (std::uint64_t offset = 0; offset < ring_bytes; ++offset) {
++      expected[flow_index][offset] = expected_byte(0, offset, flow_index);
++    }
++    const auto [source, destination] = flows[flow_index];
++    const auto region = flow_index * ring_bytes;
++    CUDA_CHECK(cudaSetDevice(source));
++    CUDA_CHECK(cudaMemcpy(context.buffers[source] + region,
++                          expected[flow_index].data(), ring_bytes,
++                          cudaMemcpyHostToDevice));
++    CUDA_CHECK(cudaMemset(context.orders[source], 0,
++                          (chunk_counts[flow_index] * 2 + 1) *
++                              sizeof(unsigned long long)));
++    CUDA_CHECK(cudaSetDevice(destination));
++    CUDA_CHECK(cudaMemset(context.buffers[destination] + region, 0, ring_bytes));
++  }
++  for (int device = 0; device < 4; ++device) {
++    CUDA_CHECK(cudaSetDevice(device));
++    CUDA_CHECK(cudaDeviceSynchronize());
++  }
++
++  int* host_start_flag = nullptr;
++  int* device_start_flag = nullptr;
++  CUDA_CHECK(cudaHostAlloc(&host_start_flag, sizeof(int),
++                           cudaHostAllocMapped | cudaHostAllocPortable));
++  *host_start_flag = 0;
++  CUDA_CHECK(cudaHostGetDevicePointer(&device_start_flag, host_start_flag, 0));
++
++  auto telemetry_before = capture_telemetry(context);
++  const auto counters_before = capture_links(context);
++  std::vector<std::chrono::steady_clock::time_point> launch_times(flows.size());
++  std::vector<cudaEvent_t> active_events(flows.size());
++  for (std::size_t flow_index = 0; flow_index < flows.size(); ++flow_index) {
++    const auto [source, destination] = flows[flow_index];
++    const auto count = chunk_counts[flow_index];
++    const auto region = flow_index * ring_bytes;
++    auto stream = context.streams[source][destination][0];
++    CUDA_CHECK(cudaSetDevice(source));
++    launch_times[flow_index] = std::chrono::steady_clock::now();
++    traf73_start_kernel<<<1, 1, 0, stream>>>(
++        context.orders[source] + 2 * count, device_start_flag);
++    CUDA_CHECK(cudaGetLastError());
++    CUDA_CHECK(cudaEventCreate(&active_events[flow_index]));
++    CUDA_CHECK(cudaEventRecord(active_events[flow_index], stream));
++    traf73_ring_stream_kernel<<<
++        static_cast<unsigned int>(std::min<std::uint64_t>(256, count)), 256, 0,
++        stream>>>(context.buffers[destination] + region,
++                  context.buffers[source] + region, context.orders[source],
++                  context.orders[source] + count,
++                  context.orders[source] + 2 * count,
++                  ring_bytes, traf73_wire_bytes(ring_bytes), count,
++                  rates[flow_index],
++                  context.clock_rate_khz[source]);
++    CUDA_CHECK(cudaGetLastError());
++  }
++  std::atomic_thread_fence(std::memory_order_seq_cst);
++  *host_start_flag = 1;
++  std::atomic_thread_fence(std::memory_order_seq_cst);
++
++  for (std::size_t flow_index = 0; flow_index < flows.size(); ++flow_index) {
++    CUDA_CHECK(cudaSetDevice(flows[flow_index].first));
++    CUDA_CHECK(cudaEventSynchronize(active_events[flow_index]));
++    CUDA_CHECK(cudaEventDestroy(active_events[flow_index]));
++  }
++  const auto common_started = std::chrono::steady_clock::now();
++  const auto window_target =
++      common_started + std::chrono::milliseconds(point.traf73_window_warmup_ms);
++  std::this_thread::sleep_until(window_target);
++  const auto window_counters_before = capture_links(context);
++  const auto window_started = std::chrono::steady_clock::now();
++  const auto window_completed_target =
++      window_started + std::chrono::milliseconds(point.traf73_window_measurement_ms);
++  std::this_thread::sleep_until(window_completed_target);
++  const auto window_counters_after = capture_links(context);
++  const auto window_completed = std::chrono::steady_clock::now();
++  std::this_thread::sleep_until(
++      window_completed + std::chrono::milliseconds(point.traf73_window_drain_ms));
++  for (std::size_t flow_index = 0; flow_index < flows.size(); ++flow_index) {
++    CUDA_CHECK(cudaSetDevice(flows[flow_index].first));
++    CUDA_CHECK(cudaStreamSynchronize(
++        context.streams[flows[flow_index].first][flows[flow_index].second][0]));
++  }
++  const auto counters_after = capture_links(context);
++  auto telemetry_after = capture_telemetry(context);
++  CUDA_CHECK(cudaFreeHost(host_start_flag));
++
++  CapturedObservation captured;
++  captured.links = link_deltas(counters_before, counters_after);
++  captured.traf73_window_links =
++      link_deltas(window_counters_before, window_counters_after);
++  captured.telemetry_before = std::move(telemetry_before);
++  captured.telemetry_after = std::move(telemetry_after);
++  captured.summary.traf73_mode = "steady_arbitration";
++  captured.summary.traf73_flow_offered_rate_percents = rates;
++  captured.summary.traf73_host_window_us =
++      std::chrono::duration<double, std::micro>(window_completed - window_started)
++          .count();
++  const auto launch_bounds = std::minmax_element(launch_times.begin(), launch_times.end());
++  captured.summary.traf73_launch_skew_us =
++      std::chrono::duration<double, std::micro>(*launch_bounds.second -
++                                                *launch_bounds.first)
++          .count();
++  captured.summary.flow_completion_us.resize(flows.size());
++  captured.summary.traf73_window_device_us_by_flow.resize(flows.size());
++  captured.summary.traf73_window_completed_bytes_by_flow.resize(flows.size());
++  captured.summary.flow_logical_bytes.resize(flows.size());
++
++  traf70::Sha256 expected_digest;
++  traf70::Sha256 observed_digest;
++  traf70::Sha256 expected_order_digest;
++  traf70::Sha256 observed_order_digest;
++  for (std::size_t flow_index = 0; flow_index < flows.size(); ++flow_index) {
++    const auto [source, destination] = flows[flow_index];
++    const auto count = chunk_counts[flow_index];
++    const auto region = flow_index * ring_bytes;
++    std::vector<unsigned char> observed(ring_bytes);
++    std::vector<unsigned long long> order(count);
++    std::vector<unsigned long long> completions(count);
++    unsigned long long start_cycle = 0;
++    CUDA_CHECK(cudaSetDevice(destination));
++    CUDA_CHECK(cudaMemcpy(observed.data(), context.buffers[destination] + region,
++                          ring_bytes, cudaMemcpyDeviceToHost));
++    CUDA_CHECK(cudaSetDevice(source));
++    CUDA_CHECK(cudaMemcpy(order.data(), context.orders[source],
++                          count * sizeof(unsigned long long), cudaMemcpyDeviceToHost));
++    CUDA_CHECK(cudaMemcpy(completions.data(), context.orders[source] + count,
++                          count * sizeof(unsigned long long), cudaMemcpyDeviceToHost));
++    CUDA_CHECK(cudaMemcpy(&start_cycle, context.orders[source] + 2 * count,
++                          sizeof(start_cycle), cudaMemcpyDeviceToHost));
++    const auto measurement_start =
++        start_cycle + static_cast<unsigned long long>(
++                          point.traf73_window_warmup_ms) *
++                          context.clock_rate_khz[source];
++    const auto measurement_end =
++        measurement_start + static_cast<unsigned long long>(
++                                point.traf73_window_measurement_ms) *
++                                context.clock_rate_khz[source];
++    const auto completed_chunks = static_cast<std::uint64_t>(std::count_if(
++        completions.begin(), completions.end(), [&](unsigned long long cycle) {
++          return cycle >= measurement_start && cycle < measurement_end;
++        }));
++    captured.summary.traf73_window_completed_bytes_by_flow[flow_index] =
++        completed_chunks * ring_bytes;
++    captured.summary.traf73_window_device_us_by_flow[flow_index] =
++        static_cast<double>(measurement_end - measurement_start) /
++        context.clock_rate_khz[source] * 1000.0;
++    captured.summary.flow_logical_bytes[flow_index] = count * ring_bytes;
++    captured.summary.logical_bytes += count * ring_bytes;
++    captured.summary.expected_extents += count;
++    captured.summary.flow_completion_us[flow_index] =
++        completions.empty()
++            ? 0.0
++            : static_cast<double>(
++                  *std::max_element(completions.begin(), completions.end()) -
++                  start_cycle) /
++                  context.clock_rate_khz[source] * 1000.0;
++    for (std::uint64_t offset = 0; offset < ring_bytes; ++offset) {
++      const auto expected_value = expected_byte(0, offset, flow_index);
++      expected_digest.update(&expected_value, 1);
++      observed_digest.update(&observed[offset], 1);
++    }
++    for (std::uint64_t chunk = 0; chunk < count; ++chunk) {
++      const std::uint64_t expected_value = chunk + 1;
++      expected_order_digest.update(&expected_value, sizeof(expected_value));
++      observed_order_digest.update(&order[chunk], sizeof(order[chunk]));
++      if (order[chunk] == 0 || completions[chunk] == 0) ++captured.summary.missing;
++      if (order[chunk] != 0 && order[chunk] != expected_value) {
++        ++captured.summary.out_of_order;
++      }
++    }
++  }
++  captured.summary.expected_sha256 = expected_digest.finish_hex();
++  captured.summary.observed_sha256 = observed_digest.finish_hex();
++  captured.summary.expected_sequence_sha256 = expected_order_digest.finish_hex();
++  captured.summary.observed_sequence_sha256 = observed_order_digest.finish_hex();
++  captured.summary.terminal_extents =
++      captured.summary.expected_extents - captured.summary.missing;
++  captured.summary.elapsed_us = *std::max_element(
++      captured.summary.flow_completion_us.begin(),
++      captured.summary.flow_completion_us.end());
++  captured.summary.completion_us = captured.summary.elapsed_us;
++  captured.summary.drain_us = std::max(
++      0.0,
++      captured.summary.elapsed_us -
++          static_cast<double>(point.traf73_window_warmup_ms +
++                              point.traf73_window_measurement_ms) *
++              1000.0);
++  captured.summary.protocol = "traf73_steady_window_observation";
++  set_observed_counter_totals(captured);
++  set_hardware_throttle_verdict(captured);
++  return captured;
++}
++
+ CapturedObservation run_hardware(const Point& point, HardwareContext& context) {
+   if (point.stream_count > static_cast<int>(kMaximumStreams)) {
+     throw std::runtime_error("stream count exceeds compiled maximum");
+@@ -1179,13 +1812,43 @@ void write_error_deltas(std::ofstream& output,
+   output << ']';
+ }
+
++template <typename Value>
++void write_numeric_vector(std::ofstream& output,
++                          const std::vector<Value>& values) {
++  output << '[';
++  for (std::size_t index = 0; index < values.size(); ++index) {
++    if (index) output << ',';
++    output << values[index];
++  }
++  output << ']';
++}
++
++void write_double_matrix(
++    std::ofstream& output,
++    const std::vector<std::vector<double>>& values) {
++  output << '[';
++  for (std::size_t index = 0; index < values.size(); ++index) {
++    if (index) output << ',';
++    write_numeric_vector(output, values[index]);
++  }
++  output << ']';
++}
++
+ void write_result(std::ofstream& output, const Point& point,
+                   const CapturedObservation& captured,
+                   const std::string& mode) {
+   const auto& observation = captured.summary;
+   const auto flows = flows_for(point);
+-  const auto flow_count = static_cast<std::uint64_t>(flows_for(point).size());
+-  const auto logical_bytes = point.payload_bytes * point.message_count * flow_count;
++  const auto flow_count = static_cast<std::uint64_t>(flows.size());
++  const auto logical_bytes = observation.logical_bytes;
++  const auto expected_extents = observation.expected_extents == 0
++      ? point.message_count * flow_count
++      : observation.expected_extents;
++  const auto flow_logical_bytes = [&](std::size_t index) {
++    return index < observation.flow_logical_bytes.size()
++        ? observation.flow_logical_bytes[index]
++        : point.payload_bytes * point.message_count;
++  };
+   const auto elapsed_seconds = observation.elapsed_us * 1.0e-6;
+   const auto payload_gbps = elapsed_seconds > 0.0
+       ? static_cast<double>(logical_bytes) / elapsed_seconds / 1.0e9
+@@ -1218,7 +1881,7 @@ void write_result(std::ofstream& output, const Point& point,
+          << observation.expected_sequence_sha256 << "\","
+          << "\"observed_sequence_sha256\":\""
+          << observation.observed_sequence_sha256 << "\","
+-         << "\"expected_extents\":" << point.message_count * flow_count << ','
++         << "\"expected_extents\":" << expected_extents << ','
+          << "\"terminal_extents\":" << observation.terminal_extents << ','
+          << "\"missing\":" << observation.missing << ','
+          << "\"duplicate\":" << observation.duplicate << ','
+@@ -1264,8 +1927,25 @@ void write_result(std::ofstream& output, const Point& point,
+          << "\"burst_messages\":" << point.burst_messages << ','
+          << "\"gap_ns\":" << point.gap_ns << ','
+          << "\"offered_rate_percent\":" << point.offered_rate_percent << ','
+-         << "\"pattern\":\"" << json_escape(point.pattern) << "\","
+-         << "\"effects\":{"
++         << "\"pattern\":\"" << json_escape(point.pattern) << '"';
++  if (!observation.traf73_mode.empty()) {
++    output << ",\"traf73_warmup_repetitions\":"
++           << point.traf73_warmup_repetitions
++           << ",\"traf73_timed_repetitions\":"
++           << point.traf73_timed_repetitions
++           << ",\"traf73_excluded_repetitions_each_edge\":"
++           << point.traf73_excluded_repetitions_each_edge
++           << ",\"traf73_flow_offered_rate_percents\":\""
++           << json_escape(point.traf73_flow_offered_rate_percents) << '"'
++           << ",\"traf73_window_warmup_ms\":"
++           << point.traf73_window_warmup_ms
++           << ",\"traf73_window_measurement_ms\":"
++           << point.traf73_window_measurement_ms
++           << ",\"traf73_window_drain_ms\":"
++           << point.traf73_window_drain_ms
++           << ",\"traf73_ring_bytes\":" << point.traf73_ring_bytes;
++  }
++  output << ",\"effects\":{"
+          << "\"payload_bytes\":\"kernel_extent_and_message_boundary\","
+          << "\"message_count\":\"kernel_extent_and_terminal_ledger\","
+          << "\"source\":\"flow_endpoint_selection\","
+@@ -1283,13 +1963,16 @@ void write_result(std::ofstream& output, const Point& point,
+          << "\"burst_messages\":\"in_kernel_burst_schedule\","
+          << "\"gap_ns\":\"in_kernel_inter_burst_delay\","
+          << "\"offered_rate_percent\":\"in_kernel_byte_issue_schedule\","
+-         << "\"pattern\":\"pattern_specific_flow_set_and_unit_permutation\"}},"
+-         << "\"flow_rate_ledger\":[";
++         << "\"pattern\":\"pattern_specific_flow_set_and_unit_permutation\"";
++  if (!observation.traf73_mode.empty()) {
++    output << ",\"traf73_controls\":\"study_specific_timing_and_rate_window\"";
++  }
++  output << "}},\"flow_rate_ledger\":[";
+   for (std::size_t index = 0; index < flows.size(); ++index) {
+     if (index) output << ',';
+     output << "{\"source\":" << flows[index].first
+            << ",\"destination\":" << flows[index].second
+-           << ",\"logical_bytes\":" << point.payload_bytes * point.message_count
++           << ",\"logical_bytes\":" << flow_logical_bytes(index)
+            << '}';
+   }
+   output << "],\"observed_counter_deltas\":{"
+@@ -1301,7 +1984,7 @@ void write_result(std::ofstream& output, const Point& point,
+   if (!flows.empty()) {
+     output << "{\"source\":" << flows.front().first
+            << ",\"destination\":" << flows.front().second
+-           << ",\"logical_bytes\":" << point.payload_bytes * point.message_count
++           << ",\"logical_bytes\":" << flow_logical_bytes(0)
+            << ",\"completion_us\":"
+            << (observation.flow_completion_us.empty()
+                    ? observation.completion_us
+@@ -1313,14 +1996,37 @@ void write_result(std::ofstream& output, const Point& point,
+     if (index > 1) output << ',';
+     output << "{\"source\":" << flows[index].first
+            << ",\"destination\":" << flows[index].second
+-           << ",\"logical_bytes\":" << point.payload_bytes * point.message_count
++           << ",\"logical_bytes\":" << flow_logical_bytes(index)
+            << ",\"completion_us\":"
+            << (index < observation.flow_completion_us.size()
+                    ? observation.flow_completion_us[index]
+                    : observation.completion_us)
+            << '}';
+   }
+-  output << "],\"telemetry_before\":";
++  output << ']';
++  if (!observation.traf73_mode.empty()) {
++    output << ",\"traf73\":{\"mode\":\""
++           << json_escape(observation.traf73_mode) << '"'
++           << ",\"launch_skew_us\":" << std::setprecision(9)
++           << observation.traf73_launch_skew_us
++           << ",\"host_window_us\":" << observation.traf73_host_window_us
++           << ",\"repetition_completion_us_by_flow\":";
++    write_double_matrix(
++        output, observation.traf73_repetition_completion_us_by_flow);
++    output << ",\"flow_offered_rate_percents\":";
++    write_numeric_vector(
++        output, observation.traf73_flow_offered_rate_percents);
++    output << ",\"window_completed_bytes_by_flow\":";
++    write_numeric_vector(
++        output, observation.traf73_window_completed_bytes_by_flow);
++    output << ",\"window_device_us_by_flow\":";
++    write_numeric_vector(output, observation.traf73_window_device_us_by_flow);
++    output << ",\"window_counter_deltas\":{\"unit\":\"KiB\","
++           << "\"per_gpu_per_link_per_direction\":";
++    write_links(output, captured.traf73_window_links);
++    output << "}}";
++  }
++  output << ",\"telemetry_before\":";
+   write_telemetry(output, captured.telemetry_before);
+   output << ",\"telemetry_after\":";
+   write_telemetry(output, captured.telemetry_after);
+@@ -1356,13 +2062,23 @@ int main(int argc, char** argv) {
+     std::ofstream output(output_path, std::ios::out | std::ios::trunc);
+     if (!output) throw std::runtime_error("cannot create output: " + output_path);
+ #ifndef SIMLLM_NVLINK_MOCK
++    if (std::any_of(points.begin(), points.end(), [](const Point& point) {
++          return point.pattern == "traf73_steady_arbitration";
++        })) {
++      CUDA_CHECK(cudaSetDeviceFlags(cudaDeviceMapHost));
++    }
+     HardwareContext context;
+ #endif
+     for (const auto& point : points) {
+ #ifdef SIMLLM_NVLINK_MOCK
+       const auto observation = run_mock(point);
+ #else
+-      const auto observation = run_hardware(point, context);
++      const auto observation =
++          point.pattern == "traf73_latency_batch"
++              ? run_traf73_latency(point, context)
++              : point.pattern == "traf73_steady_arbitration"
++                    ? run_traf73_steady(point, context)
++                    : run_hardware(point, context);
+ #endif
+       write_result(output, point, observation, mode);
+     }
