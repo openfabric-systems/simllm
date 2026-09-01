@@ -106,6 +106,19 @@ def test_harness_source_matches_the_frozen_coordinate() -> None:
         assert str(message_bytes) in source
 
 
+def test_nv4_guard_accepts_the_frozen_visible_submeshes() -> None:
+    rank_two = "GPU0 X NV4 PHB\nGPU1 NV4 X PHB\n"
+    rank_four = (
+        "GPU0 X NV4 NV4 NV4 PHB\n"
+        "GPU1 NV4 X NV4 NV4 PHB\n"
+        "GPU2 NV4 NV4 X NV4 PHB\n"
+        "GPU3 NV4 NV4 NV4 X PHB"
+    )
+    assert SCORE._nv4_rows(rank_two, 2) == 2
+    assert SCORE._nv4_rows(rank_four, 4) == 4
+    assert SCORE._nv4_rows(rank_two.replace("NV4", "SYS", 1), 2) == 1
+
+
 @pytest.mark.parametrize(
     ("ranks", "nodes", "tasks_per_node", "memory"),
     [

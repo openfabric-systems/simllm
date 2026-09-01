@@ -106,18 +106,23 @@ for guard in "${output_root}"/rank_*/guards_before.txt; do
     fail "foreign compute process occupies the assigned GPU in ${guard}"
   fi
 done
-topology_rows=$(awk '
-  $1 ~ /^GPU[0-3]$/ {
+expected_visible_gpus="${expected_ranks}"
+if [ "${expected_visible_gpus}" -gt 4 ]; then
+  expected_visible_gpus=4
+fi
+topology_rows=$(awk -v expected="${expected_visible_gpus}" '
+  $1 ~ /^GPU[0-9]+$/ {
+    seen += 1
     count = 0
     for (field = 2; field <= NF; ++field) {
       if ($field == "NV4") count += 1
     }
-    if (count == 3) valid += 1
+    if (count == expected - 1) valid += 1
   }
-  END { print valid + 0 }
+  END { print seen == expected ? valid + 0 : 0 }
 ' "$(find "${output_root}" -name guards_before.txt | sort | head -1)")
-if [ "${topology_rows}" -ne 4 ]; then
-  fail "node does not expose the frozen four-GPU direct NV4 mesh"
+if [ "${topology_rows}" -ne "${expected_visible_gpus}" ]; then
+  fail "allocated GPUs do not expose the frozen direct NV4 submesh"
 fi
 if grep -h '^cassini_port_count=' "${output_root}"/rank_*/guards_before.txt |
    grep -qv '^cassini_port_count=4$'; then
