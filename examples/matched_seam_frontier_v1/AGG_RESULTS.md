@@ -4,7 +4,10 @@
 
 What ran: append-only attempt 0002 composed the 25 frozen aggregate operating
 points twice in fresh processes from the imported Qwen3-32B-FP8 measured
-operation database, evaluated every declared remove-one sensitivity, and
+operation database, recomputed the five reachable remove-one sensitivities
+(the five absent-path factors are recorded as structural baseline identities,
+since the aggregate composition never calls the code paths that carry them,
+not as fresh disabled-path evaluations), and
 rendered both aggregate-qualified figure pairs.
 
 What came out: the run is nonvoid and Family AR passes 25 of 25. The composed
@@ -160,9 +163,14 @@ failures. They do not by themselves validate silicon accuracy.
 
 ## Network arms and figure
 
-The unpriced aggregate arm and packet aggregate arm each record zero handoff
-bytes, zero flows and zero native invocations. Their complete scheduling,
-TTFT, TPOT, throughput, axes and completion projection are byte-identical.
+The unpriced aggregate arm and packet aggregate arm are one baseline
+projection published under two labels: a co-located pool has zero
+prefill-to-decode handoff bytes, zero flows and zero native invocations, so
+no packet backend is imported or executed and there is no second network
+path to run. Intra-pool tensor-parallel collectives remain priced inside the
+imported operation timings. Their complete scheduling, TTFT, TPOT,
+throughput, axes and completion projection are byte-identical by
+construction.
 
 The new study and publication figures retain the protected panels and add a
 hollow purple marker for the SimLLM unpriced aggregate arm plus a pink cross
