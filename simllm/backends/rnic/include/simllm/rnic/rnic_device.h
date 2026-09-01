@@ -9,6 +9,7 @@
 
 #include "simllm/rnic/host_memory.h"
 #include "simllm/rnic/pcie_fabric.h"
+#include "simllm/rnic/rnic_rx_pipeline.h"
 #include "simllm/rnic/rnic_tx_pipeline.h"
 #include "simllm/rnic/work_queue.h"
 
@@ -65,6 +66,12 @@ struct RnicNetworkConfig {
     // enabled packetization block and an ABI v2 packet-attempt port.
     std::uint32_t abi_version{kNetworkPortAbiVersionV1};
     RnicTxPipelineConfig packetization;
+    // The receive half. Disabled is the identity default: the device has no
+    // receive pipeline and refuses an inbound wire packet rather than
+    // silently absorbing it. Enabling it requires the packetization block,
+    // because a receive pipeline with no packet vocabulary has nothing to
+    // check a sequence number against.
+    RnicRxPipelineConfig receive;
 };
 
 struct RnicHostMemoryConfig {
@@ -164,6 +171,17 @@ public:
     // External events must be delivered before progress() at the same
     // timestamp. The inert owned port is pumped internally in that order.
     void onNetworkEvent(const NetworkEvent& event);
+
+    // Delivers one inbound wire packet. A data packet goes to the receive
+    // pipeline and the caller gets the responder's verdict and reply back; an
+    // ACK or a NAK goes to the requester transport and the upstream events it
+    // produces are handed to the work queue here.
+    RnicRxResult onReceivedPacket(
+        const RnicRxPacket& packet,
+        Picoseconds now_ps);
+    void onTransportPacket(
+        const RnicTransportPacket& packet,
+        Picoseconds now_ps);
     std::size_t progress(Picoseconds now_ps);
     std::vector<CompletionEntry> pollCompletionQueue(
         std::size_t max_entries,
@@ -192,6 +210,11 @@ public:
     const RnicDeviceStageReport& stageReport() const noexcept;
     // Null unless the transmit pipeline is selected.
     const RnicTxPipeline* txPipeline() const noexcept;
+    // Null unless the receive pipeline is selected.
+    const RnicRxPipeline* rxPipeline() const noexcept;
+    // The observable-state facade, with the requester's and the responder's
+    // fields merged into the one counter block a real NIC exposes.
+    RnicNicCounters nicCounters() const noexcept;
     bool usesSharedPcieFabric() const noexcept;
     std::optional<WorkQueuePcieBinding> pcieBinding() const;
     const PcieFabric* pcieFabric() const noexcept;
@@ -228,6 +251,7 @@ private:
     std::shared_ptr<VirtualHostMemory> host_memory_;
     std::unique_ptr<InertNetworkPort> inert_network_port_;
     std::unique_ptr<RnicTxPipeline> tx_pipeline_;
+    std::unique_ptr<RnicRxPipeline> rx_pipeline_;
     NetworkPort* network_port_{nullptr};
     std::unique_ptr<WorkQueue> work_queue_;
     bool claimed_ordering_domains_{false};

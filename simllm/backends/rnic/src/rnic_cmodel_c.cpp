@@ -60,6 +60,7 @@ public:
         std::uint32_t qpn{0};
         std::uint32_t destination{0};
         std::uint32_t psn{0};
+        std::uint32_t transmission_attempt{0};
         std::uint32_t packet_index{0};
         std::uint32_t packet_count{1};
         std::uint32_t extent_index{0};
@@ -100,7 +101,11 @@ public:
         attempt.wr_id = descriptor.wr_id;
         attempt.qpn = descriptor.qpn;
         attempt.destination = descriptor.destination;
-        attempt.psn = next_psn_++;
+        // A packetizing producer names the sequence number itself, because a
+        // replay has to carry the number it carried the first time. Without
+        // one the port numbers its own attempts, which is what ABI v1 needs.
+        attempt.psn = packetized_ ? descriptor.psn : next_psn_++;
+        attempt.transmission_attempt = descriptor.transmission_attempt;
         attempt.packet_index = descriptor.extent_index;
         attempt.packet_count = descriptor.extent_count;
         attempt.extent_index = descriptor.extent_index;
@@ -354,6 +359,7 @@ struct rnic_cm_device {
     std::string profile_name;
     std::string profile_sha256;
     bool packetized{false};
+    bool receives{false};
     bool trace_enabled{false};
     std::unique_ptr<CapturePort> port;
     std::unique_ptr<RnicDevice> device;
@@ -496,8 +502,28 @@ rnic_cm_device* rnic_cm_create(
             pipeline.wire_bps_per_nic = wire_bps;
             pipeline.message_rate_per_qp = handle->profile.tx_pps_per_qp;
             pipeline.message_rate_per_nic = handle->profile.tx_pps_per_nic;
+            if (config->receive != 0) {
+                pipeline.transport_enabled = true;
+                pipeline.rto_ps = handle->profile.rto_ps;
+                pipeline.counts_local_ack_timeout =
+                    config->firmware_counter_variant != 0;
+            }
             device_config.network.abi_version = kNetworkPortAbiVersionV2;
             device_config.network.packetization = pipeline;
+        }
+        if (config->receive != 0) {
+            if (!handle->packetized) {
+                return nullptr;
+            }
+            simllm::rnic::RnicRxPipelineConfig receive;
+            receive.enabled = true;
+            receive.ingress_bytes = handle->profile.rx_ingress_bytes;
+            receive.drain_bps = handle->profile.rx_drain_bps;
+            receive.rc_pps_per_qp = handle->profile.rx_pps_per_qp_rc;
+            receive.ud_pps_per_qp = handle->profile.rx_pps_per_qp_ud;
+            receive.pps_per_nic = handle->profile.rx_pps_per_nic;
+            device_config.network.receive = receive;
+            handle->receives = true;
         }
 
         handle->port = std::make_unique<CapturePort>(
@@ -602,7 +628,8 @@ int rnic_cm_doorbell(
 int rnic_cm_rx_packet(
     rnic_cm_device* device,
     const rnic_cm_packet* packet,
-    uint64_t now_ps) {
+    uint64_t now_ps,
+    rnic_cm_rx_result* out_result) {
     const int ready = guard(device);
     if (ready != RNIC_CM_OK) {
         return ready;
@@ -610,12 +637,104 @@ int rnic_cm_rx_packet(
     if (packet == nullptr) {
         return RNIC_CM_ERROR_ARGUMENT;
     }
-    device->note(
-        now_ps,
-        "rx_packet " + keyValue("psn", packet->psn) + " status=unsupported");
-    // The receive pipeline is BACK-57. Failing closed keeps a testbench from
-    // reading silence as a modelled receive path.
-    return RNIC_CM_ERROR_UNSUPPORTED;
+    if (!device->receives) {
+        device->note(
+            now_ps,
+            "rx_packet " + keyValue("psn", packet->psn)
+                + " status=unsupported");
+        // Failing closed keeps a testbench from reading silence as a
+        // modelled receive path.
+        return RNIC_CM_ERROR_UNSUPPORTED;
+    }
+    if (out_result != nullptr) {
+        std::memset(out_result, 0, sizeof(*out_result));
+    }
+
+    try {
+        if (packet->kind == RNIC_CM_PACKET_ACK
+            || packet->kind == RNIC_CM_PACKET_NAK) {
+            simllm::rnic::RnicTransportPacket transport;
+            transport.kind = packet->kind == RNIC_CM_PACKET_ACK
+                ? NetworkPacketKind::Ack
+                : NetworkPacketKind::Nak;
+            transport.qpn = packet->qpn;
+            transport.psn = packet->psn;
+            device->device->onTransportPacket(transport, now_ps);
+            device->last_time_ps = now_ps;
+            device->note(
+                now_ps,
+                "rx_transport " + keyValue("kind", packet->kind) + " "
+                    + keyValue("qpn", packet->qpn) + " "
+                    + keyValue("psn", packet->psn) + " status=ok");
+            return RNIC_CM_OK;
+        }
+        if (packet->kind != RNIC_CM_PACKET_DATA
+            && packet->kind != RNIC_CM_PACKET_RETRANSMISSION) {
+            return RNIC_CM_ERROR_ARGUMENT;
+        }
+        if (packet->service != RNIC_CM_SERVICE_RC
+            && packet->service != RNIC_CM_SERVICE_UD) {
+            return RNIC_CM_ERROR_ARGUMENT;
+        }
+
+        simllm::rnic::RnicRxPacket inbound;
+        inbound.qpn = packet->qpn;
+        inbound.source = packet->destination;
+        inbound.psn = packet->psn;
+        inbound.payload_bytes = packet->payload_bytes;
+        inbound.wire_bytes = packet->wire_bytes;
+        inbound.service = packet->service == RNIC_CM_SERVICE_UD
+            ? simllm::rnic::RnicTransportService::Unreliable
+            : simllm::rnic::RnicTransportService::ReliableConnected;
+        inbound.kind = packet->kind == RNIC_CM_PACKET_RETRANSMISSION
+            ? NetworkPacketKind::Retransmission
+            : NetworkPacketKind::Data;
+        inbound.last_of_message = packet->last_of_message != 0;
+
+        const simllm::rnic::RnicRxResult result =
+            device->device->onReceivedPacket(inbound, now_ps);
+        device->last_time_ps = now_ps;
+        std::uint32_t outcome = RNIC_CM_RX_DELIVERED;
+        switch (result.outcome) {
+        case simllm::rnic::RnicRxOutcome::Delivered:
+            outcome = RNIC_CM_RX_DELIVERED;
+            break;
+        case simllm::rnic::RnicRxOutcome::DiscardedSilently:
+            outcome = RNIC_CM_RX_DISCARDED_SILENTLY;
+            break;
+        case simllm::rnic::RnicRxOutcome::DiscardedOutOfSequence:
+            outcome = RNIC_CM_RX_DISCARDED_OUT_OF_SEQUENCE;
+            break;
+        case simllm::rnic::RnicRxOutcome::DiscardedDuplicate:
+            outcome = RNIC_CM_RX_DISCARDED_DUPLICATE;
+            break;
+        }
+        if (out_result != nullptr) {
+            out_result->outcome = outcome;
+            out_result->has_reply = result.has_reply ? 1u : 0u;
+            out_result->reply_kind =
+                result.reply_kind == NetworkPacketKind::Nak
+                ? RNIC_CM_PACKET_NAK
+                : RNIC_CM_PACKET_ACK;
+            out_result->reply_psn = result.reply_psn;
+            out_result->reply_wire_bytes = result.reply_wire_bytes;
+            out_result->ingress_occupancy_bytes =
+                result.ingress_occupancy_bytes;
+        }
+        device->note(
+            now_ps,
+            "rx_packet " + keyValue("qpn", packet->qpn) + " "
+                + keyValue("psn", packet->psn) + " "
+                + keyValue("bytes", packet->payload_bytes) + " "
+                + keyValue("wire", packet->wire_bytes) + " "
+                + keyValue("service", packet->service) + " "
+                + keyValue("outcome", outcome) + " "
+                + keyValue("reply", result.has_reply ? 1 : 0) + " "
+                + keyValue("occupancy", result.ingress_occupancy_bytes));
+        return RNIC_CM_OK;
+    } catch (const std::exception&) {
+        return RNIC_CM_ERROR_STATE;
+    }
 }
 
 int rnic_cm_event(
@@ -849,8 +968,14 @@ int rnic_cm_tx_next(
         slot.psn = entry.second.psn;
         slot.packet_index = entry.second.packet_index;
         slot.packet_count = entry.second.packet_count;
-        slot.kind = RNIC_CM_PACKET_DATA;
+        slot.kind = entry.second.transmission_attempt == 0
+            ? RNIC_CM_PACKET_DATA
+            : RNIC_CM_PACKET_RETRANSMISSION;
         slot.traffic_class = entry.second.traffic_class;
+        slot.service = RNIC_CM_SERVICE_RC;
+        slot.last_of_message =
+            entry.second.packet_index + 1 == entry.second.packet_count ? 1u
+                                                                       : 0u;
         device->note(
             entry.second.issued_at_ps,
             "packet " + keyValue("token", slot.token) + " "
@@ -909,6 +1034,68 @@ int rnic_cm_counters(rnic_cm_device* device, rnic_cm_counter_set* out) {
         out->tx_inflight_bytes = tx.inflight_bytes;
         out->tx_late_releases = tx.late_releases;
         out->tx_packets_dropped = tx.packets_dropped;
+    }
+    return RNIC_CM_OK;
+}
+
+int rnic_cm_nic_counters(
+    rnic_cm_device* device,
+    rnic_cm_nic_counter_set* out) {
+    const int ready = guard(device);
+    if (ready != RNIC_CM_OK) {
+        return ready;
+    }
+    if (out == nullptr) {
+        return RNIC_CM_ERROR_ARGUMENT;
+    }
+    std::memset(out, 0, sizeof(*out));
+    out->version = SIMLLM_RNIC_CM_ABI_VERSION;
+    const simllm::rnic::RnicNicCounters nic = device->device->nicCounters();
+    out->packet_seq_err = nic.packet_seq_err;
+    out->roce_adp_retrans = nic.roce_adp_retrans;
+    out->roce_slow_restart_cnps = nic.roce_slow_restart_cnps;
+    out->local_ack_timeout_err = nic.local_ack_timeout_err;
+    out->rp_cnp_handled = nic.rp_cnp_handled;
+    out->rp_cnp_ignored = nic.rp_cnp_ignored;
+    out->out_of_sequence = nic.out_of_sequence;
+    out->duplicate_request = nic.duplicate_request;
+    out->rx_discards_phy = nic.rx_discards_phy;
+    out->rx_prio0_discards = nic.rx_prio0_discards;
+    out->tx_pause_ctrl_phy = nic.tx_pause_ctrl_phy;
+    out->tx_global_pause = nic.tx_global_pause;
+    out->np_cnp_sent = nic.np_cnp_sent;
+    out->rx_write_requests = nic.rx_write_requests;
+    out->rx_packets_phy = nic.rx_packets_phy;
+    out->rx_bytes_phy = nic.rx_bytes_phy;
+    out->tx_packets_phy = nic.tx_packets_phy;
+    out->tx_bytes_phy = nic.tx_bytes_phy;
+    out->np_ecn_marked_roce_packets = nic.np_ecn_marked_roce_packets;
+    out->rx_pause_ctrl_phy = nic.rx_pause_ctrl_phy;
+    out->rx_global_pause = nic.rx_global_pause;
+    out->rx_out_of_buffer = nic.rx_out_of_buffer;
+    out->outbound_pci_stalled_rd = nic.outbound_pci_stalled_rd;
+    out->outbound_pci_stalled_wr = nic.outbound_pci_stalled_wr;
+
+    const simllm::rnic::RnicRxPipeline* receive = device->device->rxPipeline();
+    if (receive != nullptr) {
+        const auto& rx = receive->counters();
+        out->rx_packets_offered = rx.packets_offered;
+        out->rx_packets_delivered = rx.packets_delivered;
+        out->rx_discards_meter = rx.packets_discarded_meter;
+        out->rx_discards_rate = rx.packets_discarded_rate;
+        out->rx_discards_sequence = rx.packets_discarded_sequence;
+        out->rx_payload_bytes_delivered = rx.payload_bytes_delivered;
+        out->rx_ingress_occupancy_bytes = rx.ingress_occupancy_bytes;
+        out->rx_ingress_high_watermark_bytes =
+            rx.ingress_high_watermark_bytes;
+    }
+    const simllm::rnic::RnicTxPipeline* transmit = device->device->txPipeline();
+    if (transmit != nullptr) {
+        const auto& tx = transmit->counters();
+        out->tx_packets_retransmitted = tx.packets_retransmitted;
+        out->tx_recovery_episodes = tx.recovery_episodes;
+        out->tx_timeouts = tx.timeouts;
+        out->tx_stale_terminals = tx.stale_terminals;
     }
     return RNIC_CM_OK;
 }

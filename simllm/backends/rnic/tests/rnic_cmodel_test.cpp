@@ -19,6 +19,7 @@
 #include "simllm/rnic/rnic_cmodel_c.h"
 #include "simllm/rnic/rnic_device.h"
 #include "simllm/rnic/rnic_hw_profile.h"
+#include "simllm/rnic/rnic_rx_pipeline.h"
 #include "simllm/rnic/rnic_tx_pipeline.h"
 #include "simllm/rnic/session_record.h"
 
@@ -47,6 +48,12 @@ using simllm::rnic::RnicDevice;
 using simllm::rnic::RnicDeviceAttachments;
 using simllm::rnic::RnicDeviceConfig;
 using simllm::rnic::RnicHwProfile;
+using simllm::rnic::RnicRxOutcome;
+using simllm::rnic::RnicRxPacket;
+using simllm::rnic::RnicRxPipeline;
+using simllm::rnic::RnicRxPipelineConfig;
+using simllm::rnic::RnicRxResult;
+using simllm::rnic::RnicTransportService;
 using simllm::rnic::WorkRequest;
 
 class TestRunner {
@@ -936,8 +943,9 @@ void testFacade(TestRunner& test, const std::string& scratch_dir) {
         rnic_cm_packet packet;
         std::memset(&packet, 0, sizeof(packet));
         test.check(
-            rnic_cm_rx_packet(device, &packet, 0) == RNIC_CM_ERROR_UNSUPPORTED,
-            "the receive entry point fails closed until its pipeline lands");
+            rnic_cm_rx_packet(device, &packet, 0, nullptr)
+                == RNIC_CM_ERROR_UNSUPPORTED,
+            "the receive entry point fails closed without its pipeline");
         rnic_cm_event_info event;
         std::memset(&event, 0, sizeof(event));
         event.kind = RNIC_CM_EVENT_EXTENT_DELIVERED;
@@ -964,6 +972,435 @@ void testFacade(TestRunner& test, const std::string& scratch_dir) {
         rnic_cm_post(nullptr, nullptr, 0, nullptr) == RNIC_CM_ERROR_ARGUMENT,
         "a null handle is refused rather than dereferenced");
     rnic_cm_destroy(nullptr);
+}
+
+// One RC data packet as the responder sees it.
+RnicRxPacket rcPacket(std::uint32_t psn, std::uint64_t payload_bytes) {
+    RnicRxPacket packet;
+    packet.qpn = 7;
+    packet.source = 1;
+    packet.psn = psn;
+    packet.payload_bytes = payload_bytes;
+    packet.wire_bytes = payload_bytes + 64;
+    packet.service = RnicTransportService::ReliableConnected;
+    return packet;
+}
+
+void testIngressMeter(TestRunner& test) {
+    // An unbounded meter never discards, whatever the offer.
+    {
+        RnicRxPipelineConfig config;
+        config.enabled = true;
+        RnicRxPipeline pipeline(config);
+        for (std::uint32_t index = 0; index < 64; ++index) {
+            pipeline.onPacket(rcPacket(index, 4096), index);
+        }
+        test.check(
+            pipeline.nicCounters().rx_discards_phy == 0
+                && pipeline.counters().packets_delivered == 64,
+            "an unbounded ingress meter admits every packet");
+        pipeline.validateInvariants();
+    }
+
+    // A bounded meter overflows once the offer outruns the drain, and the
+    // overflow is silent: nothing is sent back and the sequence counters do
+    // not move.
+    {
+        RnicRxPipelineConfig config;
+        config.enabled = true;
+        config.ingress_bytes = 4 * 4160;
+        config.drain_bps = 1;  // effectively no drain over the test window
+        RnicRxPipeline pipeline(config);
+        std::uint64_t silent = 0;
+        for (std::uint32_t index = 0; index < 8; ++index) {
+            const RnicRxResult result = pipeline.onPacket(rcPacket(index, 4096), 0);
+            if (result.outcome == RnicRxOutcome::DiscardedSilently) {
+                ++silent;
+                test.check(
+                    !result.has_reply,
+                    "an ingress overflow makes no reply at all");
+            }
+        }
+        test.check(silent == 4, "a four-packet buffer admits exactly four");
+        test.check(
+            pipeline.nicCounters().rx_discards_phy == 4
+                && pipeline.nicCounters().rx_prio0_discards == 4,
+            "an overflow lands on rx_discards_phy and its priority mirror");
+        test.check(
+            pipeline.nicCounters().out_of_sequence == 0,
+            "an ingress overflow leaves the sequence counter alone");
+        pipeline.validateInvariants();
+    }
+
+    // The drain empties the buffer, so the same offer spread over time is
+    // clean. This is the drain window, in miniature.
+    {
+        RnicRxPipelineConfig config;
+        config.enabled = true;
+        config.ingress_bytes = 4 * 4160;
+        config.drain_bps = 100000000000ULL;
+        RnicRxPipeline pipeline(config);
+        Picoseconds now = 0;
+        for (std::uint32_t index = 0; index < 64; ++index) {
+            pipeline.onPacket(rcPacket(index, 4096), now);
+            now += 1000000;  // one microsecond, far above the drain time
+        }
+        test.check(
+            pipeline.nicCounters().rx_discards_phy == 0,
+            "a gap long enough to drain the buffer removes every discard");
+        pipeline.validateInvariants();
+    }
+}
+
+void testReceiveProcessor(TestRunner& test) {
+    // The UD ceiling caps delivery and discards the excess silently, with no
+    // sequence check and no reply of any kind.
+    {
+        RnicRxPipelineConfig config;
+        config.enabled = true;
+        config.ud_pps_per_qp = 1000000;  // one packet per microsecond
+        RnicRxPipeline pipeline(config);
+        std::uint64_t delivered = 0;
+        for (std::uint32_t index = 0; index < 100; ++index) {
+            RnicRxPacket packet = rcPacket(index, 2048);
+            packet.service = RnicTransportService::Unreliable;
+            // Offered at four times the ceiling.
+            const RnicRxResult result =
+                pipeline.onPacket(packet, index * 250000ULL);
+            if (result.outcome == RnicRxOutcome::Delivered) {
+                ++delivered;
+            }
+            test.check(!result.has_reply, "an unreliable datagram is not acknowledged");
+        }
+        test.check(
+            delivered >= 24 && delivered <= 26,
+            "a UD receive ceiling delivers about one packet in four");
+        test.check(
+            pipeline.nicCounters().rx_discards_phy == 100 - delivered
+                && pipeline.nicCounters().out_of_sequence == 0,
+            "UD loss beyond the ceiling is silent and leaves no transport trace");
+        pipeline.validateInvariants();
+    }
+
+    // The RC responder acknowledges in sequence, NAKs once per epoch, and
+    // re-acknowledges a duplicate.
+    {
+        RnicRxPipelineConfig config;
+        config.enabled = true;
+        RnicRxPipeline pipeline(config);
+        const RnicRxResult first = pipeline.onPacket(rcPacket(0, 4096), 0);
+        test.check(
+            first.outcome == RnicRxOutcome::Delivered && first.has_reply
+                && first.reply_kind == simllm::rnic::NetworkPacketKind::Ack
+                && first.reply_psn == 0,
+            "an in-sequence packet is delivered and acknowledged");
+        // Sequence number one never arrives.
+        const RnicRxResult gap = pipeline.onPacket(rcPacket(2, 4096), 1);
+        test.check(
+            gap.outcome == RnicRxOutcome::DiscardedOutOfSequence
+                && gap.has_reply
+                && gap.reply_kind == simllm::rnic::NetworkPacketKind::Nak
+                && gap.reply_psn == 1,
+            "the first out-of-sequence packet NAKs the number still expected");
+        const RnicRxResult again = pipeline.onPacket(rcPacket(3, 4096), 2);
+        test.check(
+            again.outcome == RnicRxOutcome::DiscardedOutOfSequence
+                && !again.has_reply,
+            "one NAK per recovery epoch, not one per discarded packet");
+        test.check(
+            pipeline.nicCounters().out_of_sequence == 1,
+            "the responder counts one out-of-sequence event per epoch");
+        const RnicRxResult repair = pipeline.onPacket(rcPacket(1, 4096), 3);
+        test.check(
+            repair.outcome == RnicRxOutcome::Delivered,
+            "the replay of the missing number is accepted");
+        const RnicRxResult duplicate = pipeline.onPacket(rcPacket(0, 4096), 4);
+        test.check(
+            duplicate.outcome == RnicRxOutcome::DiscardedDuplicate
+                && duplicate.has_reply
+                && duplicate.reply_kind == simllm::rnic::NetworkPacketKind::Ack,
+            "a duplicate is dropped and re-acknowledged");
+        pipeline.validateInvariants();
+    }
+}
+
+// Drives one requester through the two-endpoint fake against one responder
+// until every message completes, and reports what the run cost.
+struct TransportRun {
+    std::uint64_t completions{0};
+    std::uint64_t errors{0};
+    std::uint64_t packets_issued{0};
+    std::uint64_t retransmitted{0};
+    std::uint64_t recovery_episodes{0};
+    std::uint64_t timeouts{0};
+    Picoseconds last_completion_ps{0};
+    simllm::rnic::RnicNicCounters requester;
+    simllm::rnic::RnicNicCounters responder;
+};
+
+TransportRun runTransport(
+    const simllm::rnic::testing::FakeV2FabricConfig& fabric_config,
+    const RnicRxPipelineConfig& receive_config,
+    std::uint64_t messages,
+    std::uint64_t message_bytes,
+    Picoseconds rto_ps,
+    bool counts_local_ack_timeout) {
+    simllm::rnic::testing::FakeV2Fabric fabric(fabric_config);
+    RnicRxPipeline responder(receive_config);
+
+    RnicDeviceConfig config;
+    config.identity.qpn = 7;
+    config.work_queue.qpn = 7;
+    config.work_queue.source = 1;
+    config.work_queue.sq_depth = 64;
+    config.work_queue.cq_depth = 128;
+    config.work_queue.doorbell_service_ps = 40000;
+    config.work_queue.wqe_fetch_service_ps = 40000;
+    config.work_queue.qpc_lookup_service_ps = 2220000;
+    config.work_queue.scheduler_service_ps = 40000;
+    config.work_queue.cqe_write_service_ps = 40000;
+    config.network.enabled = true;
+    config.network.abi_version = simllm::rnic::kNetworkPortAbiVersionV2;
+    config.network.packetization.enabled = true;
+    config.network.packetization.mtu_bytes = 4096;
+    config.network.packetization.wire_header_bytes = 64;
+    config.network.packetization.max_inflight_wqes = 64;
+    config.network.packetization.wire_bps_per_qp = 98617190000ULL;
+    config.network.packetization.wire_bps_per_nic = 98617190000ULL;
+    config.network.packetization.transport_enabled = true;
+    config.network.packetization.rto_ps = rto_ps;
+    config.network.packetization.counts_local_ack_timeout =
+        counts_local_ack_timeout;
+
+    RnicDeviceAttachments attachments;
+    attachments.network_port = &fabric;
+    RnicDevice device(config, attachments);
+
+    TransportRun run;
+    Picoseconds now = 0;
+    std::uint64_t posted = 0;
+    std::uint64_t guard = 0;
+    while (run.completions + run.errors < messages) {
+        if (++guard > 4000000) {
+            throw std::runtime_error("transport test did not converge");
+        }
+        fabric.deliverDue(responder, now);
+        for (const auto& reply : fabric.takeRepliesDue(now)) {
+            device.onTransportPacket(reply, now);
+        }
+        for (const NetworkEvent& event : fabric.takeDue(now)) {
+            device.onNetworkEvent(event);
+        }
+        bool any = false;
+        while (posted < messages && device.occupiedSqEntries() < 32) {
+            WorkRequest request;
+            request.wr_id = posted + 1;
+            request.destination = 2;
+            request.payload_bytes = message_bytes;
+            request.signaled = true;
+            if (device.postSend(request, now).status != PostStatus::Accepted) {
+                break;
+            }
+            ++posted;
+            any = true;
+        }
+        if (any) {
+            device.ringDoorbell(now);
+        }
+        device.progress(now);
+        for (const CompletionEntry& entry :
+             device.pollCompletionQueue(64, now)) {
+            if (entry.status == simllm::rnic::CompletionStatus::Success) {
+                ++run.completions;
+            } else {
+                ++run.errors;
+            }
+            run.last_completion_ps = entry.polled_at_ps;
+        }
+        std::optional<Picoseconds> next = device.nextEventTime();
+        const std::optional<Picoseconds> wire = fabric.nextEventTime();
+        if (wire.has_value() && (!next.has_value() || *wire < *next)) {
+            next = wire;
+        }
+        if (!next.has_value()) {
+            if (posted < messages) {
+                continue;
+            }
+            break;
+        }
+        now = std::max(now, *next);
+    }
+    device.validateInvariants();
+    const simllm::rnic::RnicTxPipeline* pipeline = device.txPipeline();
+    run.packets_issued = pipeline->counters().packets_issued;
+    run.retransmitted = pipeline->counters().packets_retransmitted;
+    run.recovery_episodes = pipeline->counters().recovery_episodes;
+    run.timeouts = pipeline->counters().timeouts;
+    run.requester = pipeline->nicCounters();
+    run.responder = responder.nicCounters();
+    return run;
+}
+
+void testRequesterTransport(TestRunner& test) {
+    simllm::rnic::testing::FakeV2FabricConfig fabric;
+    fabric.forward.link_bps = 100000000000ULL;
+    fabric.forward.one_way_latency_ps = 1050000;
+    fabric.reverse.link_bps = 100000000000ULL;
+    fabric.reverse.one_way_latency_ps = 1050000;
+
+    RnicRxPipelineConfig receive;
+    receive.enabled = true;
+
+    // A lossless wire completes everything with nothing resent.
+    {
+        const TransportRun run = runTransport(fabric, receive, 8, 65536, 0, false);
+        test.check(
+            run.completions == 8 && run.errors == 0,
+            "a lossless two-endpoint run completes every message");
+        test.check(
+            run.retransmitted == 0 && run.requester.packet_seq_err == 0
+                && run.responder.out_of_sequence == 0,
+            "a lossless run resends nothing and moves no error counter");
+        test.check(
+            run.packets_issued == 8 * 16,
+            "a lossless run issues exactly one attempt per packet");
+    }
+
+    // A deterministic one in sixteen fabric loss is recovered by go-back-N,
+    // and the requester's sequence-error count matches the responder's
+    // out-of-sequence count one for one.
+    {
+        simllm::rnic::testing::FakeV2FabricConfig lossy = fabric;
+        lossy.loss.mode = simllm::rnic::testing::FakeLossMode::Deterministic;
+        lossy.loss.period = 16;
+        const TransportRun run = runTransport(lossy, receive, 8, 65536, 0, false);
+        test.check(
+            run.completions == 8 && run.errors == 0,
+            "go-back-N recovers every message across a lossy wire");
+        test.check(
+            run.retransmitted > 0 && run.packets_issued > 8 * 16,
+            "recovery costs real retransmissions on the wire");
+        test.check(
+            run.requester.packet_seq_err == run.responder.out_of_sequence
+                && run.requester.packet_seq_err > 0,
+            "the requester's sequence errors track the responder's one for one");
+        test.check(
+            run.requester.roce_adp_retrans >= run.requester.packet_seq_err,
+            "every recovery episode retransmits at least one packet");
+        test.check(
+            run.requester.local_ack_timeout_err == 0,
+            "firmware 16.32 reports zero on local_ack_timeout_err");
+        test.check(
+            run.responder.np_ecn_marked_roce_packets == 0
+                && run.responder.rx_pause_ctrl_phy == 0
+                && run.responder.rx_out_of_buffer == 0,
+            "the counters the campaign measured inert stay inert");
+    }
+
+    // The same stimulus on firmware 16.31 differs in exactly one counter,
+    // and only when the loss is a tail the responder can never NAK.
+    {
+        simllm::rnic::testing::FakeV2FabricConfig tail = fabric;
+        tail.loss.mode = simllm::rnic::testing::FakeLossMode::Deterministic;
+        // One two-packet message whose second packet is lost. Nothing follows
+        // it, so the responder never sees a gap and never NAKs: the only way
+        // out is the retransmission timer.
+        tail.loss.period = 2;
+        const TransportRun without =
+            runTransport(tail, receive, 1, 8192, 1000000000ULL, false);
+        const TransportRun with =
+            runTransport(tail, receive, 1, 8192, 1000000000ULL, true);
+        test.check(
+            without.completions == 1 && with.completions == 1,
+            "the timeout path completes the run on both firmwares");
+        test.check(
+            without.timeouts == with.timeouts,
+            "the firmware variant changes no behaviour, only a counter");
+        test.check(
+            without.requester.local_ack_timeout_err == 0
+                && with.requester.local_ack_timeout_err == with.timeouts,
+            "firmware 16.31 counts every timeout and 16.32 counts none");
+        test.check(
+            with.timeouts > 0,
+            "a loss with nothing behind it is recovered by the timer");
+    }
+}
+
+void testReceiveFacade(TestRunner& test) {
+    rnic_cm_profile profile;
+    if (rnic_cm_profile_preset("cx5_100g", &profile) != RNIC_CM_OK) {
+        test.check(false, "the cx5 preset is available to the receive facade");
+        return;
+    }
+    rnic_cm_config config;
+    std::memset(&config, 0, sizeof(config));
+    config.version = SIMLLM_RNIC_CM_ABI_VERSION;
+    config.qpn = 7;
+    config.policy_context_token = 1;
+    config.sq_depth = 16;
+    config.cq_depth = 32;
+    config.packetization = 1;
+    config.receive = 1;
+
+    rnic_cm_device* device = rnic_cm_create(&profile, &config);
+    test.check(device != nullptr, "the facade constructs with the receive half");
+    if (device == nullptr) {
+        return;
+    }
+    rnic_cm_packet packet;
+    std::memset(&packet, 0, sizeof(packet));
+    packet.qpn = 7;
+    packet.destination = 2;
+    packet.psn = 0;
+    packet.payload_bytes = 4096;
+    packet.wire_bytes = 4160;
+    packet.kind = RNIC_CM_PACKET_DATA;
+    packet.service = RNIC_CM_SERVICE_RC;
+    rnic_cm_rx_result result;
+    test.check(
+        rnic_cm_rx_packet(device, &packet, 0, &result) == RNIC_CM_OK
+            && result.outcome == RNIC_CM_RX_DELIVERED
+            && result.has_reply == 1
+            && result.reply_kind == RNIC_CM_PACKET_ACK,
+        "the receive entry point delivers and acknowledges an in-sequence packet");
+    packet.psn = 4;
+    test.check(
+        rnic_cm_rx_packet(device, &packet, 1, &result) == RNIC_CM_OK
+            && result.outcome == RNIC_CM_RX_DISCARDED_OUT_OF_SEQUENCE
+            && result.reply_kind == RNIC_CM_PACKET_NAK
+            && result.reply_psn == 1,
+        "the receive entry point NAKs a gap at the number it still expects");
+
+    rnic_cm_nic_counter_set counters;
+    test.check(
+        rnic_cm_nic_counters(device, &counters) == RNIC_CM_OK
+            && counters.out_of_sequence == 1
+            && counters.rx_packets_phy == 2
+            && counters.np_ecn_marked_roce_packets == 0
+            && counters.rx_pause_ctrl_phy == 0
+            && counters.rx_out_of_buffer == 0,
+        "the NIC-named counter facade reports the responder and stays inert");
+    rnic_cm_destroy(device);
+
+    // Without the receive configuration the entry point still fails closed.
+    config.receive = 0;
+    rnic_cm_device* plain = rnic_cm_create(&profile, &config);
+    test.check(plain != nullptr, "the facade still constructs without receive");
+    if (plain != nullptr) {
+        test.check(
+            rnic_cm_rx_packet(plain, &packet, 0, nullptr)
+                == RNIC_CM_ERROR_UNSUPPORTED,
+            "the receive entry point fails closed when it is not configured");
+        rnic_cm_destroy(plain);
+    }
+
+    // A receive configuration without packetization has nothing to check a
+    // sequence number against, so it is refused rather than half built.
+    config.receive = 1;
+    config.packetization = 0;
+    test.check(
+        rnic_cm_create(&profile, &config) == nullptr,
+        "a receive pipeline without packetization is refused");
 }
 
 }  // namespace
@@ -998,6 +1435,10 @@ int main(int argc, char** argv) {
         testAnomalyTable(test, projection_path, design_path);
         testTxPipeline(test);
         testFacade(test, scratch_dir);
+        testIngressMeter(test);
+        testReceiveProcessor(test);
+        testRequesterTransport(test);
+        testReceiveFacade(test);
         if (test.failures() != 0) {
             std::cerr << test.failures() << " golden-model checks failed\n";
             return 1;

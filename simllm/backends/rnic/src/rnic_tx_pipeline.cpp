@@ -37,6 +37,11 @@ void validateRnicTxPipelineConfig(const RnicTxPipelineConfig& config) {
             - config.wire_header_bytes) {
         throw std::out_of_range("RNIC transmit pipeline MTU overflows");
     }
+    if (!config.transport_enabled
+        && (config.rto_ps != 0 || config.counts_local_ack_timeout)) {
+        throw std::invalid_argument(
+            "RNIC requester transport fields need the transport enabled");
+    }
 }
 
 Picoseconds RnicTxPipeline::RateGate::delayFor(std::uint64_t units) {
@@ -133,7 +138,9 @@ NetworkSubmitResult RnicTxPipeline::trySubmit(
     for (std::size_t index = 0;
          index < inserted.first->second.packets.size();
          ++index) {
-        queue_.push_back(QueueEntry{token, index, now_ps});
+        queue_.emplace(
+            inserted.first->second.packets[index].psn,
+            QueueEntry{token, index, now_ps});
     }
     ++counters_.extents_accepted;
     return NetworkSubmitResult::accepted(token);
@@ -177,14 +184,122 @@ bool RnicTxPipeline::windowAllows(const QueueEntry& entry) const {
     return true;
 }
 
+std::vector<NetworkEvent> RnicTxPipeline::goBackN(
+    std::uint32_t psn,
+    Picoseconds now_ps) {
+    std::vector<NetworkEvent> events;
+    for (auto live = live_psns_.lower_bound(psn); live != live_psns_.end();) {
+        Extent& extent = extents_.at(live->second.first);
+        Packet& packet = extent.packets[live->second.second];
+
+        // Close the attempt the responder threw away, so the work queue sees
+        // one clean lifecycle per attempt instead of a token that vanishes.
+        NetworkEvent dropped = packet.started;
+        dropped.kind = NetworkEventKind::Dropped;
+        dropped.event_time_ps = now_ps;
+        dropped.drop_location = DropLocation::RxPort;
+        dropped.drop_reason = DropReason::QueueOverflow;
+        dropped.drop_evidence = DropEvidenceProvenance::Inferred;
+        dropped.drop_resource_id = packet.attempt_token;
+        events.push_back(dropped);
+
+        // Its terminal is still coming. Dropping the binding makes the
+        // arriving terminal stale, which is what it is: the attempt it names
+        // has already been replaced.
+        if (packet.downstream_token != 0) {
+            downstream_tokens_.erase(packet.downstream_token);
+            packet.downstream_token = 0;
+        }
+
+        counters_.inflight_packets -= 1;
+        counters_.inflight_bytes -= packet.payload_bytes;
+        ++counters_.packets_dropped;
+        packet.issued = false;
+        packet.attempt_token = next_token_++;
+        ++packet.transmission_attempt;
+        ++counters_.packets_retransmitted;
+        ++nic_counters_.roce_adp_retrans;
+        ++nic_counters_.roce_slow_restart_cnps;
+        queue_.emplace(
+            packet.psn,
+            QueueEntry{extent.extent_token, live->second.second, now_ps});
+        live = live_psns_.erase(live);
+    }
+    return events;
+}
+
+std::optional<Picoseconds> RnicTxPipeline::earliestTimeout() const {
+    if (!config_.transport_enabled || config_.rto_ps == 0
+        || live_psns_.empty()) {
+        return std::nullopt;
+    }
+    // Sequence numbers are issued in order and a recovery replays them in
+    // order, so the lowest live sequence number is always the oldest attempt
+    // and its deadline is the earliest. That keeps this O(1) on a path the
+    // event loop walks once per step.
+    const auto& oldest = *live_psns_.begin();
+    const Extent& extent = extents_.at(oldest.second.first);
+    const Packet& packet = extent.packets[oldest.second.second];
+    return checkedAdd(packet.issued_at_ps, config_.rto_ps);
+}
+
+std::vector<NetworkEvent> RnicTxPipeline::onTransportPacket(
+    const RnicTransportPacket& packet,
+    Picoseconds now_ps) {
+    if (!config_.transport_enabled) {
+        throw std::logic_error(
+            "RNIC transmit pipeline has no requester transport");
+    }
+    if (now_ps < last_now_ps_) {
+        throw std::logic_error("RNIC requester transport time regressed");
+    }
+    last_now_ps_ = now_ps;
+    if (packet.kind != NetworkPacketKind::Nak) {
+        // An ACK arrives as the downstream port's delivery terminal, so a
+        // duplicate one here carries no new information.
+        return {};
+    }
+    ++counters_.naks_received;
+    if (in_recovery_ && packet.psn >= recovery_psn_) {
+        // The responder emits one NAK per epoch; a second inside the same
+        // episode would replay the replay.
+        return {};
+    }
+    in_recovery_ = true;
+    recovery_psn_ = packet.psn;
+    ++counters_.recovery_episodes;
+    ++nic_counters_.packet_seq_err;
+    return goBackN(packet.psn, now_ps);
+}
+
 std::vector<NetworkEvent> RnicTxPipeline::releaseDue(Picoseconds now_ps) {
     if (now_ps < last_now_ps_) {
         throw std::logic_error("RNIC transmit pipeline time regressed");
     }
     last_now_ps_ = now_ps;
     std::vector<NetworkEvent> events;
+    if (config_.transport_enabled && config_.rto_ps != 0) {
+        // A packet the responder never saw draws no NAK, so the only way out
+        // is the timer. One expiry recovers the whole window from it.
+        for (;;) {
+            const auto deadline = earliestTimeout();
+            if (!deadline.has_value() || *deadline > now_ps) {
+                break;
+            }
+            const std::uint32_t psn = live_psns_.begin()->first;
+            ++counters_.timeouts;
+            ++counters_.recovery_episodes;
+            if (config_.counts_local_ack_timeout) {
+                ++nic_counters_.local_ack_timeout_err;
+            }
+            in_recovery_ = true;
+            recovery_psn_ = psn;
+            const std::vector<NetworkEvent> closed = goBackN(psn, now_ps);
+            events.insert(events.end(), closed.begin(), closed.end());
+        }
+    }
     while (!queue_.empty()) {
-        const QueueEntry entry = queue_.front();
+        const QueueEntry entry = queue_.begin()->second;
         if (!windowAllows(entry)) {
             ++counters_.window_stalls;
             break;
@@ -209,6 +324,8 @@ std::vector<NetworkEvent> RnicTxPipeline::releaseDue(Picoseconds now_ps) {
         descriptor.extent_count =
             static_cast<std::uint32_t>(extent.packets.size());
         descriptor.eligible_at_ps = now_ps;
+        descriptor.psn = packet.psn;
+        descriptor.transmission_attempt = packet.transmission_attempt;
         const NetworkSubmitResult result =
             downstream_.trySubmit(descriptor, now_ps);
         if (result.status == NetworkSubmitStatus::Busy) {
@@ -232,13 +349,16 @@ std::vector<NetworkEvent> RnicTxPipeline::releaseDue(Picoseconds now_ps) {
         started.event_time_ps = now_ps;
         started.extent_index = 0;
         started.packet_index = packet.packet_index;
-        started.transmission_attempt = 0;
+        started.transmission_attempt = packet.transmission_attempt;
         started.payload_offset_bytes = packet.payload_offset_bytes;
         started.payload_bytes = packet.payload_bytes;
         started.wire_bytes = packet.wire_bytes;
-        started.packet_kind = NetworkPacketKind::Data;
+        started.packet_kind = packet.transmission_attempt == 0
+            ? NetworkPacketKind::Data
+            : NetworkPacketKind::Retransmission;
         packet.started = started;
         packet.issued = true;
+        packet.issued_at_ps = now_ps;
 
         if (result.status == NetworkSubmitStatus::Rejected) {
             // A refused packet is a controlled drop at the port. The queue
@@ -253,7 +373,7 @@ std::vector<NetworkEvent> RnicTxPipeline::releaseDue(Picoseconds now_ps) {
             dropped.drop_evidence = DropEvidenceProvenance::Controlled;
             dropped.drop_resource_id = packet.attempt_token;
             events.push_back(dropped);
-            queue_.pop_front();
+            queue_.erase(queue_.begin());
             ++counters_.packets_issued;
             ++counters_.packets_dropped;
             if (!extent.in_flight) {
@@ -295,9 +415,24 @@ std::vector<NetworkEvent> RnicTxPipeline::releaseDue(Picoseconds now_ps) {
         if (!downstream_tokens_
                  .emplace(
                      result.token,
-                     std::make_pair(entry.extent_token, entry.packet_index))
+                     DownstreamBinding{
+                         entry.extent_token,
+                         entry.packet_index,
+                         packet.transmission_attempt})
                  .second) {
             throw std::logic_error("duplicate RNIC packet port token");
+        }
+        packet.downstream_token = result.token;
+        if (config_.transport_enabled) {
+            live_psns_[packet.psn] =
+                std::make_pair(entry.extent_token, entry.packet_index);
+            if (in_recovery_ && packet.psn == recovery_psn_) {
+                // The replay this episode was opened for is on the wire, so
+                // the episode is closed. A later NAK at the same number is
+                // then a new loss, not an echo of this one, and absorbing it
+                // would leave the connection waiting on the timer.
+                in_recovery_ = false;
+            }
         }
 
         qp_bits_.free_at_ps = checkedAdd(
@@ -322,7 +457,7 @@ std::vector<NetworkEvent> RnicTxPipeline::releaseDue(Picoseconds now_ps) {
         counters_.payload_bytes += packet.payload_bytes;
         counters_.wire_bytes += packet.wire_bytes;
         events.push_back(started);
-        queue_.pop_front();
+        queue_.erase(queue_.begin());
     }
     return events;
 }
@@ -343,10 +478,17 @@ std::vector<NetworkEvent> RnicTxPipeline::onDownstreamEvent(
     last_now_ps_ = event.event_time_ps;
     const auto mapping = downstream_tokens_.find(event.token);
     if (mapping == downstream_tokens_.end()) {
+        if (config_.transport_enabled) {
+            // A terminal for an attempt go-back-N already replaced. The work
+            // queue closed that attempt when the recovery episode opened, so
+            // there is nothing left to say about it.
+            ++counters_.stale_terminals;
+            return {};
+        }
         throw std::logic_error("unknown RNIC packet port token");
     }
-    Extent& extent = extents_.at(mapping->second.first);
-    Packet& packet = extent.packets[mapping->second.second];
+    Extent& extent = extents_.at(mapping->second.extent_token);
+    Packet& packet = extent.packets[mapping->second.packet_index];
 
     std::vector<NetworkEvent> events;
     NetworkEvent upstream = packet.started;
@@ -364,8 +506,31 @@ std::vector<NetworkEvent> RnicTxPipeline::onDownstreamEvent(
         upstream.kind = NetworkEventKind::Delivered;
         terminal = true;
         ++counters_.packets_delivered;
+        if (config_.transport_enabled) {
+            live_psns_.erase(packet.psn);
+            packet.downstream_token = 0;
+            if (in_recovery_ && packet.psn >= recovery_psn_) {
+                in_recovery_ = false;
+            }
+        }
         break;
     case NetworkEventKind::Dropped:
+        if (config_.transport_enabled) {
+            // A port that reports the loss itself carries the same
+            // information a NAK would, so it opens the same episode. The
+            // attempt's own drop terminal comes out of go-back-N, not from
+            // here, so the lifecycle is closed exactly once.
+            downstream_tokens_.erase(mapping);
+            if (in_recovery_ && packet.psn >= recovery_psn_) {
+                ++counters_.stale_terminals;
+                return {};
+            }
+            in_recovery_ = true;
+            recovery_psn_ = packet.psn;
+            ++counters_.recovery_episodes;
+            ++nic_counters_.packet_seq_err;
+            return goBackN(packet.psn, event.event_time_ps);
+        }
         upstream.kind = NetworkEventKind::Dropped;
         upstream.drop_location = event.drop_location;
         upstream.drop_reason = event.drop_reason;
@@ -426,14 +591,19 @@ std::vector<NetworkEvent> RnicTxPipeline::onDownstreamEvent(
 }
 
 std::optional<Picoseconds> RnicTxPipeline::nextEventTime() const {
-    if (queue_.empty()) {
-        return std::nullopt;
+    const std::optional<Picoseconds> timeout = earliestTimeout();
+    std::optional<Picoseconds> issue;
+    if (!queue_.empty()) {
+        const QueueEntry& entry = queue_.begin()->second;
+        if (windowAllows(entry)) {
+            issue = std::max(eligibleAt(entry), last_now_ps_);
+        }
     }
-    const QueueEntry& entry = queue_.front();
-    if (!windowAllows(entry)) {
-        return std::nullopt;
+    if (!timeout.has_value()) {
+        return issue;
     }
-    return std::max(eligibleAt(entry), last_now_ps_);
+    const Picoseconds due = std::max(*timeout, last_now_ps_);
+    return issue.has_value() ? std::min(*issue, due) : due;
 }
 
 bool RnicTxPipeline::hasPendingWork() const noexcept {
@@ -446,6 +616,10 @@ const RnicTxPipelineConfig& RnicTxPipeline::config() const noexcept {
 
 const RnicTxPipelineCounters& RnicTxPipeline::counters() const noexcept {
     return counters_;
+}
+
+const RnicNicCounters& RnicTxPipeline::nicCounters() const noexcept {
+    return nic_counters_;
 }
 
 void RnicTxPipeline::validateInvariants() const {

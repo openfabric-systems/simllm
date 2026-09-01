@@ -3,16 +3,27 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <deque>
 #include <map>
 #include <optional>
 #include <vector>
 
 #include "simllm/rnic/network_port.h"
+#include "simllm/rnic/rnic_nic_counters.h"
 
 namespace simllm::rnic {
 
 inline constexpr std::uint32_t kRnicTxPipelineConfigVersion = 1;
+
+// One inbound transport packet at the requester. The responder's ACK is
+// carried by the downstream port's own delivery terminal, so only the
+// negative acknowledgement needs its own path in.
+struct RnicTransportPacket {
+    NetworkPacketKind kind{NetworkPacketKind::Nak};
+    std::uint32_t qpn{0};
+    // For a NAK this is the sequence number the responder is waiting for, so
+    // go-back-N restarts there. For an ACK it is the accepted number.
+    std::uint32_t psn{0};
+};
 
 // The transmit pipeline sits between the work queue and the network port. The
 // queue keeps submitting one flow extent per WQE, exactly as it does on ABI
@@ -52,6 +63,20 @@ struct RnicTxPipelineConfig {
     // the MTU the two readings coincide, which is where it was measured.
     std::uint64_t message_rate_per_qp{0};
     std::uint64_t message_rate_per_nic{0};
+
+    // Requester transport. Off is the slice-B path exactly: a packet the port
+    // reports dropped ends its extent with a transport error and nothing is
+    // ever resent. On, the pipeline keeps per-QP sequence and acknowledgement
+    // state and recovers by go-back-N, so a lost packet is replayed together
+    // with every packet the responder threw away behind it.
+    bool transport_enabled{false};
+    // Zero disables the timer, which leaves a silently lost packet with no
+    // recovery path at all. That is a test configuration, not a hardware one.
+    Picoseconds rto_ps{0};
+    // Firmware 16.31 counts a timeout-driven recovery on
+    // `local_ack_timeout_err`; firmware 16.32 counts zero for the same
+    // stimulus. False selects 16.32, which is the campaign's default node.
+    bool counts_local_ack_timeout{false};
 };
 
 struct RnicTxPipelineCounters {
@@ -74,6 +99,15 @@ struct RnicTxPipelineCounters {
     std::uint64_t inflight_wqes{0};
     std::uint64_t inflight_bytes{0};
     std::uint64_t inflight_packets{0};
+    // Requester transport. All stay zero without it.
+    std::uint64_t naks_received{0};
+    std::uint64_t recovery_episodes{0};
+    std::uint64_t packets_retransmitted{0};
+    std::uint64_t timeouts{0};
+    // Terminals that arrived for an attempt the transport had already
+    // replayed. They close the work queue's lifecycle and change nothing
+    // else, so they are the honest measure of go-back-N waste on the wire.
+    std::uint64_t stale_terminals{0};
 };
 
 void validateRnicTxPipelineConfig(const RnicTxPipelineConfig& config);
@@ -103,11 +137,22 @@ public:
     // attempt, plus the extent terminal when the last packet retires.
     std::vector<NetworkEvent> onDownstreamEvent(const NetworkEvent& event);
 
+    // Delivers one inbound transport packet to the requester. A NAK opens one
+    // recovery episode at its sequence number: every attempt at or above it
+    // that is still on the wire is closed as dropped and requeued, in
+    // sequence order, ahead of anything newer. A second NAK inside the same
+    // episode is absorbed, because the responder sends one per epoch and a
+    // second recovery would replay the replay.
+    std::vector<NetworkEvent> onTransportPacket(
+        const RnicTransportPacket& packet,
+        Picoseconds now_ps);
+
     std::optional<Picoseconds> nextEventTime() const;
     bool hasPendingWork() const noexcept;
 
     const RnicTxPipelineConfig& config() const noexcept;
     const RnicTxPipelineCounters& counters() const noexcept;
+    const RnicNicCounters& nicCounters() const noexcept;
     void validateInvariants() const;
 
 private:
@@ -129,8 +174,13 @@ private:
         std::uint64_t payload_bytes{0};
         std::uint64_t wire_bytes{0};
         std::uint32_t psn{0};
+        std::uint32_t transmission_attempt{0};
+        // The port token of the attempt currently on the wire, so a recovery
+        // can retire it without searching every live binding.
+        NetworkToken downstream_token{0};
         bool issued{false};
         bool terminal{false};
+        Picoseconds issued_at_ps{0};
         NetworkEvent started;
     };
 
@@ -155,9 +205,22 @@ private:
         Picoseconds queued_at_ps{0};
     };
 
+    // The issue queue is keyed by sequence number, not by arrival order. A
+    // packetizer hands packets over in sequence order, so for a first
+    // transmission the two are the same thing; a go-back-N replay is the case
+    // where they are not, and putting a replayed number back where it belongs
+    // is what keeps the responder in sequence. A deque with the replays
+    // pushed onto the front would send a higher number before a lower one
+    // that was still waiting, which the responder reads as a fresh loss.
+
     Picoseconds eligibleAt(const QueueEntry& entry) const;
     bool windowAllows(const QueueEntry& entry) const;
     void retirePacket(Extent& extent, Packet& packet);
+    // Closes every live attempt whose sequence number is at or above `psn`
+    // and requeues them in sequence order ahead of anything newer. Returns
+    // the upstream drop terminals those closures produce.
+    std::vector<NetworkEvent> goBackN(std::uint32_t psn, Picoseconds now_ps);
+    std::optional<Picoseconds> earliestTimeout() const;
 
     RnicTxPipelineConfig config_;
     NetworkPort& downstream_;
@@ -171,10 +234,20 @@ private:
     RateGate qp_messages_;
     RateGate nic_messages_;
     std::map<NetworkToken, Extent> extents_;
-    std::map<NetworkToken, std::pair<NetworkToken, std::size_t>>
-        downstream_tokens_;
-    std::deque<QueueEntry> queue_;
+    struct DownstreamBinding {
+        NetworkToken extent_token{0};
+        std::size_t packet_index{0};
+        std::uint32_t transmission_attempt{0};
+    };
+    std::map<NetworkToken, DownstreamBinding> downstream_tokens_;
+    std::map<std::uint32_t, QueueEntry> queue_;
+    // Live attempts by sequence number, so go-back-N can find everything at
+    // or above a NAK's number without walking every extent.
+    std::map<std::uint32_t, std::pair<NetworkToken, std::size_t>> live_psns_;
+    bool in_recovery_{false};
+    std::uint32_t recovery_psn_{0};
     RnicTxPipelineCounters counters_;
+    RnicNicCounters nic_counters_;
 };
 
 }  // namespace simllm::rnic

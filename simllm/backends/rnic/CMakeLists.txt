@@ -26,6 +26,7 @@ add_library(simllm_rnic STATIC
     src/rnic_cmodel_c.cpp
     src/rnic_device.cpp
     src/rnic_hw_profile.cpp
+    src/rnic_rx_pipeline.cpp
     src/rnic_tx_pipeline.cpp
     src/session_record.cpp
     src/submission.cpp

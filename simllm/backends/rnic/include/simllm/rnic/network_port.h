@@ -104,6 +104,11 @@ struct NetworkTxDescriptor {
     std::uint32_t extent_index{0};
     std::uint32_t extent_count{1};
     Picoseconds eligible_at_ps{0};
+    // Set by a packetizing producer on ABI v2 so the wire can carry the
+    // sequence number a responder checks and can tell a first transmission
+    // from a replay. A v1 flow extent leaves both at zero.
+    std::uint32_t psn{0};
+    std::uint32_t transmission_attempt{0};
 };
 
 struct NetworkPortCapabilities {

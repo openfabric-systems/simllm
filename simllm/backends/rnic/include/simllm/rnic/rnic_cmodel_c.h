@@ -45,10 +45,28 @@ enum {
 };
 
 /* Packet kinds, mirroring the native NetworkPacketKind subset the transmit
- * path can emit. */
+ * path can emit and the receive path can be handed. */
 enum {
     RNIC_CM_PACKET_DATA = 0,
-    RNIC_CM_PACKET_RETRANSMISSION = 1
+    RNIC_CM_PACKET_RETRANSMISSION = 1,
+    RNIC_CM_PACKET_ACK = 2,
+    RNIC_CM_PACKET_NAK = 3
+};
+
+/* Transport service of a received packet. Reliable connections carry a
+ * sequence number the responder checks; unreliable datagrams do not, which is
+ * exactly why their loss leaves no trace. */
+enum {
+    RNIC_CM_SERVICE_RC = 0,
+    RNIC_CM_SERVICE_UD = 1
+};
+
+/* What the receive pipeline did with one presented packet. */
+enum {
+    RNIC_CM_RX_DELIVERED = 0,
+    RNIC_CM_RX_DISCARDED_SILENTLY = 1,
+    RNIC_CM_RX_DISCARDED_OUT_OF_SEQUENCE = 2,
+    RNIC_CM_RX_DISCARDED_DUPLICATE = 3
 };
 
 /* Event kinds the caller may deliver. The packet kinds require an ABI v2
@@ -159,7 +177,18 @@ typedef struct rnic_cm_config {
      * transmit pipeline and its per-packet port (network ABI v2). */
     uint8_t packetization;
     uint8_t trace_enabled;
-    uint8_t reserved1[6];
+    /* 1 selects the receive pipeline (ingress meter plus receive processor)
+     * and the requester transport, which requires packetization. 0 is the
+     * identity default: the receive entry point fails closed and a dropped
+     * packet ends its work request with a transport error, exactly as before
+     * this byte was spent. It comes out of the reserved block, so the
+     * structure keeps every offset and its size. */
+    uint8_t receive;
+    /* Selects the firmware counter variant of the requester: 0 is fw 16.32,
+     * which reports zero on `local_ack_timeout_err`, and 1 is fw 16.31, which
+     * counts. Ignored without `receive`. */
+    uint8_t firmware_counter_variant;
+    uint8_t reserved1[4];
     /* 0 means the send queue itself is the bound. */
     uint64_t max_inflight_wqes;
     /* 0 means no byte bound. */
@@ -206,8 +235,25 @@ typedef struct rnic_cm_packet {
     uint32_t packet_count;
     uint8_t kind;
     uint8_t traffic_class;
-    uint8_t reserved[2];
+    /* Both come out of the reserved block, so the structure keeps every
+     * offset and its size. `service` selects the responder's sequence check
+     * and `last_of_message` is what makes the responder count a completed
+     * request. */
+    uint8_t service;
+    uint8_t last_of_message;
 } rnic_cm_packet;
+
+/* What the receive pipeline did with one packet handed to `rnic_cm_rx_packet`,
+ * and the reply it made. A silent discard makes no reply at all, which is the
+ * whole point of it. */
+typedef struct rnic_cm_rx_result {
+    uint32_t outcome;
+    uint32_t has_reply;
+    uint32_t reply_kind;
+    uint32_t reply_psn;
+    uint64_t reply_wire_bytes;
+    uint64_t ingress_occupancy_bytes;
+} rnic_cm_rx_result;
 
 typedef struct rnic_cm_event_info {
     uint32_t kind;
@@ -265,6 +311,67 @@ typedef struct rnic_cm_counter_set {
     uint64_t tx_late_releases;
 } rnic_cm_counter_set;
 
+/*
+ * The observable-state facade, spelled the way the real NIC spells it. It is
+ * a separate structure with a separate entry point on purpose: the counter set
+ * above is the model's own bookkeeping and this one is what a detection tool
+ * reads, so extending one must never move a field of the other.
+ *
+ * Three groups are inert because silicon reports them inert, not because the
+ * model forgot them: `np_ecn_marked_roce_packets` stays zero while CNPs are
+ * generated, `rx_pause_ctrl_phy` and `rx_global_pause` stay zero because no
+ * peer ever receives a pause frame, and `rx_out_of_buffer` with the two
+ * `outbound_pci_stalled_*` counters stay zero because receive overflow lands
+ * on `rx_discards_phy` instead.
+ */
+typedef struct rnic_cm_nic_counter_set {
+    uint32_t version;
+    uint32_t reserved0;
+
+    uint64_t packet_seq_err;
+    uint64_t roce_adp_retrans;
+    uint64_t roce_slow_restart_cnps;
+    uint64_t local_ack_timeout_err;
+    uint64_t rp_cnp_handled;
+    uint64_t rp_cnp_ignored;
+
+    uint64_t out_of_sequence;
+    uint64_t duplicate_request;
+    uint64_t rx_discards_phy;
+    uint64_t rx_prio0_discards;
+    uint64_t tx_pause_ctrl_phy;
+    uint64_t tx_global_pause;
+    uint64_t np_cnp_sent;
+    uint64_t rx_write_requests;
+
+    uint64_t rx_packets_phy;
+    uint64_t rx_bytes_phy;
+    uint64_t tx_packets_phy;
+    uint64_t tx_bytes_phy;
+
+    uint64_t np_ecn_marked_roce_packets;
+    uint64_t rx_pause_ctrl_phy;
+    uint64_t rx_global_pause;
+    uint64_t rx_out_of_buffer;
+    uint64_t outbound_pci_stalled_rd;
+    uint64_t outbound_pci_stalled_wr;
+
+    /* Receive-pipeline bookkeeping the NIC does not expose but a study needs
+     * to separate one discard cause from another. */
+    uint64_t rx_packets_offered;
+    uint64_t rx_packets_delivered;
+    uint64_t rx_discards_meter;
+    uint64_t rx_discards_rate;
+    uint64_t rx_discards_sequence;
+    uint64_t rx_payload_bytes_delivered;
+    uint64_t rx_ingress_occupancy_bytes;
+    uint64_t rx_ingress_high_watermark_bytes;
+    uint64_t tx_packets_retransmitted;
+    uint64_t tx_recovery_episodes;
+    uint64_t tx_timeouts;
+    uint64_t tx_stale_terminals;
+} rnic_cm_nic_counter_set;
+
 /* Fills `out` with a named preset ("cx5_100g" or "cx7_400g"). */
 int rnic_cm_profile_preset(const char* name, rnic_cm_profile* out);
 
@@ -291,13 +398,21 @@ int rnic_cm_doorbell(
     uint64_t now_ps,
     rnic_cm_doorbell_batch* out_batch);
 
-/* Delivers one wire packet to the receive side. The receive pipeline is not
- * landed, so this is refused with RNIC_CM_ERROR_UNSUPPORTED rather than
- * silently ignored. */
+/* Delivers one wire packet to the receive side.
+ *
+ * A data packet goes through the ingress meter and the receive processor and
+ * `out_result`, when it is not NULL, reports the verdict and the responder's
+ * reply. An ACK or a NAK goes to the requester transport instead, and
+ * `out_result` reports a delivered outcome with no reply of its own.
+ *
+ * Without the receive configuration this is refused with
+ * RNIC_CM_ERROR_UNSUPPORTED rather than silently ignored, so a testbench
+ * cannot read silence as a modelled receive path. */
 int rnic_cm_rx_packet(
     rnic_cm_device* device,
     const rnic_cm_packet* packet,
-    uint64_t now_ps);
+    uint64_t now_ps,
+    rnic_cm_rx_result* out_result);
 
 int rnic_cm_event(
     rnic_cm_device* device,
@@ -329,6 +444,12 @@ int rnic_cm_tx_next(
     size_t* out_count);
 
 int rnic_cm_counters(rnic_cm_device* device, rnic_cm_counter_set* out);
+
+/* Reads the NIC-named observable state. Every field is zero without the
+ * receive configuration except the transmit wire volume. */
+int rnic_cm_nic_counters(
+    rnic_cm_device* device,
+    rnic_cm_nic_counter_set* out);
 
 /* Writes the transaction trace: one line per stimulus and per observed
  * transition, each stamped in picoseconds. */

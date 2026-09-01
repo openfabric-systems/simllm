@@ -253,6 +253,46 @@ study treats a nonzero count as a voided run rather than a measurement.
 Evidence is in
 [`examples/rnic_cmodel_v1`](../../../examples/rnic_cmodel_v1/RESULTS.md).
 
+## Receive pipeline and requester transport
+
+`rnic_rx_pipeline.h` is the receive half, selected by an enabled receive block
+on the same ABI v2 network configuration and off by default. It is two blocks
+in series. The ingress meter admits wire bytes into a finite buffer drained at
+a service rate and discards the overflow at the PHY with no transport signal
+at all, which is what makes the measured loss silent. The receive processor
+then applies the per-QP receive packet-rate ceilings and the per-NIC one, and,
+for a reliable connection, checks the responder's sequence number and emits an
+ACK or a NAK. The sequence check runs at line rate on arrival rather than at
+the drain instant, because on real silicon the transport parser sits in the
+receive path while the buffer stages payload toward the host; delaying the NAK
+by the standing queue depth would collapse go-back-N at any loss rate.
+
+A packet the responder throws away keeps its bytes charged against the meter.
+It was still received, parsed and sequence-checked, so it consumed the ingress
+service its bytes were metered for. Refunding it would make go-back-N free at
+the receiver and pin the equilibrium goodput to the drain rate.
+
+The requester transport lives in the transmit pipeline behind
+`transport_enabled`, whose off path is the unchanged slice-B code. It keeps
+per-QP sequence and acknowledgement state and recovers by go-back-N: a NAK
+opens one recovery episode at its sequence number, every attempt at or above
+it that is still on the wire is closed as dropped and requeued, and the issue
+queue is ordered by sequence number so a replay goes back where it belongs
+rather than ahead of a lower number still waiting. A packet the responder
+never saw draws no NAK, so the retransmission timer is the only way out of a
+tail loss; firmware 16.31 counts that on `local_ack_timeout_err` and firmware
+16.32 counts zero for it.
+
+`rnic_nic_counters.h` is the observable-state facade, spelled the way the real
+NIC spells it. Three groups are inert because silicon reports them inert:
+`np_ecn_marked_roce_packets`, the two receive-pause counters, and
+`rx_out_of_buffer` with the two `outbound_pci_stalled_*` counters.
+`tests/fake_network.h` gains `FakeV2Fabric`, a two-endpoint wire with
+per-direction links, configurable propagation and a reproducible loss
+injector, and the facade gains `rnic_cm_rx_packet` with
+`rnic_cm_nic_counters`. Evidence is in
+[`examples/rnic_cmodel_rx_v1`](../../../examples/rnic_cmodel_rx_v1/RESULTS.md).
+
 ## Hardware profile, anomaly table and C facade
 
 `rnic_hw_profile.h` carries the hardware parameter set with one evidence class
