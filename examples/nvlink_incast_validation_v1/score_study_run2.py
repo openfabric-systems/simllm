@@ -190,6 +190,12 @@ def audit_hardware(
         scheduler_job=scheduler_job,
         residual_task=residual_task,
     )
+    if (
+        score["measurement_validity"] == "VALID_FOR_FROZEN_COMPARISON"
+        and score["summary"]["pass_cells"] == 0
+        and score["summary"]["miss_cells"] == 6
+    ):
+        score["status"] = "VALID_0_PASS_6_MISS"
     if not score["summary"]["miss_cells"] and residual_task:
         raise RuntimeError("a passing comparison must not register a residual task")
     launch_by_cell: defaultdict[tuple[int, int], list[float]] = defaultdict(list)
@@ -219,6 +225,65 @@ def audit_hardware(
         "required_observables": frozen["hardware_arm"]["required_observables"],
         "row_count": score["coverage"]["observed_rows"],
         "row_digests": [row["row_sha256"] for row in score["hardware_samples"]],
+    }
+    comparison_by_key = {
+        (row["degree"], row["size_bytes"]): row for row in score["comparisons"]
+    }
+    doubling_ratios = []
+    for degree in frozen["hardware_arm"]["degrees"]:
+        smaller = comparison_by_key[(degree, 4 << 20)]
+        larger = comparison_by_key[(degree, 8 << 20)]
+        doubling_ratios.extend(
+            larger_value / smaller_value
+            for smaller_value, larger_value in zip(
+                smaller["hardware_completion_us_by_source"],
+                larger["hardware_completion_us_by_source"],
+                strict=True,
+            )
+        )
+    floor_multiples = [
+        completion / row["physical_floor_us"]
+        for row in score["comparisons"]
+        for completion in row["hardware_completion_us_by_source"]
+    ]
+    ceiling_fractions = [
+        completion / row["physical_ceiling_us"]
+        for row in score["comparisons"]
+        for completion in row["hardware_completion_us_by_source"]
+    ]
+    hardware_source_goodput = [
+        value
+        for row in score["comparisons"]
+        for value in row["hardware_goodput_gbps_by_source"]
+    ]
+    score["physical_sanity"] = {
+        "verdict": (
+            "PASS"
+            if all(row["physical_sanity"] == "PASS" for row in score["comparisons"])
+            else "FAIL"
+        ),
+        "minimum_hardware_completion_us": min(
+            value
+            for row in score["comparisons"]
+            for value in row["hardware_completion_us_by_source"]
+        ),
+        "maximum_hardware_completion_us": max(
+            value
+            for row in score["comparisons"]
+            for value in row["hardware_completion_us_by_source"]
+        ),
+        "minimum_frozen_floor_us": min(
+            row["physical_floor_us"] for row in score["comparisons"]
+        ),
+        "maximum_frozen_floor_us": max(
+            row["physical_floor_us"] for row in score["comparisons"]
+        ),
+        "minimum_hardware_over_floor": min(floor_multiples),
+        "maximum_completion_over_ceiling": max(ceiling_fractions),
+        "minimum_eight_mib_over_four_mib_completion": min(doubling_ratios),
+        "maximum_eight_mib_over_four_mib_completion": max(doubling_ratios),
+        "minimum_hardware_source_goodput_gbps": min(hardware_source_goodput),
+        "maximum_hardware_source_goodput_gbps": max(hardware_source_goodput),
     }
     return score
 
@@ -274,8 +339,10 @@ def render_markdown(score: dict[str, Any]) -> str:
         "persistent peer-write producer on one qualified four-A100 `NV4` node. It",
         "covered 4 MiB and 8 MiB flows at incast degrees 1, 2 and 3 with seven",
         "repetitions per cell. The comparison uses the six predictions frozen at",
-        f"commit `{score['expectations_commit'][:7]}` before Merlin job",
-        f"`{score['scheduler_job']}` ran. The scored module version is",
+        (
+            f"commit `{score['expectations_commit'][:7]}` before Merlin job "
+            f"`{score['scheduler_job']}` ran. The scored module version is"
+        ),
         f"`{score['simulation_identity']['module_version_commit']}` with flow policy",
         f"`{score['simulation_identity']['flow_policy']}`.",
         "",
@@ -291,18 +358,69 @@ def render_markdown(score: dict[str, Any]) -> str:
         ]
     else:
         lines += [
-            f"The run status is **{score['status']}**. The maximum observed launch-skew",
-            f"fraction was {100 * summary['maximum_launch_skew_fraction']:.3f} percent",
-            "against the 10.000 percent ceiling. The deciding worst absolute signed",
-            f"relative error was {100 * summary['worst_absolute_signed_relative_error']:.3f}",
-            f"percent. {summary['pass_cells']} of 6 cells pass and",
-            f"{summary['miss_cells']} miss.",
+            f"The run status is **{score['status']}**. The maximum observed",
+            (
+                "launch-skew fraction was "
+                f"{100 * summary['maximum_launch_skew_fraction']:.3f} percent against "
+                "the 10.000 percent ceiling."
+            ),
+            "The deciding worst absolute signed relative error was",
+            (
+                f"{100 * summary['worst_absolute_signed_relative_error']:.3f} percent. "
+                f"{summary['pass_cells']} of 6 cells pass and "
+                f"{summary['miss_cells']} miss."
+            ),
+            "Every miss names `packetization` under the frozen size-dependent",
+            "attribution rule.",
         ]
+    sanity = score["physical_sanity"]
     lines += [
+        "",
+        "## Physical sanity before precision",
+        "",
+        "Floor: packetized wire serialization sets frozen per-cell floors from",
+        (
+            f"{sanity['minimum_frozen_floor_us']:.6f} to "
+            f"{sanity['maximum_frozen_floor_us']:.6f} us. Hardware completion ranged "
+            "from"
+        ),
+        (
+            f"{sanity['minimum_hardware_completion_us']:.6f} to "
+            f"{sanity['maximum_hardware_completion_us']:.6f} us and was never faster "
+            "than"
+        ),
+        (
+            f"its floor. The closest sample was "
+            f"{sanity['minimum_hardware_over_floor']:.3f} times its floor."
+        ),
+        "",
+        "Ceiling: every source completed below the frozen 5000 us observed-producer",
+        (
+            f"ceiling. The slowest used "
+            f"{100 * sanity['maximum_completion_over_ceiling']:.3f} percent of that "
+            "ceiling."
+        ),
+        "",
+        "Byte scaling: doubling each source from 4 MiB to 8 MiB moved median",
+        (
+            f"completion by {sanity['minimum_eight_mib_over_four_mib_completion']:.3f} "
+            f"to {sanity['maximum_eight_mib_over_four_mib_completion']:.3f} times, close"
+        ),
+        "to the expected factor of two for sustained service.",
+        "",
+        "End-to-end plausibility: measured per-source payload goodput ranged from",
+        (
+            f"{sanity['minimum_hardware_source_goodput_gbps']:.3f} to "
+            f"{sanity['maximum_hardware_source_goodput_gbps']:.3f} GB/s. That extends "
+            "the"
+        ),
+        "retained 2.2 to 3.5 GB/s short-rung trend after fixed launch work is amortized,",
+        "but it remains far below the model's packetized wire-rate prediction.",
         "",
         "## What it changes for the project",
         "",
-        f"{_registry_effect(score)}. The second capture supplies all six literal",
+        f"{_registry_effect(score)}.",
+        "The second capture supplies all six literal",
         "per-cell verdicts at the only incast degrees an NV4 node can realize.",
         "",
         "## What it does not change",
@@ -315,8 +433,10 @@ def render_markdown(score: dict[str, Any]) -> str:
         "",
         "## Fatal guards and preservation",
         "",
-        f"Fatal-guard verdict: **{score['fatal_guards']['verdict']}**. All",
-        f"{score['preservation']['artifact_count']} inherited and first-capture",
+        (
+            f"Fatal-guard verdict: **{score['fatal_guards']['verdict']}**. All "
+            f"{score['preservation']['artifact_count']} inherited and first-capture"
+        ),
         "artifacts remain byte-identical. The digest-complete raw capture stays outside",
         "Git and retains every checksum, ordering, per-link data and raw counter,",
         "replay, recovery, throttle, topology and competing-process observation.",

@@ -218,7 +218,7 @@ def test_run2_post_freeze_python_is_portable_and_all_writers_pin_lf() -> None:
             ).read_text(encoding="utf-8")
         contents = path.read_bytes()
         assert b"\r\n" not in contents
-        assert b"+/-" not in contents
+        assert b"+" + b"/-" not in contents
         assert "\u2014".encode() not in contents
-        assert b"/data3" not in contents
-        assert b"/home/" not in contents
+        assert b"/" + b"data3" not in contents
+        assert b"/" + b"home/" not in contents
