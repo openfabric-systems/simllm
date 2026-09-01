@@ -12,7 +12,6 @@ import json
 import os
 import re
 import shutil
-import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -26,6 +25,18 @@ ANALYZER_PATH = HARNESS / "analyze_capture.py"
 HASHER_PATH = HARNESS / "hash_manifest.py"
 SNAPSHOT_PATH = HARNESS / "snapshot_counters.py"
 CONFIG = json.loads((HARNESS / "study_config.json").read_text(encoding="utf-8"))
+
+
+def _git_index_mode(path: Path) -> str:
+    root = subprocess.run(
+        ["git", "rev-parse", "--show-toplevel"],
+        capture_output=True, text=True, check=True, cwd=os.fspath(path.parent),
+    ).stdout.strip()
+    line = subprocess.run(
+        ["git", "ls-files", "-s", "--", os.fspath(path)],
+        capture_output=True, text=True, check=True, cwd=root,
+    ).stdout.strip()
+    return line.split()[0] if line else ""
 
 
 def _load_module(name: str, path: Path):
@@ -312,7 +323,7 @@ def test_config_and_batch_scripts_lock_every_frozen_cell() -> None:
             expected_tasks = 1 if width == 2 else 4
             assert f"#SBATCH --ntasks-per-node={expected_tasks}" in text
             if os.name == "posix":
-                assert path.stat().st_mode & stat.S_IXUSR
+                assert _git_index_mode(path) == "100755"
 
 
 @pytest.mark.skipif(
@@ -329,7 +340,7 @@ def test_shell_entry_points_are_syntactically_valid_and_executable() -> None:
             ["bash", "-n", str(path)], check=False, capture_output=True, text=True
         )
         assert completed.returncode == 0, completed.stderr
-        assert path.stat().st_mode & stat.S_IXUSR
+        assert _git_index_mode(path) == "100755"
 
 
 def test_lane_source_locks_raw_wall_timing_and_anchor_first_order() -> None:
