@@ -23,7 +23,13 @@ families that ask whether latency shape and the floor-versus-slope
 decomposition transfer across the first locality boundary. TRAF-76's rank-8
 donor transfers at expert-parallel widths 32 and 128 remain deliberate,
 acknowledged extrapolations, but they no longer carry unqualified shape
-confidence from the fit-small-extrapolate-wide premise.
+confidence from the fit-small-extrapolate-wide premise. One scope caveat
+belongs beside that consequence: the A100 boundary crossed here changed the
+transport stack as well as the locality (NVLink NV4 inside the node, NCCL
+Socket over Cray Slingshot with GPU Direct RDMA disabled between nodes), so
+the measured 61 to 63 percent medians quantify extrapolation failure across
+this deployment's combined boundary, not a pure locality effect on an
+RDMA-capable fabric.
 
 What it does not change: this A100 study does not calibrate an H200 absolute
 latency, bandwidth, floor or slope. It does not install a profile, change the
@@ -37,7 +43,11 @@ The expectations-only freeze is commit
 `3f0aa24ea16573e3fc2ca030d541009cf308d12f`, based on `aee8cb5`. It precedes
 the harness commit `d92053314a2da4d6a638f20a4cb3d49d1a5f2a01`, the guard-only
 repair `dc211d81d86a422d6f79aa41cbb52c30038797e3`, and every measurement used
-here. The frozen JSON has SHA-256
+here. The freeze fixes the boundary-selection rule (Bayesian information
+criterion over training ranks) and the donor-scale formula; the selected
+boundary locations and the numeric scales 3.5 and 3.75 are deterministic
+deductions from frozen inputs that first materialize in the record, not
+literals present before measurement. The frozen JSON has SHA-256
 `e38a8f4a4f4a812663e251c76d56c107a6b8872c7babb70d7bf74066b2b129ea`.
 
 | Rank | Job | Nodes x GPUs | State | Start | End | Disposition |
@@ -69,8 +79,9 @@ then submitted at 11:59:44.
 The first evidence audit consumed a compact transport summary that omitted
 uppercase `CUMEM` lines. A post-specified audit repair reads the retained NCCL
 debug logs directly and records each log hash. This repair changes no raw
-measurement, fit or scored rule. The scored record uses NCCL 2.31.2 built with
-CUDA 12.2.2. The multi-node cell used the NCCL Socket network transport with
+measurement, fit or scored rule. The scored record uses NCCL 2.31.2, which identifies
+itself as built against CUDA 12.9; the harness itself was compiled with the
+site CUDA 12.2 toolchain. The multi-node cell used the NCCL Socket network transport with
 GPU Direct RDMA disabled (`GDR 0`); intra-node channels used direct CUDA memory
 and peer paths, and their initialization record reported Socket with `GDR 1`.
 
@@ -185,7 +196,8 @@ percent at 917,504 bytes, 10.71 percent at 1,310,720 bytes and 29.52 percent at
 2,097,152 bytes. Rank 8 has no local dip under the frozen definition inside
 512 KiB through 1.5 MiB: its strongest all-gather and reduce-scatter dips are
 3.55 and 0.32 percent at 262,144 bytes. It instead has completion-time speedup
-steps. Rank-8 all-gather completion falls by 21.84 percent from 1,179,648 to
+steps, reported under the freeze's pre-specified descriptive rule and
+unscored. Rank-8 all-gather completion falls by 21.84 percent from 1,179,648 to
 1,310,720 bytes; rank-8 reduce-scatter falls by 12.61 percent over the same
 step and by 10.48 percent from 917,504 to 1,048,576 bytes. Thus the expected
 rank-2 dip does not reproduce at the frozen threshold, while the dense grid
