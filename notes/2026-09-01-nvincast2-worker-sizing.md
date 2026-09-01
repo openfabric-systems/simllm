@@ -78,4 +78,31 @@
 
 ### Completion accounting
 
-- Pending.
+- The final change touches 18 files: 4,756 added and 34 deleted text lines,
+  plus two generated binary figure files.
+- Production lines: zero. No file under `simllm/`, including every NVLink
+  backend module, changed.
+- Tests and fixtures: 659 added and one deleted handwritten line across the
+  three planned run-two checks plus the retained freeze's registry assertion.
+  This exceeds the 180 to 420 estimate because byte-identical first-run
+  preservation and the separate second-run
+  result required independent immutable-surface tests rather than extensions
+  to the existing first-run files.
+- Studies, configuration and documentation: 1,824 added and 33 deleted
+  handwritten lines. This is below the 2,200 to 4,000 estimate because the
+  run-two path safely wraps the existing digest, resume and inherited-guard
+  machinery instead of copying its 1,148 handwritten lines, while keeping
+  separate run identities and implementation digests.
+- Generated evidence: 2,273 added text lines in the expectations JSON and
+  Markdown, result JSON and Markdown, and comparison CSV, plus the PDF and PNG
+  figure pair. These count as zero handwritten lines.
+- Expectations-only commit: `b21ba822707d2d7c80b83ee2d3fb87f4fa93178d`;
+  expectations SHA-256
+  `5465271e9909cebc214c153209316a6f266ec142d7e578b3279935b1c6a10a53`.
+- Execution head: `2389e00545a83af898d64fdde3c9b47c7199e3d3`.
+  Merlin job `202466` ran once on `gpu105`, completed in 50 seconds with exit
+  `0:0`, and produced one digest-complete 42-row attempt with no pending cell.
+- Result: all 13 fatal guards pass, maximum launch skew is 1.129 percent, and
+  all six cells miss. The worst absolute signed relative error is 2011.175
+  percent. The frozen rule names packetization for every miss, closes TRAF-74
+  as a non-void completed validation, and registers TRAF-86 for the residual.

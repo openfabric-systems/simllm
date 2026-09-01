@@ -119,16 +119,30 @@ def render(result: dict[str, Any], output_dir: Path) -> tuple[Path, Path]:
         axis.grid(axis="y", color=GRID, linewidth=0.7)
         axis.spines["top"].set_visible(False)
         axis.spines["right"].set_visible(False)
-        for row in rows:
-            if row["verdict"] == "MISS":
+        misses = [row for row in rows if row["verdict"] == "MISS"]
+        miss_parameters = {row["responsible_parameter"] for row in misses}
+        if misses and len(miss_parameters) == 1:
+            parameter = next(iter(miss_parameters)).replace("_", " ")
+            axis.text(
+                0.03,
+                0.96,
+                f"All cells miss: {parameter}",
+                transform=axis.transAxes,
+                ha="left",
+                va="top",
+                fontsize=7.2,
+                color=MUTED,
+            )
+        else:
+            for row in misses:
                 axis.annotate(
                     row["responsible_parameter"].replace("_", " "),
                     (row["degree"], row["hardware_aggregate_gbps"]),
-                    xytext=(0, -15),
+                    xytext=(0, 10),
                     textcoords="offset points",
                     ha="center",
-                    va="top",
-                    fontsize=7.2,
+                    va="bottom",
+                    fontsize=6.9,
                     color=MUTED,
                 )
     axes[0].set_ylabel("Aggregate receiver payload goodput (GB/s)")

@@ -212,7 +212,7 @@ def test_run2_freeze_sources_are_portable_and_pin_lf_writers() -> None:
     for path in (source, FREEZE_JSON, FREEZE_MARKDOWN):
         contents = path.read_bytes()
         assert b"\r\n" not in contents
-        assert b"+/-" not in contents
+        assert b"+" + b"/-" not in contents
         assert "\u2014".encode() not in contents
-        assert b"/data3" not in contents
-        assert b"/home/" not in contents
+        assert b"/" + b"data3" not in contents
+        assert b"/" + b"home/" not in contents
