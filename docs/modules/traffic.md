@@ -1140,6 +1140,18 @@ TRAF-78 owns observed routing geometry, TRAF-75 owns supported-path directional
 precision, TRAF-77 owns hardware transport calibration, and TRAF-26 owns
 complete production peer workloads.
 
+The [second TRAF-74 capture](../../examples/nvlink_incast_validation_v1/RESULTS_RUN2.md)
+validates the scored base domain at the only incast degrees a four-A100 `NV4`
+node can realize. Merlin job `202466` completes all 42 rows, all 13 fatal
+guards pass, and the worst sequential launch-skew fraction is 1.129 percent
+against the frozen 10.000 percent ceiling. All six cells then miss the frozen
+plus or minus 16 percent band: hardware aggregate goodput spans 4.461874 to
+14.288373 GB/s while simultaneous-release simulation spans 94.104154 to
+194.808553 GB/s, with a worst absolute signed relative error of 2011.175
+percent. The frozen size-dependent rule attributes every miss to
+packetization. TRAF-74 closes as a literal non-void validation, and TRAF-86
+owns the identified packetization precision residual.
+
 NVLink hardware incast identification is long-flow only. Sender launches on
 the real node serialize through sequential PCIe writes, so nanosecond-scale
 true synchronous small-flow co-arrival cannot be constructed. Simulated
@@ -1154,76 +1166,83 @@ leaves 12 undocumented. The deciding correction is that the documented family
 unit is a 128-bit, 16-byte flit and a packet occupies 1 through 18 flits; 272
 bytes is therefore one 17-flit occupancy, not the universal unit. The
 [mechanism record](../design/nvlink-mechanism-reverse-engineering.md) makes the
-public evidence boundary literal and closes TRAF-79. TRAF-80 owns the model
+public evidence boundary literal and closes TRAF-79. TRAF-80 delivers the model
 alignment, while TRAF-73 remains open to identify the A100-specific credit and
 arbitration parameters after that structure lands.
+
+TRAF-80 aligns the three-module domain without moving an inherited result. The
+aligned authority packetizes generation-scoped 16-byte flits, records optional
+control occupancy, link acknowledgement and replay, explicit traffic class and
+virtual channel, receiver-owned credit release and ordered visibility. Its
+NVSwitch path owns input ports, destination virtual output queues and two-sided
+crossbar grants behind an identity policy. The compatibility authority remains
+the sole owner for every merged consumer that ran before this alignment.
+
+The frozen 1 MiB sanity job reaches 94.117647 GB/s for repeated 17-flit packets
+and 88.888889 GB/s for repeated 18-flit packets on four 25 GB/s links. The
+optional flit raises serialization by exactly 5.882352941176471 percent. At
+12.5 GB/s per link both serialization terms double exactly. All 13 fatal guards
+pass, including receiver ownership, byte conservation, error-free replay,
+direct-mesh identity and physical bounds. The first attempt is retained as void
+because a historical source lock was initially evaluated against the evolving
+working file; the preserved Git blob and all current behavior artifacts pass
+on the final run. The 22 consumer roots and 95 recursively inherited artifacts
+have zero failures. Flow dynamics, both transport comparisons, incast
+validation, the analytical frontier and two-network map, and deployment pricing
+publish signed shifts of +0 on their pinned authorities. This is the literal
+TRAF-80 mechanism and evidence deliverable. TRAF-73 remains open and owns every
+unidentified A100 credit, buffer, virtual-channel, return-encoding, striping
+and arbiter value.
 
 ## Open tasks
 
 ### Precision
 
-- TRAF-80 (Precision; P1; L): align the three-module NVLink packet, credit and
-  switch domain with the public mechanism boundary established by TRAF-79.
-  The surrogate being replaced treats one fixed 272-byte extent as the packet
-  and credit unit, frees the sender credit on a fixed timer, models one
-  implicit virtual channel, exposes destination service without explicit
-  receive-buffer ownership, and gives the switch no port, virtual-output-queue
-  or crossbar contention. Replace it with generation-scoped 16-byte flit
-  packetization with optional control flits, link-local acknowledgement and
-  replay accounting, explicit traffic-class and virtual-channel state,
-  receiver-owned credit release, ordering visibility, and an NVSwitch policy
-  seam over input ports, virtual output queues and crossbar outputs. Do not
-  promote an exact A100 credit quantum, pool scope, virtual-channel count,
-  buffer depth, credit-return encoding, striping granularity or product arbiter:
-  public documents leave those parameters unidentified, so TRAF-73 remains
-  their measurement owner. Preserve the profile-absent path and the NV4
-  direct-mesh structural pass-through path exactly, and make the identity
-  arbitration policy preserve every accepted timestamp, wire byte, random
-  draw and completion order. Land an expectations-only commit before the
-  behavioral implementation. Its minimum physical oracles are 94.117647 GB/s
-  payload for repeated 17-flit packets and 88.888889 GB/s for repeated 18-flit
-  packets on four 25 GB/s A100 links, a nonnegative 5.882 percent serialization
-  change when the optional flit is present, credit release never preceding
-  receive-buffer release, and error-free replay producing zero added bytes and
-  time while injected errors add neither negative quantity. The sanity study
-  varies packet occupancy and link rate, measures one fixed job-completion
-  time, and checks the frozen serialization relation. Publish the signed shift
-  in every inherited envelope before TRAF-73 begins identification; a result
-  that violates any conservation, ownership or identity guard is void.
-
-- TRAF-74 (Precision; P1; L): validate the scored three-module A100 NVLink
-  incast prediction against one qualified four-A100 `NV4` node at the only
-  physically capturable degrees, one, two and three senders into one receiver.
-  The surrogate under test is the simultaneous-release packet and credit
-  domain using the measured TX egress and RX ingress plateaus plus the declared
-  packetization, credit round and structural pass-through switch identity. Run
-  256 KiB and 512 KiB long flows only through the unchanged corrected TRAF-70
-  persistent peer-write producer, because sequential PCIe sender launches make
-  true-sync small-flow incast unconstructible. Freeze the simulator's
-  per-source completion times and aggregate receiver goodput before one short,
-  exclusive, paced `a100-hourly` cell. Record the matching hardware quantities,
-  checksum and ordering ledgers, per-link data and raw counters, replay and
-  recovery deltas, throttle state, topology and competing processes. A cell
-  passes only when `(simulation - hardware) / hardware` is inside the frozen
-  band for its aggregate and every source median, every inherited fatal guard
-  is decidable and passes, and the frozen launch-skew budget is no more than ten
-  percent of the minimum hardware completion. A miss remains published and is
-  attributed by the frozen rules to the TX egress plateau, RX ingress plateau,
-  credit round, packetization or pass-through switch identity. Degrees 4, 8 and
-  16 remain declared simulation-only mesh extrapolations with no hardware
-  counterpart on this node class; agreement at degrees 1 to 3 supports but does
-  not prove them. Preserve every merged TRAF-69, TRAF-70 and TRAF-72 artifact
-  byte for byte and publish this study under its own records. The
-  [first frozen capture](../../examples/nvlink_incast_validation_v1/RESULTS.md),
-  Merlin job `200456`, completed all 42 rows with every inherited
-  TRAF-70 guard, the full matrix guard and the preservation guard passing. Its
-  degree-3 256 KiB samples reached a maximum sequential launch-skew fraction of
-  10.501 percent against the frozen 10.000 percent ceiling, so FG11 voided the
-  whole run before behavioral scoring. Retain that refutation as the study's
-  first result. Before a future capture, land a new expectations-only freeze
-  whose larger long-flow rungs leave physical margin below the launch-skew
-  ceiling; then run one new short paced cell. TRAF-74 stays open until a
-  non-void comparison publishes all six per-cell verdicts.
+- TRAF-81 (Precision; P1; L): complete the blocked rank-16 cell in the
+  [independent collective-floor extrapolation study](../../examples/collective_floor_extrapolation_v1/RESULTS.md).
+  The frozen rank-2 and rank-4 training cells and rank-8 holdout completed on
+  Merlin A100 GPUs with all fatal guards held and every measured rate inside
+  its physical envelope. At the first locality crossing, rank-4 donor
+  extrapolation misses rank-8 all-gather by 62.889 percent median and 155.593
+  percent p95, and reduce-scatter by 61.111 percent median and 144.544 percent
+  p95, against frozen 25 and 50 percent bands. The floor-fraction family also
+  fails both operations. This refutes normalized-efficiency and
+  floor-versus-slope transfer from one NV4 node to two nodes on the measured
+  A100 system. The formal verdict remains `BLOCKED`, not a completed
+  refutation, because Merlin's per-job quality-of-service limits admit no more
+  than eight GPUs while rank 16 needs 16, leaving the frozen error-growth and
+  sign family unevaluated. Obtain a conforming four-node rank-16 allocation,
+  run only the frozen missing cell without substituting another topology or
+  transport, then publish its descriptive fit, byte-level errors and S3
+  result. The evidence remains shape-only across architectures: no A100
+  absolute latency, bandwidth, floor or slope calibrates H200. This study
+  changes no installed authority or signature metric by itself.
+- TRAF-86 (Precision; P1; L): replace the NVLink domain's declared packetization
+  service conversion identified by the completed TRAF-74 comparison. The
+  surrogate being replaced maps each logical flow directly onto the profile's
+  256-byte payload plus 16-byte header and then services those packets at the
+  measured TX egress and RX ingress plateaus. On base commit `6559313`, it
+  predicts 94.104154 to 194.808553 GB/s for the six simultaneous-release cells.
+  Merlin job `202466` instead measures 4.461874 to 14.288373 GB/s at 4 MiB and
+  8 MiB, with all 13 fatal guards passing and every per-source completion plus
+  aggregate comparison outside the frozen plus or minus 16 percent band. The
+  size-dependent miss shrinks by more than five percentage points at 8 MiB for
+  every degree, so the frozen TRAF-74 rule names packetization rather than the
+  TX plateau, RX plateau, credit round or pass-through switch identity. Treat
+  that capture as identification evidence, not as a held-out acceptance set.
+  After TRAF-80 lands the public-document packet and credit structure, freeze
+  the effective logical-message to packet-service conversion, its counter or
+  trace observable, and new 16 MiB and 32 MiB held-out long-flow cells before
+  implementation or capture. The replacement must keep checksum, ordering,
+  per-link data and raw counters, replay, recovery, throttle, topology and
+  competing-process guards decidable; put the base conversion behind an
+  explicit compatibility mode that reproduces every frozen base completion,
+  aggregate, byte count and order exactly. Acceptance requires one new non-void
+  degree-1, degree-2 and degree-3 comparison whose aggregate and every
+  per-source median are inside its pre-run physical band, plus an end-to-end
+  TTFT or TPOT change through the supported metric chain. Degrees 4, 8 and 16
+  remain declared simulation-only extrapolations and are not validated by an
+  NV4 result.
 
 - TRAF-77 (Precision; P1; L): replace the MiniMax scaling study's borrowed
   32 MiB switch-wide buffer and uncalibrated rnic-cn transport service with
@@ -1387,6 +1406,17 @@ arbitration parameters after that structure lands.
   denominator. Acceptance requires every newly pre-specified independent cell
   to pass and preserves the current surface and legacy donor authority as
   explicit, separately selectable paths.
+  Independent A100 evidence now tests the shape premise behind that wider-rank
+  transfer. A rank-4 donor misses untouched rank-8 all-gather and
+  reduce-scatter curves by 62.889 and 61.111 percent median respectively, and
+  both floor-fraction decompositions fail their frozen bands at the first
+  locality crossing, a boundary that on the measured cluster combines node
+  locality with a transport-stack change (NVLink inside the node, NCCL Socket
+  over Slingshot with GPU Direct RDMA disabled between nodes). TRAF-81 remains
+  formally blocked on rank 16, so it does not supply an error-growth result,
+  but the available rank-8 evidence removes unqualified shape confidence from
+  the EP 32 and EP 128 donor transfers. It neither transfers an A100 absolute
+  band to H200 nor changes the exact H200 rank-8 measurements.
 - TRAF-20 (Precision; P2; M): qualify the delivered `loggopsim-ideal`
   fast level for schedule-shape studies that do not need per-flow transport
   behavior. The
@@ -1995,12 +2025,13 @@ arbitration parameters after that structure lands.
   node. The surrogate being replaced is the pair-keyed credit ledger plus an
   undocumented scheduling choice. Public documents establish credit flow
   control and multiple virtual-channel classes, but not the A100 allocation
-  scope or quantum. Until TRAF-80 replaces the fixed-unit and timer structure,
-  the unchanged 256-credit, 272-byte candidate stays keyed per link for one
-  implicit modeled virtual channel. It does not claim a physical
-  virtual-channel count. Release-aware round robin is the declared baseline
-  candidate; static interleave and greedy capture are explicit alternatives.
-  TRAF-73 measures among those candidates only after the structure is aligned.
+  scope or quantum. The aligned authority separates variable flit occupancy
+  from the unchanged 256-credit and 272-byte accounting candidates, names the
+  active virtual channel and keys candidate pools by link, destination and
+  virtual channel. It does not claim a physical virtual-channel count.
+  Release-aware round robin is the declared NV4 receiver baseline candidate;
+  static interleave and greedy capture are explicit alternatives. TRAF-73
+  measures among those candidates on the aligned structure.
 
   The expectations-only specification is
   [nvlink_credit_arbitration_v1](../../examples/nvlink_credit_arbitration_v1/expectations.md).

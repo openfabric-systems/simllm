@@ -46,7 +46,9 @@ from simllm.deploy.estimator import (
     queue_occupancy,
 )
 from simllm.deploy.external_measured import (
+    AGGREGATE_TPOT_MIXED_STEP_REDUCTION,
     PICOSECONDS_PER_MILLISECOND,
+    ExternalAggregatePoint,
     ExternalQwen32BDeploymentBinding,
     ExternalServiceValue,
     validate_external_scored_stamp,
@@ -96,6 +98,7 @@ from simllm.deploy.loop import (
 )
 
 __all__ = [
+    "AGGREGATE_TPOT_MIXED_STEP_REDUCTION",
     "BUDGET_GPUS_EXCEEDED",
     "BUDGET_NODES_EXCEEDED",
     "DEPLOYMENT_CANDIDATE_SCHEMA",
@@ -117,6 +120,7 @@ __all__ = [
     "EstimatorClass",
     "EstimatorInputs",
     "EvidenceClass",
+    "ExternalAggregatePoint",
     "ExternalAnchor",
     "ExternalQwen32BDeploymentBinding",
     "ExternalServiceValue",

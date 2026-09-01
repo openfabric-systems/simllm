@@ -1,0 +1,1258 @@
+{
+  "attempt_manifest_sha256": "4ebe25ccd49dca3047916af0c08c7302d3111c7ff6fbd0d6c41aa60ff1e72ee0",
+  "comparisons": [
+    {
+      "aggregate_signed_relative_error": 20.090725960700343,
+      "completion_signed_relative_error_by_source": [
+        -0.9525857952038559
+      ],
+      "degree": 1,
+      "hardware_aggregate_gbps": 4.461873614611664,
+      "hardware_completion_us_by_source": [
+        940.032005
+      ],
+      "hardware_goodput_gbps_by_source": [
+        4.461873614611664
+      ],
+      "launch_skew_fraction_high": 0.1,
+      "maximum_launch_skew_fraction": 0.0,
+      "physical_ceiling_us": 5000.0,
+      "physical_floor_us": 44.56448,
+      "physical_sanity": "PASS",
+      "responsible_parameter": "packetization",
+      "simulation_aggregate_gbps": 94.1041536770541,
+      "simulation_completion_us_by_source": [
+        44.57087
+      ],
+      "size_bytes": 4194304,
+      "verdict": "MISS",
+      "within_frozen_band": false
+    },
+    {
+      "aggregate_signed_relative_error": 20.111748331889775,
+      "completion_signed_relative_error_by_source": [
+        -0.9526344049830752,
+        -0.9520591781568021
+      ],
+      "degree": 2,
+      "hardware_aggregate_gbps": 8.914036873594686,
+      "hardware_completion_us_by_source": [
+        941.056013,
+        929.791987
+      ],
+      "hardware_goodput_gbps_by_source": [
+        4.457018436797343,
+        4.511013278930312
+      ],
+      "launch_skew_fraction_high": 0.1,
+      "maximum_launch_skew_fraction": 0.0054374302353232375,
+      "physical_ceiling_us": 5000.0,
+      "physical_floor_us": 44.56448,
+      "physical_sanity": "PASS",
+      "responsible_parameter": "packetization",
+      "simulation_aggregate_gbps": 188.19090309651654,
+      "simulation_completion_us_by_source": [
+        44.573678,
+        44.574992
+      ],
+      "size_bytes": 4194304,
+      "verdict": "MISS",
+      "within_frozen_band": false
+    },
+    {
+      "aggregate_signed_relative_error": 13.156037248890842,
+      "completion_signed_relative_error_by_source": [
+        -0.9291235316141938,
+        -0.928235105953404,
+        -0.9282336461091192
+      ],
+      "degree": 3,
+      "hardware_aggregate_gbps": 13.760358508193,
+      "hardware_completion_us_by_source": [
+        911.360025,
+        900.095999,
+        900.095999
+      ],
+      "hardware_goodput_gbps_by_source": [
+        4.602247064764554,
+        4.6598407332771625,
+        4.6598407332771625
+      ],
+      "launch_skew_fraction_high": 0.1,
+      "maximum_launch_skew_fraction": 0.011289739769680661,
+      "physical_ceiling_us": 5000.0,
+      "physical_floor_us": 64.554418,
+      "physical_sanity": "PASS",
+      "responsible_parameter": "packetization",
+      "simulation_aggregate_gbps": 194.79214760007213,
+      "simulation_completion_us_by_source": [
+        64.59398,
+        64.595294,
+        64.596608
+      ],
+      "size_bytes": 4194304,
+      "verdict": "MISS",
+      "within_frozen_band": false
+    },
+    {
+      "aggregate_signed_relative_error": 19.632712565777773,
+      "completion_signed_relative_error_by_source": [
+        -0.9515332752873881
+      ],
+      "degree": 1,
+      "hardware_aggregate_gbps": 4.561247077147439,
+      "hardware_completion_us_by_source": [
+        1839.104056
+      ],
+      "hardware_goodput_gbps_by_source": [
+        4.561247077147439
+      ],
+      "launch_skew_fraction_high": 0.1,
+      "maximum_launch_skew_fraction": 0.0,
+      "physical_ceiling_us": 5000.0,
+      "physical_floor_us": 89.12896,
+      "physical_sanity": "PASS",
+      "responsible_parameter": "packetization",
+      "simulation_aggregate_gbps": 94.11089988427712,
+      "simulation_completion_us_by_source": [
+        89.13535
+      ],
+      "size_bytes": 8388608,
+      "verdict": "MISS",
+      "within_frozen_band": false
+    },
+    {
+      "aggregate_signed_relative_error": 19.769609573186614,
+      "completion_signed_relative_error_by_source": [
+        -0.9518534397321278,
+        -0.9512596491197335
+      ],
+      "degree": 2,
+      "hardware_aggregate_gbps": 9.0619467509202,
+      "hardware_completion_us_by_source": [
+        1851.392031,
+        1828.863978
+      ],
+      "hardware_goodput_gbps_by_source": [
+        4.5309733754601,
+        4.5867861693976675
+      ],
+      "launch_skew_fraction_high": 0.1,
+      "maximum_launch_skew_fraction": 0.002746238698613284,
+      "physical_ceiling_us": 5000.0,
+      "physical_floor_us": 89.12896,
+      "physical_sanity": "PASS",
+      "responsible_parameter": "packetization",
+      "simulation_aggregate_gbps": 188.2130959896195,
+      "simulation_completion_us_by_source": [
+        89.138158,
+        89.139472
+      ],
+      "size_bytes": 8388608,
+      "verdict": "MISS",
+      "within_frozen_band": false
+    },
+    {
+      "aggregate_signed_relative_error": 12.634061711037647,
+      "completion_signed_relative_error_by_source": [
+        -0.9266557774304431,
+        -0.9260964588001904,
+        -0.9260523865542152
+      ],
+      "degree": 3,
+      "hardware_aggregate_gbps": 14.288372571660371,
+      "hardware_completion_us_by_source": [
+        1761.279941,
+        1747.967958,
+        1746.943951
+      ],
+      "hardware_goodput_gbps_by_source": [
+        4.762790857220124,
+        4.799062798381113,
+        4.801875867395817
+      ],
+      "launch_skew_fraction_high": 0.1,
+      "maximum_launch_skew_fraction": 0.005744485218219692,
+      "physical_ceiling_us": 5000.0,
+      "physical_floor_us": 129.108836,
+      "physical_sanity": "PASS",
+      "responsible_parameter": "packetization",
+      "simulation_aggregate_gbps": 194.8085533923152,
+      "simulation_completion_us_by_source": [
+        129.179708,
+        129.181022,
+        129.182336
+      ],
+      "size_bytes": 8388608,
+      "verdict": "MISS",
+      "within_frozen_band": false
+    }
+  ],
+  "coverage": {
+    "expected_rows": 42,
+    "hardware_cells": 6,
+    "observed_rows": 42,
+    "repetitions_per_cell": 7,
+    "sample_rows": 42
+  },
+  "execution_head": "2389e00545a83af898d64fdde3c9b47c7199e3d3",
+  "expectations_commit": "b21ba822707d2d7c80b83ee2d3fb87f4fa93178d",
+  "expectations_sha256": "5465271e9909cebc214c153209316a6f266ec142d7e578b3279935b1c6a10a53",
+  "fatal_guards": {
+    "guards": [
+      {
+        "decidable": true,
+        "findings": [],
+        "id": "FG01",
+        "pass": true,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "findings": [],
+        "id": "FG02",
+        "pass": true,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "findings": [],
+        "id": "FG03",
+        "pass": true,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "findings": [],
+        "id": "FG04",
+        "pass": true,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "findings": [],
+        "id": "FG05",
+        "pass": true,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "findings": [],
+        "id": "FG06",
+        "pass": true,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "findings": [],
+        "id": "FG07",
+        "pass": true,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "findings": [],
+        "id": "FG08",
+        "pass": true,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "findings": [],
+        "id": "FG09",
+        "pass": true,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "findings": [],
+        "id": "FG10",
+        "pass": true,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "findings": [],
+        "id": "FG11",
+        "pass": true,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "findings": [],
+        "id": "FG12",
+        "pass": true,
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "findings": [],
+        "id": "FG13",
+        "pass": true,
+        "status": "PASS"
+      }
+    ],
+    "launch_skew_rows": [
+      {
+        "degree": 1,
+        "launch_skew_fraction": 0.0,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 1,
+        "launch_skew_fraction": 0.0,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 1,
+        "launch_skew_fraction": 0.0,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 1,
+        "launch_skew_fraction": 0.0,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 1,
+        "launch_skew_fraction": 0.0,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 1,
+        "launch_skew_fraction": 0.0,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 1,
+        "launch_skew_fraction": 0.0,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 2,
+        "launch_skew_fraction": 0.005290154471822857,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 2,
+        "launch_skew_fraction": 0.005395372794270574,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 2,
+        "launch_skew_fraction": 0.005407322766063445,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 2,
+        "launch_skew_fraction": 0.005371630941945728,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 2,
+        "launch_skew_fraction": 0.005371630941945728,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 2,
+        "launch_skew_fraction": 0.0054374302353232375,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 2,
+        "launch_skew_fraction": 0.005377546881354227,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 3,
+        "launch_skew_fraction": 0.011289739769680661,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 3,
+        "launch_skew_fraction": 0.011109926064675242,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 3,
+        "launch_skew_fraction": 0.011160713936941975,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 3,
+        "launch_skew_fraction": 0.011135262456087201,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 3,
+        "launch_skew_fraction": 0.011084704696511233,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 3,
+        "launch_skew_fraction": 0.011224856460436222,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 3,
+        "launch_skew_fraction": 0.011109926064675242,
+        "size_bytes": 4194304
+      },
+      {
+        "degree": 1,
+        "launch_skew_fraction": 0.0,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 1,
+        "launch_skew_fraction": 0.0,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 1,
+        "launch_skew_fraction": 0.0,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 1,
+        "launch_skew_fraction": 0.0,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 1,
+        "launch_skew_fraction": 0.0,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 1,
+        "launch_skew_fraction": 0.0,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 1,
+        "launch_skew_fraction": 0.0,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 2,
+        "launch_skew_fraction": 0.0027263051115237716,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 2,
+        "launch_skew_fraction": 0.0027370025778562786,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 2,
+        "launch_skew_fraction": 0.002724783724038482,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 2,
+        "launch_skew_fraction": 0.0027339376028762265,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 2,
+        "launch_skew_fraction": 0.0027339376028762265,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 2,
+        "launch_skew_fraction": 0.0027293529875177377,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 2,
+        "launch_skew_fraction": 0.002746238698613284,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 3,
+        "launch_skew_fraction": 0.005737734889232073,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 3,
+        "launch_skew_fraction": 0.005724282106632968,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 3,
+        "launch_skew_fraction": 0.00573100040949488,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 3,
+        "launch_skew_fraction": 0.005744485218219692,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 3,
+        "launch_skew_fraction": 0.005734365673753107,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 3,
+        "launch_skew_fraction": 0.005700890234771524,
+        "size_bytes": 8388608
+      },
+      {
+        "degree": 3,
+        "launch_skew_fraction": 0.005737734889232073,
+        "size_bytes": 8388608
+      }
+    ],
+    "verdict": "PASS"
+  },
+  "hardware_samples": [
+    {
+      "aggregate_receiver_goodput_gbps": 3.503849282981155,
+      "completion_us_by_source": [
+        1197.056055
+      ],
+      "degree": 1,
+      "goodput_gbps_by_source": [
+        3.503849282981155
+      ],
+      "repetition": 0,
+      "row_sha256": "f94332ebc9ce79af37b654d7ea5ca5932726f79007dd876bb8d08add3cf6935e",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 4.461873614611664,
+      "completion_us_by_source": [
+        940.032005
+      ],
+      "degree": 1,
+      "goodput_gbps_by_source": [
+        4.461873614611664
+      ],
+      "repetition": 1,
+      "row_sha256": "777d8d72da89177ac9a23a0178d3223477c77297e8c1edcf9a5b775e42c8d38d",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 4.466739377016467,
+      "completion_us_by_source": [
+        939.007998
+      ],
+      "degree": 1,
+      "goodput_gbps_by_source": [
+        4.466739377016467
+      ],
+      "repetition": 2,
+      "row_sha256": "9d2291100e9cac1a72683f82739c880f0242cfa9a072d271a607d6a6495d155d",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 4.457018436797343,
+      "completion_us_by_source": [
+        941.056013
+      ],
+      "degree": 1,
+      "goodput_gbps_by_source": [
+        4.457018436797343
+      ],
+      "repetition": 3,
+      "row_sha256": "f5aaaac20ec30e1023c09d4ae6a7f89ade91ee2a691c3c711b58ab12723a80a6",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 4.43290047038099,
+      "completion_us_by_source": [
+        946.175992
+      ],
+      "degree": 1,
+      "goodput_gbps_by_source": [
+        4.43290047038099
+      ],
+      "repetition": 4,
+      "row_sha256": "c5fccab98cb18dd16250144cd4c3da0ee34c03e697ee86191ab1a42664f30359",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 4.4814005621286235,
+      "completion_us_by_source": [
+        935.935974
+      ],
+      "degree": 1,
+      "goodput_gbps_by_source": [
+        4.4814005621286235
+      ],
+      "repetition": 5,
+      "row_sha256": "8ed2c3740d9e2a9c9df7f72b85ed1d391248799c4f2ecb80921f12e7a3c60b6e",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 4.4814005621286235,
+      "completion_us_by_source": [
+        935.935974
+      ],
+      "degree": 1,
+      "goodput_gbps_by_source": [
+        4.4814005621286235
+      ],
+      "repetition": 6,
+      "row_sha256": "533d593a3a6a09b72909bf22b055f54eeffceffc515b8d8ec3932567e77c480a",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 8.489119050712771,
+      "completion_us_by_source": [
+        945.151985,
+        988.160014
+      ],
+      "degree": 2,
+      "goodput_gbps_by_source": [
+        4.437703212356899,
+        4.244559525356386
+      ],
+      "repetition": 0,
+      "row_sha256": "df81a8d8d91668242be32a0b488436943e49e85baf2c9c8b1237f81d1fa02bb3",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 8.94323153639328,
+      "completion_us_by_source": [
+        937.98399,
+        926.720023
+      ],
+      "degree": 2,
+      "goodput_gbps_by_source": [
+        4.47161576819664,
+        4.525966738500049
+      ],
+      "repetition": 1,
+      "row_sha256": "6ad047912e821644fc5d3ab4d00e821834eb18dcb51327cfed08e46cc06d8478",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 8.86580094076198,
+      "completion_us_by_source": [
+        946.175992,
+        924.672008
+      ],
+      "degree": 2,
+      "goodput_gbps_by_source": [
+        4.43290047038099,
+        4.535991101398194
+      ],
+      "repetition": 2,
+      "row_sha256": "a0ba56f0f1ff6565036e9bba4f3732663c3cdef9f55a549412aed02e7d534ac6",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 8.923747229223329,
+      "completion_us_by_source": [
+        940.032005,
+        930.815995
+      ],
+      "degree": 2,
+      "goodput_gbps_by_source": [
+        4.461873614611664,
+        4.506050629265347
+      ],
+      "repetition": 3,
+      "row_sha256": "2e2a417a7a989e982eb973d1b8e8b98f37118ba56eed5f29118868e035c72634",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 8.914036873594686,
+      "completion_us_by_source": [
+        941.056013,
+        930.815995
+      ],
+      "degree": 2,
+      "goodput_gbps_by_source": [
+        4.457018436797343,
+        4.506050629265347
+      ],
+      "repetition": 4,
+      "row_sha256": "bcc1585d2ba83e9195d6f735295a5edd7531d5dab2bf2ccaba3b0df988d153af",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 8.904347627599249,
+      "completion_us_by_source": [
+        942.080021,
+        919.552028
+      ],
+      "degree": 2,
+      "goodput_gbps_by_source": [
+        4.452173813799624,
+        4.561247077147439
+      ],
+      "repetition": 5,
+      "row_sha256": "aab7af3f61bd3757cd942022c3a25cd3a247da227c259745c211412460d4e3a3",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 8.914036873594686,
+      "completion_us_by_source": [
+        941.056013,
+        929.791987
+      ],
+      "degree": 2,
+      "goodput_gbps_by_source": [
+        4.457018436797343,
+        4.511013278930312
+      ],
+      "repetition": 6,
+      "row_sha256": "c1fa09f81d188c117011af0145d07f8dd30f7a0c5e8fe8d4f9b0e87b00bbbad2",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 13.227126331194011,
+      "completion_us_by_source": [
+        911.360025,
+        885.760009,
+        951.295972
+      ],
+      "degree": 3,
+      "goodput_gbps_by_source": [
+        4.602247064764554,
+        4.735260067493067,
+        4.409042110398004
+      ],
+      "repetition": 0,
+      "row_sha256": "698922388fdc46a2e7216fbe1cbe2d194f5cb7ab85ac6ebcc181cc317c83c0cf",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 13.760358508193,
+      "completion_us_by_source": [
+        914.431989,
+        900.095999,
+        903.168023
+      ],
+      "degree": 3,
+      "goodput_gbps_by_source": [
+        4.5867861693976675,
+        4.6598407332771625,
+        4.643990811441738
+      ],
+      "repetition": 1,
+      "row_sha256": "9dcee02e434625aafa507a33d39a42705470dc659cf6b641a7e96c786e416584",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 13.869074583819534,
+      "completion_us_by_source": [
+        907.263994,
+        897.023976,
+        896.000028
+      ],
+      "degree": 3,
+      "goodput_gbps_by_source": [
+        4.623024861273178,
+        4.67579921185964,
+        4.681142710857147
+      ],
+      "repetition": 2,
+      "row_sha256": "63c03cfb322277f580d6387440268c8ace6b0196f9aae6ab24c0cd81fa54c43e",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 13.82227194266634,
+      "completion_us_by_source": [
+        910.336018,
+        903.168023,
+        898.047984
+      ],
+      "degree": 3,
+      "goodput_gbps_by_source": [
+        4.607423980888781,
+        4.643990811441738,
+        4.670467586061637
+      ],
+      "repetition": 3,
+      "row_sha256": "bd3a9758501ff2bd1bf5ba8098a56ed7c7d7995ce4b257251067684ed7ae2f56",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 13.698996357236876,
+      "completion_us_by_source": [
+        918.52802,
+        905.215979,
+        902.144015
+      ],
+      "degree": 3,
+      "goodput_gbps_by_source": [
+        4.566332119078958,
+        4.633484270387587,
+        4.649262124739585
+      ],
+      "repetition": 4,
+      "row_sha256": "086665034e56f94a8951bf589bda0df9ee3483cf72bd68692ed97cc61f6cae10",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 13.837837685658632,
+      "completion_us_by_source": [
+        909.31201,
+        890.879989,
+        896.000028
+      ],
+      "degree": 3,
+      "goodput_gbps_by_source": [
+        4.612612561886211,
+        4.708046035143348,
+        4.681142710857147
+      ],
+      "repetition": 5,
+      "row_sha256": "dfa167264f21f42ef90ea46395749776fd0da27045f436eff21c1957034f0c52",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 13.744966487996036,
+      "completion_us_by_source": [
+        915.455997,
+        901.120007,
+        900.095999
+      ],
+      "degree": 3,
+      "goodput_gbps_by_source": [
+        4.581655495998679,
+        4.65454541838843,
+        4.6598407332771625
+      ],
+      "repetition": 6,
+      "row_sha256": "3356c1ed550805464a47413bf341af1c2a8be797215cf4a42d071e4edacc1779",
+      "size_bytes": 4194304
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 4.558709095633021,
+      "completion_us_by_source": [
+        1840.127945
+      ],
+      "degree": 1,
+      "goodput_gbps_by_source": [
+        4.558709095633021
+      ],
+      "repetition": 0,
+      "row_sha256": "d82dd99b7bdb37205f7cd0eaee15c367a46b8bb304c76fe81f3ea33659c0a5d5",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 4.55617364244786,
+      "completion_us_by_source": [
+        1841.151953
+      ],
+      "degree": 1,
+      "goodput_gbps_by_source": [
+        4.55617364244786
+      ],
+      "repetition": 1,
+      "row_sha256": "1afd7185b0e71f322a89908efe68df5227cfb635fb1cf3b8cd8f43254d6925b1",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 4.561247077147439,
+      "completion_us_by_source": [
+        1839.104056
+      ],
+      "degree": 1,
+      "goodput_gbps_by_source": [
+        4.561247077147439
+      ],
+      "repetition": 2,
+      "row_sha256": "eb3fdfcfad370c3b8fecc35817d1a33b4e29479c57f7ed4238d46e4db790098a",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 4.597082063936538,
+      "completion_us_by_source": [
+        1824.767947
+      ],
+      "degree": 1,
+      "goodput_gbps_by_source": [
+        4.597082063936538
+      ],
+      "repetition": 3,
+      "row_sha256": "517b8392a7723852c3495192155a621c4675a8495f06f1e60cd9ca6ee5e91080",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 4.551111190123459,
+      "completion_us_by_source": [
+        1843.199968
+      ],
+      "degree": 1,
+      "goodput_gbps_by_source": [
+        4.551111190123459
+      ],
+      "repetition": 4,
+      "row_sha256": "deb1989e0e6cf409cb79971f0ced72e81dd1d7a786cbe711bbb705ea96b8bc9f",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 4.566332116593279,
+      "completion_us_by_source": [
+        1837.056041
+      ],
+      "degree": 1,
+      "goodput_gbps_by_source": [
+        4.566332116593279
+      ],
+      "repetition": 5,
+      "row_sha256": "afc93f175bcd5b8e04d4811551e50084593eab040689567f6768133a44a13dca",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 4.5714285091478,
+      "completion_us_by_source": [
+        1835.008025
+      ],
+      "degree": 1,
+      "goodput_gbps_by_source": [
+        4.5714285091478
+      ],
+      "repetition": 6,
+      "row_sha256": "05739027a9047029732feef75c3c50ce508afc2c9c80baed7b4f1663768c80a1",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 9.066961702461283,
+      "completion_us_by_source": [
+        1850.368023,
+        1833.984017
+      ],
+      "degree": 2,
+      "goodput_gbps_by_source": [
+        4.5334808512306415,
+        4.573980973793841
+      ],
+      "repetition": 0,
+      "row_sha256": "7ec163fdc77ff06a2382ba2c0118b920021b4ec6782c00fb503f0e1e8b897a20",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 9.1428570182956,
+      "completion_us_by_source": [
+        1835.008025,
+        1826.815963
+      ],
+      "degree": 2,
+      "goodput_gbps_by_source": [
+        4.5714285091478,
+        4.591928344125161
+      ],
+      "repetition": 1,
+      "row_sha256": "fca4b7b9b0d8f387749921c354137440099cfd29abb5a95a31e77dfa444a1746",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 9.087077133107483,
+      "completion_us_by_source": [
+        1846.271992,
+        1835.008025
+      ],
+      "degree": 2,
+      "goodput_gbps_by_source": [
+        4.5435385665537416,
+        4.5714285091478
+      ],
+      "repetition": 2,
+      "row_sha256": "4f031e640f74db035136f4f01b9cf57cef5dac6e7d0a97b11c9e856e4958de63",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 9.051933477000098,
+      "completion_us_by_source": [
+        1853.440046,
+        1828.863978
+      ],
+      "degree": 2,
+      "goodput_gbps_by_source": [
+        4.525966738500049,
+        4.5867861693976675
+      ],
+      "repetition": 3,
+      "row_sha256": "1ef0161bfa5edcaa9b1be23b9b09d33913035cfd6b65bdfa3df0732f8dc3ac20",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 9.046935131372463,
+      "completion_us_by_source": [
+        1854.464054,
+        1828.863978
+      ],
+      "degree": 2,
+      "goodput_gbps_by_source": [
+        4.523467565686231,
+        4.5867861693976675
+      ],
+      "repetition": 4,
+      "row_sha256": "60d1a1bc0b6383620aa672d0a53dc78255348a5be7dea9d8a48aeb665c926a89",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 9.0619467509202,
+      "completion_us_by_source": [
+        1851.392031,
+        1831.936002
+      ],
+      "degree": 2,
+      "goodput_gbps_by_source": [
+        4.5309733754601,
+        4.579094461183039
+      ],
+      "repetition": 5,
+      "row_sha256": "00ea403bb80d273ec329061cbe22bdedaa9d351bf67afe00b45f466c92ef1978",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 9.056937343868464,
+      "completion_us_by_source": [
+        1852.416039,
+        1820.672035
+      ],
+      "degree": 2,
+      "goodput_gbps_by_source": [
+        4.528468671934232,
+        4.607423983419396
+      ],
+      "repetition": 6,
+      "row_sha256": "5af0400d060565dcbca8e56bdef6ffa7b7cece21caf8a7c4452ad5924419c68e",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 14.37192997229917,
+      "completion_us_by_source": [
+        1751.039982,
+        1742.848039,
+        1750.015974
+      ],
+      "degree": 3,
+      "goodput_gbps_by_source": [
+        4.790643324099723,
+        4.8131608793691285,
+        4.79344653113435
+      ],
+      "repetition": 0,
+      "row_sha256": "0c28735dd132d675fce9c2fc78c9c419e75ba14283defbfebe180988b0760f0b",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 14.338389625419873,
+      "completion_us_by_source": [
+        1755.136013,
+        1746.943951,
+        1752.06399
+      ],
+      "degree": 3,
+      "goodput_gbps_by_source": [
+        4.779463208473291,
+        4.801875867395817,
+        4.787843393779242
+      ],
+      "repetition": 1,
+      "row_sha256": "55716f2cc94e42949f2d75f35e965d5f18df2b7430c9612904c3b8f97d9fc995",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 14.288372571660371,
+      "completion_us_by_source": [
+        1761.279941,
+        1747.967958,
+        1744.896054
+      ],
+      "degree": 3,
+      "goodput_gbps_by_source": [
+        4.762790857220124,
+        4.799062798381113,
+        4.807511588309202
+      ],
+      "repetition": 2,
+      "row_sha256": "6528b4105fe1a9100b27d087b48a564bfabcbcc6ad44cb5984eec7d2f175deb3",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 14.246956683049781,
+      "completion_us_by_source": [
+        1766.39998,
+        1753.087997,
+        1740.800023
+      ],
+      "degree": 3,
+      "goodput_gbps_by_source": [
+        4.748985561016593,
+        4.78504673716045,
+        4.818823465743946
+      ],
+      "repetition": 3,
+      "row_sha256": "3d4d0d7e46dbb67b491bab055bef612accb3ad3925e13618c802c6360ca206d4",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 14.280070148262528,
+      "completion_us_by_source": [
+        1762.303948,
+        1758.208036,
+        1743.872046
+      ],
+      "degree": 3,
+      "goodput_gbps_by_source": [
+        4.760023382754176,
+        4.771112307667782,
+        4.8103345765770715
+      ],
+      "repetition": 4,
+      "row_sha256": "6a5bba6a6b5a07be2fd695ffac4ac79c430cac11d8fdb5fee14ffd6249925c6c",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 14.189376171402062,
+      "completion_us_by_source": [
+        1773.568034,
+        1756.160021,
+        1754.112005
+      ],
+      "degree": 3,
+      "goodput_gbps_by_source": [
+        4.72979205713402,
+        4.776676327720593,
+        4.78225334305263
+      ],
+      "repetition": 5,
+      "row_sha256": "e2e45c7c521072eecb2a4e268d7fcde5169d369b5bd52bf13532524572500c61",
+      "size_bytes": 8388608
+    },
+    {
+      "aggregate_receiver_goodput_gbps": 14.313336923003348,
+      "completion_us_by_source": [
+        1758.208036,
+        1742.848039,
+        1746.943951
+      ],
+      "degree": 3,
+      "goodput_gbps_by_source": [
+        4.771112307667782,
+        4.8131608793691285,
+        4.801875867395817
+      ],
+      "repetition": 6,
+      "row_sha256": "89de5cf369a05c93bfaf6f4ff2c55ca4b3c875b9bc4e2014fcd960869045a998",
+      "size_bytes": 8388608
+    }
+  ],
+  "measurement_validity": "VALID_FOR_FROZEN_COMPARISON",
+  "physical_sanity": {
+    "maximum_completion_over_ceiling": 0.3702784062,
+    "maximum_eight_mib_over_four_mib_completion": 1.9673558273092933,
+    "maximum_frozen_floor_us": 129.108836,
+    "maximum_hardware_completion_us": 1851.392031,
+    "maximum_hardware_source_goodput_gbps": 4.801875867395817,
+    "minimum_eight_mib_over_four_mib_completion": 1.9325841519107667,
+    "minimum_frozen_floor_us": 44.56448,
+    "minimum_hardware_completion_us": 900.095999,
+    "minimum_hardware_over_floor": 13.530785383271521,
+    "minimum_hardware_source_goodput_gbps": 4.457018436797343,
+    "verdict": "PASS"
+  },
+  "preservation": {
+    "artifact_count": 71,
+    "artifacts_sha256": "68fd24d949424ca580877e1cfc693383921fd8df5c14e2c413bf6222560dc79a",
+    "verdict": "PASS"
+  },
+  "producer_binary_sha256": "a30df800c3bc2cf725b1e8678d561a27c78bf55625367b5039759aa58f910a54",
+  "raw_evidence": {
+    "attempt_manifest_sha256": "4ebe25ccd49dca3047916af0c08c7302d3111c7ff6fbd0d6c41aa60ff1e72ee0",
+    "required_observables": [
+      "per-flow receiver completion time",
+      "per-flow receiver payload goodput",
+      "aggregate receiver payload goodput",
+      "TRAF-70 destination checksum and ordering ledger",
+      "TRAF-70 per-link data and raw counters",
+      "TRAF-70 replay, recovery, CRC and ECC deltas",
+      "TRAF-70 clock, throttle, topology and competing-process records"
+    ],
+    "row_count": 42,
+    "row_digests": [
+      "f94332ebc9ce79af37b654d7ea5ca5932726f79007dd876bb8d08add3cf6935e",
+      "777d8d72da89177ac9a23a0178d3223477c77297e8c1edcf9a5b775e42c8d38d",
+      "9d2291100e9cac1a72683f82739c880f0242cfa9a072d271a607d6a6495d155d",
+      "f5aaaac20ec30e1023c09d4ae6a7f89ade91ee2a691c3c711b58ab12723a80a6",
+      "c5fccab98cb18dd16250144cd4c3da0ee34c03e697ee86191ab1a42664f30359",
+      "8ed2c3740d9e2a9c9df7f72b85ed1d391248799c4f2ecb80921f12e7a3c60b6e",
+      "533d593a3a6a09b72909bf22b055f54eeffceffc515b8d8ec3932567e77c480a",
+      "df81a8d8d91668242be32a0b488436943e49e85baf2c9c8b1237f81d1fa02bb3",
+      "6ad047912e821644fc5d3ab4d00e821834eb18dcb51327cfed08e46cc06d8478",
+      "a0ba56f0f1ff6565036e9bba4f3732663c3cdef9f55a549412aed02e7d534ac6",
+      "2e2a417a7a989e982eb973d1b8e8b98f37118ba56eed5f29118868e035c72634",
+      "bcc1585d2ba83e9195d6f735295a5edd7531d5dab2bf2ccaba3b0df988d153af",
+      "aab7af3f61bd3757cd942022c3a25cd3a247da227c259745c211412460d4e3a3",
+      "c1fa09f81d188c117011af0145d07f8dd30f7a0c5e8fe8d4f9b0e87b00bbbad2",
+      "698922388fdc46a2e7216fbe1cbe2d194f5cb7ab85ac6ebcc181cc317c83c0cf",
+      "9dcee02e434625aafa507a33d39a42705470dc659cf6b641a7e96c786e416584",
+      "63c03cfb322277f580d6387440268c8ace6b0196f9aae6ab24c0cd81fa54c43e",
+      "bd3a9758501ff2bd1bf5ba8098a56ed7c7d7995ce4b257251067684ed7ae2f56",
+      "086665034e56f94a8951bf589bda0df9ee3483cf72bd68692ed97cc61f6cae10",
+      "dfa167264f21f42ef90ea46395749776fd0da27045f436eff21c1957034f0c52",
+      "3356c1ed550805464a47413bf341af1c2a8be797215cf4a42d071e4edacc1779",
+      "d82dd99b7bdb37205f7cd0eaee15c367a46b8bb304c76fe81f3ea33659c0a5d5",
+      "1afd7185b0e71f322a89908efe68df5227cfb635fb1cf3b8cd8f43254d6925b1",
+      "eb3fdfcfad370c3b8fecc35817d1a33b4e29479c57f7ed4238d46e4db790098a",
+      "517b8392a7723852c3495192155a621c4675a8495f06f1e60cd9ca6ee5e91080",
+      "deb1989e0e6cf409cb79971f0ced72e81dd1d7a786cbe711bbb705ea96b8bc9f",
+      "afc93f175bcd5b8e04d4811551e50084593eab040689567f6768133a44a13dca",
+      "05739027a9047029732feef75c3c50ce508afc2c9c80baed7b4f1663768c80a1",
+      "7ec163fdc77ff06a2382ba2c0118b920021b4ec6782c00fb503f0e1e8b897a20",
+      "fca4b7b9b0d8f387749921c354137440099cfd29abb5a95a31e77dfa444a1746",
+      "4f031e640f74db035136f4f01b9cf57cef5dac6e7d0a97b11c9e856e4958de63",
+      "1ef0161bfa5edcaa9b1be23b9b09d33913035cfd6b65bdfa3df0732f8dc3ac20",
+      "60d1a1bc0b6383620aa672d0a53dc78255348a5be7dea9d8a48aeb665c926a89",
+      "00ea403bb80d273ec329061cbe22bdedaa9d351bf67afe00b45f466c92ef1978",
+      "5af0400d060565dcbca8e56bdef6ffa7b7cece21caf8a7c4452ad5924419c68e",
+      "0c28735dd132d675fce9c2fc78c9c419e75ba14283defbfebe180988b0760f0b",
+      "55716f2cc94e42949f2d75f35e965d5f18df2b7430c9612904c3b8f97d9fc995",
+      "6528b4105fe1a9100b27d087b48a564bfabcbcc6ad44cb5984eec7d2f175deb3",
+      "3d4d0d7e46dbb67b491bab055bef612accb3ad3925e13618c802c6360ca206d4",
+      "6a5bba6a6b5a07be2fd695ffac4ac79c430cac11d8fdb5fee14ffd6249925c6c",
+      "e2e45c7c521072eecb2a4e268d7fcde5169d369b5bd52bf13532524572500c61",
+      "89de5cf369a05c93bfaf6f4ff2c55ca4b3c875b9bc4e2014fcd960869045a998"
+    ],
+    "storage": "digest-complete external attempt retained outside Git"
+  },
+  "recorded_at": "2026-09-01T12:00:38.295896+00:00",
+  "registry_effect": "TRAF-74 closes as a completed validation; TRAF-86 owns the identified model precision residual",
+  "residual_task": "TRAF-86",
+  "scheduler_job": "202466",
+  "schema": "simllm-nvlink-incast-validation-score-v2",
+  "scope_limits": {
+    "flow_scope": "long flows only",
+    "hardware_degrees": [
+      1,
+      2,
+      3
+    ],
+    "higher_degree_statement": "agreement at degrees 1 to 3 supports but does not prove the simulation-only degree 4, 8 and 16 extrapolation",
+    "simulation_only_degrees": [
+      4,
+      8,
+      16
+    ],
+    "small_flow_statement": "true-sync small-flow incast is not constructible with sequential sender launch writes and remains a model prediction"
+  },
+  "simulation_identity": {
+    "flow_policy": "release_aware_round_robin",
+    "implementation": "simllm-htsim-nvlink-domain-v1",
+    "model_sha256": "498de9ca7e81bd59679ce55242eeae516624d9be495e802b5c1ee959ee213f47",
+    "module_version_commit": "65593131a0448d2b33f51018d5972c918dad3493",
+    "profile_sha256": "d33ef5b2c6fa87cc97e1e7b45a43a841a5da45f5462311e3981fbc903c56deb2",
+    "release_ps": 0
+  },
+  "status": "VALID_0_PASS_6_MISS",
+  "summary": {
+    "launch_skew_fraction_high": 0.1,
+    "maximum_launch_skew_fraction": 0.011289739769680661,
+    "miss_cells": 6,
+    "pass_cells": 0,
+    "void_cells": 0,
+    "worst_absolute_signed_relative_error": 20.111748331889775
+  },
+  "task_id": "TRAF-74",
+  "task_status": "CLOSED_WITH_FINDING"
+}
