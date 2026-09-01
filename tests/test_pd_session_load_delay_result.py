@@ -164,5 +164,5 @@ def test_registry_advances_after_the_historical_vllm39_result() -> None:
     assert "- VLLM-39 (Precision; P1; M):" not in module
     assert "- VLLM-40 (Precision; P1; M):" not in module
     assert "- VLLM-41 (Precision; P1; M):" not in module
-    assert "- VLLM-42 (Precision; P1; M):" in module
+    assert "- VLLM-42 (Precision; P1; M):" not in module
     assert "it stays open until VLLM-40 permits the literal" not in module

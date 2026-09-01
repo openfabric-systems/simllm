@@ -1,0 +1,2149 @@
+{
+  "conservation": {
+    "admissions": 3072,
+    "cells": 48,
+    "handoffs": 3072,
+    "maximum_ttft_residual_ps": 0,
+    "terminal_decode_tokens": 12288,
+    "terminals": 3072
+  },
+  "fatal_guards": {
+    "findings": [],
+    "status": "HELD"
+  },
+  "physical_sanity": {
+    "all_observations_inside_physical_bounds": true,
+    "ceiling_service_per_token_ps": {
+      "denominator": 1,
+      "numerator": 1110576000
+    },
+    "floor_service_per_token_ps": {
+      "denominator": 2,
+      "numerator": 473207875
+    },
+    "maximum_absolute_prediction_error_ps": {
+      "denominator": 128,
+      "numerator": 894563665
+    },
+    "observed_maximum_service_per_token_ps": {
+      "denominator": 1,
+      "numerator": 1110576000
+    },
+    "observed_minimum_service_per_token_ps": {
+      "denominator": 128,
+      "numerator": 125157018365
+    },
+    "scored": false
+  },
+  "provenance": {
+    "access_protocol_sha256": "0706303d2d69502a06a362dec0f9bf83ff2306b02dfad8a0e842b5167aab769a",
+    "expectations_sha256": "95a5921d2075136073189ead7ca7fdc9eca4c8fcb6482cffda7e04eee35989da",
+    "field_reader_sha256": "73d9d5891efbbbe2d0e521da6343be9f9cac9cdf0ce65ce4975559b761b360f6",
+    "forbidden_access_ledger_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "freeze_commit": "375639c147f39fe4f01ea212855ef9e8efb5d7fa",
+    "monotonic_direction_rescored": false,
+    "non_held_out_publication": null,
+    "onset_rescored": false,
+    "preservation": {
+      "artifact_count": 56,
+      "manifest_sha256": "ac8dfc619d6e0ecf62d0f935242daa84fe02f2a679b30428f542a39a653df2e2",
+      "queue_onset_artifact_count": 11,
+      "worktree_bytes_held": true
+    },
+    "raw_result_location": "non-held-out/result.json under SIMLLM_VLLM42_RUN_ROOT",
+    "raw_result_sha256": "03d0aa975ec3528b099ac11fdb9c86535bd902c3754761158e67dacf5365913b",
+    "run_head": "daf0914534aa01240559669b0405e78664187979",
+    "service_model_sha256": "10ae0207581302f1e685c2374ce8e2348f4fd589e08368178b90ad51d56b3a3f",
+    "split": "non-held-out",
+    "surface_sha256": "26fc547d8b47ccec7108872e05fbedfe71ebb6229b88799ca254089d3f2b6e9d"
+  },
+  "runtime": {
+    "cluster_time": false,
+    "offline": true,
+    "python": "3.10.18",
+    "vllm": "0.27.1"
+  },
+  "schema": "simllm-pd-session-batching-service-publication-v1",
+  "separate_fields": {
+    "arrival_to_prefill_published": true,
+    "batching_service_published": true,
+    "handoff_to_decode_published": true
+  },
+  "service_band_summary": {
+    "evaluated": 48,
+    "held": 48,
+    "missed": 0
+  },
+  "service_band_verdicts": [
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        1,
+        8,
+        50
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        1,
+        8,
+        100
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        1,
+        8,
+        150
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        1,
+        8,
+        175
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        1,
+        8,
+        200
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        1,
+        8,
+        210
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 2,
+        "numerator": 340510165
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 141259164335
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        1,
+        8,
+        220
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 839109250
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 606425514
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 256,
+          "numerator": 276256383015
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 141259164335
+        }
+      },
+      "cell": [
+        1,
+        1,
+        8,
+        225
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 918270500
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 139470037005
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 279834637675
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 598855041
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 16,
+          "numerator": 16874652335
+        },
+        "upper": {
+          "denominator": 32,
+          "numerator": 34643868335
+        }
+      },
+      "cell": [
+        1,
+        1,
+        8,
+        230
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 949935000
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 272678128355
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 68393173005
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 571649088
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 132313527685
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 270889001025
+        }
+      },
+      "cell": [
+        1,
+        1,
+        8,
+        235
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 965767250
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 267310746365
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 134102655015
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 2,
+        "numerator": 1099123861
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 126946145695
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 260154237045
+        }
+      },
+      "cell": [
+        1,
+        1,
+        8,
+        245
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 981599500
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 256575982385
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 128735273025
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 514604750
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 32,
+          "numerator": 31065613675
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 254786855055
+        }
+      },
+      "cell": [
+        1,
+        1,
+        8,
+        250
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 981599500
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 251208600395
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 63025791015
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        1,
+        16,
+        50
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        1,
+        16,
+        100
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        1,
+        16,
+        150
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        1,
+        16,
+        175
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        1,
+        16,
+        200
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        1,
+        16,
+        210
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 2,
+        "numerator": 1110918165
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 64,
+          "numerator": 70182300335
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        1,
+        16,
+        220
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 854941500
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 283412892335
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 592440014
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 137680909675
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 281623765005
+        }
+      },
+      "cell": [
+        1,
+        1,
+        16,
+        225
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 934102750
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 278045510345
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 278045510345
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 581067291
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 256,
+          "numerator": 269099873695
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 276256383015
+        }
+      },
+      "cell": [
+        1,
+        1,
+        16,
+        230
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 949935000
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 135891782345
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 272678128355
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 581816838
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 256,
+          "numerator": 263732491705
+        },
+        "upper": {
+          "denominator": 16,
+          "numerator": 16874652335
+        }
+      },
+      "cell": [
+        1,
+        1,
+        16,
+        235
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 965767250
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 66604045675
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 66604045675
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 2,
+        "numerator": 1091503861
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 256,
+          "numerator": 252997727725
+        },
+        "upper": {
+          "denominator": 64,
+          "numerator": 64814918345
+        }
+      },
+      "cell": [
+        1,
+        1,
+        16,
+        245
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 981599500
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 8,
+        "numerator": 7990044335
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 8,
+        "numerator": 7990044335
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 524772500
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 256,
+          "numerator": 247630345735
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 126946145695
+        }
+      },
+      "cell": [
+        1,
+        1,
+        16,
+        250
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 981599500
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 125157018365
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 251208600395
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        2,
+        8,
+        50
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        2,
+        8,
+        100
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        2,
+        8,
+        150
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        2,
+        8,
+        175
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        2,
+        8,
+        200
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        2,
+        8,
+        210
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 2,
+        "numerator": 340510165
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        2,
+        8,
+        220
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 839109250
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 899319264
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 139470037005
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        2,
+        8,
+        225
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 1231376000
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 141259164335
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 141259164335
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 1022824041
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 64,
+          "numerator": 68393173005
+        },
+        "upper": {
+          "denominator": 64,
+          "numerator": 70182300335
+        }
+      },
+      "cell": [
+        1,
+        2,
+        8,
+        230
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 1370391000
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 137680909675
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 32,
+        "numerator": 34643868335
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 1073270088
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 134102655015
+        },
+        "upper": {
+          "denominator": 64,
+          "numerator": 68393173005
+        }
+      },
+      "cell": [
+        1,
+        2,
+        8,
+        235
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 1428467750
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 16,
+        "numerator": 16874652335
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 270889001025
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 2,
+        "numerator": 2076268861
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 128735273025
+        },
+        "upper": {
+          "denominator": 32,
+          "numerator": 32854741005
+        }
+      },
+      "cell": [
+        1,
+        2,
+        8,
+        245
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 1477598500
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 64814918345
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 260154237045
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 1045420250
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 64,
+          "numerator": 63025791015
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 258365109715
+        }
+      },
+      "cell": [
+        1,
+        2,
+        8,
+        250
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 1480580500
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 126946145695
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 8,
+        "numerator": 7990044335
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        2,
+        16,
+        50
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        2,
+        16,
+        100
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        2,
+        16,
+        150
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        2,
+        16,
+        175
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        2,
+        16,
+        200
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        2,
+        16,
+        210
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 2,
+        "numerator": 1056246165
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        2,
+        16,
+        220
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 854941500
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 1,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 899931014
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 256,
+          "numerator": 278045510345
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "cell": [
+        1,
+        2,
+        16,
+        225
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 1281997750
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 70182300335
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 70182300335
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 1060947291
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 135891782345
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 139470037005
+        }
+      },
+      "cell": [
+        1,
+        2,
+        16,
+        230
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 1367409000
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 137680909675
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 137680909675
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 1093998588
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 64,
+          "numerator": 66604045675
+        },
+        "upper": {
+          "denominator": 64,
+          "numerator": 68393173005
+        }
+      },
+      "cell": [
+        1,
+        2,
+        16,
+        235
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 1428806000
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 269099873695
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 16,
+        "numerator": 16874652335
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 2,
+        "numerator": 2173636861
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 8,
+          "numerator": 7990044335
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 261943364375
+        }
+      },
+      "cell": [
+        1,
+        2,
+        16,
+        245
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 1483019500
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 258365109715
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 64814918345
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    },
+    {
+      "admissions": 64,
+      "arrival_to_prefill_wait_ps": {
+        "denominator": 1,
+        "numerator": 1038193250
+      },
+      "batching_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 125157018365
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 128735273025
+        }
+      },
+      "cell": [
+        1,
+        2,
+        16,
+        250
+      ],
+      "handoff_to_decode_admission_wait_ps": {
+        "denominator": 1,
+        "numerator": 1486611250
+      },
+      "handoffs": 64,
+      "held": true,
+      "maximum_decode_batch_size": 2,
+      "maximum_prefill_batch_size": 1,
+      "maximum_ttft_residual_ps": 0,
+      "observed_batching_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 252997727725
+      },
+      "predicted_batching_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 126946145695
+      },
+      "split": "non-held-out",
+      "terminal_decode_tokens": 256,
+      "terminals": 64
+    }
+  ],
+  "settled_claims": {
+    "monotonic_250_to_8000": "PRESERVED_NOT_RESCORED",
+    "onset": "PRESERVED_NOT_RESCORED"
+  },
+  "split": "non-held-out",
+  "status": "PASS"
+}
