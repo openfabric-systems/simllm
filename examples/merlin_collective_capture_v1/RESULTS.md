@@ -6,21 +6,21 @@ What ran: four A100 Slurm jobs captured all-gather, reduce-scatter,
 all-reduce and pairwise all-to-allv over the frozen 8-byte through 128-MiB
 ladder at widths 2 and 8 under declared one-port and four-port routing.
 
-What came out: the campaign is **VOID** because fatal guard FG-2 failed.
-The endpoint counters contradicted the declared concentration in all four
-attempts. The frozen rule voids every Family R directional row and forbids
-relabeling the cells. Independent consistency anchors and complete ladders
-were still earned: Family C passes all three anchors, Family L publishes all
-352 cells without a duplicate, and Family W passes.
+What came out: the campaign is **NONVOID** because the only campaign-voiding
+guard, FG-4, held. FG-2 applies to cells. Separate TX and RX evaluation finds
+317 contradicted cells, 35 cells below the frozen 1 MiB signal minimum, and
+zero proven cells. Family R therefore has 129 VOID rows, 21 UNEVALUABLE rows,
+and zero scoreable rows. Independent Family C passes all three anchors, Family
+L publishes all 352 cells without a duplicate, and Family W passes.
 
 What it changes: TRAF-77 narrows to the literal achieved evidence: phase
 timing at widths 2 and 8 with anchors held; endpoint proxies captured;
 concentration control refuted pending a working pinning mechanism; switch
 occupancy remains unobservable. TRAF-77 stays open. TRAF-81 now owns working
-TX-side routing control, the unresolved TX-counter semantics, and the two
-capture-harness portability defects.
+TX-side routing control, the unresolved TX and RX counter semantics, and the
+two capture-harness portability defects.
 
-What it does not change: this void run supplies no routing-direction score,
+What it does not change: this campaign supplies no routing-direction score,
 fabric-only width-8 attribution, fitted transport calibration, H200 evidence,
 switch occupancy, receiver occupancy, queue-wait, buffer high-water, time to
 first token (TTFT), or time per output token (TPOT) acceptance. It closes no
@@ -93,25 +93,24 @@ microseconds, above that floor, and the source provides no finite upper bound.
 | width 8, four-port, all-reduce, 8 B | 71.664 us | 1.410986414648553 | [0.5, 2.0] | PASS |
 | width 8, four-port, all-to-allv, 8 B | 126.407 us | 1.4075719614720783 | [0.5, 2.0] | PASS |
 
-### Family R: VOID
+### Family R: UNEVALUABLE
 
 Physical sanity first: the frozen routing proof requires at least 95 percent
 on hsn0 for one-port and at least 5 percent on every hsn port for four-port,
-after at least 1 MiB moved. Every attempt moved far more than 1 MiB, yet the
-per-direction table below shows that the declaration was not achieved.
+after at least 1 MiB moved in the cell's node-level TX-plus-RX counter window.
+The separate TX and RX predicate finds 317 contradicted cells, 35
+insufficient-signal cells and zero proven cells. The six width-8 four-port
+cells that passed the old pooled-fraction calculation have balanced RX but
+more than 99 percent of TX on one port, so none survives directional testing.
 
-All 150 rows in E1 through E4 are **VOID**, with no behavioral denominator.
-The cells consumed by E1, E2, E3 and E4 all belong to attempts whose counters
-contradicted their declared concentration. In particular, the width-2
-one-port attempts split RX across two ports and sent almost all TX on hsn2 or
-hsn1; width-8 one-port gpu101 received on hsn0 but sent almost all TX on hsn2;
-and both four-port attempts concentrated TX on one port per node. The freeze
-says contradicted cells void and are never relabeled, so even E4's diagnostic
-anchor comparisons cannot enter a routing score.
-
-For audit only, if FG-2 were ignored, the recorded diagnostics would leave E1
-and E2 refuted, E3 refuted, and E4 held. Those statements are not scored
-family outcomes and do not repair the void.
+Family R publishes 129 **VOID** rows because at least one consumed cell is
+contradicted and 21 **UNEVALUABLE** rows because at least one consumed cell is
+below the signal minimum and none is contradicted. No row consumes only proven
+cells, so the behavioral denominator is zero. E1 contributes 75 VOID and 13
+UNEVALUABLE rows; E2 contributes 42 VOID and 2 UNEVALUABLE rows; E3 contributes
+12 VOID rows; and all 6 E4 rows are UNEVALUABLE. The concentration-control
+refutation is cell-scoped and undiminished: contradicted cells remain void and
+are never relabeled.
 
 ### Family L: PASS
 
@@ -157,6 +156,22 @@ than 99.93 percent on hsn2. At width 2 the one-port and four-port snapshots are
 nearly identical: each node received approximately 3.12 GB on two ports and
 transmitted more than 99.9 percent on one non-hsn0 port.
 
+### Per-direction concentration verdicts
+
+The job-level snapshots have ample signal in both directions. Applying the
+declared concentration to TX and RX separately gives:
+
+| Attempt and declaration | Node | TX verdict | RX verdict |
+|---|---|---|---|
+| w2 four-port, job 202416 | gpu101 | CONTRADICTED | CONTRADICTED |
+| w2 four-port, job 202416 | gpu102 | CONTRADICTED | CONTRADICTED |
+| w2 one-port, job 202415 | gpu101 | CONTRADICTED | CONTRADICTED |
+| w2 one-port, job 202415 | gpu102 | CONTRADICTED | CONTRADICTED |
+| w8 four-port, job 202418 | gpu101 | CONTRADICTED | PROVEN |
+| w8 four-port, job 202418 | gpu105 | CONTRADICTED | PROVEN |
+| w8 one-port, job 202417 | gpu101 | CONTRADICTED | PROVEN |
+| w8 one-port, job 202417 | gpu105 | PROVEN | PROVEN |
+
 ## Transport mechanism
 
 The hardware moved bytes from GPU buffers through host memory and ordinary
@@ -194,20 +209,16 @@ Physical sanity first: width-8 one-port gpu101 has 262,776,768,014 counted TX
 bytes against 25,527,859,035 RX bytes, a quotient of 10.2937. Yet it has
 33,649,046 TX packets and 33,508,230 RX packets, and the opposite node has
 33,229,717 TX packets and 33,844,821 RX packets. Every captured error and drop
-delta is zero. Tenfold wire retransmission would require a comparable packet
-or error excess; neither exists.
+delta is zero. Those Linux packet and error fields cannot exclude
+retransmission below the offload accounting boundary.
 
-The byte counters therefore do not have symmetric wire-byte semantics. Across
-the attempts, TX averages roughly 7.6 to 7.9 KiB per counted packet while RX
-averages roughly 0.73 to 0.75 KiB per counted packet. The independently reconstructed
-RX total matches the payload ladder and warmup arithmetic, so RX is the
-payload-matched side. The strongest evidence-supported explanation is receive
-offload or aggregation accounting on one side of the Linux interface, or an
-equivalent Cassini driver convention that charges different byte units in TX
-and RX. This is a counter-semantics conclusion, not an identification of the
-exact driver rule. The compute image lacked `ethtool` and `tc`, and the capture
-contains no authoritative Cassini hardware byte counter. The exact meaning of
-the TX byte field remains unexplained and is assigned to TRAF-81.
+The Linux TX and RX byte fields are not symmetric wire-byte authorities.
+Across the attempts, TX averages roughly 7.6 to 7.9 KiB per counted packet
+while RX averages roughly 0.73 to 0.75 KiB per counted packet. The independently
+reconstructed RX total matches the payload ladder and warmup arithmetic, but
+the capture contains no authoritative Cassini hardware counter that identifies
+the wire-byte relation. The exact TX and RX field semantics remain unexplained
+and are assigned to TRAF-81.
 
 ## Width-8 interpretation limit
 

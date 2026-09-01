@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+from collections import Counter
 from pathlib import Path
 
 import pytest
@@ -42,11 +43,13 @@ def _evidence_root_or_skip() -> Path:
     return root
 
 
-def test_tracked_record_locks_void_run_and_independent_family_outcomes() -> None:
+def test_tracked_record_locks_nonvoid_run_and_cell_scoped_family_outcomes() -> None:
     record = _record()
     assert record["schema"] == "simllm-merlin-collective-scored-record-v1"
-    assert record["run_state"] == "void"
-    assert record["verdict"] == "VOID_FG_2_CONCENTRATION_CONTROL_REFUTED"
+    assert record["run_state"] == "nonvoid"
+    assert record["verdict"] == (
+        "NONVOID_FG_2_CELL_SCOPED_CONCENTRATION_CONTROL_REFUTED"
+    )
     assert {key: row["status"] for key, row in record["fatal_guards"].items()} == {
         "FG-1": "PASS",
         "FG-2": "FAIL",
@@ -58,9 +61,16 @@ def test_tracked_record_locks_void_run_and_independent_family_outcomes() -> None
     }
     assert record["families"]["C"]["status"] == "PASS"
     assert record["families"]["C"]["passed"] == 3
-    assert record["families"]["R"]["status"] == "VOID"
-    assert record["families"]["R"]["denominator"] is None
-    assert record["families"]["R"]["void_rows"] == 150
+    assert record["fatal_guards"]["FG-2"]["cell_status_counts"] == {
+        "CONTRADICTED": 317,
+        "INSUFFICIENT-SIGNAL": 35,
+        "PROVEN": 0,
+    }
+    assert record["families"]["R"]["status"] == "UNEVALUABLE"
+    assert record["families"]["R"]["denominator"] == 0
+    assert record["families"]["R"]["scoreable_rows"] == 0
+    assert record["families"]["R"]["void_rows"] == 129
+    assert record["families"]["R"]["unevaluable_rows"] == 21
     assert record["families"]["L"]["status"] == "PASS"
     assert record["families"]["L"]["passed"] == 352
     assert record["families"]["W"]["status"] == "PASS"
@@ -125,8 +135,44 @@ def test_tracked_record_locks_socket_mechanism_and_achieved_ports() -> None:
     assert gpu105["rx_total_bytes"] == 25_595_714_529
     assert len(record["achieved_concentration"]["rows"]) == 32
 
+    direction_verdicts = {
+        (row["attempt_id"], row["node"]): (
+            row["directional_routing"]["tx"]["status"],
+            row["directional_routing"]["rx"]["status"],
+        )
+        for row in record["achieved_concentration"]["node_summaries"]
+    }
+    assert direction_verdicts == {
+        ("w2_four-port_job202416", "gpu101"): (
+            "CONTRADICTED",
+            "CONTRADICTED",
+        ),
+        ("w2_four-port_job202416", "gpu102"): (
+            "CONTRADICTED",
+            "CONTRADICTED",
+        ),
+        ("w2_one-port_job202415", "gpu101"): (
+            "CONTRADICTED",
+            "CONTRADICTED",
+        ),
+        ("w2_one-port_job202415", "gpu102"): (
+            "CONTRADICTED",
+            "CONTRADICTED",
+        ),
+        ("w8_four-port_job202418", "gpu101"): ("CONTRADICTED", "PROVEN"),
+        ("w8_four-port_job202418", "gpu105"): ("CONTRADICTED", "PROVEN"),
+        ("w8_one-port_job202417", "gpu101"): ("CONTRADICTED", "PROVEN"),
+        ("w8_one-port_job202417", "gpu105"): ("PROVEN", "PROVEN"),
+    }
 
-def test_results_csv_separates_scored_and_void_evidence_classes() -> None:
+    cell_routing = record["achieved_concentration"]["cell_routing"]
+    assert cell_routing["signal_scope"] == "node-level TX-plus-RX total"
+    assert "w8/four-port/all_gather/65536" in cell_routing[
+        "cell_ids_by_status"
+    ]["CONTRADICTED"]
+
+
+def test_results_csv_separates_scored_void_and_unevaluable_evidence() -> None:
     rows = _csv_rows()
     assert len(rows) == 506
     counts = {}
@@ -142,8 +188,20 @@ def test_results_csv_separates_scored_and_void_evidence_classes() -> None:
         "W": 1,
     }
     routing_rows = [row for row in rows if row["family"].startswith("R/")]
-    assert {row["status"] for row in routing_rows} == {"VOID"}
-    assert all("forbids relabeling" in row["reason"] for row in routing_rows)
+    assert Counter(row["status"] for row in routing_rows) == {
+        "VOID": 129,
+        "UNEVALUABLE": 21,
+    }
+    assert all(
+        "forbids relabeling" in row["reason"]
+        for row in routing_rows
+        if row["status"] == "VOID"
+    )
+    assert all(
+        "1 MiB signal minimum" in row["reason"]
+        for row in routing_rows
+        if row["status"] == "UNEVALUABLE"
+    )
     assert {row["status"] for row in rows if row["family"] == "L"} == {"PASS"}
 
 

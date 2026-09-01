@@ -354,7 +354,10 @@ def test_runbook_locks_the_remote_command_sequence_and_hash_checks() -> None:
     assert "scp merlin:simllm-stage" in text
     assert text.count("sbatch -M gmerlin7 --account=merlin") == 4
     assert "squeue -M gmerlin7" in text
-    assert "LOCAL_EVIDENCE_ROOT=/\"data3/yifeng/simllm-dev/planmode-runs/traf77-t2\"" in text
+    assert (
+        'LOCAL_EVIDENCE_ROOT="${SIMLLM_TRAF77_EVIDENCE_ROOT:?set '
+        'SIMLLM_TRAF77_EVIDENCE_ROOT}"' in text
+    )
     assert "cuda/12.2.2" in text
     assert "nvidia_nccl_cu12" in text
     assert 'ln -s libnccl.so.2 "${NCCL_ROOT}/lib/libnccl.so"' in text
@@ -392,6 +395,45 @@ def test_counter_delta_handles_increment_wrap_and_nested_sources() -> None:
             "wrapped": False,
         }
     ]
+
+
+def test_routing_observation_keeps_tx_and_rx_fractions_separate() -> None:
+    nodes = {
+        "synthetic-node": {
+            "ports": {
+                "hsn0": {"tx_delta_bytes": 1_000, "rx_delta_bytes": 9_000_000},
+                "hsn1": {"tx_delta_bytes": 1_000, "rx_delta_bytes": 1_000},
+                "hsn2": {"tx_delta_bytes": 9_000_000, "rx_delta_bytes": 1_000},
+                "hsn3": {"tx_delta_bytes": 1_000, "rx_delta_bytes": 1_000},
+            }
+        }
+    }
+
+    observation = analyzer._routing_observation("one-port", nodes, CONFIG)
+
+    node = observation["nodes"]["synthetic-node"]
+    assert observation["status"] == "contradicted"
+    assert node["directions"]["tx"]["status"] == "contradicted"
+    assert node["directions"]["rx"]["status"] == "proven"
+
+
+def test_routing_observation_retains_the_pooled_one_mib_signal_gate() -> None:
+    nodes = {
+        "synthetic-node": {
+            "ports": {
+                port: {"tx_delta_bytes": 10_000, "rx_delta_bytes": 10_000}
+                for port in CONFIG["interfaces"]
+            }
+        }
+    }
+
+    observation = analyzer._routing_observation("one-port", nodes, CONFIG)
+
+    node = observation["nodes"]["synthetic-node"]
+    assert observation["status"] == "insufficient-signal"
+    assert {row["status"] for row in node["directions"].values()} == {
+        "insufficient-signal"
+    }
 
 
 def test_snapshot_parser_reads_synthetic_sysfs_and_names_sources(tmp_path: Path) -> None:
