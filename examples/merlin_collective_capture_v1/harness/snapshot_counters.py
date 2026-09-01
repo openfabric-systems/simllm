@@ -77,14 +77,27 @@ def _ethtool_stats(interface: str) -> dict[str, Any]:
 
 def snapshot(interface: str, tag: str, net_class_root: Path) -> dict[str, Any]:
     interface_root = net_class_root / interface
-    clock_id = getattr(time, "CLOCK_MONOTONIC_RAW", time.CLOCK_MONOTONIC)
+    clock_id = getattr(
+        time, "CLOCK_MONOTONIC_RAW", getattr(time, "CLOCK_MONOTONIC", None)
+    )
     return {
         "schema": "simllm-merlin-interface-counter-snapshot-v1",
         "evidence_class": os.environ.get("TRAF77_EVIDENCE_CLASS", "hardware-capture"),
         "tag": tag,
         "node": socket.gethostname(),
         "interface": interface,
-        "clock_monotonic_raw_ns": time.clock_gettime_ns(clock_id),
+        "clock_monotonic_raw_ns": (
+            time.clock_gettime_ns(clock_id)
+            if clock_id is not None
+            else time.monotonic_ns()
+        ),
+        "clock_source": (
+            "CLOCK_MONOTONIC_RAW"
+            if hasattr(time, "CLOCK_MONOTONIC_RAW")
+            else "CLOCK_MONOTONIC"
+            if clock_id is not None
+            else "monotonic_ns"
+        ),
         "clock_realtime_ns": time.time_ns(),
         "sources": {
             "sysfs_statistics": _read_tree(interface_root / "statistics"),
