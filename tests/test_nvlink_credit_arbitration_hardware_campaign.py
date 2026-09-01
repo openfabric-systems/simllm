@@ -54,6 +54,10 @@ def mock_binary(tmp_path_factory):
     applied = subprocess.run(
         (
             "git",
+            "-c",
+            "core.autocrlf=false",
+            "-c",
+            "core.eol=lf",
             "-C",
             str(build_root),
             "apply",
