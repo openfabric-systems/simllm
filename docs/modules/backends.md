@@ -1541,6 +1541,23 @@ model the two flows as separate nodes and say so.
   where the sender decides to emit the next packet. Acceptance: the depth-1 and
   depth-1024 pairs at 8 KiB and 64 KiB reproduce within 20 percent on the
   ratio, and an unset cap preserves every accepted result byte for byte.
+- HTSIM-39 (Precision; P1; M): admission fairness in the ns-tm3 egress buffer.
+  When the buffer is full the switch drops whatever arrives, and with several
+  equal-rate sources whose pacing is deterministic the same source wins the
+  race for every freed slot, so the loss lands entirely on the others. The
+  [hacc_fabric_v1](../../examples/hacc_fabric_v1/RESULTS.md) study measured it:
+  two symmetric 32 MiB senders into one port put **100 percent** of the
+  retransmissions on one sender while the other finished with zero, and three
+  senders produced a strict 0, 7689, 13943 ordering. The measurement this is
+  compared against split the loss evenly, within 0.5 percent across eight
+  concurrent streams on a real tail-drop switch. The consequence is not only
+  unfair: the starved flow receives nothing after its first hole, so its
+  receiver never sees an out-of-order packet, never generates a NACK, and the
+  sender learns of the loss only when the queue drains, which makes any
+  first-drop timing instrument unusable. Acceptance: with several equal-rate
+  sources and a full buffer, the loss splits within 10 percent across sources
+  and the first NACK arrives about one buffer drain after the first drop, while
+  a single-source run preserves every accepted result byte for byte.
 ### Completeness
 
 - HTSIM-1 (Completeness; P2; L): `rnic-ss` (Slingshot-like) profile
