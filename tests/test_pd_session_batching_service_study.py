@@ -34,6 +34,21 @@ def _runner():
             sys.modules["service_model"] = previous
 
 
+def _module_with_service_model(path: Path, name: str):
+    previous = sys.modules.get("service_model")
+    sys.modules["service_model"] = _module(
+        STUDY_DIR / "service_model.py",
+        f"{name}_service_model",
+    )
+    try:
+        return _module(path, name)
+    finally:
+        if previous is None:
+            del sys.modules["service_model"]
+        else:
+            sys.modules["service_model"] = previous
+
+
 def _request(cell_key: tuple[int, int, int, int], index: int) -> dict:
     stable = "-".join(map(str, cell_key)) + f"-{index}"
     return {
@@ -205,3 +220,44 @@ def test_publisher_combines_only_released_unique_splits() -> None:
     assert combined["status"] == "PASS"
     assert combined["service_band_summary"]["held"] == 78
     assert combined["closure"] == {"VLLM-42": "CLOSED", "VLLM-50": "UNUSED"}
+
+
+def test_merge_accepts_one_complete_non_held_out_shard_set() -> None:
+    merger = _module_with_service_model(
+        STUDY_DIR / "merge_cells.py",
+        "vllm42_test_merger",
+    )
+    observation, _freeze = _observation("non-held-out")
+    provenance = {"freeze_commit": "f" * 40}
+    runtime = {"python": "3.10.18", "vllm": "0.27.1"}
+    documents = [
+        {
+            "schema": merger.CELL_RESULT_SCHEMA,
+            "provenance": provenance,
+            "runtime": runtime,
+            "split": "non-held-out",
+            "cell": cell,
+            "onset_scored": False,
+            "monotonic_direction_scored": False,
+        }
+        for cell in reversed(observation["cells"])
+    ]
+
+    merged = merger.merge_cell_documents("non-held-out", documents)
+
+    assert merged["provenance"] == provenance
+    assert len(merged["cells"]) == 48
+    assert [tuple(cell[key] for key in (
+        "prefill_engines",
+        "decode_engines",
+        "prompt_tokens",
+        "offered_load_requests_per_second",
+    )) for cell in merged["cells"]] == sorted(
+        tuple(cell[key] for key in (
+            "prefill_engines",
+            "decode_engines",
+            "prompt_tokens",
+            "offered_load_requests_per_second",
+        ))
+        for cell in observation["cells"]
+    )
