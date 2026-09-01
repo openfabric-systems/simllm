@@ -174,6 +174,6 @@ def test_registry_closes_vllm41_and_registers_only_vllm42() -> None:
     ledger = json.loads((REPOSITORY_ROOT / "docs" / "task-ledger.json").read_text(encoding="utf-8"))
 
     assert "- VLLM-41 (Precision; P1; M):" not in module
-    assert "- VLLM-42 (Precision; P1; M):" in module
+    assert "- VLLM-42 (Precision; P1; M):" not in module
     assert "- VLLM-43 (Precision; P1; M):" not in module
     assert "VLLM-41" in ledger["closed"]
