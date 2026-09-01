@@ -1,0 +1,74 @@
+evidence_class,family,id,kind,passed,expected,observed,units,detail
+GUARD,FG,FG-AGG-1a,fatal,True,true,true,,all positive forward-pass durations come from the imported measured operation database and RooflineProvider was never reached
+GUARD,FG,FG-AGG-1b,fatal,True,true,true,,"the five reachable adjustments, donor source hashes, source ranges and imported memory constants match the freeze"
+GUARD,FG,FG-AGG-1c,fatal,True,true,true,,all ten declared factors have complete remove-one TPOT and TTFT projections with identity on unreachable outputs
+GUARD,FG,FG-AGG-2,fatal,True,true,true,,"all protected prior publications, the aggregate table and the parity record are byte-identical before and after evaluation"
+GUARD,FG,FG-AGG-3,fatal,True,true,true,,"package versions, imported slice identity, donor hashes and source line ranges match the frozen aggregate semantics"
+GUARD,FG,FG-AGG-4,fatal,True,true,true,,every figure series names its strategy and traffic while both co-located aggregate arms carry zero P/D handoff bytes and start no packet process
+GUARD,FG,FG-AGG-5,fatal,True,true,true,,"every published operating-point TTFT is decomposed into prefill, queueing and a residual inside the frozen rounding bound"
+GUARD,FG,FG-AGG-7,fatal,True,true,true,,"all 25 scheduling counters, table identities, axes and request rates reproduce the declared aggregate arithmetic"
+GUARD,FG,FG-AGG-8,fatal,True,true,true,,"all measured aggregate services satisfy the frozen HBM, compute, causal, scaling and throughput bounds"
+GUARD,FG,FG-AGG-9,fatal,True,true,true,,the immutable DEPLOY-22 expectation freeze precedes this implementation and evaluation
+MEASURED-EXTERNAL,AR,AR-01,scored,True,"[0.98, 1.02]",0.999958049968,,aggregate-tp4-b20-ctx4000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-02,scored,True,"[0.98, 1.02]",0.999974265342,,aggregate-tp4-b16-ctx4000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-03,scored,True,"[0.98, 1.02]",1.000028075001,,aggregate-tp4-b15-ctx4000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-04,scored,True,"[0.98, 1.02]",0.999997899320,,aggregate-tp4-b14-ctx4000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-05,scored,True,"[0.98, 1.02]",0.999976581561,,aggregate-tp4-b13-ctx4000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-06,scored,True,"[0.98, 1.02]",1.000006805812,,aggregate-tp4-b12-ctx4000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-07,scored,True,"[0.98, 1.02]",0.999994978670,,aggregate-tp4-b11-ctx4000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-08,scored,True,"[0.98, 1.02]",1.000018454060,,aggregate-tp4-b10-ctx4000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-09,scored,True,"[0.98, 1.02]",0.999931345189,,aggregate-tp4-b9-ctx4000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-10,scored,True,"[0.98, 1.02]",0.999930062827,,aggregate-tp8-b16-ctx8000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-11,scored,True,"[0.98, 1.02]",1.000056418122,,aggregate-tp8-b15-ctx8000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-12,scored,True,"[0.98, 1.02]",1.000000630017,,aggregate-tp8-b14-ctx8000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-13,scored,True,"[0.98, 1.02]",0.999967472313,,aggregate-tp8-b13-ctx8000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-14,scored,True,"[0.98, 1.02]",0.999945090395,,aggregate-tp8-b12-ctx8000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-15,scored,True,"[0.98, 1.02]",1.000000468793,,aggregate-tp8-b11-ctx8000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-16,scored,True,"[0.98, 1.02]",1.000021939910,,aggregate-tp8-b10-ctx8000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-17,scored,True,"[0.98, 1.02]",1.000018627257,,aggregate-tp8-b9-ctx8000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-18,scored,True,"[0.98, 1.02]",1.000067317930,,aggregate-tp8-b8-ctx8000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-19,scored,True,"[0.98, 1.02]",1.000074535719,,aggregate-tp8-b7-ctx8000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-20,scored,True,"[0.98, 1.02]",0.999943843483,,aggregate-tp8-b6-ctx8000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-21,scored,True,"[0.98, 1.02]",1.000062095486,,aggregate-tp8-b5-ctx4000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-22,scored,True,"[0.98, 1.02]",1.000012513828,,aggregate-tp8-b5-ctx8000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-23,scored,True,"[0.98, 1.02]",0.999951384797,,aggregate-tp8-b4-ctx8000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-24,scored,True,"[0.98, 1.02]",0.999990557920,,aggregate-tp8-b4-ctx4000; composed TPOT / published aggregate operating-point TPOT
+MEASURED-EXTERNAL,AR,AR-25,scored,True,"[0.98, 1.02]",0.999995104781,,aggregate-tp8-b3-ctx4000; composed TPOT / published aggregate operating-point TPOT
+UNSCORED-DECOMPOSITION,TTFT,TTFT-01,unscored,,,-0.000093785061,ms residual,aggregate-tp4-b20-ctx4000; pure prefill 100.764594311 ms; queueing 186.414499475 ms; composed 287.179093785 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-02,unscored,,,0.000157174390,ms residual,aggregate-tp4-b16-ctx4000; pure prefill 100.562204840 ms; queueing 165.927637986 ms; composed 266.489842826 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-03,unscored,,,0.000172547916,ms residual,aggregate-tp4-b15-ctx4000; pure prefill 100.495318251 ms; queueing 160.792509201 ms; composed 261.287827452 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-04,unscored,,,-0.000497931779,ms residual,aggregate-tp4-b14-ctx4000; pure prefill 100.428430561 ms; queueing 155.664067370 ms; composed 256.092497932 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-05,unscored,,,0.000145572372,ms residual,aggregate-tp4-b13-ctx4000; pure prefill 100.361541771 ms; queueing 150.542312657 ms; composed 250.903854428 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-06,unscored,,,0.000102897270,ms residual,aggregate-tp4-b12-ctx4000; pure prefill 100.294651879 ms; queueing 145.427245224 ms; composed 245.721897103 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-07,unscored,,,0.000373879650,ms residual,aggregate-tp4-b11-ctx4000; pure prefill 100.227760883 ms; queueing 140.318865237 ms; composed 240.546626120 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-08,unscored,,,-0.000041643918,ms residual,aggregate-tp4-b10-ctx4000; pure prefill 100.160868785 ms; queueing 135.217172859 ms; composed 235.378041644 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-09,unscored,,,-0.000143837033,ms residual,aggregate-tp4-b9-ctx4000; pure prefill 100.093975581 ms; queueing 130.122168256 ms; composed 230.216143837 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-10,unscored,,,-0.000013409874,ms residual,aggregate-tp8-b16-ctx8000; pure prefill 127.620005960 ms; queueing 159.525007450 ms; composed 287.145013410 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-11,unscored,,,-0.000243220596,ms residual,aggregate-tp8-b15-ctx8000; pure prefill 127.591663654 ms; queueing 159.489579567 ms; composed 287.081243221 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-12,unscored,,,-0.000306962225,ms residual,aggregate-tp8-b14-ctx8000; pure prefill 127.563321346 ms; queueing 153.075985616 ms; composed 280.639306962 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-13,unscored,,,0.000046115197,ms residual,aggregate-tp8-b13-ctx8000; pure prefill 127.534979039 ms; queueing 153.041974846 ms; composed 280.576953885 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-14,unscored,,,-0.000268969157,ms residual,aggregate-tp8-b12-ctx8000; pure prefill 127.506636730 ms; queueing 146.632632239 ms; composed 274.139268969 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-15,unscored,,,-0.000333003746,ms residual,aggregate-tp8-b11-ctx8000; pure prefill 127.478294420 ms; queueing 146.600038583 ms; composed 274.078333004 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-16,unscored,,,0.000100568862,ms residual,aggregate-tp8-b10-ctx8000; pure prefill 127.449952110 ms; queueing 140.194947321 ms; composed 267.644899431 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-17,unscored,,,-0.000083656557,ms residual,aggregate-tp8-b9-ctx8000; pure prefill 127.433849360 ms; queueing 140.177234296 ms; composed 267.611083657 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-18,unscored,,,-0.000380549838,ms residual,aggregate-tp8-b8-ctx8000; pure prefill 127.417746610 ms; queueing 133.788633940 ms; composed 261.206380550 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-19,unscored,,,-0.000369909515,ms residual,aggregate-tp8-b7-ctx8000; pure prefill 127.401643858 ms; queueing 133.771726051 ms; composed 261.173369910 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-20,unscored,,,-0.000082212269,ms residual,aggregate-tp8-b6-ctx8000; pure prefill 127.385541106 ms; queueing 127.385541106 ms; composed 254.771082212 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-21,unscored,,,0.000498550033,ms residual,aggregate-tp8-b5-ctx4000; pure prefill 74.773095929 ms; queueing 82.250405521 ms; composed 157.023501450 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-22,unscored,,,0.000457587165,ms residual,aggregate-tp8-b5-ctx8000; pure prefill 127.364771206 ms; queueing 127.364771206 ms; composed 254.729542413 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-23,unscored,,,0.000197453473,ms residual,aggregate-tp8-b4-ctx8000; pure prefill 127.344001306 ms; queueing 120.976801241 ms; composed 248.320802547 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-24,unscored,,,-0.000177511943,ms residual,aggregate-tp8-b4-ctx4000; pure prefill 74.757159762 ms; queueing 78.495017750 ms; composed 153.252177512 ms
+UNSCORED-DECOMPOSITION,TTFT,TTFT-25,unscored,,,-0.000444422929,ms residual,aggregate-tp8-b3-ctx4000; pure prefill 74.741222211 ms; queueing 74.741222211 ms; composed 149.482444423 ms
+UNSCORED-SENSITIVITY,ADJ,ADJ-01,unscored,,,TPOT 0.999930063..1.000074536; TTFT 0.999996825..1.000002973,quotient ranges,remove prefill_latency_correction; TPOT reachable=False; TTFT reachable=False
+UNSCORED-SENSITIVITY,ADJ,ADJ-02,unscored,,,TPOT 0.999930063..1.000074536; TTFT 0.999996825..1.000002973,quotient ranges,remove decode_latency_correction; TPOT reachable=False; TTFT reachable=False
+UNSCORED-SENSITIVITY,ADJ,ADJ-03,unscored,,,TPOT 0.999930063..1.000074536; TTFT 0.999996825..1.000002973,quotient ranges,remove prefill_rate_matching_degradation; TPOT reachable=False; TTFT reachable=False
+UNSCORED-SENSITIVITY,ADJ,ADJ-04,unscored,,,TPOT 0.999930063..1.000074536; TTFT 0.999996825..1.000002973,quotient ranges,remove decode_rate_matching_degradation; TPOT reachable=False; TTFT reachable=False
+UNSCORED-SENSITIVITY,ADJ,ADJ-05,unscored,,,TPOT 0.999930063..1.000074536; TTFT 0.999996825..1.000002973,quotient ranges,remove autoscale_ttft_correction; TPOT reachable=False; TTFT reachable=False
+UNSCORED-SENSITIVITY,ADJ,ADJ-06,unscored,,,TPOT 0.994353381..0.999240408; TTFT 0.981435704..0.985975253,quotient ranges,remove memory_bandwidth_empirical_scale; TPOT reachable=True; TTFT reachable=True
+UNSCORED-SENSITIVITY,ADJ,ADJ-07,unscored,,,TPOT 0.870898115..0.942110113; TTFT 0.992253423..0.995463140,quotient ranges,remove memory_empirical_constant_latency; TPOT reachable=True; TTFT reachable=True
+UNSCORED-SENSITIVITY,ADJ,ADJ-08,unscored,,,TPOT 0.999170510..0.999977012; TTFT 0.996915199..0.998194901,quotient ranges,remove context_attention_extra_latency_correction; TPOT reachable=True; TTFT reachable=True
+UNSCORED-SENSITIVITY,ADJ,ADJ-09,unscored,,,TPOT 0.999930063..1.000074536; TTFT 0.350877308..0.512820105,quotient ranges,remove aggregate_ttft_queueing_heuristic; TPOT reachable=False; TTFT reachable=True
+UNSCORED-SENSITIVITY,ADJ,ADJ-10,unscored,,,TPOT 1.052782053..1.154867076; TTFT 0.999996825..1.000002973,quotient ranges,remove trtllm_tpot_mixed_step_reduction; TPOT reachable=True; TTFT reachable=False
+STRUCTURAL-IDENTITY,NET,NET-1,unscored,,,byte-identical,complete projection,co-located unpriced and packet arms each carry zero P/D handoff bytes and the packet arm invokes no native process
+GUARD,FG,FG-AGG-6,fatal,True,true,true,,two complete fresh-process scored evaluation JSON payloads are byte-identical; elapsed_seconds and W-1 are excluded by name
+WALL,W,W-1,scored,True,<= 600,283.608026,seconds,"two complete fresh-process evaluations, source audits, ten sensitivities and both additive figure renderings"
