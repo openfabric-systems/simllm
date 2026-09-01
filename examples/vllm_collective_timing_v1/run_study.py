@@ -7,6 +7,7 @@ import hashlib
 import importlib.metadata
 import json
 import os
+import re
 import subprocess
 import sys
 from copy import deepcopy
@@ -33,6 +34,7 @@ from simllm.traffic import (
 )
 
 CONFIG_PATH = Path(__file__).with_name("study_config.json")
+AMENDMENT_PATH = Path(__file__).with_name("study_config_amendment_1.json")
 RESULT_SCHEMA = "simllm-vllm-collective-timing-result-v1"
 OLD_CANONICAL_BYTES = (
     b'{"finished_request_ids":[],"preempted_request_ids":[],"scheduled":[],'
@@ -65,6 +67,10 @@ def _canonical(value: object) -> bytes:
 
 def _load_config() -> dict[str, Any]:
     return json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+
+
+def _load_amendment() -> dict[str, Any]:
+    return json.loads(AMENDMENT_PATH.read_text(encoding="utf-8"))
 
 
 def _require_external_directory(path: Path, label: str) -> Path:
@@ -109,6 +115,13 @@ def _validate_pins(args: argparse.Namespace, config: dict[str, Any]) -> None:
             raise FatalGuardError(f"pinned source hash changed for {relative}: {observed}")
     if _sha256(model / "config.json") != pins["model_config_sha256"]:
         raise FatalGuardError("pinned Granite model config hash changed")
+    amendment = _load_amendment()
+    for relative, expected in amendment["pinned_sources"].items():
+        observed = _sha256(source / relative)
+        if observed != expected:
+            raise FatalGuardError(
+                f"amendment source hash changed for {relative}: {observed}"
+            )
 
 
 def _child_preflight(args: argparse.Namespace) -> None:
@@ -448,13 +461,36 @@ def _bypassed_comparator() -> None:
     """Mutation control that skips the comparator's default refusal."""
 
 
+def _metadata_control_projection(
+    run: list[list[dict[str, Any]]],
+) -> list[list[dict[str, Any]]]:
+    """Project M1 onto cells not refuted by the frozen logits-kind oracle."""
+
+    projected = deepcopy(run)
+    for step in projected:
+        if len(step) > 49:
+            step[49].pop("kind", None)
+    return projected
+
+
+def _transition(baseline_pass: bool, mutant_pass: bool) -> dict[str, bool]:
+    return {
+        "baseline_pass": baseline_pass,
+        "mutant_pass": mutant_pass,
+        "pass_to_fail": baseline_pass and not mutant_pass,
+    }
+
+
 def _mutation_controls(
     expected_runs: list[list[list[dict[str, Any]]]],
     observed_runs: list[list[list[dict[str, Any]]]],
     shape_runs: list[list[dict[str, Any]]],
     raw_rows: list[dict[str, Any]],
+    refusal: bool,
     acknowledgement: dict[str, Any],
-) -> dict[str, bool]:
+) -> dict[str, dict[str, bool]]:
+    metadata_expected = _metadata_control_projection(expected_runs[0])
+    metadata_observed = _metadata_control_projection(observed_runs[0])
     dropped = deepcopy(observed_runs[0])
     dropped[0] = dropped[0][1:]
     changed_payload = deepcopy(observed_runs[0])
@@ -466,15 +502,35 @@ def _mutation_controls(
     acknowledged_without_stamp = deepcopy(acknowledgement)
     acknowledged_without_stamp["cross_environment_acknowledged"] = False
     return {
-        "drop-first-call": dropped != expected_runs[0],
-        "increment-first-payload-byte": changed_payload != expected_runs[0],
-        "change-second-run-first-kind": changed_kind_shape != shape_runs[0],
-        "delete-optional-envelope": not _new_schema_predicate(no_envelope),
-        "bypass-cross-environment-refusal": not _refusal_predicate(_bypassed_comparator),
-        "drop-cross-environment-acknowledgement-stamp": not (
-            _acknowledgement_predicate(acknowledged_without_stamp)
+        "drop-first-call": _transition(
+            metadata_observed == metadata_expected,
+            _metadata_control_projection(dropped) == metadata_expected,
+        ),
+        "increment-first-payload-byte": _transition(
+            metadata_observed == metadata_expected,
+            _metadata_control_projection(changed_payload) == metadata_expected,
+        ),
+        "change-second-run-first-kind": _transition(
+            shape_runs[1] == shape_runs[0],
+            changed_kind_shape == shape_runs[0],
+        ),
+        "delete-optional-envelope": _transition(
+            _new_schema_predicate(raw_rows),
+            _new_schema_predicate(no_envelope),
+        ),
+        "bypass-cross-environment-refusal": _transition(
+            refusal,
+            _refusal_predicate(_bypassed_comparator),
+        ),
+        "drop-cross-environment-acknowledgement-stamp": _transition(
+            _acknowledgement_predicate(acknowledgement),
+            _acknowledgement_predicate(acknowledged_without_stamp),
         ),
     }
+
+
+def _internal_request_id_matches(logical: str, internal: str) -> bool:
+    return re.fullmatch(rf"{re.escape(logical)}-[0-9a-f]{{8}}", internal) is not None
 
 
 def _fatal_guards(
@@ -499,7 +555,7 @@ def _fatal_guards(
         guards[f"run-{index}-request-identity"] = (
             len(assigned) == len(requests)
             and all(
-                internal.startswith(f"{logical}-")
+                _internal_request_id_matches(logical, internal)
                 for internal, logical in zip(assigned, requests, strict=True)
             )
             and scheduled_ids == assigned
@@ -562,9 +618,12 @@ def _score(
         observed_runs,
         shape_runs,
         raw_by_run[0],
+        refusal,
         acknowledgement,
     )
-    guards["all-mutation-controls-fire"] = all(mutations.values())
+    guards["all-mutation-controls-fire"] = all(
+        transition["pass_to_fail"] for transition in mutations.values()
+    )
     if not all(guards.values()):
         failed = sorted(name for name, passed in guards.items() if not passed)
         raise FatalGuardError(f"fatal guards failed: {failed}")
@@ -578,12 +637,23 @@ def _score(
     }
     passed = sum(result for results in families.values() for result in results)
     total = sum(len(results) for results in families.values())
-    services = [
-        invocation.service_ps
-        for records in records_by_run
-        for record in records
+    timing_rows = [
+        {
+            "service_ps": invocation.service_ps,
+            "run": run_index,
+            "step": step_index,
+            "phase": "prefill" if step_index == 0 else "decode",
+            "ordinal": invocation.sequence,
+            "kind": invocation.kind,
+            "layer_index": invocation.layer_index,
+            "layer_name": invocation.layer_name,
+        }
+        for run_index, records in enumerate(records_by_run, start=1)
+        for step_index, record in enumerate(records)
         for invocation in record.collective_service.invocations
     ]
+    minimum_timing = min(timing_rows, key=lambda row: row["service_ps"])
+    maximum_timing = max(timing_rows, key=lambda row: row["service_ps"])
     metadata_mismatches = []
     for run_index, (expected_run, observed_run) in enumerate(
         zip(expected_runs, observed_runs, strict=True), start=1
@@ -610,6 +680,7 @@ def _score(
         "task": "VLLM-48",
         "status": "PASS" if passed == total else "FAIL",
         "expectation_commit": "2808a04",
+        "expectation_amendment_commit": "ad98074",
         "live_environment": {
             "vllm_version": "0.27.1+cpu",
             "device": "cpu",
@@ -630,9 +701,11 @@ def _score(
         },
         "shape_determinism": families["M2"][0],
         "timing_diagnostics_ps": {
-            "count": len(services),
-            "minimum": min(services),
-            "maximum": max(services),
+            "count": len(timing_rows),
+            "minimum": minimum_timing["service_ps"],
+            "minimum_location": minimum_timing,
+            "maximum": maximum_timing["service_ps"],
+            "maximum_location": maximum_timing,
             "values_recorded": True,
             "scored": False,
         },
@@ -646,7 +719,10 @@ def _score(
             "acknowledged_result": acknowledgement,
         },
         "fatal_guards": guards,
-        "mutation_controls": mutations,
+        "mutation_controls": {
+            name: transition["pass_to_fail"] for name, transition in mutations.items()
+        },
+        "mutation_control_transitions": mutations,
         "families": families,
         "behavioral_score": {"passed": passed, "total": total},
         "bulk_artifacts": [
@@ -682,6 +758,7 @@ def _run_parent(args: argparse.Namespace) -> None:
             "finding": str(error),
             "behavioral_score": None,
         }
+    result["attempt_name"] = args.attempt_name
     (attempt_dir / "results.json").write_bytes(_canonical(result) + b"\n")
     print(json.dumps(result, indent=2, sort_keys=True))
     if result["status"] != "PASS":
@@ -690,10 +767,45 @@ def _run_parent(args: argparse.Namespace) -> None:
 
 def _check_only() -> None:
     config = _load_config()
+    amendment = _load_amendment()
     if config["task"] != "VLLM-48":
         raise SystemExit("study config task changed")
     if sum(config["families"].values()) != 7:
         raise SystemExit("frozen behavioral denominator changed")
+    if amendment != {
+        "schema": "simllm-vllm-collective-timing-amendment-v1",
+        "task": "VLLM-48",
+        "base_expectation_commit": "2808a04",
+        "chronology": "post-attempt-2-harness-reality-amendment",
+        "scope": "request-identity-fatal-guard-only",
+        "pinned_sources": {
+            "vllm/v1/engine/input_processor.py": (
+                "5de9296e6f4c00473a92df8df6e4e7e5f83fa37852c7540c4447c59a8b813111"
+            ),
+            "vllm/utils/__init__.py": (
+                "c58b3f45deeb98bccca22c945526fd15d483a2f5eb8a3c62cf7df218b081885f"
+            ),
+        },
+        "assigned_request_id_rule": {
+            "logical_id_relation": "exact-logical-id-hyphen-eight-lowercase-hex",
+            "scheduler_ids": "exact-assigned-internal-ids-in-order",
+            "completion_ids": "exact-original-logical-ids",
+            "output_map_ids": "exact-original-logical-ids",
+        },
+        "qualifying_evidence": {
+            "fresh_processes": 2,
+            "new_append_only_attempt_after_amendment_commit": True,
+        },
+        "unchanged_expectations": [
+            "collective-population",
+            "collective-metadata-oracle",
+            "seven-instance-behavioral-denominator",
+            "local-timings-unscored",
+            "all-mutation-controls",
+            "logits-kind-gather",
+        ],
+    }:
+        raise SystemExit("request-identity amendment changed")
     if config["source_population"] != {
         "steps_per_run": 2,
         "calls_per_step": 50,

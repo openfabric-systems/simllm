@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import importlib.util
 import json
+from copy import deepcopy
 from fractions import Fraction
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -24,6 +27,14 @@ from simllm.traffic import (
     CollectiveFloorSourceIdentity,
     compare_collective_service_to_floor,
 )
+
+_STUDY_PATH = (
+    Path(__file__).parents[1] / "examples" / "vllm_collective_timing_v1" / "run_study.py"
+)
+_STUDY_SPEC = importlib.util.spec_from_file_location("vllm48_run_study", _STUDY_PATH)
+assert _STUDY_SPEC is not None and _STUDY_SPEC.loader is not None
+run_study = importlib.util.module_from_spec(_STUDY_SPEC)
+_STUDY_SPEC.loader.exec_module(run_study)
 
 
 class _FakeDtype:
@@ -227,16 +238,90 @@ def test_cuda_seam_uses_events_around_the_collective(monkeypatch):
         )
     finally:
         live_capture._active_session.reset(token)
+    assert actions == ["record:start", "collective", "record:end"]
+    actions.append("step-returned")
     capture = session.resolve()
     assert actions == [
         "record:start",
         "collective",
         "record:end",
+        "step-returned",
         "sync:end",
         "elapsed:start:end",
     ]
     assert capture.environment.timer == "cuda-event"
     assert capture.invocations[0].service_ps == 250_000_000
+
+
+def test_cuda_execute_defers_resolution_beyond_the_wrapped_step(monkeypatch):
+    monkeypatch.setenv(live_capture.COLLECTIVE_CAPTURE_SYSTEM_ENV, "gpu-host")
+    monkeypatch.setattr(live_capture.importlib.metadata, "version", lambda _name: "0.27.1")
+    actions = []
+
+    class Event:
+        def __init__(self, name):
+            self.name = name
+
+        def record(self):
+            actions.append(f"record:{self.name}")
+
+        def synchronize(self):
+            actions.append(f"sync:{self.name}")
+
+        def elapsed_time(self, other):
+            actions.append(f"elapsed:{self.name}:{other.name}")
+            return 0.25
+
+    monkeypatch.setattr(live_capture, "_cuda_events", lambda: (Event("start"), Event("end")))
+    monkeypatch.setattr(
+        live_capture,
+        "translate_scheduler_output",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            record=StepRecord(step_index=0, virtual_time_ps=0)
+        ),
+    )
+    monkeypatch.setattr(live_capture, "_step_index", 0)
+    deferred = []
+
+    def submit(record, session):
+        actions.append("defer:resolution")
+        deferred.append((record, session))
+
+    monkeypatch.setattr(live_capture, "_submit_cuda_resolution", submit)
+    monkeypatch.setattr(
+        live_capture,
+        "_append_record",
+        lambda _record: actions.append("append:record"),
+    )
+    coordinator = SimpleNamespace(
+        world_size=2,
+        rank=0,
+        torch_distributed_backend="nccl",
+        unique_name="tp:0",
+    )
+
+    def execute(_runner, _scheduler_output):
+        live_capture._timed_collective_call(
+            coordinator,
+            "all_gather",
+            lambda _coordinator, tensor: actions.append("collective") or tensor,
+            _Tensor(device_type="cuda"),
+        )
+        actions.append("execute:return")
+        return "result"
+
+    assert live_capture._capture_execute(execute, object(), object()) == "result"
+    actions.append("wrapper:return")
+    assert actions == [
+        "record:start",
+        "collective",
+        "record:end",
+        "execute:return",
+        "defer:resolution",
+        "wrapper:return",
+    ]
+    live_capture._resolve_and_append(*deferred[0])
+    assert actions[-3:] == ["sync:end", "elapsed:start:end", "append:record"]
 
 
 def test_non_driver_and_single_rank_calls_are_not_recorded():
@@ -301,3 +386,51 @@ def test_same_environment_comparison_is_unstamped():
     )
     assert not result.cross_environment_acknowledged
     assert not result.transferred_at_use_acknowledged
+
+
+def test_request_identity_amendment_requires_exact_vllm_suffix():
+    assert run_study._internal_request_id_matches("vllm48-short", "vllm48-short-0123abcd")
+    assert not run_study._internal_request_id_matches("vllm48-short", "vllm48-short")
+    assert not run_study._internal_request_id_matches(
+        "vllm48-short", "vllm48-short-0123abcd-extra"
+    )
+    assert not run_study._internal_request_id_matches("vllm48-short", "other-0123abcd")
+
+
+def test_metadata_mutations_flip_after_masking_only_refuted_kind_cell():
+    expected_step = [
+        {
+            "sequence": index,
+            "kind": "gather" if index == 49 else "all_reduce",
+            "payload_bytes": 16,
+        }
+        for index in range(50)
+    ]
+    observed_step = deepcopy(expected_step)
+    observed_step[49]["kind"] = "all_gather"
+    expected_runs = [[expected_step]]
+    observed_runs = [[observed_step]]
+    shape = [{"step_index": 0, "invocations": observed_step}]
+    raw_rows = [
+        step_record_to_json(
+            StepRecord(
+                step_index=0,
+                virtual_time_ps=0,
+                collective_service=CollectiveServiceCapture(
+                    environment=_environment(),
+                    invocations=(_invocation(),),
+                ),
+            )
+        )
+    ]
+    transitions = run_study._mutation_controls(
+        expected_runs,
+        observed_runs,
+        [shape, deepcopy(shape)],
+        raw_rows,
+        True,
+        {"cross_environment_acknowledged": True},
+    )
+    assert all(control["baseline_pass"] for control in transitions.values())
+    assert not any(control["mutant_pass"] for control in transitions.values())
+    assert all(control["pass_to_fail"] for control in transitions.values())
