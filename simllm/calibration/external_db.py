@@ -2222,6 +2222,9 @@ class ExternalQwen32BPassModel:
         kv_cache_quant_mode: str = "bfloat16",
         fmha_quant_mode: str = "bfloat16",
         communication_quant_mode: str = "half",
+        memory_bandwidth_empirical_scale: float | None = None,
+        memory_empirical_constant_latency_s: float | None = None,
+        context_attention_extra_latency_correction: float = 1.1,
     ) -> None:
         self.database = database
         if tensor_parallel not in {2, 4, 8}:
@@ -2236,6 +2239,41 @@ class ExternalQwen32BPassModel:
         self.kv_cache_quant_mode = kv_cache_quant_mode
         self.fmha_quant_mode = fmha_quant_mode
         self.communication_quant_mode = communication_quant_mode
+        gpu = database.system_spec["gpu"]
+        self.memory_bandwidth_empirical_scale = (
+            float(gpu["mem_bw_empirical_scaling_factor"])
+            if memory_bandwidth_empirical_scale is None
+            else memory_bandwidth_empirical_scale
+        )
+        self.memory_empirical_constant_latency_s = (
+            float(gpu["mem_empirical_constant_latency"])
+            if memory_empirical_constant_latency_s is None
+            else memory_empirical_constant_latency_s
+        )
+        self.context_attention_extra_latency_correction = (
+            context_attention_extra_latency_correction
+        )
+        if (
+            not math.isfinite(self.memory_bandwidth_empirical_scale)
+            or self.memory_bandwidth_empirical_scale <= 0
+        ):
+            raise ValueError(
+                "memory_bandwidth_empirical_scale must be finite and positive"
+            )
+        if (
+            not math.isfinite(self.memory_empirical_constant_latency_s)
+            or self.memory_empirical_constant_latency_s < 0
+        ):
+            raise ValueError(
+                "memory_empirical_constant_latency_s must be finite and non-negative"
+            )
+        if (
+            not math.isfinite(self.context_attention_extra_latency_correction)
+            or self.context_attention_extra_latency_correction <= 0
+        ):
+            raise ValueError(
+                "context_attention_extra_latency_correction must be finite and positive"
+            )
         expected_model = {
             "hidden_size": self._HIDDEN_SIZE,
             "intermediate_size": self._INTERMEDIATE_SIZE,
@@ -2265,7 +2303,16 @@ class ExternalQwen32BPassModel:
         mem_bytes: int,
         scale_factor: float,
     ) -> ExternalLatency:
-        latency = self.database.query_memory_operation(mem_bytes) * scale_factor
+        gpu = self.database.system_spec["gpu"]
+        latency = (
+            mem_bytes
+            / (
+                float(gpu["mem_bw"])
+                * self.memory_bandwidth_empirical_scale
+            )
+            + self.memory_empirical_constant_latency_s
+        ) * 1000
+        latency *= scale_factor
         return self._result(latency, operation, "analytical-h200-empirical-memory")
 
     def _gemm(
@@ -2340,7 +2387,7 @@ class ExternalQwen32BPassModel:
             key_elements * kv_element_bytes
         ) + self.database.query_memory_operation(value_elements * kv_element_bytes)
         extra_latency += apply_rope_latency + kv_write_latency
-        result += extra_latency * 1.1
+        result += extra_latency * self.context_attention_extra_latency_correction
         return self._result(
             result * self._NUM_LAYERS,
             "context_attention",

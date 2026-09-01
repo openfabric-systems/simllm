@@ -1,0 +1,308 @@
+{
+  "attempt_history": [
+    {
+      "attempt": "0001",
+      "finding": "The current-worktree check encountered one historical source lock for the implementation file that TRAF-80 is authorized to evolve. All physical and behavioral relations passed.",
+      "result_sha256": "a7839a0c25af80761bcb7624a70325f89bc04b5b9ac2afb866655f8c26d62c34",
+      "verdict": "VOID"
+    },
+    {
+      "attempt": "0002",
+      "finding": "The historical source blob and all current artifacts verified. This result retained the full expanded preservation ledger.",
+      "result_sha256": "6537e1361095fb2f49b1d1a992b080f7e0e394d9028ad08e375e97c962d79c43",
+      "verdict": "PASS"
+    },
+    {
+      "attempt": "0003",
+      "finding": "The compact publication projection retained the same passing oracles and preservation evidence digests.",
+      "result_sha256": "f976a268a3b1a6a1501dbbad4c45d4ce5c13ee29d91069883a4a9fda20ded74a",
+      "verdict": "PASS"
+    }
+  ],
+  "authority": {
+    "aligned_implementation": "simllm-htsim-nvlink-domain-v2",
+    "compatibility_implementation": "simllm-htsim-nvlink-domain-v1",
+    "expectations_commit": "c589abadcfe7d142ffeee3a38db9f9d0a1dc23c8",
+    "expectations_sha256": "fafe9bbe730d9c424f7d4f72fd2df3d5fa2cdd8ad9f370f63ff60194374c58cc"
+  },
+  "fatal_guard_verdict": "PASS",
+  "fatal_guards": [
+    {
+      "id": "expectations_authority",
+      "verdict": "PASS"
+    },
+    {
+      "id": "profile_absent_identity",
+      "verdict": "PASS"
+    },
+    {
+      "id": "root_consumer_pins",
+      "verdict": "PASS"
+    },
+    {
+      "id": "recursive_preservation_locks",
+      "verdict": "PASS"
+    },
+    {
+      "id": "cell_conservation",
+      "verdict": "PASS"
+    },
+    {
+      "id": "receiver_credit_ownership",
+      "verdict": "PASS"
+    },
+    {
+      "id": "direct_mesh_identity",
+      "verdict": "PASS"
+    },
+    {
+      "id": "arbitration_identity",
+      "verdict": "PASS"
+    },
+    {
+      "id": "physical_bounds",
+      "verdict": "PASS"
+    },
+    {
+      "id": "serialization_oracles",
+      "verdict": "PASS"
+    },
+    {
+      "id": "replay_accounting",
+      "verdict": "PASS"
+    },
+    {
+      "id": "frozen_relations",
+      "verdict": "PASS"
+    },
+    {
+      "id": "zero_random_draws",
+      "verdict": "PASS"
+    }
+  ],
+  "inherited_envelope_shifts": [
+    {
+      "authority": "compatibility",
+      "id": "nvlink-flow-dynamics-v1",
+      "proof": "root byte pin, recursive preservation locks and full suite",
+      "signed_shift": "+0 ps and +0 GB/s in every published coordinate",
+      "surface": "transitions, flow-completion-time ladders, incast ceilings and fanout finding",
+      "verdict": "PASS"
+    },
+    {
+      "authority": "compatibility",
+      "id": "nvlink-rnic-comparison-v1",
+      "proof": "root byte pin, recursive preservation locks and full suite",
+      "signed_shift": "+0 ps in every flow-completion-time coordinate",
+      "surface": "all NVLink transport completion samples, distributions and verdicts",
+      "verdict": "PASS"
+    },
+    {
+      "authority": "compatibility",
+      "id": "nvlink-rnic-comparison-v2",
+      "proof": "root byte pin, recursive preservation locks and full suite",
+      "signed_shift": "+0 ps and +0 in every fairness coordinate",
+      "surface": "physical degrees and simulated degrees 4, 8 and 16",
+      "verdict": "PASS"
+    },
+    {
+      "authority": "compatibility",
+      "id": "nvlink-incast-validation-v1",
+      "proof": "root byte pin, recursive preservation locks and full suite",
+      "signed_shift": "+0 ps and +0 GB/s in every prediction",
+      "surface": "six frozen simulated hardware-comparison predictions",
+      "verdict": "PASS"
+    },
+    {
+      "authority": "compatibility",
+      "id": "deployment-frontier-v1",
+      "proof": "root byte pin, recursive preservation locks and full suite",
+      "signed_shift": "+0 ps in all 18 intra-node services and +0 classifications",
+      "surface": "analytical frontier and two-network bottleneck map",
+      "verdict": "PASS"
+    },
+    {
+      "authority": "analytic_non_packet_path",
+      "id": "deployment-curve-v1-run3",
+      "proof": "root byte pin, recursive preservation locks and full suite",
+      "signed_shift": "+0 ps and +0 price because the aligned A100 packet path remains unreachable",
+      "surface": "deployment pricing whose H100 substitution of the A100 packet candidate is frozen rejected",
+      "verdict": "PASS"
+    }
+  ],
+  "non_effect": "No A100 credit, buffer, virtual-channel, return-encoding, striping or product-arbitration candidate is promoted.",
+  "physical_sanity": {
+    "ceiling": "serialized link, endpoint-egress and receiver-ingress services",
+    "floor": "bytes over four physical link rates",
+    "real_system_anchor": "four A100 NVLink 3 links at 25 GB/s per direction"
+  },
+  "preservation": {
+    "historical_source_locks": [
+      {
+        "path": "simllm/backends/htsim_nvlink.py",
+        "sha256": "0f16f44d0c6c74a1113ac0df7b9d6250aaa1c1ef20b8edd1d0f7e7449c76440c",
+        "verification_commit": "9898a66dc215fd853d10492c6b852009326e376e"
+      }
+    ],
+    "recursive_artifact_count": 95,
+    "recursive_evidence_sha256": "4c1b401f033fcbd276f3d6c777fddc6f4c40fa5db7aef026079eeec3b7b922c1",
+    "recursive_failures": 0,
+    "root_evidence_sha256": "a176fe9460664fffc24db7705ba926ee4bc09dbc532c15a4be1ff6e831cad637",
+    "root_failures": 0,
+    "root_pin_count": 22
+  },
+  "registered_effect": "TRAF-80 closes only when this result is PASS and the full repository suite proves compatibility consumer identity. TRAF-73 remains open.",
+  "relation_checks": [
+    {
+      "expected_shift_percent": 5.882352941176471,
+      "observed_shift_percent": 5.882352941176471,
+      "per_link_bytes_per_second": 12500000000,
+      "relation": "optional_flit_serialization",
+      "signed_jct_shift_ps": 1311097,
+      "verdict": "PASS"
+    },
+    {
+      "expected_shift_percent": 5.882352941176471,
+      "observed_shift_percent": 5.882352941176471,
+      "per_link_bytes_per_second": 25000000000,
+      "relation": "optional_flit_serialization",
+      "signed_jct_shift_ps": 655737,
+      "verdict": "PASS"
+    },
+    {
+      "expected_ratio": 2,
+      "observed_ratio": 2.0,
+      "packet_flits": 17,
+      "relation": "inverse_link_rate",
+      "verdict": "PASS"
+    },
+    {
+      "expected_ratio": 2,
+      "observed_ratio": 2.0,
+      "packet_flits": 18,
+      "relation": "inverse_link_rate",
+      "verdict": "PASS"
+    }
+  ],
+  "replay_probe": {
+    "error_free_added_time_ps": 0,
+    "error_free_added_wire_bytes": 0,
+    "error_free_verdict": "PASS",
+    "injected_added_time_ps": 10980,
+    "injected_added_wire_bytes": 272,
+    "injected_nonnegative_verdict": "PASS"
+  },
+  "sanity_cells": [
+    {
+      "acknowledgement_count": 4096,
+      "arbitration_identity_verdict": "PASS",
+      "completion_order_sha256": "cdd110821f842a0c5c3badfd3f885e4f640edd519aaa9bc302354b5e9c1561e8",
+      "conservation_verdict": "PASS",
+      "credit_release_count": 4096,
+      "expected_link_serialization_ps": 22282240,
+      "expected_payload_ceiling_gbps": 94.11764705882354,
+      "fixed_point_iterations": 2,
+      "jct_ceiling_ps": 34590516,
+      "jct_floor_ps": 22282240,
+      "job_completion_time_ps": 22288630,
+      "link_serialization_ps": 22282240,
+      "logical_bytes": 1048576,
+      "packet_count": 4096,
+      "packet_flits": 17,
+      "pass_through_identity_verdict": "PASS",
+      "payload_rate_gbps": 47.05882352941177,
+      "per_link_bytes_per_second": 12500000000,
+      "physical_bound_verdict": "PASS",
+      "random_draw_count": 0,
+      "receiver_ownership_verdict": "PASS",
+      "replay_time_ps": 0,
+      "replay_wire_bytes": 0,
+      "serialization_verdict": "PASS",
+      "wire_bytes": 1114112
+    },
+    {
+      "acknowledgement_count": 4096,
+      "arbitration_identity_verdict": "PASS",
+      "completion_order_sha256": "be234d41a7bfe5d342bb14686696eba9c8bb7b818c20bf14af16b1695a9d512b",
+      "conservation_verdict": "PASS",
+      "credit_release_count": 4096,
+      "expected_link_serialization_ps": 23592960,
+      "expected_payload_ceiling_gbps": 88.88888888888889,
+      "fixed_point_iterations": 2,
+      "jct_ceiling_ps": 36625253,
+      "jct_floor_ps": 23592960,
+      "job_completion_time_ps": 23599727,
+      "link_serialization_ps": 23592960,
+      "logical_bytes": 1048576,
+      "packet_count": 4096,
+      "packet_flits": 18,
+      "pass_through_identity_verdict": "PASS",
+      "payload_rate_gbps": 44.44444444444444,
+      "per_link_bytes_per_second": 12500000000,
+      "physical_bound_verdict": "PASS",
+      "random_draw_count": 0,
+      "receiver_ownership_verdict": "PASS",
+      "replay_time_ps": 0,
+      "replay_wire_bytes": 0,
+      "serialization_verdict": "PASS",
+      "wire_bytes": 1179648
+    },
+    {
+      "acknowledgement_count": 4096,
+      "arbitration_identity_verdict": "PASS",
+      "completion_order_sha256": "612a1b9f6a867f1061e811e4ddc422e971532a259a4868308e115657db808683",
+      "conservation_verdict": "PASS",
+      "credit_release_count": 4096,
+      "expected_link_serialization_ps": 11141120,
+      "expected_payload_ceiling_gbps": 94.11764705882354,
+      "fixed_point_iterations": 2,
+      "jct_ceiling_ps": 23449396,
+      "jct_floor_ps": 11141120,
+      "job_completion_time_ps": 11147510,
+      "link_serialization_ps": 11141120,
+      "logical_bytes": 1048576,
+      "packet_count": 4096,
+      "packet_flits": 17,
+      "pass_through_identity_verdict": "PASS",
+      "payload_rate_gbps": 94.11764705882354,
+      "per_link_bytes_per_second": 25000000000,
+      "physical_bound_verdict": "PASS",
+      "random_draw_count": 0,
+      "receiver_ownership_verdict": "PASS",
+      "replay_time_ps": 0,
+      "replay_wire_bytes": 0,
+      "serialization_verdict": "PASS",
+      "wire_bytes": 1114112
+    },
+    {
+      "acknowledgement_count": 4096,
+      "arbitration_identity_verdict": "PASS",
+      "completion_order_sha256": "f4f40bcbc35674540ca38bba3a2d390ca768e2cb209ca33ce75ed9bed81c188b",
+      "conservation_verdict": "PASS",
+      "credit_release_count": 4096,
+      "expected_link_serialization_ps": 11796480,
+      "expected_payload_ceiling_gbps": 88.88888888888889,
+      "fixed_point_iterations": 2,
+      "jct_ceiling_ps": 24828773,
+      "jct_floor_ps": 11796480,
+      "job_completion_time_ps": 11803247,
+      "link_serialization_ps": 11796480,
+      "logical_bytes": 1048576,
+      "packet_count": 4096,
+      "packet_flits": 18,
+      "pass_through_identity_verdict": "PASS",
+      "payload_rate_gbps": 88.88888888888889,
+      "per_link_bytes_per_second": 25000000000,
+      "physical_bound_verdict": "PASS",
+      "random_draw_count": 0,
+      "receiver_ownership_verdict": "PASS",
+      "replay_time_ps": 0,
+      "replay_wire_bytes": 0,
+      "serialization_verdict": "PASS",
+      "wire_bytes": 1179648
+    }
+  ],
+  "schema": "simllm-nvlink-mechanism-alignment-result-v1",
+  "study_verdict": "PASS",
+  "task": "TRAF-80"
+}

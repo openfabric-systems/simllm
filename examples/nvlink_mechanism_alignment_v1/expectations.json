@@ -1,0 +1,296 @@
+{
+  "schema": "simllm-nvlink-mechanism-alignment-expectations-v1",
+  "study": {
+    "task": "TRAF-80",
+    "date": "2026-09-01",
+    "status": "EXPECTATIONS_ONLY",
+    "source": "TRAF-80 registry entry and TRAF-79 mechanism record",
+    "chronology": "Committed before the aligned mechanism implementation, the first aligned simulation run, generated result values, or outcome-dependent edits.",
+    "cluster_time": false
+  },
+  "authority": {
+    "compatibility": {
+      "implementation": "simllm-htsim-nvlink-domain-v1",
+      "selection": "Explicit compatibility authority for every inherited consumer.",
+      "ownership": "The compatibility ledger is the sole mutable packet and timing authority when selected."
+    },
+    "aligned": {
+      "implementation": "simllm-htsim-nvlink-domain-v2",
+      "selection": "Explicit aligned authority for the TRAF-80 sanity study and future opt-in consumers.",
+      "ownership": "The aligned receiver-buffer, link-reliability, ordering and switch ledgers are the sole mutable authorities when selected."
+    },
+    "mutual_exclusion": "One run selects exactly one authority. Compatibility and aligned ledgers never advance the same packet."
+  },
+  "declared_candidate_defaults": [
+    {
+      "parameter": "A100 credit quantum",
+      "status": "DECLARED_CANDIDATE",
+      "provenance": "TRAF-79 public evidence leaves the product quantum unidentified; the merged 272-byte value is retained only as a compatibility candidate."
+    },
+    {
+      "parameter": "A100 credit-pool scope and depth",
+      "status": "DECLARED_CANDIDATE",
+      "provenance": "TRAF-79 confirms receiver capacity flow control but not A100 allocation scope or numeric depth."
+    },
+    {
+      "parameter": "A100 virtual-channel count and class map",
+      "status": "DECLARED_CANDIDATE",
+      "provenance": "TRAF-79 confirms multiple protocol-family virtual channels but publishes no A100 count or map."
+    },
+    {
+      "parameter": "A100 receive-buffer depth",
+      "status": "DECLARED_CANDIDATE",
+      "provenance": "TRAF-79 identifies receiver ownership but no A100 byte depth."
+    },
+    {
+      "parameter": "A100 credit-return encoding",
+      "status": "DECLARED_CANDIDATE",
+      "provenance": "TRAF-79 does not decide piggybacking, aggregation, standalone control traffic or idle-link behavior."
+    },
+    {
+      "parameter": "A100 bonded-link striping granularity",
+      "status": "DECLARED_CANDIDATE",
+      "provenance": "TRAF-79 confirms ganged-link spraying but not the A100 selector or granularity."
+    },
+    {
+      "parameter": "NVSwitch product arbiter",
+      "status": "DECLARED_CANDIDATE",
+      "provenance": "TRAF-79 supports a policy seam and two-sided matching but binds no algorithm to a named product."
+    }
+  ],
+  "packet_format": {
+    "generation_scope": "pascal_documented_family_anchor_with_a100_continuity_unidentified",
+    "flit_bytes": 16,
+    "header_flits": 1,
+    "payload_flits_maximum": 16,
+    "address_extension_flits": [0, 1],
+    "byte_enable_flits": [0, 1],
+    "complete_packet_flits": [1, 18],
+    "aligned_a100_candidate_payload_bytes": 256,
+    "default_optional_control_flits": 0,
+    "default_provenance": "The 16-byte family flit is public. The A100 field continuity and selection of optional flits remain declared candidates."
+  },
+  "physical_oracles": {
+    "repeated_packet_count": 4096,
+    "fixed_job_payload_bytes": 1048576,
+    "links": 4,
+    "a100_per_link_bytes_per_second": 25000000000,
+    "aggregate_link_bytes_per_second": 100000000000,
+    "occupancy_rows": [
+      {
+        "packet_flits": 17,
+        "packet_wire_bytes": 272,
+        "payload_bytes": 256,
+        "total_wire_bytes": 1114112,
+        "payload_ceiling_gbps_exact": 94.11764705882354,
+        "payload_ceiling_gbps_reported": 94.117647,
+        "serialization_ps_at_25_gbps_per_link": 11141120,
+        "serialization_ps_at_12_5_gbps_per_link": 22282240,
+        "jct_floor_ps_at_25_gbps_per_link": 11141120,
+        "jct_ceiling_ps_at_25_gbps_per_link": 23449396,
+        "jct_floor_ps_at_12_5_gbps_per_link": 22282240,
+        "jct_ceiling_ps_at_12_5_gbps_per_link": 34590516
+      },
+      {
+        "packet_flits": 18,
+        "packet_wire_bytes": 288,
+        "payload_bytes": 256,
+        "total_wire_bytes": 1179648,
+        "payload_ceiling_gbps_exact": 88.88888888888889,
+        "payload_ceiling_gbps_reported": 88.888889,
+        "serialization_ps_at_25_gbps_per_link": 11796480,
+        "serialization_ps_at_12_5_gbps_per_link": 23592960,
+        "jct_floor_ps_at_25_gbps_per_link": 11796480,
+        "jct_ceiling_ps_at_25_gbps_per_link": 24828773,
+        "jct_floor_ps_at_12_5_gbps_per_link": 23592960,
+        "jct_ceiling_ps_at_12_5_gbps_per_link": 36625253
+      }
+    ],
+    "reported_rate_tolerance": "plus or minus 0.0000005 GB/s",
+    "optional_flit_serialization_shift_percent_exact": 5.882352941176471,
+    "optional_flit_serialization_shift_percent_reported": 5.882,
+    "optional_flit_throughput_shift_percent_exact": -5.555555555555555,
+    "rate_scaling": "Halving every physical link rate doubles the link serialization term exactly.",
+    "credit_ownership": "Every credit release timestamp is greater than or equal to its receiver-buffer release timestamp.",
+    "error_free_replay": {
+      "added_wire_bytes": 0,
+      "added_time_ps": 0
+    },
+    "injected_error_replay": {
+      "minimum_added_wire_bytes": 0,
+      "minimum_added_time_ps": 0
+    }
+  },
+  "sanity_sweep": {
+    "fixed_job": "one 1048576-byte posted peer write from endpoint 0 to endpoint 1",
+    "packet_occupancy_flits": [17, 18],
+    "per_link_bytes_per_second": [12500000000, 25000000000],
+    "measured_outcome": "job_completion_time_ps",
+    "relations": [
+      "The measured job completion time lies at or above bytes over aggregate link rate.",
+      "The measured job completion time lies at or below fully serialized link, endpoint-egress and receiver-ingress service.",
+      "The 18-flit link serialization term exceeds the 17-flit term by exactly 5.882352941176471 percent at each rate.",
+      "Halving link rate doubles each link serialization term exactly.",
+      "The optional flit produces a nonnegative job-completion-time shift at each rate."
+    ]
+  },
+  "inherited_envelopes": [
+    {
+      "id": "nvlink-flow-dynamics-v1",
+      "authority": "compatibility",
+      "surface": "transitions, flow-completion-time ladders, incast ceilings and fanout finding",
+      "required_signed_shift": "+0 ps and +0 GB/s in every published coordinate"
+    },
+    {
+      "id": "nvlink-rnic-comparison-v1",
+      "authority": "compatibility",
+      "surface": "all NVLink transport completion samples, distributions and verdicts",
+      "required_signed_shift": "+0 ps in every flow-completion-time coordinate"
+    },
+    {
+      "id": "nvlink-rnic-comparison-v2",
+      "authority": "compatibility",
+      "surface": "physical degrees and simulated degrees 4, 8 and 16",
+      "required_signed_shift": "+0 ps and +0 in every fairness coordinate"
+    },
+    {
+      "id": "nvlink-incast-validation-v1",
+      "authority": "compatibility",
+      "surface": "six frozen simulated hardware-comparison predictions",
+      "required_signed_shift": "+0 ps and +0 GB/s in every prediction"
+    },
+    {
+      "id": "deployment-frontier-v1",
+      "authority": "compatibility",
+      "surface": "analytical frontier and two-network bottleneck map",
+      "required_signed_shift": "+0 ps in all 18 intra-node services and +0 classifications"
+    },
+    {
+      "id": "deployment-curve-v1-run3",
+      "authority": "analytic_non_packet_path",
+      "surface": "deployment pricing whose H100 substitution of the A100 packet candidate is frozen rejected",
+      "required_signed_shift": "+0 ps and +0 price because the aligned A100 packet path remains unreachable"
+    }
+  ],
+  "consumer_pins": [
+    {
+      "path": "examples/a100_nvlink_packet_v1/candidate-profile.json",
+      "sha256": "d33ef5b2c6fa87cc97e1e7b45a43a841a5da45f5462311e3981fbc903c56deb2"
+    },
+    {
+      "path": "examples/nvlink_flow_dynamics_v1/expectations.json",
+      "sha256": "6e6e8f0ed7c79572f1ef893f7f7869d8a4e854200bdee514b4338b87955e1261"
+    },
+    {
+      "path": "examples/nvlink_flow_dynamics_v1/results.json",
+      "sha256": "c9fb0752149c73f78faa60411ae2eea6a593a23ee65380121ae0decda2cb4004"
+    },
+    {
+      "path": "examples/nvlink_flow_dynamics_v1/RESULTS.md",
+      "sha256": "2897bacb313fa3f2e8c2f11d11016432043d9f1ff5e591172c9183291f412255"
+    },
+    {
+      "path": "examples/nvlink_rnic_comparison_v1/expectations.json",
+      "sha256": "4b60365d8251b5fd3c7627dbe38c66ad1fc1c096b21fdfada4fc744320a5bdfa"
+    },
+    {
+      "path": "examples/nvlink_rnic_comparison_v1/results.json",
+      "sha256": "c01a64f65a514b96c1e869e7ce2cf0ea2ed9d63c11446ce6bbb8b8ddc564392b"
+    },
+    {
+      "path": "examples/nvlink_rnic_comparison_v1/RESULTS.md",
+      "sha256": "fc7ac95a3ad5ae145271ca4638e6d703452f13bb0741d111e953d03e054b7b5b"
+    },
+    {
+      "path": "examples/nvlink_rnic_comparison_v2/expectations.json",
+      "sha256": "9724d405c400d5e38582fd869f24866f31fc6e0907d4b1b558b620eb411324bb"
+    },
+    {
+      "path": "examples/nvlink_rnic_comparison_v2/results.json",
+      "sha256": "5a9c9d9f461a2d145d0bdab6ae3b28606452a040da7bc105a01d5d32de918bea"
+    },
+    {
+      "path": "examples/nvlink_rnic_comparison_v2/RESULTS.md",
+      "sha256": "d0a2f9ced4ed0b12910a4b287162bb57c09f86a18fdcee2f18466bfe3494369a"
+    },
+    {
+      "path": "examples/nvlink_incast_validation_v1/expectations.json",
+      "sha256": "9f50aadba0085a54e78c156d61837e4c7db19a498d8fef9c1aba7b32e0a163b4"
+    },
+    {
+      "path": "examples/nvlink_incast_validation_v1/results.json",
+      "sha256": "114c8f86c6df378f7afbc9e2a2d57cc665d71d9da017283810d30ed970f7ebfd"
+    },
+    {
+      "path": "examples/nvlink_incast_validation_v1/RESULTS.md",
+      "sha256": "f81971b6113b36be9998339b8f8ddd174a1f45488ed79c4bc46c9c159b1fa0a6"
+    },
+    {
+      "path": "examples/deployment_frontier_v1/expectations.json",
+      "sha256": "54295c81cebe36ee32d12b8ab1432c9fc060094ddf98403152b0d619cc37438f"
+    },
+    {
+      "path": "examples/deployment_frontier_v1/result.json",
+      "sha256": "f2f216068bf5ba914853c62a2ee965ede0ebfc0a6f29e3d11cfa5f45eac359ad"
+    },
+    {
+      "path": "examples/deployment_frontier_v1/RESULTS.md",
+      "sha256": "f1f6b3aafddea1551b9ca724467d671cef9de666fe8e10e13430fc29a99ee978"
+    },
+    {
+      "path": "examples/deployment_curve_v1/scored_run3_expectations.json",
+      "sha256": "9764f4c910c2ac7410c8ac447936b5ca48964096cf6240521c3f7888754fe637"
+    },
+    {
+      "path": "examples/deployment_curve_v1/scored_run3_expectations.md",
+      "sha256": "f10cabb436a4670f090983afed9c17ea1cb970d1c0da74ddc975ead8f9d6556c"
+    },
+    {
+      "path": "examples/deployment_curve_v1/flagship_run3_result.json",
+      "sha256": "255a73b120e2ad6e3a7b202475419d30174298590d6c9d3c22f9cfb6063489fe"
+    },
+    {
+      "path": "examples/deployment_curve_v1/RESULTS_RUN3.md",
+      "sha256": "4f64189ec4150a93c3861aba8bbc1e8dbd8dfc78b0966f411e2a7ffb32017ea5"
+    },
+    {
+      "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve-run3.pdf",
+      "sha256": "a28fcc56399dd980e0a9758e720916186206360934431a635f944a3ae359a536"
+    },
+    {
+      "path": "examples/deployment_curve_v1/figures/deepseek-deployment-curve-run3.png",
+      "sha256": "03bdfc7fab4cc71e4991ff8c3683336a5625f7390b8a2e6fe402efc0dd3ca811"
+    }
+  ],
+  "preservation_lock_rule": {
+    "root_pin_count": 22,
+    "recursive_sources": [
+      "examples/nvlink_flow_dynamics_v1/expectations.json",
+      "examples/nvlink_rnic_comparison_v1/expectations.json",
+      "examples/nvlink_rnic_comparison_v2/expectations.json",
+      "examples/nvlink_incast_validation_v1/expectations.json",
+      "examples/deployment_frontier_v1/expectations.json"
+    ],
+    "rule": "The runner expands every preservation artifact reachable from these frozen roots and verifies its byte digest without executing or rewriting a prior study."
+  },
+  "fatal_guards": [
+    "the expectations digest or final expectations-only commit is not the run authority",
+    "either authority advances an object owned by the other authority",
+    "the profile-absent service fails to return the exact input object",
+    "the compatibility authority changes any canonical result byte",
+    "the NV4 pass-through switch changes a packet tuple, timestamp, wire byte, random-draw count or completion order",
+    "any root consumer pin or recursively inherited preservation artifact changes",
+    "a logical byte, payload flit, control flit, wire byte, acknowledgement or replay is lost or duplicated",
+    "a credit is released before its owning receive buffer is released",
+    "error-free replay adds any byte or picosecond",
+    "an injected error adds a negative byte or time quantity",
+    "a packet lacks explicit traffic-class, virtual-channel or ordering-domain identity",
+    "consumer visibility violates the frozen per-domain packet sequence",
+    "an NVSwitch grant uses one input or output more than once in one grant interval",
+    "the identity arbitration seam changes any accepted timestamp, wire byte, random draw or completion order",
+    "a repeated-packet payload rate exceeds its applicable physical ceiling",
+    "a sanity job completion falls outside its frozen physical floor and ceiling",
+    "a prior consumer record, runner, report or figure is rewritten"
+  ],
+  "void_rule": "Any fatal-guard violation makes the entire result VOID. No behavioral fraction is reported, TRAF-80 remains open, and no inherited envelope shift is published as valid."
+}
