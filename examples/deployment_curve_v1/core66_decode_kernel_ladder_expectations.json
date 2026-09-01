@@ -1,0 +1,155 @@
+{
+  "access_guard": {
+    "automated_tests_exempt": true,
+    "held_out_value_may_enter_arithmetic_or_comparison": false,
+    "incidental_exposure_disposition": "survivable_and_disclosed",
+    "standard_decode_anchor_is_calibration": true
+  },
+  "calibration_inputs": {
+    "common_layer_service_ps": 173184000,
+    "dense_layer_service_ps": 308256000,
+    "dense_specific_service_ps": 135072000,
+    "graph_fixed_service_ps": 3456000,
+    "lm_head_service_ps": 533824000,
+    "moe_layer_service_ps": 415648000,
+    "moe_nonrouted_specific_service_ps": 43264000,
+    "moe_routed_group_service_ps": 199200000,
+    "non_lm_step_and_output_service_ps": 22912000,
+    "provenance": {
+      "common_dense_moe_and_routed": "rung_1",
+      "graph_fixed_and_non_lm_step_output": "retained_core65_inventory",
+      "lm_head": "rung_0"
+    }
+  },
+  "calibration_projection_freeze": {
+    "anchor_tokens_per_second_per_node": "22282",
+    "assignment_endpoint": {
+      "compute_step_ps": "15322677333.333333",
+      "movement_from_inherited_prediction": "+7162.605199",
+      "prediction_tokens_per_second_per_node": "16707.262995",
+      "signed_residual_percent": "-25.019015"
+    },
+    "compute_only_prediction_interval_tokens_per_second_per_node": {
+      "maximum": "18003.485222",
+      "minimum": "16707.262995"
+    },
+    "expert_parallel_communication": {
+      "measured_in_this_study": false,
+      "modeled_term": "E_ep_ps >= 0",
+      "publication_disposition": "ABSENT_AND_UNPRICED",
+      "signed_effect": "adding E_ep_ps increases step service and moves throughput downward"
+    },
+    "inherited_corrected_step_ps": "26821286365",
+    "inherited_prediction_tokens_per_second_per_node": "9544.657796",
+    "movement_interval_tokens_per_second_per_node": {
+      "maximum": "+8458.827426",
+      "minimum": "+7162.605199"
+    },
+    "resident_endpoint": {
+      "compute_step_ps": "14219469000",
+      "movement_from_inherited_prediction": "+8458.827426",
+      "prediction_tokens_per_second_per_node": "18003.485222",
+      "signed_residual_percent": "-19.201664"
+    }
+  },
+  "chronology": {
+    "base_commit": "598e12463f5b9b6355078e2da3f85828a01dad1a",
+    "confirmatory_run_must_follow_this_commit": true,
+    "confirmatory_run_observed": false,
+    "scratch_layer_is_nonpublished_calibration": true,
+    "status": "EXPECTATIONS_ONLY"
+  },
+  "confirmatory_capture": {
+    "composition": {
+      "dense_layer_count": 3,
+      "dense_layer_service_ps": 308256000,
+      "graph_fixed_service_ps": 3456000,
+      "independent_stream_contention_factor": "1",
+      "moe_layer_count": 1,
+      "moe_layer_service_ps": 415648000,
+      "predicted_graph_service_ps": 1343872000
+    },
+    "fatal_guards": [
+      "process_exit_zero",
+      "empty_and_identical_weight_snapshots",
+      "exact_batch_32_kv_2000_marker",
+      "three_dense_then_one_moe",
+      "output_shape_32_by_7168_bf16",
+      "one_native_cuda_stream",
+      "stable_100_node_graph",
+      "dense_moe_mla_and_embedding_identities"
+    ],
+    "measurement": {
+      "cache_flush_mib_before_each_trial": 256,
+      "native_service_authority": "sum of correlation-complete CUDA kernel durations for one graph replay",
+      "raw_subtraction_method": "median device-event interval for N graph replays minus the median empty device-event interval, divided by N",
+      "repeats": [
+        50,
+        20
+      ],
+      "trials": 7,
+      "warmup_replays": 20
+    },
+    "scored_relations": {
+      "composition_residual_absolute_ps_at_most": 67193600,
+      "native_repeat_difference_fraction_at_most": "0.05",
+      "physical_service_ceiling_ps": 20000000000,
+      "physical_service_floor_ps": 524000000
+    }
+  },
+  "evidence_classes": {
+    "behavioral_relations": [
+      "composition_residual",
+      "repeat_stability",
+      "physical_bounds"
+    ],
+    "fatal_structural_guards_are_unscored": true,
+    "preservation_locks_are_unscored": true,
+    "run_configuration_is_unscored": true
+  },
+  "model_freeze": {
+    "full_layer_identities": {
+      "dense_ps": "C + D = 308256000",
+      "moe_ps": "C + N + G = 415648000"
+    },
+    "moe_routed_function": "G(R,A,alpha) = 199200000 * (alpha * R / 256 + (1 - alpha) * A / 256), 0 <= alpha <= 1",
+    "standard_decode_arguments": {
+      "assignments_per_rank_per_moe_layer": "256/9",
+      "dense_layer_count": 3,
+      "moe_layer_count": 58,
+      "resident_experts_per_rank": 4
+    },
+    "standard_decode_compute_ps": "61*C + 3*D + 58*(N + G(4,256/9,alpha)) + F",
+    "symbols_ps": {
+      "C_common": 173184000,
+      "D_dense_specific": 135072000,
+      "F_per_step_fixed": 560192000,
+      "G_routed_group_at_R256_A256": 199200000,
+      "N_moe_nonrouted_specific": 43264000
+    }
+  },
+  "preservation": {
+    "manifest": "core66_decode_kernel_ladder_prior_sha256.txt",
+    "required_count": 7
+  },
+  "runtime_substitution": {
+    "captured_framework": "vllm-0.27.1",
+    "cuda_toolchain": "12.9",
+    "machine": "aarch64",
+    "native_identity_authority": "vLLM kernels are the record-native identities for this ladder",
+    "sglang_physical_binding": "DECLARED_LIMITATION_NOT_A_GOAL",
+    "torch": "cu129"
+  },
+  "schema": "simllm-deployment-curve-core66-decode-kernel-ladder-expectations-v1",
+  "shape": {
+    "batch_size": 32,
+    "dummy_weights": true,
+    "expert_parallel": 1,
+    "gpu_count": 1,
+    "kv_tokens_per_request": 2000,
+    "network_enabled": false,
+    "pipeline_parallel": 1,
+    "tensor_parallel": 1
+  },
+  "task": "CORE-66"
+}
