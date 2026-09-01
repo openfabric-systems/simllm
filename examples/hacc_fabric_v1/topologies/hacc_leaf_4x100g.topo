@@ -1,0 +1,26 @@
+Nodes 4
+Tiers 2
+Podsize 4
+
+# Generated from the hacc_leaf_4x100g fabric profile. One leaf switch with
+# 4 directly attached hosts and one uplink to each of 4 spine
+# switches. Every host pair is same-leaf, so the spines carry no traffic:
+# the measured fabric is a single switch hop and a same-leaf pair
+# reproduces it exactly.
+#
+# 515 ns per pipe over 4 pipe traversals puts the
+# smallest message's round trip at the measured latency floor once the
+# store-and-forward serializations are added.
+Tier 0
+Downlink_speed_Gbps 100
+Radix_Down 4
+Radix_Up 4
+Downlink_Latency_ns 515
+Switch_Latency_ns 0
+
+# 4 spine switches, each with one link to the leaf.
+Tier 1
+Downlink_speed_Gbps 100
+Radix_Down 1
+Downlink_Latency_ns 515
+Switch_Latency_ns 0

@@ -40,6 +40,11 @@ runs/
 !examples/cx5_msgsize_v1/msg.csv
 !examples/cx5_msgsize_v1/mtu.csv
 !examples/cx5_msgsize_v1/incast.csv
+!examples/hacc_fabric_v1/summary.csv
+!examples/hacc_fabric_v1/latency.csv
+!examples/hacc_fabric_v1/msg.csv
+!examples/hacc_fabric_v1/buffer.csv
+!examples/hacc_fabric_v1/incast.csv
 
 # Local agent rule files (kept out of the public repo on purpose)
 CLAUDE.md

@@ -18,6 +18,22 @@ from simllm.backends.dependency_cross_check import (
     plan_dependency_cross_check,
 )
 from simllm.backends.device_step_sink import DeviceRuntimeStepSink, DeviceStepOutcome
+
+# `fabric_profile` and `nic_profile` each own an `EVIDENCE_CLASSES` and a
+# `MODEL_FIELDS` for their own carrier, so those two names stay module-local
+# and only the fabric-specific ones are re-exported here.
+from simllm.backends.fabric_profile import (
+    ECN_KEYS,
+    ECN_NONE,
+    FABRIC_GAP_TASKS,
+    FABRICS,
+    HACC_LEAF_4X100G,
+    FabricProfile,
+    dcqcn_port_gbps,
+    fabric_gap_fields,
+    render_dcqcn,
+    render_topology,
+)
 from simllm.backends.fct import NormalizedFct, normalized_fct
 from simllm.backends.htsim import HtsimUecConfig, build_htsim_uec_command
 from simllm.backends.htsim_dcqcn import (
@@ -197,10 +213,15 @@ __all__ = [
     "DEFAULT_LOGGOPSIM_EAGER_THRESHOLD_BYTES",
     "DEFAULT_NVLINK_ARBITRATION_POLICY",
     "DEPENDENCY_CROSS_CHECK_MODES",
+    "ECN_KEYS",
+    "ECN_NONE",
     "EVIDENCE_CLASSES",
+    "FABRICS",
+    "FABRIC_GAP_TASKS",
     "FABRIC_OWNER",
     "GAP_TASKS",
     "GPU_COMPUTE_MEDIUM",
+    "HACC_LEAF_4X100G",
     "KERNEL_OWNER",
     "LEGACY_NVLINK_FLOW_POLICY",
     "LOCAL_SERVICE_MEDIA",
@@ -243,6 +264,7 @@ __all__ = [
     "DerivedLoggpParams",
     "DeviceRuntimeStepSink",
     "DeviceStepOutcome",
+    "FabricProfile",
     "FlowCompletion",
     "HtsimDcqcnConfig",
     "HtsimPersistentStepSink",
@@ -335,7 +357,9 @@ __all__ = [
     "complete_dependency_cross_check",
     "dcqcn_flags",
     "dcqcn_link_bps",
+    "dcqcn_port_gbps",
     "derive_loggp_params",
+    "fabric_gap_fields",
     "find_htsim_dcqcn",
     "find_htsim_rnic",
     "find_loggopsim",
@@ -349,6 +373,8 @@ __all__ = [
     "parse_loggopsim_stdout",
     "plan_dependency_cross_check",
     "read_bypass_artifacts",
+    "render_dcqcn",
+    "render_topology",
     "rnic_bookkeeping_projection_from_json",
     "rnic_session_config_from_json",
     "rnic_session_result_from_json",
