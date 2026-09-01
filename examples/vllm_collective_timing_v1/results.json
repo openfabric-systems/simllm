@@ -1,0 +1,251 @@
+{
+  "schema": "simllm-vllm-collective-timing-result-v1",
+  "task": "VLLM-48",
+  "status": "FAIL",
+  "expectation_commit": "2808a0450308121c7b25ce9a4a6292273a1014d4",
+  "expectation_amendment_commit": "ad98074fa8e7f3bf30b3cfb957d6051d7e864cf9",
+  "implementation_commits": [
+    "6dcc69bc856f6e0e72f19174e6f7473ba3f57b14",
+    "c9dbfff5b666e8a711838773377abb47dadb8bcc"
+  ],
+  "qualifying_evidence_attempt": "live-study-attempt-4-20260901",
+  "attempts": [
+    {
+      "name": "live-study-attempt-1-20260901",
+      "status": "UNSCORED",
+      "qualifying": false,
+      "finding": "The first process stopped before capture because automatic binding required two allowed NUMA nodes."
+    },
+    {
+      "name": "live-study-attempt-2-20260901",
+      "status": "VOID",
+      "qualifying": false,
+      "finding": "Both runs completed, but the original request-identity guards failed because stock vLLM appended internal suffixes.",
+      "failed_fatal_guards": [
+        "run-1-request-identity",
+        "run-2-request-identity"
+      ],
+      "behavioral_score": null,
+      "calls_per_run": [
+        100,
+        100
+      ],
+      "counterfactual_final_scorer": {
+        "qualifying": false,
+        "all_current_fatal_guards_pass": true,
+        "behavioral_score": {
+          "passed": 5,
+          "total": 7
+        }
+      },
+      "capture_sha256": [
+        "bc9fcce9ff0bd9e0e77efd4952bd9bc13d2de28e789f1c54e07e9727a93ffa00",
+        "6a32af5d08cc51d88b96a8a34ad20842f9f4d98bdda293921e3651976537d0f8"
+      ]
+    },
+    {
+      "name": "live-study-attempt-3-20260901",
+      "status": "FAIL",
+      "qualifying": false,
+      "finding": "The suffix-tolerant identity ruling was post-specified because no amendment preceded this attempt.",
+      "behavioral_score": {
+        "passed": 5,
+        "total": 7
+      },
+      "capture_sha256": [
+        "a17ef54be24e23c0866a20a8770bb4a75c81e38b2c3e937d72a4466d83125908",
+        "d4c616f44842be18872645f1638511440919cbb4d8e86213e0e8afdcd417d07c"
+      ],
+      "timing_diagnostics_ps": {
+        "minimum": 171305000,
+        "minimum_location": {
+          "run": 1,
+          "phase": "decode",
+          "ordinal": 33,
+          "layer_index": 16,
+          "layer_name": "model.layers.16"
+        },
+        "maximum": 373712983000,
+        "maximum_location": {
+          "run": 1,
+          "phase": "prefill",
+          "ordinal": 0,
+          "layer_index": null,
+          "layer_name": null,
+          "character": "first-call-cold-start-rendezvous"
+        },
+        "scored": false
+      }
+    },
+    {
+      "name": "live-study-attempt-4-20260901",
+      "status": "FAIL",
+      "qualifying": true,
+      "all_fatal_guards_pass": true,
+      "behavioral_score": {
+        "passed": 5,
+        "total": 7
+      }
+    }
+  ],
+  "live_environment": {
+    "framework": "vllm",
+    "framework_version": "0.27.1+cpu",
+    "device": "cpu",
+    "collective_backend": "gloo",
+    "tensor_parallel_size": 2,
+    "timer": "host-monotonic-ns",
+    "timing_score": "unscored"
+  },
+  "population": {
+    "fresh_runs": 2,
+    "steps_per_run": [
+      2,
+      2
+    ],
+    "calls_per_run": [
+      100,
+      100
+    ],
+    "calls_per_step": 50,
+    "kind_counts_per_run": {
+      "all_reduce": 98,
+      "all_gather": 2
+    },
+    "capture_sha256": [
+      "3d1e33421e64df2cd40916283c102a5a283f980b1b004615ca8691fb4f28cd9a",
+      "582b746ee8ef2da8a8404311f4a4e140583d33b96e6f6b0543ab40cd49bfc256"
+    ]
+  },
+  "metadata_conservation": {
+    "call_count": [
+      true,
+      true
+    ],
+    "payload_bytes": [
+      true,
+      true
+    ],
+    "world_size": [
+      true,
+      true
+    ],
+    "dtype_and_width": [
+      true,
+      true
+    ],
+    "group_and_layer": [
+      true,
+      true
+    ],
+    "native_kind": [
+      false,
+      false
+    ],
+    "finding": "The frozen logits call was gather; standard pinned vLLM executed all_gather at ordinal 49 in both steps of both runs."
+  },
+  "shape_determinism": {
+    "passed": true,
+    "ordered_projections_equal": true
+  },
+  "timing_diagnostics_ps": {
+    "values_recorded": 200,
+    "minimum": 145565000,
+    "minimum_location": {
+      "run": 1,
+      "phase": "decode",
+      "ordinal": 5,
+      "layer_index": 2,
+      "layer_name": "model.layers.2"
+    },
+    "maximum": 15211205000,
+    "maximum_location": {
+      "run": 2,
+      "phase": "prefill",
+      "ordinal": 2,
+      "layer_index": 0,
+      "layer_name": "model.layers.0"
+    },
+    "scored": false
+  },
+  "schema_compatibility": {
+    "old_capture_exact_bytes": true,
+    "new_capture_exact_round_trip": true
+  },
+  "comparator": {
+    "default_cross_environment_refusal": true,
+    "acknowledged_cross_environment_use": true,
+    "acknowledgement_stamped_on_result": true,
+    "coordinate": {
+      "kind": "all_reduce",
+      "payload_bytes": 24576,
+      "ranks": 2
+    }
+  },
+  "mutation_control_transitions": {
+    "drop-first-call": {
+      "baseline_pass": true,
+      "mutant_pass": false,
+      "pass_to_fail": true
+    },
+    "increment-first-payload-byte": {
+      "baseline_pass": true,
+      "mutant_pass": false,
+      "pass_to_fail": true
+    },
+    "change-second-run-first-kind": {
+      "baseline_pass": true,
+      "mutant_pass": false,
+      "pass_to_fail": true
+    },
+    "delete-optional-envelope": {
+      "baseline_pass": true,
+      "mutant_pass": false,
+      "pass_to_fail": true
+    },
+    "bypass-cross-environment-refusal": {
+      "baseline_pass": true,
+      "mutant_pass": false,
+      "pass_to_fail": true
+    },
+    "drop-cross-environment-acknowledgement-stamp": {
+      "baseline_pass": true,
+      "mutant_pass": false,
+      "pass_to_fail": true
+    }
+  },
+  "cuda_resolution": {
+    "model_step_thread_waits_for_cuda_end": false,
+    "ordered_background_resolution": true,
+    "locally_exercised": false,
+    "a100_validation_owner": "VLLM-49"
+  },
+  "families": {
+    "M1": [
+      false,
+      false
+    ],
+    "M2": [
+      true
+    ],
+    "M3": [
+      true,
+      true
+    ],
+    "M4": [
+      true
+    ],
+    "M5": [
+      true
+    ]
+  },
+  "behavioral_score": {
+    "passed": 5,
+    "total": 7
+  },
+  "project_consequence": {
+    "VLLM-48": "remains open pending successor kind expectations and fresh runs",
+    "VLLM-49": "remains open for standard-path all_gather and matched A100 floor evidence",
+    "VLLM-50": "not consumed because the pinned CPU build succeeded"
+  }
+}

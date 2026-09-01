@@ -42,6 +42,7 @@ simllm-calibrate = "simllm.calibration.cli:main"
 simllm = "simllm.adapters.sglang.plugin:register"
 
 [project.entry-points."vllm.general_plugins"]
+simllm_collective_timing = "simllm.adapters.vllm.collective_capture:register_collective_timing_hooks"
 simllm_oracle = "simllm.adapters.vllm.oracle:register_oracle_hooks"
 
 [tool.setuptools.packages.find]

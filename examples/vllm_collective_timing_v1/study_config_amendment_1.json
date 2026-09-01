@@ -1,0 +1,29 @@
+{
+  "schema": "simllm-vllm-collective-timing-amendment-v1",
+  "task": "VLLM-48",
+  "base_expectation_commit": "2808a04",
+  "chronology": "post-attempt-2-harness-reality-amendment",
+  "scope": "request-identity-fatal-guard-only",
+  "pinned_sources": {
+    "vllm/v1/engine/input_processor.py": "5de9296e6f4c00473a92df8df6e4e7e5f83fa37852c7540c4447c59a8b813111",
+    "vllm/utils/__init__.py": "c58b3f45deeb98bccca22c945526fd15d483a2f5eb8a3c62cf7df218b081885f"
+  },
+  "assigned_request_id_rule": {
+    "logical_id_relation": "exact-logical-id-hyphen-eight-lowercase-hex",
+    "scheduler_ids": "exact-assigned-internal-ids-in-order",
+    "completion_ids": "exact-original-logical-ids",
+    "output_map_ids": "exact-original-logical-ids"
+  },
+  "qualifying_evidence": {
+    "fresh_processes": 2,
+    "new_append_only_attempt_after_amendment_commit": true
+  },
+  "unchanged_expectations": [
+    "collective-population",
+    "collective-metadata-oracle",
+    "seven-instance-behavioral-denominator",
+    "local-timings-unscored",
+    "all-mutation-controls",
+    "logits-kind-gather"
+  ]
+}

@@ -60,6 +60,18 @@ from typing import Any
 from simllm.adapters.vllm._version import PINNED_VLLM_VERSION
 
 _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
+    "COLLECTIVE_CAPTURE_ENABLE_ENV": (
+        "collective_capture",
+        "COLLECTIVE_CAPTURE_ENABLE_ENV",
+    ),
+    "COLLECTIVE_CAPTURE_PATH_ENV": (
+        "collective_capture",
+        "COLLECTIVE_CAPTURE_PATH_ENV",
+    ),
+    "COLLECTIVE_CAPTURE_SYSTEM_ENV": (
+        "collective_capture",
+        "COLLECTIVE_CAPTURE_SYSTEM_ENV",
+    ),
     "NATIVE_STEP_CAPTURE_SCHEMA": ("capture", "NATIVE_STEP_CAPTURE_SCHEMA"),
     "NativeScheduledTokens": ("capture", "NativeScheduledTokens"),
     "VllmNativeStepCapture": ("capture", "VllmNativeStepCapture"),
@@ -68,6 +80,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "VllmNativeStepCaptureStream",
     ),
     "capture_vllm_native_step": ("capture", "capture_vllm_native_step"),
+    "collective_capture_enabled": (
+        "collective_capture",
+        "collective_capture_enabled",
+    ),
     "vllm_native_step_capture_to_json": (
         "capture",
         "vllm_native_step_capture_to_json",
@@ -105,6 +121,10 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "mark_oracle_capture_start": ("oracle", "mark_oracle_capture_start"),
     "mark_oracle_request_mapping": ("oracle", "mark_oracle_request_mapping"),
     "mark_oracle_submission_group": ("oracle", "mark_oracle_submission_group"),
+    "register_collective_timing_hooks": (
+        "collective_capture",
+        "register_collective_timing_hooks",
+    ),
     "VLLM_KV_PROJECTION_SCHEMA": (
         "kv_bridge",
         "VLLM_KV_PROJECTION_SCHEMA",
@@ -181,6 +201,9 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
 }
 
 __all__ = [
+    "COLLECTIVE_CAPTURE_ENABLE_ENV",
+    "COLLECTIVE_CAPTURE_PATH_ENV",
+    "COLLECTIVE_CAPTURE_SYSTEM_ENV",
     "DEPLOYMENT_CURVE_POINT_SCHEMA",
     "DEPLOYMENT_CURVE_SCHEMA",
     "FLOAT32",
@@ -244,6 +267,7 @@ __all__ = [
     "VllmPoolEngine",
     "build_granite_execution_observations",
     "capture_vllm_native_step",
+    "collective_capture_enabled",
     "configure",
     "estimate_step_latency_ps",
     "expert_group_ranks",
@@ -261,6 +285,7 @@ __all__ = [
     "observe_scheduler_output",
     "placement_entry",
     "read_vllm_kv_sidecar",
+    "register_collective_timing_hooks",
     "reset_configuration",
     "sample_adapter_tokens",
     "skeleton_mode_enabled",
