@@ -206,6 +206,7 @@ def test_aggregate_plot_contract_names_strategy_and_traffic() -> None:
 
 
 def test_aggregate_plotter_renders_both_additive_pairs(tmp_path: Path) -> None:
+    pytest.importorskip("matplotlib")
     plotter = _load(PLOTTER, "matched_seam_aggregate_renderer")
     paths = {
         "study_pdf": tmp_path / "study.pdf",
