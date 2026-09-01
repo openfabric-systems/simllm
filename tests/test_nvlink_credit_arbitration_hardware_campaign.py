@@ -107,6 +107,14 @@ def test_campaign_pins_final_aligned_freeze(runner, frozen):
     runner.verify_frozen_authority(frozen)
 
 
+def test_archive_stage_uses_the_frozen_blob_without_remote_git(
+    runner, tmp_path, monkeypatch
+):
+    monkeypatch.setattr(runner, "ROOT", tmp_path)
+    frozen = runner.load_expectations()
+    assert frozen["study"]["status"] == "EXPECTATIONS_ONLY"
+
+
 def test_h1_expands_all_pairs_and_the_seeded_31_size_order(runner, frozen):
     points = runner.h1_points(frozen)
     assert len(points) == 372
