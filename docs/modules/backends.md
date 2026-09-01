@@ -1137,6 +1137,37 @@ created" statement stands and refers to different, never-registered work.
   `T_eff` reported per profile and the ConnectX-7 arm still derived by scaling
   alone. The declared ECN thresholds stay declared until an endpoint that
   exposes them is measured.
+- BACK-60 (Precision; P1; M): validate the measured HACC leaf fabric end to
+  end, using `simllm.backends.fabric_profile` as the carrier. The profile
+  itself lands by configuration and its runnable subset is already scored in
+  [examples/hacc_fabric_v1](../../examples/hacc_fabric_v1/expectations.md): the
+  2.08 us latency floor, the rendered link rate, the per-port buffer identity
+  read from the first go-back-N NACK, and fair sharing under fan-in. What is
+  not scorable there is everything that needs a modeled endpoint, because the
+  measured fabric never marks and never pauses, so every congestion signal on
+  it originates at a NIC. Acceptance, all four bars frozen in that
+  registration: 2 to 1 RC receiver goodput 74 to 78 Gb/s within 15 percent
+  while the wire carries 99.3 Gb/s; lone-flow receiver ingress loss
+  0.18 percent within 30 percent above about 94 Gb/s, in bursts of 50 to 100
+  packets; DCQCN return to at least 95 percent of the pre-congestion rate in
+  447 ms within 25 percent, with additive increase near 0.1 Gb/s per ms; and
+  283 CNP per second per congested queue pair within 30 percent. Each bar is
+  blocked on golden-model endpoint work that is not merged here: the transport
+  slice for per-queue-pair sender state across messages, the receive slice for
+  a responder ingress meter, the rate-control slice for the DCQCN timer
+  constants, and HTSIM-38 for the notification origin. The distance between
+  the study's comparator baseline and the first bar is the size of that gap.
+- BACK-61 (Precision; P2; S): calibrate queue depth against delay with
+  synchronised clocks. The fabric campaign estimated the per-port buffer from
+  `t_drop x excess` and cross-checked it against a drain tail, but its
+  third estimator, the rise in one-way delay as the queue builds, is void: the
+  two-sender runs mix two unsynchronised sender monotonic clocks inside one
+  bin, and a single sender never builds more than 58 KB of queue before its
+  own send queue becomes the thing the delay column measures. Acceptance: with
+  hardware timestamps taken on both ends of the same packet, the delay trend
+  over a sweep of offered rates yields a queue-depth estimate that agrees with
+  the 5.2 MB fill estimate within 25 percent, and the disagreement between the
+  three estimators is reported rather than averaged away.
 
 ### Completeness
 
@@ -1555,6 +1586,25 @@ model the two flows as separate nodes and say so.
   reproduced within 20 percent, the single-QP knee appears at the configured
   ceiling with the excess discarded and no sender-visible signal, and an unset
   ceiling preserves every accepted result byte for byte.
+- HTSIM-38 (Completeness; P2; M): an endpoint-side congestion-notification
+  hook in the DCQCN runtime, and an explicit drop-only switch mode beside it.
+  Every congestion notification the packet path can originate comes from a
+  switch RED mark, but the measured HACC fabric marks nothing at all: 0
+  CE-marked packets in 670 M, with the egress buffer full and dropping, while
+  the receiving NIC's own `np_cnp_sent` rises from 38 to 2262 per second under
+  fan-in. The notification point is an endpoint, not a switch. Two things are
+  missing. First, a sink-side hook that can emit a CNP from its own ingress
+  state, so a rate-control study can run on a fabric that never marks. Second,
+  a way to say "this switch does not mark": the configuration guard requires
+  `0 <= Kmin < Kmax < egress buffer` and `0 < Pmax`, so a drop-only switch can
+  only be spelled by parking the threshold two bytes below the tail-drop limit
+  at a probability of 1e-6, which
+  [examples/hacc_fabric_v1](../../examples/hacc_fabric_v1/expectations.md)
+  does and then has to check empirically. Acceptance: a fabric configured
+  drop-only marks nothing by construction rather than by arithmetic, an
+  endpoint-generated notification reproduces the measured 283 CNP per second
+  per congested queue pair within 30 percent, and both paths off preserve
+  every accepted result byte for byte.
 - ATLAHS-1 (Completeness; P2; S): correct the vendored-fallback wording (the
   vendored htsim tree
   cannot satisfy the resolver) and pin a known-good HTSIM commit. Audited on
