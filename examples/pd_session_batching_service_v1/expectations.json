@@ -1,0 +1,5495 @@
+{
+  "authored_against": "7c8ddf1",
+  "chronology": {
+    "field_reader_commit": "ffc9bbc",
+    "observed_curve_fit_permitted": false,
+    "sizing_commit": "7c8ddf1",
+    "successor_run_existed_before_freeze": false,
+    "vllm41_held_out_value_accessed_before_freeze": false,
+    "vllm41_observed_batching_service_accessed_before_freeze": false
+  },
+  "date": "2026-09-01",
+  "decision_rule": {
+    "close_vllm42": "close only if every one of 78 cells holds, all fatal guards hold, and held-out cells are scored after the committed non-held-out publication",
+    "fatal_guards": "any conservation, identity, pricing, frozen-input, preservation, or chronology violation makes the run VOID and leaves VLLM-42 open",
+    "per_cell": "the observed amortized batching-service field must lie inside its inclusive frozen band",
+    "refutation": "publish every miss without widening; keep VLLM-42 open and register the predictor residual on VLLM-50",
+    "settled_claims": "the 210 to 220 requests per second onset and the 250 to 8,000 requests per second monotonic direction remain preserved and unscored",
+    "unscored_fields": "arrival-to-prefill wait and handoff-to-decode admission wait are published diagnostics and conservation inputs, not service-band scores"
+  },
+  "holdout": {
+    "disclosure_order": "publish and commit all non-held-out verdicts before running or scoring any held-out cell",
+    "held_out_cell_count": 30,
+    "loads": [
+      240
+    ],
+    "non_held_out_cell_count": 48,
+    "pool_ratios": [
+      [
+        2,
+        1
+      ]
+    ],
+    "union_rule": "a cell is held out when its load or pool ratio is held out"
+  },
+  "independent_inputs": {
+    "arrival_schedule": {
+      "clock_ps_per_second": 1000000000000,
+      "rule": "request i arrives at cell start plus i times floor(10^12 divided by offered requests per second)"
+    },
+    "decode_batch_service_surface": {
+      "acceptance_status": "candidate",
+      "calibration_claim": false,
+      "interpolation": "power-law-linear-in-log-batch-and-log-total-service",
+      "path": "examples/pd_session_load_delay_v1/surface.json",
+      "points": [
+        {
+          "batch_size": 1,
+          "entry_key_sha256": "d8fdebd7051f530bed3232cfeb2e3d5c87a1ab9a22fe68db9cca51436853a502",
+          "measured_service_ps": 1110576000,
+          "trimmed_coefficient_of_variation_ppm": 4232
+        },
+        {
+          "batch_size": 8,
+          "entry_key_sha256": "38978457b27e56dbc0e9ffbe2385b7d53538a2515c826284be4d6d414520c830",
+          "measured_service_ps": 1892831500,
+          "trimmed_coefficient_of_variation_ppm": 1538
+        }
+      ],
+      "record_sha256": "ff46f6d8a79ddae899da89d4db6eb34373f8042acd06cab50b6336c8fb9a8f52",
+      "sha256": "26fc547d8b47ccec7108872e05fbedfe71ebb6229b88799ca254089d3f2b6e9d"
+    },
+    "handoff_ps": 100000000,
+    "prefill_and_handoff_source": {
+      "path": "examples/pd_session_load_delay_v1/queue_model.py",
+      "relationship": "frozen before VLLM-41 and independent of its observed curves",
+      "sha256": "21b292023ad7e3ae7149e03bce9e502470bb105dd535afb7584003b40ee676a8"
+    },
+    "prefill_service_ps": {
+      "16": 114936000,
+      "8": 95424000
+    }
+  },
+  "physical_bounds": {
+    "all_prediction_bands_inside_bounds": true,
+    "ceiling_derivation": "maximum measured interpolated S(b) divided by b for b from one through eight",
+    "ceiling_service_per_token_ps": {
+      "denominator": 1,
+      "numerator": 1110576000
+    },
+    "floor_derivation": "minimum measured interpolated S(b) divided by b for b from one through eight",
+    "floor_service_per_token_ps": {
+      "denominator": 2,
+      "numerator": 473207875
+    }
+  },
+  "prediction_bands": [
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        8
+      ],
+      "interarrival_ps": 20000000000,
+      "offered_load_requests_per_second": 50,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        8
+      ],
+      "interarrival_ps": 10000000000,
+      "offered_load_requests_per_second": 100,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        8
+      ],
+      "interarrival_ps": 6666666666,
+      "offered_load_requests_per_second": 150,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        8
+      ],
+      "interarrival_ps": 5714285714,
+      "offered_load_requests_per_second": 175,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        8
+      ],
+      "interarrival_ps": 5000000000,
+      "offered_load_requests_per_second": 200,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        8
+      ],
+      "interarrival_ps": 4761904761,
+      "offered_load_requests_per_second": 210,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 141259164335
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        8
+      ],
+      "interarrival_ps": 4545454545,
+      "offered_load_requests_per_second": 220,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 141259164335
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 256,
+          "numerator": 276256383015
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 141259164335
+        }
+      },
+      "central_decode_batch_count": 251,
+      "central_decode_batch_histogram": {
+        "1": 246,
+        "2": 5,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        8
+      ],
+      "interarrival_ps": 4444444444,
+      "offered_load_requests_per_second": 225,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -4472818325
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 279834637675
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 256,
+          "numerator": 279834637675
+        },
+        "lower": {
+          "denominator": 128,
+          "numerator": 141259164335
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 276256383015
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 16,
+          "numerator": 16874652335
+        },
+        "upper": {
+          "denominator": 32,
+          "numerator": 34643868335
+        }
+      },
+      "central_decode_batch_count": 244,
+      "central_decode_batch_histogram": {
+        "1": 232,
+        "2": 12,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        8
+      ],
+      "interarrival_ps": 4347826086,
+      "offered_load_requests_per_second": 230,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 128,
+        "numerator": -2683690995
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 68393173005
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 64,
+          "numerator": 68393173005
+        },
+        "lower": {
+          "denominator": 32,
+          "numerator": 34643868335
+        },
+        "upper": {
+          "denominator": 16,
+          "numerator": 16874652335
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 139470037005
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 132313527685
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 270889001025
+        }
+      },
+      "central_decode_batch_count": 238,
+      "central_decode_batch_histogram": {
+        "1": 220,
+        "2": 18,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        8
+      ],
+      "interarrival_ps": 4255319148,
+      "offered_load_requests_per_second": 235,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 128,
+        "numerator": -2683690995
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 134102655015
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 128,
+          "numerator": 134102655015
+        },
+        "lower": {
+          "denominator": 256,
+          "numerator": 270889001025
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 132313527685
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 68393173005
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 64,
+          "numerator": 64814918345
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 265521619035
+        }
+      },
+      "central_decode_batch_count": 232,
+      "central_decode_batch_histogram": {
+        "1": 208,
+        "2": 24,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        8
+      ],
+      "interarrival_ps": 4166666666,
+      "offered_load_requests_per_second": 240,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -4472818325
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 32,
+        "numerator": 32854741005
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 32,
+          "numerator": 32854741005
+        },
+        "lower": {
+          "denominator": 256,
+          "numerator": 265521619035
+        },
+        "upper": {
+          "denominator": 64,
+          "numerator": 64814918345
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 267310746365
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 126946145695
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 260154237045
+        }
+      },
+      "central_decode_batch_count": 226,
+      "central_decode_batch_histogram": {
+        "1": 196,
+        "2": 30,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        8
+      ],
+      "interarrival_ps": 4081632653,
+      "offered_load_requests_per_second": 245,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -4472818325
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 128735273025
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 128,
+          "numerator": 128735273025
+        },
+        "lower": {
+          "denominator": 256,
+          "numerator": 260154237045
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 126946145695
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 261943364375
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 32,
+          "numerator": 31065613675
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 254786855055
+        }
+      },
+      "central_decode_batch_count": 220,
+      "central_decode_batch_histogram": {
+        "1": 184,
+        "2": 36,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        8
+      ],
+      "interarrival_ps": 4000000000,
+      "offered_load_requests_per_second": 250,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 128,
+        "numerator": -2683690995
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 63025791015
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 64,
+          "numerator": 63025791015
+        },
+        "lower": {
+          "denominator": 256,
+          "numerator": 254786855055
+        },
+        "upper": {
+          "denominator": 32,
+          "numerator": 31065613675
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 128735273025
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "interarrival_ps": 20000000000,
+      "offered_load_requests_per_second": 50,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "interarrival_ps": 10000000000,
+      "offered_load_requests_per_second": 100,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "interarrival_ps": 6666666666,
+      "offered_load_requests_per_second": 150,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "interarrival_ps": 5714285714,
+      "offered_load_requests_per_second": 175,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "interarrival_ps": 5000000000,
+      "offered_load_requests_per_second": 200,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "interarrival_ps": 4761904761,
+      "offered_load_requests_per_second": 210,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 64,
+          "numerator": 70182300335
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "interarrival_ps": 4545454545,
+      "offered_load_requests_per_second": 220,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 64,
+          "numerator": 70182300335
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 137680909675
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 281623765005
+        }
+      },
+      "central_decode_batch_count": 249,
+      "central_decode_batch_histogram": {
+        "1": 242,
+        "2": 7,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "interarrival_ps": 4444444444,
+      "offered_load_requests_per_second": 225,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -6261945655
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 278045510345
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 256,
+          "numerator": 278045510345
+        },
+        "lower": {
+          "denominator": 256,
+          "numerator": 281623765005
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 137680909675
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 256,
+          "numerator": 269099873695
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 276256383015
+        }
+      },
+      "central_decode_batch_count": 243,
+      "central_decode_batch_histogram": {
+        "1": 230,
+        "2": 13,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "interarrival_ps": 4347826086,
+      "offered_load_requests_per_second": 230,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -6261945655
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 272678128355
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 256,
+          "numerator": 272678128355
+        },
+        "lower": {
+          "denominator": 256,
+          "numerator": 276256383015
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 269099873695
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 139470037005
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 256,
+          "numerator": 263732491705
+        },
+        "upper": {
+          "denominator": 16,
+          "numerator": 16874652335
+        }
+      },
+      "central_decode_batch_count": 236,
+      "central_decode_batch_histogram": {
+        "1": 216,
+        "2": 20,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "interarrival_ps": 4255319148,
+      "offered_load_requests_per_second": 235,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 32,
+        "numerator": -894563665
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 66604045675
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 64,
+          "numerator": 66604045675
+        },
+        "lower": {
+          "denominator": 16,
+          "numerator": 16874652335
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 263732491705
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 68393173005
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 256,
+          "numerator": 258365109715
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 132313527685
+        }
+      },
+      "central_decode_batch_count": 230,
+      "central_decode_batch_histogram": {
+        "1": 204,
+        "2": 26,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "interarrival_ps": 4166666666,
+      "offered_load_requests_per_second": 240,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -6261945655
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 130524400355
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 128,
+          "numerator": 130524400355
+        },
+        "lower": {
+          "denominator": 128,
+          "numerator": 132313527685
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 258365109715
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 267310746365
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 256,
+          "numerator": 252997727725
+        },
+        "upper": {
+          "denominator": 64,
+          "numerator": 64814918345
+        }
+      },
+      "central_decode_batch_count": 224,
+      "central_decode_batch_histogram": {
+        "1": 192,
+        "2": 32,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "interarrival_ps": 4081632653,
+      "offered_load_requests_per_second": 245,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -6261945655
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 8,
+        "numerator": 7990044335
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 8,
+          "numerator": 7990044335
+        },
+        "lower": {
+          "denominator": 64,
+          "numerator": 64814918345
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 252997727725
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 261943364375
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 256,
+          "numerator": 247630345735
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 126946145695
+        }
+      },
+      "central_decode_batch_count": 219,
+      "central_decode_batch_histogram": {
+        "1": 182,
+        "2": 37,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        1,
+        16
+      ],
+      "interarrival_ps": 4000000000,
+      "offered_load_requests_per_second": 250,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -6261945655
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 251208600395
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 256,
+          "numerator": 251208600395
+        },
+        "lower": {
+          "denominator": 128,
+          "numerator": 126946145695
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 247630345735
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 128735273025
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        8
+      ],
+      "interarrival_ps": 20000000000,
+      "offered_load_requests_per_second": 50,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        8
+      ],
+      "interarrival_ps": 10000000000,
+      "offered_load_requests_per_second": 100,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        8
+      ],
+      "interarrival_ps": 6666666666,
+      "offered_load_requests_per_second": 150,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        8
+      ],
+      "interarrival_ps": 5714285714,
+      "offered_load_requests_per_second": 175,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        8
+      ],
+      "interarrival_ps": 5000000000,
+      "offered_load_requests_per_second": 200,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        8
+      ],
+      "interarrival_ps": 4761904761,
+      "offered_load_requests_per_second": 210,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        8
+      ],
+      "interarrival_ps": 4545454545,
+      "offered_load_requests_per_second": 220,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 139470037005
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 254,
+      "central_decode_batch_histogram": {
+        "1": 252,
+        "2": 2,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        8
+      ],
+      "interarrival_ps": 4444444444,
+      "offered_load_requests_per_second": 225,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 128,
+        "numerator": -894563665
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 141259164335
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 128,
+          "numerator": 141259164335
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 139470037005
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 64,
+          "numerator": 68393173005
+        },
+        "upper": {
+          "denominator": 64,
+          "numerator": 70182300335
+        }
+      },
+      "central_decode_batch_count": 248,
+      "central_decode_batch_histogram": {
+        "1": 240,
+        "2": 8,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        8
+      ],
+      "interarrival_ps": 4347826086,
+      "offered_load_requests_per_second": 230,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 128,
+        "numerator": -2683690995
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 32,
+        "numerator": 34643868335
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 32,
+          "numerator": 34643868335
+        },
+        "lower": {
+          "denominator": 64,
+          "numerator": 70182300335
+        },
+        "upper": {
+          "denominator": 64,
+          "numerator": 68393173005
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 141259164335
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 134102655015
+        },
+        "upper": {
+          "denominator": 64,
+          "numerator": 68393173005
+        }
+      },
+      "central_decode_batch_count": 241,
+      "central_decode_batch_histogram": {
+        "1": 226,
+        "2": 15,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        8
+      ],
+      "interarrival_ps": 4255319148,
+      "offered_load_requests_per_second": 235,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 128,
+        "numerator": -2683690995
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 270889001025
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 256,
+          "numerator": 270889001025
+        },
+        "lower": {
+          "denominator": 64,
+          "numerator": 68393173005
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 134102655015
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 276256383015
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 32,
+          "numerator": 32854741005
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 134102655015
+        }
+      },
+      "central_decode_batch_count": 235,
+      "central_decode_batch_histogram": {
+        "1": 214,
+        "2": 21,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        8
+      ],
+      "interarrival_ps": 4166666666,
+      "offered_load_requests_per_second": 240,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -4472818325
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 265521619035
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 256,
+          "numerator": 265521619035
+        },
+        "lower": {
+          "denominator": 128,
+          "numerator": 134102655015
+        },
+        "upper": {
+          "denominator": 32,
+          "numerator": 32854741005
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 16,
+        "numerator": 16874652335
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 128735273025
+        },
+        "upper": {
+          "denominator": 32,
+          "numerator": 32854741005
+        }
+      },
+      "central_decode_batch_count": 229,
+      "central_decode_batch_histogram": {
+        "1": 202,
+        "2": 27,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        8
+      ],
+      "interarrival_ps": 4081632653,
+      "offered_load_requests_per_second": 245,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -4472818325
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 260154237045
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 256,
+          "numerator": 260154237045
+        },
+        "lower": {
+          "denominator": 32,
+          "numerator": 32854741005
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 128735273025
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 132313527685
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 64,
+          "numerator": 63025791015
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 258365109715
+        }
+      },
+      "central_decode_batch_count": 224,
+      "central_decode_batch_histogram": {
+        "1": 192,
+        "2": 32,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        8
+      ],
+      "interarrival_ps": 4000000000,
+      "offered_load_requests_per_second": 250,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -4472818325
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 8,
+        "numerator": 7990044335
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 8,
+          "numerator": 7990044335
+        },
+        "lower": {
+          "denominator": 256,
+          "numerator": 258365109715
+        },
+        "upper": {
+          "denominator": 64,
+          "numerator": 63025791015
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 260154237045
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "interarrival_ps": 20000000000,
+      "offered_load_requests_per_second": 50,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "interarrival_ps": 10000000000,
+      "offered_load_requests_per_second": 100,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "interarrival_ps": 6666666666,
+      "offered_load_requests_per_second": 150,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "interarrival_ps": 5714285714,
+      "offered_load_requests_per_second": 175,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "interarrival_ps": 5000000000,
+      "offered_load_requests_per_second": 200,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "interarrival_ps": 4761904761,
+      "offered_load_requests_per_second": 210,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "interarrival_ps": 4545454545,
+      "offered_load_requests_per_second": 220,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 256,
+          "numerator": 278045510345
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 252,
+      "central_decode_batch_histogram": {
+        "1": 248,
+        "2": 4,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "interarrival_ps": 4444444444,
+      "offered_load_requests_per_second": 225,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 64,
+        "numerator": -894563665
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 70182300335
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 64,
+          "numerator": 70182300335
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 278045510345
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 135891782345
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 139470037005
+        }
+      },
+      "central_decode_batch_count": 246,
+      "central_decode_batch_histogram": {
+        "1": 236,
+        "2": 10,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "interarrival_ps": 4347826086,
+      "offered_load_requests_per_second": 230,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 32,
+        "numerator": -894563665
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 137680909675
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 128,
+          "numerator": 137680909675
+        },
+        "lower": {
+          "denominator": 128,
+          "numerator": 139470037005
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 135891782345
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 141259164335
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 64,
+          "numerator": 66604045675
+        },
+        "upper": {
+          "denominator": 64,
+          "numerator": 68393173005
+        }
+      },
+      "central_decode_batch_count": 240,
+      "central_decode_batch_histogram": {
+        "1": 224,
+        "2": 16,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "interarrival_ps": 4255319148,
+      "offered_load_requests_per_second": 235,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -6261945655
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 16,
+        "numerator": 16874652335
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 16,
+          "numerator": 16874652335
+        },
+        "lower": {
+          "denominator": 64,
+          "numerator": 68393173005
+        },
+        "upper": {
+          "denominator": 64,
+          "numerator": 66604045675
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 276256383015
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 130524400355
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 134102655015
+        }
+      },
+      "central_decode_batch_count": 234,
+      "central_decode_batch_histogram": {
+        "1": 212,
+        "2": 22,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "interarrival_ps": 4166666666,
+      "offered_load_requests_per_second": 240,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 128,
+        "numerator": -2683690995
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 132313527685
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 128,
+          "numerator": 132313527685
+        },
+        "lower": {
+          "denominator": 128,
+          "numerator": 134102655015
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 130524400355
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 16,
+        "numerator": 16874652335
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 8,
+          "numerator": 7990044335
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 261943364375
+        }
+      },
+      "central_decode_batch_count": 228,
+      "central_decode_batch_histogram": {
+        "1": 200,
+        "2": 28,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "interarrival_ps": 4081632653,
+      "offered_load_requests_per_second": 245,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 128,
+        "numerator": -2683690995
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 64814918345
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 64,
+          "numerator": 64814918345
+        },
+        "lower": {
+          "denominator": 256,
+          "numerator": 261943364375
+        },
+        "upper": {
+          "denominator": 8,
+          "numerator": 7990044335
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 132313527685
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 125157018365
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 128735273025
+        }
+      },
+      "central_decode_batch_count": 222,
+      "central_decode_batch_histogram": {
+        "1": 188,
+        "2": 34,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        1,
+        2,
+        16
+      ],
+      "interarrival_ps": 4000000000,
+      "offered_load_requests_per_second": 250,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -6261945655
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 126946145695
+      },
+      "split": "non-held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 128,
+          "numerator": 126946145695
+        },
+        "lower": {
+          "denominator": 128,
+          "numerator": 128735273025
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 125157018365
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 260154237045
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "interarrival_ps": 20000000000,
+      "offered_load_requests_per_second": 50,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "interarrival_ps": 10000000000,
+      "offered_load_requests_per_second": 100,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "interarrival_ps": 6666666666,
+      "offered_load_requests_per_second": 150,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "interarrival_ps": 5714285714,
+      "offered_load_requests_per_second": 175,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "interarrival_ps": 5000000000,
+      "offered_load_requests_per_second": 200,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "interarrival_ps": 4761904761,
+      "offered_load_requests_per_second": 210,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 141259164335
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "interarrival_ps": 4545454545,
+      "offered_load_requests_per_second": 220,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 141259164335
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 256,
+          "numerator": 276256383015
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 141259164335
+        }
+      },
+      "central_decode_batch_count": 251,
+      "central_decode_batch_histogram": {
+        "1": 246,
+        "2": 5,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "interarrival_ps": 4444444444,
+      "offered_load_requests_per_second": 225,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -4472818325
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 279834637675
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 256,
+          "numerator": 279834637675
+        },
+        "lower": {
+          "denominator": 128,
+          "numerator": 141259164335
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 276256383015
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 16,
+          "numerator": 16874652335
+        },
+        "upper": {
+          "denominator": 32,
+          "numerator": 34643868335
+        }
+      },
+      "central_decode_batch_count": 244,
+      "central_decode_batch_histogram": {
+        "1": 232,
+        "2": 12,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "interarrival_ps": 4347826086,
+      "offered_load_requests_per_second": 230,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 128,
+        "numerator": -2683690995
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 68393173005
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 64,
+          "numerator": 68393173005
+        },
+        "lower": {
+          "denominator": 32,
+          "numerator": 34643868335
+        },
+        "upper": {
+          "denominator": 16,
+          "numerator": 16874652335
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 139470037005
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 132313527685
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 270889001025
+        }
+      },
+      "central_decode_batch_count": 238,
+      "central_decode_batch_histogram": {
+        "1": 220,
+        "2": 18,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "interarrival_ps": 4255319148,
+      "offered_load_requests_per_second": 235,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 128,
+        "numerator": -2683690995
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 134102655015
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 128,
+          "numerator": 134102655015
+        },
+        "lower": {
+          "denominator": 256,
+          "numerator": 270889001025
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 132313527685
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 68393173005
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 64,
+          "numerator": 64814918345
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 265521619035
+        }
+      },
+      "central_decode_batch_count": 232,
+      "central_decode_batch_histogram": {
+        "1": 208,
+        "2": 24,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "interarrival_ps": 4166666666,
+      "offered_load_requests_per_second": 240,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -4472818325
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 32,
+        "numerator": 32854741005
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 32,
+          "numerator": 32854741005
+        },
+        "lower": {
+          "denominator": 256,
+          "numerator": 265521619035
+        },
+        "upper": {
+          "denominator": 64,
+          "numerator": 64814918345
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 267310746365
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 126946145695
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 260154237045
+        }
+      },
+      "central_decode_batch_count": 226,
+      "central_decode_batch_histogram": {
+        "1": 196,
+        "2": 30,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "interarrival_ps": 4081632653,
+      "offered_load_requests_per_second": 245,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -4472818325
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 128735273025
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 128,
+          "numerator": 128735273025
+        },
+        "lower": {
+          "denominator": 256,
+          "numerator": 260154237045
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 126946145695
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 261943364375
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 32,
+          "numerator": 31065613675
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 254786855055
+        }
+      },
+      "central_decode_batch_count": 220,
+      "central_decode_batch_histogram": {
+        "1": 184,
+        "2": 36,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        8
+      ],
+      "interarrival_ps": 4000000000,
+      "offered_load_requests_per_second": 250,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 128,
+        "numerator": -2683690995
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 63025791015
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 64,
+          "numerator": 63025791015
+        },
+        "lower": {
+          "denominator": 256,
+          "numerator": 254786855055
+        },
+        "upper": {
+          "denominator": 32,
+          "numerator": 31065613675
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 128735273025
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "interarrival_ps": 20000000000,
+      "offered_load_requests_per_second": 50,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "interarrival_ps": 10000000000,
+      "offered_load_requests_per_second": 100,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "interarrival_ps": 6666666666,
+      "offered_load_requests_per_second": 150,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "interarrival_ps": 5714285714,
+      "offered_load_requests_per_second": 175,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "interarrival_ps": 5000000000,
+      "offered_load_requests_per_second": 200,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "interarrival_ps": 4761904761,
+      "offered_load_requests_per_second": 210,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 64,
+          "numerator": 70182300335
+        },
+        "upper": {
+          "denominator": 1,
+          "numerator": 1110576000
+        }
+      },
+      "central_decode_batch_count": 256,
+      "central_decode_batch_histogram": {
+        "1": 256,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 1,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "interarrival_ps": 4545454545,
+      "offered_load_requests_per_second": 220,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 1,
+        "numerator": 0
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "lower": {
+          "denominator": 1,
+          "numerator": 1110576000
+        },
+        "upper": {
+          "denominator": 64,
+          "numerator": 70182300335
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 128,
+          "numerator": 137680909675
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 281623765005
+        }
+      },
+      "central_decode_batch_count": 249,
+      "central_decode_batch_histogram": {
+        "1": 242,
+        "2": 7,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "interarrival_ps": 4444444444,
+      "offered_load_requests_per_second": 225,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -6261945655
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 278045510345
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 256,
+          "numerator": 278045510345
+        },
+        "lower": {
+          "denominator": 256,
+          "numerator": 281623765005
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 137680909675
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 1,
+        "numerator": 1110576000
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 256,
+          "numerator": 269099873695
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 276256383015
+        }
+      },
+      "central_decode_batch_count": 243,
+      "central_decode_batch_histogram": {
+        "1": 230,
+        "2": 13,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "interarrival_ps": 4347826086,
+      "offered_load_requests_per_second": 230,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -6261945655
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 272678128355
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 256,
+          "numerator": 272678128355
+        },
+        "lower": {
+          "denominator": 256,
+          "numerator": 276256383015
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 269099873695
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 139470037005
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 256,
+          "numerator": 263732491705
+        },
+        "upper": {
+          "denominator": 16,
+          "numerator": 16874652335
+        }
+      },
+      "central_decode_batch_count": 236,
+      "central_decode_batch_histogram": {
+        "1": 216,
+        "2": 20,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "interarrival_ps": 4255319148,
+      "offered_load_requests_per_second": 235,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 32,
+        "numerator": -894563665
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 66604045675
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 64,
+          "numerator": 66604045675
+        },
+        "lower": {
+          "denominator": 16,
+          "numerator": 16874652335
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 263732491705
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 64,
+        "numerator": 68393173005
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 256,
+          "numerator": 258365109715
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 132313527685
+        }
+      },
+      "central_decode_batch_count": 230,
+      "central_decode_batch_histogram": {
+        "1": 204,
+        "2": 26,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "interarrival_ps": 4166666666,
+      "offered_load_requests_per_second": 240,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -6261945655
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 130524400355
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 128,
+          "numerator": 130524400355
+        },
+        "lower": {
+          "denominator": 128,
+          "numerator": 132313527685
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 258365109715
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 267310746365
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 256,
+          "numerator": 252997727725
+        },
+        "upper": {
+          "denominator": 64,
+          "numerator": 64814918345
+        }
+      },
+      "central_decode_batch_count": 224,
+      "central_decode_batch_histogram": {
+        "1": 192,
+        "2": 32,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "interarrival_ps": 4081632653,
+      "offered_load_requests_per_second": 245,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -6261945655
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 8,
+        "numerator": 7990044335
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 8,
+          "numerator": 7990044335
+        },
+        "lower": {
+          "denominator": 64,
+          "numerator": 64814918345
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 252997727725
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 261943364375
+      }
+    },
+    {
+      "batch_service_per_token_band_ps": {
+        "lower": {
+          "denominator": 256,
+          "numerator": 247630345735
+        },
+        "upper": {
+          "denominator": 128,
+          "numerator": 126946145695
+        }
+      },
+      "central_decode_batch_count": 219,
+      "central_decode_batch_histogram": {
+        "1": 182,
+        "2": 37,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      },
+      "central_maximum_decode_batch_size": 2,
+      "central_maximum_prefill_batch_size": 1,
+      "configuration": [
+        2,
+        1,
+        16
+      ],
+      "interarrival_ps": 4000000000,
+      "offered_load_requests_per_second": 250,
+      "phase_completion_signed_delta_ps": {
+        "denominator": 256,
+        "numerator": -6261945655
+      },
+      "predicted_batch_service_per_token_ps": {
+        "denominator": 256,
+        "numerator": 251208600395
+      },
+      "split": "held-out",
+      "timing_scenario_services_per_token_ps": {
+        "central": {
+          "denominator": 256,
+          "numerator": 251208600395
+        },
+        "lower": {
+          "denominator": 128,
+          "numerator": 126946145695
+        },
+        "upper": {
+          "denominator": 256,
+          "numerator": 247630345735
+        }
+      },
+      "zero_phase_counterfactual_service_per_token_ps": {
+        "denominator": 128,
+        "numerator": 128735273025
+      }
+    }
+  ],
+  "predictor": {
+    "derivation": {
+      "arrival": "a_i equals i times floor(10^12 divided by lambda)",
+      "decode_grant": "the next legal driver in prefill-then-decode round-robin order takes at most eight ready requests",
+      "decode_release": "a decode grant of size b advances the shared clock by measured interpolated S(b); nonterminal requests retain queue order for their next token visit",
+      "handoff_completion": "decode eligibility is prefill completion plus the independently frozen handoff service",
+      "prefill_completion": "a ready prefill batch advances the shared clock by the independently frozen prompt service",
+      "service_projection": "sum central S(b_j) over predicted decode grants j and divide by 64 times four request-token visits"
+    },
+    "fit_parameters": [],
+    "name": "phase-complete-service-only-bulk-scheduler-v1",
+    "observed_curve_inputs": [],
+    "old_model_refutation_mechanism": {
+      "causal_effect": "removing those positive delays grants decode before some external arrivals are ready, so transition cells contain fewer requests per decode batch",
+      "locality": "away from a discrete batch transition, the added phase does not change batch membership and the service projection is unchanged",
+      "omitted_term": "the old batching-service component predictor made prefill and handoff zero-time boundaries",
+      "signed_bias": "smaller batches raise service per request-token, so the old predictor is biased high where the omitted phase changes batch membership"
+    },
+    "phase_changed_cell_count": 36,
+    "phase_changed_cells": [
+      {
+        "configuration": [
+          1,
+          1,
+          8
+        ],
+        "offered_load_requests_per_second": 225,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -4472818325
+        }
+      },
+      {
+        "configuration": [
+          1,
+          1,
+          8
+        ],
+        "offered_load_requests_per_second": 230,
+        "signed_delta_ps": {
+          "denominator": 128,
+          "numerator": -2683690995
+        }
+      },
+      {
+        "configuration": [
+          1,
+          1,
+          8
+        ],
+        "offered_load_requests_per_second": 235,
+        "signed_delta_ps": {
+          "denominator": 128,
+          "numerator": -2683690995
+        }
+      },
+      {
+        "configuration": [
+          1,
+          1,
+          8
+        ],
+        "offered_load_requests_per_second": 240,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -4472818325
+        }
+      },
+      {
+        "configuration": [
+          1,
+          1,
+          8
+        ],
+        "offered_load_requests_per_second": 245,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -4472818325
+        }
+      },
+      {
+        "configuration": [
+          1,
+          1,
+          8
+        ],
+        "offered_load_requests_per_second": 250,
+        "signed_delta_ps": {
+          "denominator": 128,
+          "numerator": -2683690995
+        }
+      },
+      {
+        "configuration": [
+          1,
+          1,
+          16
+        ],
+        "offered_load_requests_per_second": 225,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -6261945655
+        }
+      },
+      {
+        "configuration": [
+          1,
+          1,
+          16
+        ],
+        "offered_load_requests_per_second": 230,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -6261945655
+        }
+      },
+      {
+        "configuration": [
+          1,
+          1,
+          16
+        ],
+        "offered_load_requests_per_second": 235,
+        "signed_delta_ps": {
+          "denominator": 32,
+          "numerator": -894563665
+        }
+      },
+      {
+        "configuration": [
+          1,
+          1,
+          16
+        ],
+        "offered_load_requests_per_second": 240,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -6261945655
+        }
+      },
+      {
+        "configuration": [
+          1,
+          1,
+          16
+        ],
+        "offered_load_requests_per_second": 245,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -6261945655
+        }
+      },
+      {
+        "configuration": [
+          1,
+          1,
+          16
+        ],
+        "offered_load_requests_per_second": 250,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -6261945655
+        }
+      },
+      {
+        "configuration": [
+          1,
+          2,
+          8
+        ],
+        "offered_load_requests_per_second": 225,
+        "signed_delta_ps": {
+          "denominator": 128,
+          "numerator": -894563665
+        }
+      },
+      {
+        "configuration": [
+          1,
+          2,
+          8
+        ],
+        "offered_load_requests_per_second": 230,
+        "signed_delta_ps": {
+          "denominator": 128,
+          "numerator": -2683690995
+        }
+      },
+      {
+        "configuration": [
+          1,
+          2,
+          8
+        ],
+        "offered_load_requests_per_second": 235,
+        "signed_delta_ps": {
+          "denominator": 128,
+          "numerator": -2683690995
+        }
+      },
+      {
+        "configuration": [
+          1,
+          2,
+          8
+        ],
+        "offered_load_requests_per_second": 240,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -4472818325
+        }
+      },
+      {
+        "configuration": [
+          1,
+          2,
+          8
+        ],
+        "offered_load_requests_per_second": 245,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -4472818325
+        }
+      },
+      {
+        "configuration": [
+          1,
+          2,
+          8
+        ],
+        "offered_load_requests_per_second": 250,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -4472818325
+        }
+      },
+      {
+        "configuration": [
+          1,
+          2,
+          16
+        ],
+        "offered_load_requests_per_second": 225,
+        "signed_delta_ps": {
+          "denominator": 64,
+          "numerator": -894563665
+        }
+      },
+      {
+        "configuration": [
+          1,
+          2,
+          16
+        ],
+        "offered_load_requests_per_second": 230,
+        "signed_delta_ps": {
+          "denominator": 32,
+          "numerator": -894563665
+        }
+      },
+      {
+        "configuration": [
+          1,
+          2,
+          16
+        ],
+        "offered_load_requests_per_second": 235,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -6261945655
+        }
+      },
+      {
+        "configuration": [
+          1,
+          2,
+          16
+        ],
+        "offered_load_requests_per_second": 240,
+        "signed_delta_ps": {
+          "denominator": 128,
+          "numerator": -2683690995
+        }
+      },
+      {
+        "configuration": [
+          1,
+          2,
+          16
+        ],
+        "offered_load_requests_per_second": 245,
+        "signed_delta_ps": {
+          "denominator": 128,
+          "numerator": -2683690995
+        }
+      },
+      {
+        "configuration": [
+          1,
+          2,
+          16
+        ],
+        "offered_load_requests_per_second": 250,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -6261945655
+        }
+      },
+      {
+        "configuration": [
+          2,
+          1,
+          8
+        ],
+        "offered_load_requests_per_second": 225,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -4472818325
+        }
+      },
+      {
+        "configuration": [
+          2,
+          1,
+          8
+        ],
+        "offered_load_requests_per_second": 230,
+        "signed_delta_ps": {
+          "denominator": 128,
+          "numerator": -2683690995
+        }
+      },
+      {
+        "configuration": [
+          2,
+          1,
+          8
+        ],
+        "offered_load_requests_per_second": 235,
+        "signed_delta_ps": {
+          "denominator": 128,
+          "numerator": -2683690995
+        }
+      },
+      {
+        "configuration": [
+          2,
+          1,
+          8
+        ],
+        "offered_load_requests_per_second": 240,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -4472818325
+        }
+      },
+      {
+        "configuration": [
+          2,
+          1,
+          8
+        ],
+        "offered_load_requests_per_second": 245,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -4472818325
+        }
+      },
+      {
+        "configuration": [
+          2,
+          1,
+          8
+        ],
+        "offered_load_requests_per_second": 250,
+        "signed_delta_ps": {
+          "denominator": 128,
+          "numerator": -2683690995
+        }
+      },
+      {
+        "configuration": [
+          2,
+          1,
+          16
+        ],
+        "offered_load_requests_per_second": 225,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -6261945655
+        }
+      },
+      {
+        "configuration": [
+          2,
+          1,
+          16
+        ],
+        "offered_load_requests_per_second": 230,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -6261945655
+        }
+      },
+      {
+        "configuration": [
+          2,
+          1,
+          16
+        ],
+        "offered_load_requests_per_second": 235,
+        "signed_delta_ps": {
+          "denominator": 32,
+          "numerator": -894563665
+        }
+      },
+      {
+        "configuration": [
+          2,
+          1,
+          16
+        ],
+        "offered_load_requests_per_second": 240,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -6261945655
+        }
+      },
+      {
+        "configuration": [
+          2,
+          1,
+          16
+        ],
+        "offered_load_requests_per_second": 245,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -6261945655
+        }
+      },
+      {
+        "configuration": [
+          2,
+          1,
+          16
+        ],
+        "offered_load_requests_per_second": 250,
+        "signed_delta_ps": {
+          "denominator": 256,
+          "numerator": -6261945655
+        }
+      }
+    ],
+    "surface_uncertainty": {
+      "envelope_ppm": 12696,
+      "multiplier": 3,
+      "rule": "scale only the decode service clock by plus or minus three times the maximum independent trimmed coefficient of variation; price every scenario batch with central S(b)"
+    },
+    "timing_scenarios": [
+      "lower",
+      "central",
+      "upper"
+    ]
+  },
+  "preservation": {
+    "artifact_count": 56,
+    "manifest_sha256": "ac8dfc619d6e0ecf62d0f935242daa84fe02f2a679b30428f542a39a653df2e2",
+    "queue_onset_artifact_count": 11,
+    "rows": [
+      {
+        "blob_sha1": "fcadb2cf97913f58a2523f535336e725c6b59d1f",
+        "path": "examples/pd_session_concurrent_v1/.gitattributes",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "4db2b54762fec9c0e7cc1cee03ac9026d68aeddb",
+        "path": "examples/pd_session_concurrent_v1/RESULTS.md",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "e107c9d8df63023a87a883e0500f6df7c5433374",
+        "path": "examples/pd_session_concurrent_v1/expectations-load-amendment.json",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "4a1ce61bd45f5e3a6dc69cd5a959b0a8c91c55f3",
+        "path": "examples/pd_session_concurrent_v1/expectations-load-amendment.md",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "642d687fc3ab8a8e05795de0aff11e0b9f8fdc29",
+        "path": "examples/pd_session_concurrent_v1/expectations-provenance-correction.md",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "e68fd7bc7650686bcdc8f8c81e64b32fb9eecdcb",
+        "path": "examples/pd_session_concurrent_v1/expectations.json",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "3e816dba869224d0902cfc88ad8f56aa2c4fb2b7",
+        "path": "examples/pd_session_concurrent_v1/expectations.md",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "9f8b1547628224a8b05e85ee17e14e6b22852c49",
+        "path": "examples/pd_session_concurrent_v1/results.json",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "ff49ef637e3c7c4471659b26d07b7ad62e0a393f",
+        "path": "examples/pd_session_concurrent_v1/run_study.py",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "fcadb2cf97913f58a2523f535336e725c6b59d1f",
+        "path": "examples/pd_session_fabric_handoff_v1/.gitattributes",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "1c1430d1d2270bc0dc51730fe5b1c437a5223e48",
+        "path": "examples/pd_session_fabric_handoff_v1/RESULTS.md",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "56c5c6209662607101de0fbe3c397d698b9c7215",
+        "path": "examples/pd_session_fabric_handoff_v1/expectations-converter-correction.md",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "0aaae8872fdf0340e8f8663b1d45ad6a5c495669",
+        "path": "examples/pd_session_fabric_handoff_v1/expectations-provenance-correction.md",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "0cd7f4e7fe0436d0c20c2da2ed8cd93c0bceb721",
+        "path": "examples/pd_session_fabric_handoff_v1/expectations.json",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "f463965bb1c0fd0d4317961dad97d0ee2630c7dc",
+        "path": "examples/pd_session_fabric_handoff_v1/expectations.md",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "cd83ac4a4d729e5789d5dbd690431f1726f24010",
+        "path": "examples/pd_session_fabric_handoff_v1/results.json",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "be632508fb239e705ad318a2f14e040a1592a282",
+        "path": "examples/pd_session_fabric_handoff_v1/run_study.py",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "aaf9edf492ba96aa19c916d601c1faea01fa7ce2",
+        "path": "examples/pd_session_kernel_cycle_v1/RESULTS.md",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "eb26b4adffa5c2f64ffd3274a4aa7fe3b5d7940f",
+        "path": "examples/pd_session_kernel_cycle_v1/expectations.json",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "944f68139e7e1ac1d0f81f2b62f3c98700d7a15b",
+        "path": "examples/pd_session_kernel_cycle_v1/expectations.md",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "d57e19f1152ff2ca9a0d45528aba9b0d32c59b6a",
+        "path": "examples/pd_session_kernel_cycle_v1/results.json",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "95fb0ce4c23205cab95361312a17ca70c124e5ee",
+        "path": "examples/pd_session_kernel_cycle_v1/run_study.py",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "fcadb2cf97913f58a2523f535336e725c6b59d1f",
+        "path": "examples/pd_session_load_delay_v1/.gitattributes",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "081041379dcfab24ca143248e06c2f227be6b6ca",
+        "path": "examples/pd_session_load_delay_v1/ACCESS_PROTOCOL.md",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "3d3dad763e7ee6e6dd3dd6da2ce62e42f428b188",
+        "path": "examples/pd_session_load_delay_v1/EXPECTATIONS.md",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "b47730eb5ba941b14891a5ba0bd938feb0660e2c",
+        "path": "examples/pd_session_load_delay_v1/RESULTS.md",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "a62a7f2fed796539883c430935cfe5c97c5ec026",
+        "path": "examples/pd_session_load_delay_v1/VLLM40_RESULTS.md",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "e6a6b2784d1d5984843a8b9246537a4930ef13f9",
+        "path": "examples/pd_session_load_delay_v1/access_ledger.jsonl",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "7ed6f78bcf59b7d5ad657c1e3eb5b797719e6f12",
+        "path": "examples/pd_session_load_delay_v1/access_protocol.json",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "683b100b5d0869f7698226c58ca9b8c53d3d9c64",
+        "path": "examples/pd_session_load_delay_v1/expectations.json",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "a417e941cfd502d7dab28479b1ea93a57c166ec2",
+        "path": "examples/pd_session_load_delay_v1/field_reader.py",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "4645c9a591558fb161f982acfcfce6188f141078",
+        "path": "examples/pd_session_load_delay_v1/freeze_expectations.py",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "b640946f4dd54ca119e84b0bdba4e03dd526b2cc",
+        "path": "examples/pd_session_load_delay_v1/publish_results.py",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "cf3f0e7b0ff67247ca794c80170ad69d2bb0746f",
+        "path": "examples/pd_session_load_delay_v1/queue_model.py",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "aeb4ecf87b5f98c326812a3e83fb48887a65f068",
+        "path": "examples/pd_session_load_delay_v1/results.json",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "a3afd85026a2b6a6e2035d58e505133791b8f487",
+        "path": "examples/pd_session_load_delay_v1/run_study.py",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "66b59974751f98a45ab5f6e0e64008f21f500a94",
+        "path": "examples/pd_session_load_delay_v1/surface.json",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "039bf13db3d0c0823c79b2f36bc5fe916b818e86",
+        "path": "examples/pd_session_load_delay_v1/vllm40_access_ledger.jsonl",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "d44d75a8a3542a012a6aa5e2668a338631b3ca30",
+        "path": "examples/pd_session_load_delay_v1/vllm40_results.json",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "08f6ceebcbec0aca268ac4115f7cdc4a785b46c0",
+        "path": "examples/pd_session_queue_onset_v1/EXPECTATIONS.md",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "7b96dbba8d7a0c36a53d0ad2e1334ae10ec8d542",
+        "path": "examples/pd_session_queue_onset_v1/RESULTS.md",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "039bf13db3d0c0823c79b2f36bc5fe916b818e86",
+        "path": "examples/pd_session_queue_onset_v1/access_ledger.jsonl",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "35beb4293e6cf3de181b0ec9dfa711675e72f32f",
+        "path": "examples/pd_session_queue_onset_v1/expectations.json",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "6a55e914259a02602a893f71a64f7fad96041409",
+        "path": "examples/pd_session_queue_onset_v1/freeze_expectations.py",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "6b3b7e802b06de2461b051861bb566ac016eded8",
+        "path": "examples/pd_session_queue_onset_v1/merge_cells.py",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "b936c54d98e755ef844cd0389063c9551025f833",
+        "path": "examples/pd_session_queue_onset_v1/publish_results.py",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "1468f432a63f53399ab1f2da6769e627bbdda440",
+        "path": "examples/pd_session_queue_onset_v1/queue_model.py",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "565267cedf2b26db52c5fc50fa4319264cfb2caf",
+        "path": "examples/pd_session_queue_onset_v1/results.json",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "65a00322b70a6b27109a1c197516d21ac2dba72f",
+        "path": "examples/pd_session_queue_onset_v1/run_cell.py",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "f9ded52d339c0f2512fbae756810bf68489a7150",
+        "path": "examples/pd_session_queue_onset_v1/run_study.py",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "fcadb2cf97913f58a2523f535336e725c6b59d1f",
+        "path": "examples/pd_session_v1/.gitattributes",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "7489765b527a8bce077da4406c4c5a604bfd3c4d",
+        "path": "examples/pd_session_v1/RESULTS.md",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "9dc21c26832c5d7a4217b63d33013ca2451a5839",
+        "path": "examples/pd_session_v1/expectations.json",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "cec68d8f1413df473d1f1c227586db1b38778250",
+        "path": "examples/pd_session_v1/expectations.md",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "e2b6d8e80309ae83f242d66c1ffa1352f60a2e4d",
+        "path": "examples/pd_session_v1/results.json",
+        "stage": 0
+      },
+      {
+        "blob_sha1": "2d3771140cba2b770d34d6975441f49cf2305640",
+        "path": "examples/pd_session_v1/run_study.py",
+        "stage": 0
+      }
+    ],
+    "selection_rule": "every tracked examples/pd_session* path except this successor study"
+  },
+  "schema": "simllm-pd-session-batching-service-expectations-v1",
+  "source_access": {
+    "access_protocol_path": "examples/pd_session_batching_service_v1/access_protocol.json",
+    "access_protocol_sha256": "0706303d2d69502a06a362dec0f9bf83ff2306b02dfad8a0e842b5167aab769a",
+    "field_reader_path": "examples/pd_session_batching_service_v1/field_reader.py",
+    "field_reader_sha256": "73d9d5891efbbbe2d0e521da6343be9f9cac9cdf0ce65ce4975559b761b360f6",
+    "forbidden_access_ledger": [],
+    "forbidden_access_ledger_path": "examples/pd_session_batching_service_v1/forbidden_access_ledger.json",
+    "guarded_access_count_before_freeze": 0,
+    "status": "CLEAN",
+    "whole_record_loaded": false
+  },
+  "status": "EXPECTATIONS_ONLY",
+  "sweep": {
+    "cell_count": 78,
+    "decode_output_tokens_per_request": 4,
+    "maximum_scheduler_batch_size": 8,
+    "offered_load_requests_per_second": [
+      50,
+      100,
+      150,
+      175,
+      200,
+      210,
+      220,
+      225,
+      230,
+      235,
+      240,
+      245,
+      250
+    ],
+    "pool_ratios": [
+      [
+        1,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        1
+      ]
+    ],
+    "prompt_tokens": [
+      8,
+      16
+    ],
+    "requests_per_cell": 64
+  },
+  "task": "VLLM-42"
+}
