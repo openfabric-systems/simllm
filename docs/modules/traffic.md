@@ -1140,6 +1140,18 @@ TRAF-78 owns observed routing geometry, TRAF-75 owns supported-path directional
 precision, TRAF-77 owns hardware transport calibration, and TRAF-26 owns
 complete production peer workloads.
 
+The [second TRAF-74 capture](../../examples/nvlink_incast_validation_v1/RESULTS_RUN2.md)
+validates the scored base domain at the only incast degrees a four-A100 `NV4`
+node can realize. Merlin job `202466` completes all 42 rows, all 13 fatal
+guards pass, and the worst sequential launch-skew fraction is 1.129 percent
+against the frozen 10.000 percent ceiling. All six cells then miss the frozen
+plus or minus 16 percent band: hardware aggregate goodput spans 4.461874 to
+14.288373 GB/s while simultaneous-release simulation spans 94.104154 to
+194.808553 GB/s, with a worst absolute signed relative error of 2011.175
+percent. The frozen size-dependent rule attributes every miss to
+packetization. TRAF-74 closes as a literal non-void validation, and TRAF-86
+owns the identified packetization precision residual.
+
 NVLink hardware incast identification is long-flow only. Sender launches on
 the real node serialize through sequential PCIe writes, so nanosecond-scale
 true synchronous small-flow co-arrival cannot be constructed. Simulated
@@ -1210,39 +1222,32 @@ arbitration parameters after that structure lands.
   in every inherited envelope before TRAF-73 begins identification; a result
   that violates any conservation, ownership or identity guard is void.
 
-- TRAF-74 (Precision; P1; L): validate the scored three-module A100 NVLink
-  incast prediction against one qualified four-A100 `NV4` node at the only
-  physically capturable degrees, one, two and three senders into one receiver.
-  The surrogate under test is the simultaneous-release packet and credit
-  domain using the measured TX egress and RX ingress plateaus plus the declared
-  packetization, credit round and structural pass-through switch identity. Run
-  256 KiB and 512 KiB long flows only through the unchanged corrected TRAF-70
-  persistent peer-write producer, because sequential PCIe sender launches make
-  true-sync small-flow incast unconstructible. Freeze the simulator's
-  per-source completion times and aggregate receiver goodput before one short,
-  exclusive, paced `a100-hourly` cell. Record the matching hardware quantities,
-  checksum and ordering ledgers, per-link data and raw counters, replay and
-  recovery deltas, throttle state, topology and competing processes. A cell
-  passes only when `(simulation - hardware) / hardware` is inside the frozen
-  band for its aggregate and every source median, every inherited fatal guard
-  is decidable and passes, and the frozen launch-skew budget is no more than ten
-  percent of the minimum hardware completion. A miss remains published and is
-  attributed by the frozen rules to the TX egress plateau, RX ingress plateau,
-  credit round, packetization or pass-through switch identity. Degrees 4, 8 and
-  16 remain declared simulation-only mesh extrapolations with no hardware
-  counterpart on this node class; agreement at degrees 1 to 3 supports but does
-  not prove them. Preserve every merged TRAF-69, TRAF-70 and TRAF-72 artifact
-  byte for byte and publish this study under its own records. The
-  [first frozen capture](../../examples/nvlink_incast_validation_v1/RESULTS.md),
-  Merlin job `200456`, completed all 42 rows with every inherited
-  TRAF-70 guard, the full matrix guard and the preservation guard passing. Its
-  degree-3 256 KiB samples reached a maximum sequential launch-skew fraction of
-  10.501 percent against the frozen 10.000 percent ceiling, so FG11 voided the
-  whole run before behavioral scoring. Retain that refutation as the study's
-  first result. Before a future capture, land a new expectations-only freeze
-  whose larger long-flow rungs leave physical margin below the launch-skew
-  ceiling; then run one new short paced cell. TRAF-74 stays open until a
-  non-void comparison publishes all six per-cell verdicts.
+- TRAF-86 (Precision; P1; L): replace the NVLink domain's declared packetization
+  service conversion identified by the completed TRAF-74 comparison. The
+  surrogate being replaced maps each logical flow directly onto the profile's
+  256-byte payload plus 16-byte header and then services those packets at the
+  measured TX egress and RX ingress plateaus. On base commit `6559313`, it
+  predicts 94.104154 to 194.808553 GB/s for the six simultaneous-release cells.
+  Merlin job `202466` instead measures 4.461874 to 14.288373 GB/s at 4 MiB and
+  8 MiB, with all 13 fatal guards passing and every per-source completion plus
+  aggregate comparison outside the frozen plus or minus 16 percent band. The
+  size-dependent miss shrinks by more than five percentage points at 8 MiB for
+  every degree, so the frozen TRAF-74 rule names packetization rather than the
+  TX plateau, RX plateau, credit round or pass-through switch identity. Treat
+  that capture as identification evidence, not as a held-out acceptance set.
+  After TRAF-80 lands the public-document packet and credit structure, freeze
+  the effective logical-message to packet-service conversion, its counter or
+  trace observable, and new 16 MiB and 32 MiB held-out long-flow cells before
+  implementation or capture. The replacement must keep checksum, ordering,
+  per-link data and raw counters, replay, recovery, throttle, topology and
+  competing-process guards decidable; put the base conversion behind an
+  explicit compatibility mode that reproduces every frozen base completion,
+  aggregate, byte count and order exactly. Acceptance requires one new non-void
+  degree-1, degree-2 and degree-3 comparison whose aggregate and every
+  per-source median are inside its pre-run physical band, plus an end-to-end
+  TTFT or TPOT change through the supported metric chain. Degrees 4, 8 and 16
+  remain declared simulation-only extrapolations and are not validated by an
+  NV4 result.
 
 - TRAF-77 (Precision; P1; L): replace the MiniMax scaling study's borrowed
   32 MiB switch-wide buffer and uncalibrated rnic-cn transport service with
