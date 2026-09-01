@@ -1,0 +1,32 @@
+{
+  "schema": "simllm-collective-floor-qualifying-candidate-v1",
+  "study": "collective_floor_calibration_v1",
+  "predecessor": {
+    "expectations_v5_sha256": "c9ad29ab5d322f3f8dc9f1f77fc1978e3181cc6bba2a5bc31cfec8daf2176376",
+    "study_config_v3_sha256": "474bab36dfead88da59ecade282f9fb95e32f6adf2a59e681f10b743646e7ae5",
+    "arithmetic_candidate_classification": "post-specified regression evidence"
+  },
+  "membership": {
+    "source": "study_config.json",
+    "training_count": 63,
+    "holdout_count": 63
+  },
+  "model": {
+    "model_id": "h200-nccl-2.26.2-aggregate-anchor-v4",
+    "model_form": "geometric-symmetric-transition-v4",
+    "default_rule": "geometric mean of same-operation affine training trend and complementary-operation exact training anchor",
+    "unchanged_rules_source": "study_config_v3.json",
+    "completion_semantics": "opaque fully local completion charged once"
+  },
+  "family_h": {
+    "denominator": 63,
+    "required_passed": 63,
+    "band": "relative error no greater than max(0.10, two H200 GPU cycles divided by measured completion)"
+  },
+  "family_d8": {
+    "operation_buffer_bytes": 196608,
+    "external_arm_ms": 1.92205,
+    "band": [0.9, 1.1],
+    "expected_unchanged_rule": "same-operation-affine"
+  }
+}

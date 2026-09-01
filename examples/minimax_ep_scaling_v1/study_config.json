@@ -1,0 +1,392 @@
+{
+  "schema": "simllm-minimax-ep-scaling-study-config-v2",
+  "chronology": {
+    "expectations_commit": "61b66c4",
+    "corrected_expectations_commit": "4d1e41c",
+    "diagnostic_extrapolation_rule_commit": "a6ba97f",
+    "diagnostic_extrapolation_rule_frozen": false,
+    "frozen_before_implementation": true,
+    "oracle_collection": "live pinned SDK in a fresh process"
+  },
+  "collective_floor_correction": {
+    "status": "defect correction evaluated against the unchanged expectations_v2.md predicate",
+    "source_config": "examples/collective_floor_calibration_v1/study_config.json",
+    "source_config_sha256": "83de9c82dea918d09e9bb474529f33b146b3a14a6f010b8d85ea1cfa83b35f57",
+    "source_record": "examples/collective_floor_calibration_v1/record.json",
+    "source_record_sha256": "3e41e6ec80e67eed851ca68884da0244ac8f79c338bef06272d8ccb97113026f",
+    "calibration_id": "h200-nccl-2.26.2-aggregate-floor-v1",
+    "donor_ranks": 8,
+    "acknowledge_transferred_at_use": true,
+    "composition": "charge each aggregate floor once outside max(calibrated byte-slope service, unchanged fabric service)",
+    "dense_operation_buffer_coordinate": "tokens_per_rank * hidden_size * expert_parallel * 2 half-precision bytes per semantic phase",
+    "sparse_dispatch_transfer": {
+      "requested_dtype": "int8",
+      "requested_operation": "moe_dispatch",
+      "donor_dtype": "half",
+      "donor_operation": "all_gather",
+      "operation_buffer_coordinate": "tokens_per_rank * top_k * hidden_size * 1 FP8 byte"
+    },
+    "sparse_combine_transfer": {
+      "requested_dtype": "half",
+      "requested_operation": "moe_combine",
+      "donor_dtype": "half",
+      "donor_operation": "reduce_scatter",
+      "operation_buffer_coordinate": "tokens_per_rank * top_k * hidden_size * 2 BF16 bytes"
+    }
+  },
+  "source": {
+    "tool": "NVIDIA AIConfigurator",
+    "aiconfigurator": "0.11.0",
+    "aiconfigurator_core": "0.11.0",
+    "system": "h200_sxm",
+    "backend": "trtllm",
+    "database_version": "1.3.0rc10",
+    "database_mode": "SILICON",
+    "shared_layer": false,
+    "surface": "python"
+  },
+  "model": {
+    "model_id": "MiniMaxAI/MiniMax-M2.5",
+    "num_hidden_layers": 62,
+    "hidden_size": 3072,
+    "intermediate_size": 1536,
+    "num_attention_heads": 48,
+    "num_key_value_heads": 8,
+    "head_dim": 128,
+    "num_local_experts": 256,
+    "num_experts_per_tok": 8,
+    "has_shared_expert": false,
+    "vocab_size": 200064,
+    "nextn": 3,
+    "gemm_quant_mode": "fp8_block",
+    "kv_cache_quant_mode": "fp8"
+  },
+  "declared_adjustments": [
+    {
+      "id": "A-1",
+      "behavior": "set nextn to 3 explicitly instead of accepting the runtime default of zero",
+      "sources": [
+        {
+          "file": "aiconfigurator_core/model_configs/MiniMaxAI--MiniMax-M2.5_config.json",
+          "line": 27
+        },
+        {
+          "file": "aiconfigurator_core/sdk/config.py",
+          "line": 38
+        }
+      ]
+    },
+    {
+      "id": "A-2",
+      "behavior": "expand decode batch by nextn plus one",
+      "sources": [
+        {
+          "file": "aiconfigurator_core/sdk/backends/base_backend.py",
+          "line": 374
+        }
+      ]
+    },
+    {
+      "id": "A-3",
+      "behavior": "scale layer work by 65 repeats and singleton work by 65 over 62",
+      "sources": [
+        {
+          "file": "aiconfigurator_core/sdk/models/helpers.py",
+          "line": 531
+        },
+        {
+          "file": "aiconfigurator_core/sdk/models/moe.py",
+          "line": 239
+        }
+      ]
+    },
+    {
+      "id": "A-4",
+      "behavior": "resolve power_law to the model's power_law_1.2 table",
+      "sources": [
+        {
+          "file": "aiconfigurator_core/sdk/models/moe.py",
+          "line": 101
+        }
+      ]
+    },
+    {
+      "id": "A-5",
+      "behavior": "infer FP8 GEMM, MoE, attention and key/value cache modes from the model's FP8 quantization record",
+      "sources": [
+        {
+          "file": "aiconfigurator_core/model_configs/MiniMaxAI--MiniMax-M2.5_config.json",
+          "line": 30
+        },
+        {
+          "file": "aiconfigurator_core/sdk/models/helpers.py",
+          "line": 283
+        }
+      ]
+    },
+    {
+      "id": "A-6",
+      "behavior": "compose router, pre-dispatch, MoE, post-dispatch and logits in donor execution order",
+      "sources": [
+        {
+          "file": "aiconfigurator_core/sdk/models/moe.py",
+          "line": 271
+        }
+      ]
+    },
+    {
+      "id": "A-7",
+      "behavior": "price SM90 dispatch as half-precision all-gather and combine as half-precision reduce-scatter over tokens times hidden times expert width elements",
+      "sources": [
+        {
+          "file": "aiconfigurator_core/sdk/operations/moe.py",
+          "line": 1208
+        }
+      ]
+    },
+    {
+      "id": "A-8",
+      "behavior": "use effective ranks min(E, 8), raw linear size interpolation and the donor rank extrapolation",
+      "sources": [
+        {
+          "file": "aiconfigurator_core/sdk/operations/communication.py",
+          "line": 470
+        },
+        {
+          "file": "aiconfigurator_core/sdk/operations/communication.py",
+          "line": 480
+        },
+        {
+          "file": "aiconfigurator_core/sdk/operations/communication.py",
+          "line": 491
+        }
+      ]
+    },
+    {
+      "id": "A-9",
+      "behavior": "use 450000000000 bytes per second within eight ranks and 50000000000 bytes per second above eight",
+      "sources": [
+        {
+          "file": "aiconfigurator_core/systems/h200_sxm.yaml",
+          "line": 17
+        }
+      ]
+    },
+    {
+      "id": "A-10",
+      "behavior": "retain the first NCCL source row when a lookup coordinate repeats",
+      "sources": [
+        {
+          "file": "aiconfigurator_core/sdk/operations/communication.py",
+          "line": 726
+        }
+      ]
+    },
+    {
+      "id": "A-11",
+      "behavior": "use the donor analytical empirical memory-operation formula for embedding and elementwise work",
+      "sources": [
+        {
+          "file": "aiconfigurator_core/sdk/perf_database.py",
+          "line": 2949
+        }
+      ]
+    },
+    {
+      "id": "A-12",
+      "behavior": "record tensor-parallel all-reduce and pipeline transfer as zero at widths one",
+      "sources": [
+        {
+          "file": "aiconfigurator_core/sdk/models/moe.py",
+          "line": 339
+        }
+      ]
+    },
+    {
+      "id": "A-13",
+      "behavior": "raise the rnic-cn Ring-CAM wire capacity to 2097152 bytes so the topology-derived EP 256 delay window satisfies the backend capacity invariant",
+      "sources": [
+        {
+          "file": "htsim/sim/datacenter/rnic_atlahs_driver.cpp",
+          "line": 62
+        },
+        {
+          "file": "htsim/sim/datacenter/rnic_atlahs_cli.cpp",
+          "line": 149
+        }
+      ]
+    },
+    {
+      "id": "A-14",
+      "behavior": "use a 33554432-byte switch-wide ns-tm3 shared pool, matching the backend's DCQCN physical-runtime default, so the synchronized full-population collective is evaluated without a fatal control-packet drop",
+      "sources": [
+        {
+          "file": "htsim/sim/datacenter/dcqcn_atlahs_runtime.h",
+          "line": 31
+        },
+        {
+          "file": "htsim/sim/datacenter/ns_tm3_switch.cpp",
+          "line": 309
+        }
+      ]
+    },
+    {
+      "id": "A-15",
+      "behavior": "price sparse dispatch at one FP8 byte per element and ordinary combine at two BF16 bytes per element because low-precision combine is a separate explicit mode",
+      "sources": [
+        {
+          "file": "aiconfigurator_core/sdk/operations/moe.py",
+          "line": 2099
+        },
+        {
+          "file": "aiconfigurator_core/sdk/operations/moe.py",
+          "line": 2114
+        },
+        {
+          "file": "aiconfigurator_core/sdk/operations/moe.py",
+          "line": 2360
+        }
+      ]
+    }
+  ],
+  "operating_point": {
+    "total_gpu_budget": 256,
+    "tensor_parallel": 1,
+    "pipeline_parallel": 1,
+    "moe_tensor_parallel": 1,
+    "attention_data_parallel_equals_expert_parallel": true,
+    "local_batch_per_attention_dp_rank": 1,
+    "input_length": 256,
+    "output_length": 2,
+    "generation_stride": 32,
+    "workload_distribution": "power_law",
+    "gpus_per_node": 8,
+    "link_rate_bits_per_second": 400000000000,
+    "packet_profile": "rnic-cn",
+    "ring_cam_wire_capacity_bytes": 2097152,
+    "switch_shared_buffer_bytes": 33554432
+  },
+  "strategies": {
+    "dense_sm90_general_fallback": {
+      "name": "dense SM90 general fallback",
+      "logical_traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements",
+      "external_pricing_definition": "opaque eight-rank NCCL table measurement scaled by the donor rank factor, with no source, destination, path or message ledger",
+      "packet_pricing_definition": "dense half-precision operation-buffer coordinate priced by the landed aggregate all-gather and reduce-scatter floor authority, each floor charged once outside the maximum of calibrated local byte-slope service and synchronized direct all-pairs fabric service over the declared Clos placement",
+      "superseded_packet_pricing_definition": "dense half-precision element count expanded as synchronized direct all-pairs transfers over the declared Clos placement, with intra-node collective transport and fixed collective overheads omitted",
+      "external_dtype_identifier": "half",
+      "external_dtype_interpretation": "generic half precision; the table does not identify BF16",
+      "external_message_axis_name": "message_bytes",
+      "external_message_argument_interpretation": "the caller passes tokens times hidden times expert-parallel width as an element count; the calibration study proved that the raw table coordinate is ELEMENTS despite the message_bytes interpolation label, and converts it to true bytes using the dtype width"
+    },
+    "sparse_routed_payload": {
+      "name": "sparse routed expert payload",
+      "logical_traffic_definition": "top-k token assignments routed only to realized expert-owner ranks, with FP8 dispatch and BF16 combine",
+      "dispatch_bytes_per_element": 1,
+      "combine_bytes_per_element": 2,
+      "precision_justification": "the represented sparse path quantizes dispatch to FP8 and returns ordinary combine in BF16; low-precision combine is a separate mode and is disabled",
+      "packet_pricing_definition": "realized sparse packet fabric service composed with acknowledged transferred all-gather and reduce-scatter aggregate floors and byte slopes at the logical FP8 dispatch and BF16 combine operation-buffer coordinates",
+      "superseded_packet_pricing_definition": "realized sparse packet transfers with intra-node collective transport and fixed collective overheads omitted"
+    }
+  },
+  "packet_sampling": {
+    "sampled": true,
+    "sampled_layers": [
+      0
+    ],
+    "represented_layer_executions": 65,
+    "rule": "simulate layer 0 and multiply the serial dispatch-plus-combine layer makespan by 65",
+    "label_full": "sampled layer only: full rank and message population, one layer of 65",
+    "dense_direct_full_population_max_width": 128,
+    "dense_widest_anchor_width": 128,
+    "dense_widest_extrapolation_rule": "post-specified diagnostic introduced in implementation commit a6ba97f after corrected expectations commit 4d1e41c: multiply the EP 128 measured per-layer makespan by the ratio of EP 256 to EP 128 cross-node bytes per rank, (256 - 8) / (128 - 8) = 31 / 15; message size, link rate, placement rule and represented layer count stay fixed",
+    "dense_widest_extrapolation_rule_status": "superseded because multiplying the whole phase also multiplies the newly bound fixed floor",
+    "dense_widest_corrected_extrapolation_rule": "unscored post-specified diagnostic: for each semantic half, multiply only the EP 128 fabric service by (256 - 8) / (128 - 8) = 31 / 15, query the rank-8 collective-floor donor at the EP 256 operation-buffer byte coordinate, then charge its floor once outside max(calibrated byte-slope service, extrapolated fabric service)",
+    "dense_widest_extrapolation_scored": false
+  },
+  "void_first_run": {
+    "status": "VOID against FG-4",
+    "run_commit": "df47c6532c71312d36eb96ed528f6ebd772e5952",
+    "published_headline_ratio": 0.2742607736975033,
+    "rows": [
+      {
+        "expert_parallel": 8,
+        "packet_dispatch_combine_ms": 0.02496,
+        "packet_priced_step_ms": 12.087042942232175,
+        "packet_to_external_step_ratio": 0.8643398194341548,
+        "simulated_messages_per_layer": 112,
+        "population_status": "full all-pairs fluidized population"
+      },
+      {
+        "expert_parallel": 32,
+        "packet_dispatch_combine_ms": 4.0350336,
+        "packet_priced_step_ms": 11.72994880117192,
+        "packet_to_external_step_ratio": 0.4262782480503487,
+        "simulated_messages_per_layer": 1984,
+        "population_status": "full all-pairs fluidized population"
+      },
+      {
+        "expert_parallel": 128,
+        "packet_dispatch_combine_ms": 5.5890432,
+        "packet_priced_step_ms": 13.679158504693262,
+        "packet_to_external_step_ratio": 0.3048657016451342,
+        "simulated_messages_per_layer": 32512,
+        "population_status": "full all-pairs fluidized population"
+      },
+      {
+        "expert_parallel": 256,
+        "packet_dispatch_combine_ms": 7.1043648,
+        "packet_priced_step_ms": 16.73784003997693,
+        "packet_to_external_step_ratio": 0.2742607736975033,
+        "simulated_messages_per_layer": 16320,
+        "full_messages_per_layer": 130560,
+        "population_status": "one eighth receiver sample without a full-population anchor"
+      }
+    ]
+  },
+  "widths": [
+    {
+      "expert_parallel": 8,
+      "live_decode_step_ms": 13.984132942232176,
+      "live_decode_step_hex": "0x1.bf7e045e39b5ep+3",
+      "live_pre_dispatch_ms": 1.066,
+      "live_pre_dispatch_hex": "0x1.10e5604189375p+0",
+      "live_post_dispatch_ms": 0.8560500000000001,
+      "live_post_dispatch_hex": "0x1.b64c2f837b4a3p-1",
+      "live_dispatch_ms": 1.92205,
+      "live_dispatch_hex": "0x1.ec0b780346dc6p+0"
+    },
+    {
+      "expert_parallel": 32,
+      "live_decode_step_ms": 27.51711787974335,
+      "live_decode_step_hex": "0x1.b8461d65dacafp+4",
+      "live_pre_dispatch_ms": 10.379049107142858,
+      "live_pre_dispatch_hex": "0x1.4c212b97d835ep+3",
+      "live_post_dispatch_ms": 9.443153571428573,
+      "live_post_dispatch_hex": "0x1.2e2e50660c85bp+3",
+      "live_dispatch_ms": 19.82220267857143,
+      "live_dispatch_hex": "0x1.3d27bdfef25dcp+4"
+    },
+    {
+      "expert_parallel": 128,
+      "live_decode_step_ms": 44.86945704576469,
+      "live_decode_step_hex": "0x1.66f4a5e546b06p+5",
+      "live_pre_dispatch_ms": 19.98668169642857,
+      "live_pre_dispatch_hex": "0x1.3fc972bf1b8f6p+4",
+      "live_post_dispatch_ms": 16.792660044642858,
+      "live_post_dispatch_hex": "0x1.0caebc4c89644p+4",
+      "live_dispatch_ms": 36.77934174107143,
+      "live_dispatch_hex": "0x1.263c1785d279dp+5"
+    },
+    {
+      "expert_parallel": 256,
+      "live_decode_step_ms": 61.028924458726934,
+      "live_decode_step_hex": "0x1.e83b3cbf224b2p+5",
+      "live_pre_dispatch_ms": 26.821531808035715,
+      "live_pre_dispatch_hex": "0x1.ad24fe898231cp+4",
+      "live_post_dispatch_ms": 24.57391741071429,
+      "live_post_dispatch_hex": "0x1.892ec405d9f75p+4",
+      "live_dispatch_ms": 51.39544921875,
+      "live_dispatch_hex": "0x1.9b29e147ae148p+5"
+    }
+  ]
+}
