@@ -116,15 +116,16 @@ def load_expectations(
         raise ValueError("the requested TRAF-73 freeze digest is not committed")
     if sha256(EXPECTATIONS_PATH) != EXPECTATIONS_SHA256:
         raise RuntimeError("the aligned TRAF-73 expectations digest changed")
-    completed = subprocess.run(
-        ("git", "merge-base", "--is-ancestor", EXPECTATIONS_COMMIT, "HEAD"),
-        cwd=ROOT,
-        capture_output=True,
-        timeout=30,
-        check=False,
-    )
-    if completed.returncode:
-        raise RuntimeError("the aligned expectations commit is not an ancestor")
+    if (ROOT / ".git").exists():
+        completed = subprocess.run(
+            ("git", "merge-base", "--is-ancestor", EXPECTATIONS_COMMIT, "HEAD"),
+            cwd=ROOT,
+            capture_output=True,
+            timeout=30,
+            check=False,
+        )
+        if completed.returncode:
+            raise RuntimeError("the aligned expectations commit is not an ancestor")
     with open(EXPECTATIONS_PATH, encoding="utf-8", newline="") as handle:
         frozen = json.load(handle)
     if frozen["study"]["status"] != "EXPECTATIONS_ONLY":
