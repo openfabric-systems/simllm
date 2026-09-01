@@ -124,3 +124,55 @@ backend invocation and random-generator state. Two fresh evaluations match
 exactly apart from wall time. The append-only bulk evidence is selected by the
 runner's `--workdir` argument and is not named by a machine-specific tracked
 path.
+
+## Adversarial review correction, 2026-09-01
+
+This append-only section controls the interpretation of the earlier
+classification and consequence language. It changes no frozen expectation,
+configuration, runner, result row, digest, band or fitted number.
+
+### Family H evidence classification
+
+The 63-of-63 result is a post-specified regression on an adaptively reused
+63-cell evaluation set with training-cell-only numeric evaluation. The
+training and evaluation identities stayed disjoint, and no evaluation value
+was read while any one candidate was numerically fitted. That mechanical fact
+does not make the result an untouched holdout qualification. Across the
+attempt sequence, the same 63 evaluation cells informed selection of the
+geometric operator, trough preservation, the 8 KiB reduce-scatter floor, the
+transition coordinates, and the rank-8 256 KiB and 4 MiB branches.
+
+The honest result is therefore post-specified 63 of 63, up from the prior 51
+of 63, with unchanged median, p95 and maximum errors of 2.5010, 8.6958 and
+9.9262 percent. Words such as `qualifying`, `holdout` and `qualification` in
+the immutable freezes, configuration, runner and machine record name their
+original chronology and mechanical data split only. They do not claim
+independent validation. TRAF-84 owns genuinely independent H200 validation on
+cells never used in fitting or any selection decision.
+
+### MiniMax successor consequence
+
+The existing MiniMax EP 8 PASS holds only under the legacy authority pin. The
+successor surface evaluates the exact consumed coordinate: the same two
+operations at rank 8, 196,608 operation-buffer bytes, 65 repeats and the same
+1.922050 ms external arm. Explicit successor binding produces quotient
+0.946736591 against the MiniMax freeze's packet-over-external requirement of at
+least 1.0, so it refutes EP 8.
+
+Under successor binding, MiniMax Family D is 0 of 3. EP 32 and EP 128 stay
+refuted as rank-8 donor transfers that delegate to the legacy authority; the
+successor authority rejects their unfitted ranks. The 16 exact reproductions
+remain valid only as a legacy-preservation proof. No default binding changes in
+this correction. TRAF-83 registers the explicit rebinding decision and the
+required superseding MiniMax publication with all bands unchanged.
+
+### TRAF-76 consequence
+
+Leg B remains complete at quotient 0.946736591 inside its unchanged
+`[0.90, 1.10]` matched-coordinate band. Leg C remains honestly undecidable,
+with no scored denominator or before-and-after error. Leg A retains real
+post-specified regression progress from 51 of 63 to 63 of 63, but it is not an
+independent qualification. TRAF-76 remains open for the packet integration in
+TRAF-82, MiniMax successor rebinding in TRAF-83 and independent H200 validation
+in TRAF-84. Nothing in this correction changes packet coverage, legacy bytes,
+timestamps, completion order, backend invocation order or random draws.

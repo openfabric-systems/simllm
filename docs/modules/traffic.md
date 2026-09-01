@@ -1121,15 +1121,21 @@ floor-omitting values remain labeled superseded. At EP 256 it reconstructs
 29.78125 cross-node senders per receiver from simulator completion rows,
 against an analytical 29.576912, and carries 97,920 dispatch plus 195,840
 combine bytes per rank. The isolated-engine default is unchanged. The
-TRAF-76 MiniMax binding is complete for the three scored dense populations,
-the EP 256 component-wise diagnostic and all four sparse populations. TRAF-76
-also completes its aggregate calibration: the qualifying training-only anchor
-passes all 63 H200 holdouts with 2.5010 percent median, 8.6958 percent p95 and
-9.9262 percent maximum relative error, while the matched D8 coordinate moves
-from quotient 1.109143050 to 0.946736591 inside the unchanged band. Its opaque
-completion is one charge with zero exposed serialization, and the accepted
-floor-plus-slope donor transfers remain byte-identical. TRAF-76 remains open
-only for packet-mechanism integration, now owned in detail by TRAF-82.
+existing MiniMax publication is complete only for its pinned legacy authority.
+Its EP 8 PASS holds only under that legacy authority pin; explicit successor
+binding gives quotient 0.946736591 against the MiniMax freeze's
+packet-over-external floor of 1.0 and therefore refutes the cell. The rebinding
+and superseding publication are registered in TRAF-83 rather than silently
+defaulted. TRAF-76's aggregate surface records a post-specified regression on
+an adaptively reused 63-cell evaluation set with training-cell-only numeric
+evaluation: all 63 H200 cells pass with 2.5010 percent median, 8.6958 percent
+p95 and 9.9262 percent maximum relative error. The matched D8 coordinate moves
+from quotient 1.109143050 to 0.946736591 inside that Family D8 comparison's
+unchanged `[0.90, 1.10]` band. Its opaque completion is one charge with zero
+exposed serialization, and the accepted floor-plus-slope donor transfers
+remain byte-identical. TRAF-76 stays open for packet integration, explicit
+MiniMax successor rebinding and genuinely independent H200 validation, owned
+by TRAF-82, TRAF-83 and TRAF-84 respectively.
 TRAF-78 owns observed routing geometry, TRAF-75 owns supported-path directional
 precision, TRAF-77 owns hardware transport calibration, and TRAF-26 owns
 complete production peer workloads.
@@ -1260,40 +1266,80 @@ arbitration parameters after that structure lands.
 - TRAF-76 (Precision; P1; L): complete H200 intra-node collective precision
   beyond the selectable aggregate completion authority. The
   [completion publication](../../examples/collective_floor_calibration_v1/COMPLETION_RESULTS.md)
-  closes the aggregate legs. The opaque training-only authority passes all 63
-  Family H cells inside the larger of 10 percent or two GPU cycles, with
-  2.5010 percent median, 8.6958 percent p95 and 9.9262 percent maximum relative
-  error. At the matched 196,608-byte D8 coordinate it predicts 1.819675065 ms,
-  quotient 0.946736591 inside the unchanged `[0.90, 1.10]` band. It charges one
-  whole completion and exposes zero serialization service. The original
-  floor-plus-slope authority remains byte-identical for explicit donor
-  transfers, all 16 published MiniMax queries reproduce exactly, and the
-  pre-wave timestamps, byte counts, completion order, backend invocation order
-  and random state remain exact. Attempt 0005 remains visible as a 46-of-63
-  refutation of the paired-operation trend ratio. This task remains open only
-  for the packet integration owned by TRAF-82; it closes when TRAF-82 lands and
-  not from the two completed aggregate legs alone. TRAF-77 owns cross-node
-  transport calibration, TRAF-78 owns destination geometry, TRAF-75 owns
-  directional precision selection, and COMP-89 owns independent calibration
-  of the external NCCL extrapolation.
-#### TRAF-82 (Precision; P1; L)
-
-Complete the packetized H200 intra-node collective and thereby close TRAF-76.
-The [design boundary](../design/traf82-h200-packet-collective.md) freezes
-zero-fan-in participants 2 and 8 and nonzero-fan-in participants 4 and 8 at
-65,536-byte and 1,048,576-byte payloads. The completion wave did not execute or
-score those cells because the opaque H200 table cannot independently identify
-credit, queue, port, switch or arbitration values, and the current tree lacks
-the prerequisite generation-scoped flit, receiver-owned credit, explicit
-virtual-channel, replay, receive-order, virtual-output-queue and two-sided
-crossbar structure. Land that structure through TRAF-80, identify every H200
-product parameter from independent evidence, then run the frozen PZ and PN
-families. Acceptance requires the larger of 10 percent or two GPU cycles for
-every matched phase completion, before and after errors, exact byte
-conservation, one timing authority, zero aggregate charge when packet timing is
-enabled, deterministic replay and a byte-identical identity off path. Until
-then the nonzero-fan-in packet mechanism remains an explicitly transferred
-local component and TRAF-76 stays open.
+  records a post-specified regression on an adaptively reused 63-cell
+  evaluation set with training-cell-only numeric evaluation. The completed
+  surface moves that regression from 51 of 63 to 63 of 63 inside the larger of
+  10 percent or two GPU cycles, with 2.5010 percent median, 8.6958 percent p95
+  and 9.9262 percent maximum relative error. It is not an untouched holdout
+  qualification because the model form, trough preservation, reduce-scatter
+  floor, transition coordinates and rank-8 branches were selected after this
+  evaluation set had been observed. At the matched 196,608-byte D8 coordinate
+  it predicts 1.819675065 ms, quotient 0.946736591 inside the unchanged
+  `[0.90, 1.10]` Family D8 band, which completes Leg B without tuning its band.
+  It charges one whole completion and exposes zero serialization service. The
+  original floor-plus-slope authority remains byte-identical for explicit
+  donor transfers, all 16 published MiniMax legacy queries reproduce exactly,
+  and the pre-wave timestamps, byte counts, completion order, backend
+  invocation order and random state remain exact. Those reproductions do not
+  establish successor validity: the existing MiniMax EP 8 PASS holds only
+  under the legacy authority pin, while successor binding yields quotient
+  0.946736591 against the MiniMax freeze's packet-over-external requirement of
+  at least 1.0 and refutes it. MiniMax Family D is 0 of 3 under
+  successor binding; EP 32 and EP 128 remain refuted legacy rank-8 donor
+  transfers, and the successor rejects their unfitted ranks. TRAF-83 owns the
+  explicit rebinding and superseding publication with unchanged bands, so no
+  successor is silently defaulted. Attempt 0005 remains visible as a 46-of-63
+  refutation of the paired-operation trend ratio. TRAF-76 stays open for the
+  packet integration in TRAF-82, the MiniMax rebinding in TRAF-83 and genuinely
+  independent H200 validation in TRAF-84. TRAF-77 owns cross-node transport
+  calibration, TRAF-78 owns destination geometry, TRAF-75 owns directional
+  precision selection, and COMP-89 owns independent calibration of the
+  external NCCL extrapolation.
+- TRAF-82 (Precision; P1; L): complete the packetized H200 intra-node
+  collective. The
+  [design boundary](../design/traf82-h200-packet-collective.md) freezes
+  zero-fan-in participants 2 and 8 and nonzero-fan-in participants 4 and 8 at
+  65,536-byte and 1,048,576-byte payloads. The completion wave did not execute
+  or score those cells because the opaque H200 table cannot independently
+  identify credit, queue, port, switch or arbitration values, and the current
+  tree lacks the prerequisite generation-scoped flit, receiver-owned credit,
+  explicit virtual-channel, replay, receive-order, virtual-output-queue and
+  two-sided crossbar structure. Land that structure through TRAF-80, identify
+  every H200 product parameter from independent evidence, then run the frozen
+  PZ and PN families. Acceptance requires the larger of 10 percent or two GPU
+  cycles for every matched phase completion, before and after errors, exact
+  byte conservation, one timing authority, zero aggregate charge when packet
+  timing is enabled, deterministic replay and a byte-identical identity off
+  path. Until then the nonzero-fan-in packet mechanism remains an explicitly
+  transferred local component and TRAF-76 stays open. This entry's packet
+  scope is unchanged; landing it alone does not close TRAF-76 while TRAF-83
+  and TRAF-84 remain open.
+- TRAF-83 (Precision; P1; M): explicitly rebind and supersede the MiniMax
+  expert-parallel scaling publication under the completed aggregate authority,
+  without changing any frozen band. Preserve the legacy publication and its
+  authority pin, then predeclare the successor binding and republish Family D.
+  The exact EP 8 coordinate uses the same operations, rank, 196,608 operation
+  bytes, 65 repeats and 1.922050 ms external arm; its successor quotient is
+  0.946736591, below the frozen packet-over-external floor of 1.0, so the
+  legacy EP 8 PASS reverses to a refutation. EP 32 and EP 128 remain refuted
+  rank-8 donor transfers under the legacy authority, while the successor
+  rejects their unfitted ranks. Acceptance makes the authority choice explicit
+  at every consumer, preserves the legacy off path byte for byte, reports
+  successor Family D as 0 of 3 unless new predeclared evidence changes a cell,
+  and publishes the superseding MiniMax result without silently changing a
+  default.
+- TRAF-84 (Precision; P1; L): independently validate the completed H200
+  aggregate surface on cells never used in any fitting, model-form selection,
+  branch selection, threshold selection or prior evaluation decision. Freeze
+  the independent matrix, physical floor and ceiling checks, and the unchanged
+  larger of 10 percent or two GPU cycles band before measuring or importing
+  any cell. Publish every cell and fatal guard, with a violated fatal guard
+  voiding the run. The existing 63-of-63 result remains a post-specified
+  regression on an adaptively reused 63-cell evaluation set with
+  training-cell-only numeric evaluation and never enters the independent
+  denominator. Acceptance requires every newly pre-specified independent cell
+  to pass and preserves the current surface and legacy donor authority as
+  explicit, separately selectable paths.
 - TRAF-20 (Precision; P2; M): qualify the delivered `loggopsim-ideal`
   fast level for schedule-shape studies that do not need per-flow transport
   behavior. The
