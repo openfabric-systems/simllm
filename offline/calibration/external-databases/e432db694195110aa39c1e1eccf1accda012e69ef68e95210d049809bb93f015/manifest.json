@@ -1,0 +1,101 @@
+{
+  "conversion": {
+    "format": "XZ-compressed JSON Lines with binary64 hex values",
+    "modified": true,
+    "numpy": "1.26.4",
+    "payload": "rows-12ed4c1dc12b3d9f0f04ffecf025d0dea5599946fa36944bcb60117035d70efb.jsonl.xz",
+    "payload_bytes": 7120,
+    "payload_sha256": "12ed4c1dc12b3d9f0f04ffecf025d0dea5599946fa36944bcb60117035d70efb",
+    "pyarrow": "25.0.1",
+    "python": "3.12.12",
+    "recipe": {
+      "converter_schema": "simllm-external-nccl-converter-v1",
+      "duplicate_resolution": "the first source row at each lookup coordinate wins",
+      "float_encoding": "Python float.hex() encodes source IEEE-754 binary64 values",
+      "json_lines": {
+        "encoding": "ASCII",
+        "ensure_ascii": true,
+        "line_termination": "LF (0x0a) after every record",
+        "record": "one seven-element JSON array per source row",
+        "separators": [
+          ",",
+          ":"
+        ]
+      },
+      "pyarrow": "25.0.1",
+      "row_ordering": "rows retain PyArrow to_pylist source order",
+      "xz": {
+        "check": "CHECK_CRC64",
+        "extreme": true,
+        "format": "FORMAT_XZ",
+        "preset": 9,
+        "preset_expression": "9 | PRESET_EXTREME"
+      }
+    },
+    "row_schema": "simllm-external-nccl-row-v1",
+    "rows": 1008,
+    "uncompressed_bytes": 94344
+  },
+  "resolver_sources": [
+    {
+      "line": 470,
+      "path": "aiconfigurator_core/sdk/operations/communication.py",
+      "semantic": "effective rank selection and NCCL table lookup"
+    },
+    {
+      "line": 480,
+      "path": "aiconfigurator_core/sdk/operations/communication.py",
+      "semantic": "raw linear message-size interpolation"
+    },
+    {
+      "line": 491,
+      "path": "aiconfigurator_core/sdk/operations/communication.py",
+      "semantic": "rank extrapolation above the measured maximum"
+    },
+    {
+      "line": 720,
+      "path": "aiconfigurator_core/sdk/operations/communication.py",
+      "semantic": "first source row wins when a coordinate repeats"
+    }
+  ],
+  "schema": "simllm-external-nccl-database-v1",
+  "source": {
+    "aiconfigurator_core_version": "0.11.0",
+    "aiconfigurator_version": "0.11.0",
+    "backend": "nccl",
+    "collection_metadata_sha256": "6b40bd84085192ec4f7cb2780635dfe2eb00857e30987dd6c1a90c3b4a63cd8a",
+    "data_slice_sha256": "e432db694195110aa39c1e1eccf1accda012e69ef68e95210d049809bb93f015",
+    "database_mode": "SILICON",
+    "database_version": "2.26.2",
+    "estimator_surface": "python",
+    "parquet_sha256": "85bc8eeed2e20da0c74d035a9f1172ef9196fc729a49956c78ac19c659d101c2",
+    "row_versions": [
+      "2.29.2"
+    ],
+    "shared_layer": false,
+    "source_path": "systems/data/h200_sxm/comm/nccl/2.26.2/nccl_perf.parquet",
+    "system": "h200_sxm",
+    "tool": "NVIDIA AIConfigurator"
+  },
+  "source_hash_manifest": "source-files.sha256",
+  "table": {
+    "dtypes": [
+      "half",
+      "int8"
+    ],
+    "measured_ranks": [
+      2,
+      4,
+      8
+    ],
+    "operations": [
+      "all_gather",
+      "all_reduce",
+      "alltoall",
+      "reduce_scatter"
+    ],
+    "rows": 1008,
+    "source_path": "nccl_perf.parquet",
+    "source_sha256": "85bc8eeed2e20da0c74d035a9f1172ef9196fc729a49956c78ac19c659d101c2"
+  }
+}

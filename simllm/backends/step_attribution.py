@@ -18,13 +18,15 @@ conservation check on every sampled interval.
 
 Scope: any locality level, including a placement that mixes intra-node NVLink
 service with cross-node fabric service. The sink executes artifacts serially
-and composes each one as ``base + max(local, fabric)``, so the step's realized
-interval is the ordered concatenation of one disjoint subinterval per artifact
-and partitioning by artifact is critical-path selection rather than a sum over
-concurrent visits. Inside one artifact the two media compose by maximum: the
-resource whose own service equals that maximum decided the finish time and
-owns the whole realized service, while the other medium's service is masked,
-sits off the critical path, and is published as a work sum under its own name.
+and composes each one as ``fixed + max(local, fabric)``, where fixed terms stay
+separately named as semantic base, aggregate floor and one-time registration.
+The step's realized interval is the ordered concatenation of one disjoint
+subinterval per artifact, and partitioning by artifact is critical-path
+selection rather than a sum over concurrent visits. Inside one artifact the
+two media compose by maximum: the resource whose own service equals that
+maximum decided the finish time and owns the whole realized service, while the
+other medium's service is masked, sits off the critical path, and is published
+as a work sum under its own name.
 :class:`MediumAttribution` keeps the NVLink and fabric components separately
 named so no additive TTFT or TPOT decomposition can mix two differently owned
 waits, and :class:`~simllm.core.LatencyAttribution` keeps its existing coarse
@@ -95,6 +97,9 @@ class MediumAttribution:
     co_critical_ps: int = 0
     #: semantic collective fixed cost; no resource owns it
     collective_base_ps: int = 0
+    #: fitted aggregate completion floor; no resource owns it and its measured
+    #: source already includes launch and synchronization
+    collective_floor_ps: int = 0
     #: one-time channel-and-buffer registration serialized ahead of a collective;
     #: no resource owns it, and it is kept apart from the base so a reader can
     #: tell a per-call fixed cost from a once-per-identity setup cost
@@ -110,6 +115,7 @@ class MediumAttribution:
             "fabric_ps",
             "co_critical_ps",
             "collective_base_ps",
+            "collective_floor_ps",
             "collective_registration_ps",
             "control_ps",
         ):
@@ -126,6 +132,7 @@ class MediumAttribution:
             + self.fabric_ps
             + self.co_critical_ps
             + self.collective_base_ps
+            + self.collective_floor_ps
             + self.collective_registration_ps
             + self.control_ps
         )
@@ -139,6 +146,7 @@ class MediumAttribution:
             + self.fabric_ps
             + self.co_critical_ps
             + self.collective_base_ps
+            + self.collective_floor_ps
             + self.collective_registration_ps
         )
 
@@ -152,6 +160,7 @@ class MediumAttribution:
             fabric_ps=self.fabric_ps + other.fabric_ps,
             co_critical_ps=self.co_critical_ps + other.co_critical_ps,
             collective_base_ps=self.collective_base_ps + other.collective_base_ps,
+            collective_floor_ps=self.collective_floor_ps + other.collective_floor_ps,
             collective_registration_ps=(
                 self.collective_registration_ps + other.collective_registration_ps
             ),
@@ -229,6 +238,7 @@ class _ArtifactOwnership:
 
     owner: str
     base_ps: int
+    floor_ps: int
     registration_ps: int
     owned_ps: int
     #: local service declared for an NVLink-medium artifact, owned or masked
@@ -244,6 +254,7 @@ def _artifact_ownership(
     fabric_ps: int,
     local_ps: int,
     base_ps: int,
+    floor_ps: int,
     registration_ps: int,
     medium: str,
 ) -> _ArtifactOwnership:
@@ -257,6 +268,7 @@ def _artifact_ownership(
         ("fabric service", fabric_ps),
         ("local service", local_ps),
         ("base latency", base_ps),
+        ("aggregate floor", floor_ps),
         ("registration cost", registration_ps),
     ):
         _require_nonnegative_int(f"{path} {name}", value)
@@ -265,12 +277,14 @@ def _artifact_ownership(
             raise ValueError(f"{path} is compute owned and cannot carry fabric service")
         if base_ps:
             raise ValueError(f"{path} is compute owned and cannot carry a base latency")
+        if floor_ps:
+            raise ValueError(f"{path} is compute owned and cannot carry an aggregate floor")
         if registration_ps:
             raise ValueError(
                 f"{path} is compute owned and cannot carry a registration cost"
             )
     realized_ps = max(local_ps, fabric_ps)
-    if composed_ps != registration_ps + base_ps + realized_ps:
+    if composed_ps != registration_ps + base_ps + floor_ps + realized_ps:
         raise ValueError(
             f"{path} composed service disagrees with its base and medium terms "
             "once its registration cost is included"
@@ -290,6 +304,7 @@ def _artifact_ownership(
     return _ArtifactOwnership(
         owner=owner,
         base_ps=base_ps,
+        floor_ps=floor_ps,
         registration_ps=registration_ps,
         owned_ps=realized_ps,
         nvlink_service_ps=nvlink_service_ps,
@@ -404,24 +419,40 @@ def attribute_step_detail(
             )
     else:
         registration = (0,) * len(composed)
+    floor = locality.collective_floor_phase_ps
+    if floor:
+        if not any(published):
+            raise ValueError(
+                "request attribution of an aggregate collective floor requires "
+                "the per-artifact medium projection"
+            )
+        if len(floor) != len(composed):
+            raise ValueError(
+                "the per-artifact aggregate floor projection disagrees in length "
+                "with the executed artifact services"
+            )
+    else:
+        floor = (0,) * len(composed)
 
     kernel_ps = 0
     nvlink_ps = 0
     fabric_owned_ps = 0
     co_critical_ps = 0
     base_ps = 0
+    floor_ps = 0
     registration_ps = 0
     masked_nvlink_ps = 0
     masked_fabric_ps = 0
     declared_nvlink_service_ps = 0
     for index, artifact in enumerate(
-        zip(composed, fabric, local, base, registration, medium, strict=True)
+        zip(composed, fabric, local, base, floor, registration, medium, strict=True)
     ):
         (
             composed_ps,
             fabric_ps,
             local_ps,
             artifact_base_ps,
+            artifact_floor_ps,
             artifact_registration_ps,
             artifact_medium,
         ) = artifact
@@ -431,10 +462,12 @@ def attribute_step_detail(
             fabric_ps=fabric_ps,
             local_ps=local_ps,
             base_ps=artifact_base_ps,
+            floor_ps=artifact_floor_ps,
             registration_ps=artifact_registration_ps,
             medium=artifact_medium,
         )
         base_ps += ownership.base_ps
+        floor_ps += ownership.floor_ps
         registration_ps += ownership.registration_ps
         masked_nvlink_ps += ownership.masked_nvlink_ps
         masked_fabric_ps += ownership.masked_fabric_ps
@@ -456,7 +489,12 @@ def attribute_step_detail(
     attribution = LatencyAttribution(
         kernel_ps=kernel_ps,
         collective_ps=(
-            nvlink_ps + fabric_owned_ps + co_critical_ps + base_ps + registration_ps
+            nvlink_ps
+            + fabric_owned_ps
+            + co_critical_ps
+            + base_ps
+            + floor_ps
+            + registration_ps
         ),
     )
     if attribution.total_ps != result.step_latency_ps:
@@ -471,6 +509,7 @@ def attribute_step_detail(
             fabric_ps=fabric_owned_ps,
             co_critical_ps=co_critical_ps,
             collective_base_ps=base_ps,
+            collective_floor_ps=floor_ps,
             collective_registration_ps=registration_ps,
         ),
         masked=MaskedMediumService(

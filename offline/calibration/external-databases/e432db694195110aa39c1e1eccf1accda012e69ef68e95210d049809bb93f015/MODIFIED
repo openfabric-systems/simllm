@@ -1,0 +1,15 @@
+Modified-file statement
+
+SimLLM converted the source NCCL Parquet table and collection metadata into
+deterministic compressed JSON Lines plus a portable identity manifest. Every
+source latency is retained as Python float.hex. The converted files are not
+original NVIDIA distribution files.
+
+Artifact derivations:
+
+- LICENSE: byte-identical Apache License 2.0 text from the installed package.
+- MODIFIED: this file-by-file conversion and modification statement.
+- THIRD_PARTY_NOTICE: copyright and license lines retained from collection_meta.yaml.
+- manifest.json: source identity, conversion recipe, row inventory and hashes.
+- rows-12ed4c1dc12b3d9f0f04ffecf025d0dea5599946fa36944bcb60117035d70efb.jsonl.xz: row-preserving conversion of nccl_perf.parquet.
+- source-files.sha256: sorted SHA-256 manifest of the two source files.

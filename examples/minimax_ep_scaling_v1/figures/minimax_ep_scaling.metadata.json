@@ -1,0 +1,57 @@
+{
+  "caption": "Family D corrected ratios are 1.109, 0.436, 0.847, 1.219 at EP 8, 32, 128 and 256; the superseded floor-omitting ratios are 0.026, 0.353, 0.803, 1.187. The corrected packet arm charges aggregate half-precision all-gather and reduce-scatter floors once outside local/fabric max service. EP 8 has no cross-node traffic. EP 256 uses an unscored component-wise diagnostic. Family S compares the dense fallback with corrected sparse routed FP8 dispatch plus BF16 combine; its floor-omitting series is superseded.",
+  "point_annotations": {
+    "ep256": "unscored post-specified component-wise diagnostic",
+    "ep8": "zero cross-node traffic; corrected floor-bound ratio"
+  },
+  "series": [
+    {
+      "label": "External NCCL cost model\nDense fallback: half all-gather + reduce-scatter",
+      "panel": "family-s-strategy-steps",
+      "strategy": "dense SM90 general fallback",
+      "traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements"
+    },
+    {
+      "label": "Corrected sparse routed payload\nFP8 dispatch + BF16 combine + transferred collective floor",
+      "panel": "family-s-strategy-steps",
+      "strategy": "sparse routed expert payload",
+      "traffic_definition": "top-k token assignments routed only to realized expert-owner ranks, with FP8 dispatch and BF16 combine"
+    },
+    {
+      "label": "Superseded sparse routed payload\nFP8 dispatch + BF16 combine, floor omitted",
+      "panel": "family-s-strategy-steps",
+      "strategy": "sparse routed expert payload",
+      "traffic_definition": "top-k token assignments routed only to realized expert-owner ranks, with FP8 dispatch and BF16 combine; superseded omission of intra-node transport and fixed collective overheads"
+    },
+    {
+      "label": "External NCCL cost model\nDense fallback: half all-gather + reduce-scatter",
+      "panel": "family-d-cost-model-times",
+      "strategy": "dense SM90 general fallback",
+      "traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements"
+    },
+    {
+      "label": "Corrected packet Clos cost model\nDirect all-pairs half traffic + aggregate collective floor",
+      "panel": "family-d-cost-model-times",
+      "strategy": "dense SM90 general fallback",
+      "traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements"
+    },
+    {
+      "label": "Superseded packet Clos cost model\nDirect all-pairs half traffic, floor omitted",
+      "panel": "family-d-cost-model-times",
+      "strategy": "dense SM90 general fallback",
+      "traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements; superseded omission of intra-node transport and fixed collective overheads"
+    },
+    {
+      "label": "Corrected packet Clos / external NCCL\nsame requested half-element count + collective floor",
+      "panel": "family-d-cost-model-ratio",
+      "strategy": "same requested dense logical element count, different physical realizations and cost models",
+      "traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements"
+    },
+    {
+      "label": "Superseded packet Clos / external NCCL\nsame requested count, collective floor omitted",
+      "panel": "family-d-cost-model-ratio",
+      "strategy": "same requested dense logical element count with the packet collective floor omitted",
+      "traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements"
+    }
+  ]
+}

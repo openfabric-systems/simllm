@@ -18,6 +18,7 @@ __all__ = [
     "ORACLE_ENABLE_ENV",
     "ORACLE_LOG_ENV",
     "ORACLE_OBSERVATION_SCHEMA",
+    "ORACLE_SCOPE_ENV",
     "mark_oracle_capture_start",
     "mark_oracle_request_mapping",
     "mark_oracle_submission_group",
@@ -27,6 +28,7 @@ __all__ = [
 
 ORACLE_ENABLE_ENV = "SIMLLM_VLLM_ORACLE_CAPTURE"
 ORACLE_LOG_ENV = "SIMLLM_VLLM_ORACLE_LOG"
+ORACLE_SCOPE_ENV = "SIMLLM_VLLM_ORACLE_SCOPE"
 ORACLE_OBSERVATION_SCHEMA = "simllm-vllm-framework-observation-v1"
 
 _hooks_registered = False
@@ -44,6 +46,14 @@ def oracle_enabled(env: Mapping[str, str] | None = None) -> bool:
 
     values = os.environ if env is None else env
     return values.get(ORACLE_ENABLE_ENV, "") == "1"
+
+
+def _oracle_scope(env: Mapping[str, str] | None = None) -> str:
+    values = os.environ if env is None else env
+    scope = values.get(ORACLE_SCOPE_ENV, "full") or "full"
+    if scope not in {"full", "kv"}:
+        raise ValueError(f"{ORACLE_SCOPE_ENV} must be full or kv, got {scope!r}")
+    return scope
 
 
 def _log_path() -> Path:
@@ -152,6 +162,21 @@ def _flatten_block_ids(blocks: Any) -> list[int]:
     return result
 
 
+def _flatten_freed_block_ids(blocks: Any) -> list[int]:
+    """Return blocks in the order the pinned managers pass them to the pool."""
+
+    if blocks is None:
+        return []
+    get_ids = getattr(blocks, "get_block_ids", None)
+    values = get_ids() if callable(get_ids) else blocks
+    if values is None:
+        return []
+    result: list[int] = []
+    for group in values:
+        result.extend(int(value) for value in reversed(group))
+    return result
+
+
 def _block_size(manager: Any) -> int:
     groups = manager.kv_cache_config.kv_cache_groups
     sizes = {int(group.kv_cache_spec.block_size) for group in groups}
@@ -214,7 +239,7 @@ def _observe_free(
 ) -> Any:
     request_id = str(request.request_id)
     try:
-        block_ids = _flatten_block_ids(manager.get_blocks(request_id))
+        block_ids = _flatten_freed_block_ids(manager.get_blocks(request_id))
     except KeyError:
         block_ids = []
     result = original(manager, request)
@@ -245,7 +270,12 @@ def _observe_eviction(
 
 
 def _observe_preemption(
-    original: Callable[..., Any], scheduler: Any, request: Any, timestamp: float
+    original: Callable[..., Any],
+    scheduler: Any,
+    request: Any,
+    timestamp: float,
+    *,
+    drop_stale_output: bool = False,
 ) -> Any:
     request_id = str(request.request_id)
     try:
@@ -254,7 +284,12 @@ def _observe_preemption(
         )
     except KeyError:
         block_ids = []
-    result = original(scheduler, request, timestamp)
+    result = original(
+        scheduler,
+        request,
+        timestamp,
+        drop_stale_output=drop_stale_output,
+    )
     _emit(
         "preemption",
         block_ids=block_ids,
@@ -397,23 +432,19 @@ def register_oracle_hooks() -> None:
     global _hooks_registered
     if not oracle_enabled():
         return
-    if os.environ.get("SIMLLM_VLLM_WORKER_MODE") == "skeleton" or os.environ.get(
-        "SIMLLM_VLLM_MODE"
-    ) in {"paced", "virtual"}:
+    scope = _oracle_scope()
+    if scope == "full" and (
+        os.environ.get("SIMLLM_VLLM_WORKER_MODE") == "skeleton"
+        or os.environ.get("SIMLLM_VLLM_MODE") in {"paced", "virtual"}
+    ):
         raise RuntimeError("vLLM framework observation and simulation are exclusive")
     if _hooks_registered:
         return
     _log_path().parent.mkdir(parents=True, exist_ok=True)
 
-    from vllm.model_executor.layers.fused_moe import cpu_fused_moe
-    from vllm.model_executor.layers.fused_moe.routed_experts_capturer import (
-        RoutedExpertsCapturer,
-    )
     from vllm.v1.core.block_pool import BlockPool
     from vllm.v1.core.kv_cache_manager import KVCacheManager
     from vllm.v1.core.sched.scheduler import Scheduler
-    from vllm.v1.worker.cpu_worker import CPUWorker
-    from vllm.v1.worker.gpu_model_runner import GPUModelRunner
 
     for owner, name, observer in (
         (KVCacheManager, "__init__", _observe_manager_init),
@@ -423,17 +454,31 @@ def register_oracle_hooks() -> None:
         (BlockPool, "_maybe_evict_cached_block", _observe_eviction),
         (Scheduler, "_preempt_request", _observe_preemption),
         (Scheduler, "_free_request", _observe_request_finish),
-        (CPUWorker, "load_model", _observe_worker_load),
-        (GPUModelRunner, "init_routed_experts_capturer", _observe_capturer_init),
-        (cpu_fused_moe.CPUFusedMOE, "__call__", _observe_cpu_moe_call),
-        (RoutedExpertsCapturer, "capture", _observe_dispatch_capture),
     ):
         _install_around(owner, name, observer)
-    original_select = cpu_fused_moe.select_experts
+    if scope == "full":
+        from vllm.model_executor.layers.fused_moe import cpu_fused_moe
+        from vllm.model_executor.layers.fused_moe.routed_experts_capturer import (
+            RoutedExpertsCapturer,
+        )
+        from vllm.v1.worker.cpu_worker import CPUWorker
+        from vllm.v1.worker.gpu_model_runner import GPUModelRunner
 
-    def observed_select(*args: Any, **kwargs: Any) -> Any:
-        return _observe_cpu_select(original_select, *args, **kwargs)
+        for owner, name, observer in (
+            (CPUWorker, "load_model", _observe_worker_load),
+            (GPUModelRunner, "init_routed_experts_capturer", _observe_capturer_init),
+            (cpu_fused_moe.CPUFusedMOE, "__call__", _observe_cpu_moe_call),
+            (RoutedExpertsCapturer, "capture", _observe_dispatch_capture),
+        ):
+            _install_around(owner, name, observer)
+        original_select = cpu_fused_moe.select_experts
 
-    cpu_fused_moe.select_experts = observed_select
+        def observed_select(*args: Any, **kwargs: Any) -> Any:
+            return _observe_cpu_select(original_select, *args, **kwargs)
+
+        cpu_fused_moe.select_experts = observed_select
     _hooks_registered = True
-    _emit("plugin-active", process_id=os.getpid())
+    if scope == "full":
+        _emit("plugin-active", process_id=os.getpid())
+    else:
+        _emit("plugin-active", process_id=os.getpid(), scope=scope)

@@ -49,9 +49,11 @@ structures are exactly the patterns validated by the M1/M4/M5 studies.
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from enum import Enum
+from functools import cache
 
 from simllm.compute import ModelDims
 from simllm.core import (
@@ -129,7 +131,7 @@ def renders_expert_combine(
 
     False for dense dims, for an expert-parallel group below two ranks, for a
     zero-new-token drain record, and for the one degenerate case of the uniform
-    approximation: when ``total_new_tokens * top_k * hidden_size *
+approximation: when ``total_new_tokens * top_k * hidden_size *
     dtype_bytes`` floors to zero bytes per ordered pair, that approximation
     renders no all-to-all at all, so nothing returns the layer output and the
     reduction stays on the tensor-parallel allreduce. A captured
@@ -787,6 +789,22 @@ class MoeAllToAll:
     placement_epoch: int = 0
 
 
+@dataclass(frozen=True)
+class MoeActivationPrecision:
+    """Element widths for routed dispatch and returned combine activations."""
+
+    dispatch_bytes_per_element: int
+    combine_bytes_per_element: int
+
+    def __post_init__(self) -> None:
+        for field_name, value in (
+            ("dispatch_bytes_per_element", self.dispatch_bytes_per_element),
+            ("combine_bytes_per_element", self.combine_bytes_per_element),
+        ):
+            if type(value) is not int or value <= 0:
+                raise ValueError(f"{field_name} must be a positive integer")
+
+
 class MoeMessageGrouping(str, Enum):
     """Declared coalescing rule for captured MoE message replay."""
 
@@ -1198,12 +1216,168 @@ def _routed_moe_alltoalls(
     )
 
 
+_UNIFORM_ROUTING_SCHEMA = "simllm-balanced-uniform-routing-v1"
+
+
+@cache
+def _uniform_destination_permutation(
+    *,
+    world_size: int,
+    token_index: int,
+    top_k: int,
+) -> tuple[int, ...]:
+    """Return a stable balanced destination order for one token position.
+
+    Sliding a ``top_k``-wide window over a permutation makes every destination
+    receive exactly ``top_k`` assignments across the source population. The
+    salt selection minimizes disagreement with the uniform self-route count,
+    which is ``top_k`` assignments across the whole population for one token.
+    """
+
+    best: tuple[int, tuple[int, ...]] | None = None
+    for salt in range(256):
+        prefix = (
+            f"{_UNIFORM_ROUTING_SCHEMA}:{world_size}:{token_index}:{salt}:"
+        ).encode("ascii")
+        permutation = tuple(
+            sorted(
+                range(world_size),
+                key=lambda destination: hashlib.sha256(
+                    prefix + str(destination).encode("ascii")
+                ).digest(),
+            )
+        )
+        local_assignments = sum(
+            permutation[(source_index + top_k_index) % world_size]
+            == source_index
+            for source_index in range(world_size)
+            for top_k_index in range(top_k)
+        )
+        error = abs(local_assignments - top_k)
+        candidate = (error, permutation)
+        if best is None or candidate < best:
+            best = candidate
+        if error == 0:
+            return permutation
+    assert best is not None
+    return best[1]
+
+
+def _uniform_population_pair_payloads(
+    *,
+    ranks: tuple[int, ...],
+    tokens_per_rank: int,
+    top_k: int,
+    hidden_size: int,
+    precision: MoeActivationPrecision,
+) -> tuple[
+    tuple[tuple[int, int, int], ...],
+    tuple[tuple[int, int, int], ...],
+]:
+    """Route whole token assignments and aggregate only realized rank pairs."""
+
+    world_size = len(ranks)
+    permutations = tuple(
+        _uniform_destination_permutation(
+            world_size=world_size,
+            token_index=token_index,
+            top_k=top_k,
+        )
+        for token_index in range(tokens_per_rank)
+    )
+    dispatch_vectors: dict[tuple[int, int], int] = {}
+    for source_index, source in enumerate(ranks):
+        for permutation in permutations:
+            destinations = {
+                permutation[(source_index + top_k_index) % world_size]
+                for top_k_index in range(top_k)
+            }
+            for destination_index in destinations:
+                destination = ranks[destination_index]
+                if destination == source:
+                    continue
+                pair = (source, destination)
+                dispatch_vectors[pair] = dispatch_vectors.get(pair, 0) + 1
+
+    dispatch = tuple(
+        (
+            source,
+            destination,
+            vectors * hidden_size * precision.dispatch_bytes_per_element,
+        )
+        for (source, destination), vectors in sorted(dispatch_vectors.items())
+    )
+    combine = tuple(
+        (
+            destination,
+            source,
+            vectors * hidden_size * precision.combine_bytes_per_element,
+        )
+        for (source, destination), vectors in sorted(dispatch_vectors.items())
+    )
+    return dispatch, combine
+
+
+def _scale_pair_payloads(
+    entries: tuple[tuple[int, int, int], ...],
+    *,
+    numerator: int,
+    denominator: int,
+) -> tuple[tuple[int, int, int], ...]:
+    scaled = []
+    for source, destination, payload_bytes in entries:
+        product = payload_bytes * numerator
+        if product % denominator:
+            raise ValueError("MoE precision does not preserve whole payload bytes")
+        scaled.append((source, destination, product // denominator))
+    return tuple(scaled)
+
+
+def _apply_moe_precision(
+    operations: list[MoeAllToAll],
+    *,
+    model_bytes_per_element: int,
+    precision: MoeActivationPrecision,
+) -> list[MoeAllToAll]:
+    scaled = []
+    for operation in operations:
+        bytes_per_element = (
+            precision.dispatch_bytes_per_element
+            if operation.phase == "dispatch"
+            else precision.combine_bytes_per_element
+        )
+        scaled.append(
+            replace(
+                operation,
+                pair_payload_bytes=_scale_pair_payloads(
+                    operation.pair_payload_bytes,
+                    numerator=bytes_per_element,
+                    denominator=model_bytes_per_element,
+                ),
+                request_pair_payload_bytes=tuple(
+                    (
+                        request_id,
+                        source,
+                        destination,
+                        payload_bytes * bytes_per_element // model_bytes_per_element,
+                    )
+                    for request_id, source, destination, payload_bytes in (
+                        operation.request_pair_payload_bytes
+                    )
+                ),
+            )
+        )
+    return scaled
+
+
 def step_moe_alltoalls(
     record: StepRecord,
     dims: ModelDims,
     ep_ranks: Sequence[int],
     *,
     routed_supply: RoutedMoeSupply | None = None,
+    uniform_tokens_per_rank: int | None = None,
+    activation_precision: MoeActivationPrecision | None = None,
 ) -> list[MoeAllToAll]:
     """The step's MoE all-to-alls, empty when the step produces none.
 
@@ -1220,8 +1394,8 @@ def step_moe_alltoalls(
     on the same destination into one hidden vector, and combine is the exact
     reverse table after owner-side pre-reduction.
 
-    Without a routed supply, the uniform approximation uses ``ep_ranks[0]``
-    as the one engine rank. It spreads that engine's
+    Without a routed supply, the default uniform approximation uses
+    ``ep_ranks[0]`` as the one engine rank. It spreads that engine's
     ``total_new_tokens * top_k`` (token, expert) assignments evenly over the W
     expert-owner ranks, so the engine sends
 
@@ -1233,29 +1407,81 @@ def step_moe_alltoalls(
     never touches the fabric. The floor division remains part of this explicit
     approximation.
 
+    ``uniform_tokens_per_rank`` selects the full-population variant. Every EP
+    rank contributes that many tokens. Each token routes ``top_k`` whole hidden
+    vectors through a deterministic balanced assignment matrix, and only the
+    distinct destinations those assignments reach become messages. The record's
+    token count must equal the declared per-rank count, so the option cannot
+    silently change the operating point. It is mutually exclusive with
+    captured routing.
+
+    ``activation_precision`` declares dispatch and combine widths separately.
+    Its default uses ``dims.dtype_bytes`` in both directions and preserves all
+    callers that do not select a directional precision contract.
+
     Empty means: dense dims (``num_experts == 0``), an EP world smaller
     than 2, or a zero-new-token drain record. The uniform path also returns
     empty when its per-pair share rounds to zero bytes.
     """
+    if routed_supply is not None and uniform_tokens_per_rank is not None:
+        raise ValueError(
+            "uniform_tokens_per_rank is mutually exclusive with routed_supply"
+        )
+    if uniform_tokens_per_rank is not None:
+        if type(uniform_tokens_per_rank) is not int or uniform_tokens_per_rank <= 0:
+            raise ValueError("uniform_tokens_per_rank must be a positive integer")
+        if record.total_new_tokens != uniform_tokens_per_rank:
+            raise ValueError(
+                "uniform_tokens_per_rank must equal record.total_new_tokens"
+            )
+    if activation_precision is None:
+        activation_precision = MoeActivationPrecision(
+            dispatch_bytes_per_element=dims.dtype_bytes,
+            combine_bytes_per_element=dims.dtype_bytes,
+        )
+    elif not isinstance(activation_precision, MoeActivationPrecision):
+        raise TypeError("activation_precision must be a MoeActivationPrecision")
     ranks = tuple(ep_ranks)
     if not renders_expert_combine(record, dims, ranks, routed_supply=routed_supply):
         return []
     if routed_supply is not None:
-        return _routed_moe_alltoalls(record, dims, ranks, routed_supply)
-    per_pair = (record.total_new_tokens * dims.top_k * dims.hidden_size * dims.dtype_bytes) // len(
-        ranks
-    )
-    source = ranks[0]
-    dispatch = tuple(
-        (source, destination, per_pair)
-        for destination in ranks
-        if destination != source
-    )
-    combine = tuple(
-        (destination, source, per_pair)
-        for destination in ranks
-        if destination != source
-    )
+        return _apply_moe_precision(
+            _routed_moe_alltoalls(record, dims, ranks, routed_supply),
+            model_bytes_per_element=dims.dtype_bytes,
+            precision=activation_precision,
+        )
+    dispatch_per_pair = (
+        record.total_new_tokens
+        * dims.top_k
+        * dims.hidden_size
+        * activation_precision.dispatch_bytes_per_element
+    ) // len(ranks)
+    combine_per_pair = (
+        record.total_new_tokens
+        * dims.top_k
+        * dims.hidden_size
+        * activation_precision.combine_bytes_per_element
+    ) // len(ranks)
+    if uniform_tokens_per_rank is None:
+        source = ranks[0]
+        dispatch = tuple(
+            (source, destination, dispatch_per_pair)
+            for destination in ranks
+            if destination != source
+        )
+        combine = tuple(
+            (destination, source, combine_per_pair)
+            for destination in ranks
+            if destination != source
+        )
+    else:
+        dispatch, combine = _uniform_population_pair_payloads(
+            ranks=ranks,
+            tokens_per_rank=uniform_tokens_per_rank,
+            top_k=dims.top_k,
+            hidden_size=dims.hidden_size,
+            precision=activation_precision,
+        )
     return [
         MoeAllToAll(
             layer=layer,
@@ -1475,6 +1701,8 @@ def render_step_goal(
     *,
     ep_ranks: Sequence[int] | None = None,
     routed_supply: RoutedMoeSupply | None = None,
+    uniform_tokens_per_rank: int | None = None,
+    activation_precision: MoeActivationPrecision | None = None,
     num_goal_ranks: int | None = None,
     base_tag: int = 1000,
 ) -> GoalTrace:
@@ -1517,6 +1745,8 @@ def render_step_goal(
         dims,
         ep_ranks if ep_ranks is not None else [],
         routed_supply=routed_supply,
+        uniform_tokens_per_rank=uniform_tokens_per_rank,
+        activation_precision=activation_precision,
     )
     if not tp_ops and not moe_ops:
         raise ValueError(
@@ -1874,6 +2104,8 @@ def step_communication_phases(
     *,
     ep_ranks: Sequence[int] | None = None,
     routed_supply: RoutedMoeSupply | None = None,
+    uniform_tokens_per_rank: int | None = None,
+    activation_precision: MoeActivationPrecision | None = None,
     base_tag: int = 1000,
 ) -> tuple[CollectiveCommunicationPhase, ...]:
     """Expand a step into serial phases of positive directed transfers."""
@@ -1886,6 +2118,8 @@ def step_communication_phases(
         dims,
         ep_ranks if ep_ranks is not None else (),
         routed_supply=routed_supply,
+        uniform_tokens_per_rank=uniform_tokens_per_rank,
+        activation_precision=activation_precision,
     )
     tp_by_key = {
         (operation.layer, operation.site): (index, operation)
@@ -2117,6 +2351,8 @@ def plan_step_locality(
     *,
     ep_ranks: Sequence[int] | None = None,
     routed_supply: RoutedMoeSupply | None = None,
+    uniform_tokens_per_rank: int | None = None,
+    activation_precision: MoeActivationPrecision | None = None,
     rank_mapper: RankMapper | None = None,
     nvlink_bandwidth_bytes_per_second: int = (
         DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND
@@ -2131,6 +2367,8 @@ def plan_step_locality(
         tp_ranks,
         ep_ranks=ep_ranks,
         routed_supply=routed_supply,
+        uniform_tokens_per_rank=uniform_tokens_per_rank,
+        activation_precision=activation_precision,
         base_tag=base_tag,
     )
     return classify_step_locality(
