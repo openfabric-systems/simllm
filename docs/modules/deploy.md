@@ -206,6 +206,22 @@ identified only for this TP4-to-TP2 schedule shape. DEPLOY-13 retains the
 rounded-axis residual. DEPLOY-9 through DEPLOY-11 retain their breadth and
 silicon-precision scopes.
 
+The additive
+[aggregate arm](../../examples/matched_seam_frontier_v1/AGG_RESULTS.md) is
+nonvoid: all 11 fatal guards hold, Family AR passes 25 of 25, W passes 1 of 1,
+and the two complete fresh-process evaluations are byte-identical. SimLLM's
+co-located TP4/TP8 composition reproduces the published aggregate TPOT with
+quotients from 0.999930063 to 1.000074536. Its operating-point TTFT is
+decomposed into 74.741222 to 127.620006 ms of pure prefill and 74.741222 to
+186.414499 ms of queueing, leaving only the frozen three-decimal publication
+residual. Both aggregate traffic arms are the exact zero-byte P/D handoff
+identity and the packet arm starts no native process. The complete ten-factor
+sensitivity identifies the three-step mixed-count correction as the dominant
+aggregate-specific TPOT term and the queueing heuristic as the dominant TTFT
+term. Both additive figure pairs pass visual inspection, making the projected
+aggregate counterpart literal and closing DEPLOY-22 without changing any
+protected disaggregated result.
+
 ## Open tasks
 
 ### Precision
@@ -251,18 +267,6 @@ silicon-precision scopes.
   timestamp or metric byte. Acceptance is a median surrogate-to-live ratio at
   or below 0.01 over seven runs on the same disclosed machine and pin, with
   every exact passing family still byte-identical.
-- DEPLOY-22 (Precision; P1; M): add the matched-seam SimLLM aggregate arm for
-  the co-located Qwen3-32B-FP8 in-flight TP pool over all 25 frozen external
-  operating points. Compose mixed and generation-only service only from the
-  imported measured database, keep the concurrency-dependent TTFT as a
-  decomposed operating-point quantity, publish remove-one sensitivity for
-  every aggregate-reachable external adjustment, and require each composed
-  TPOT quotient against the frozen aggregate table to stay in [0.98, 1.02].
-  The unpriced and packet P/D handoff modes must remain exact identities at
-  zero bytes for the co-located pool, while the new figure series name both
-  strategy and traffic definition. Preserve every existing matched-seam
-  artifact byte exactly and close only on a nonvoid two-process record plus
-  both visually inspected aggregate-qualified figure pairs.
 - DEPLOY-4 (Precision; P1; M): Replace the single input-local decode batch
   surface with content-addressed per-width coverage beyond the frozen 8, 16
   and 72 GPU shapes. Identify every width by measured entry keys and accept
