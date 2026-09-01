@@ -22,7 +22,10 @@ add_library(simllm_rnic STATIC
     src/gpu_device.cpp
     src/host_memory.cpp
     src/pcie_fabric.cpp
+    src/rnic_anomaly_table.cpp
+    src/rnic_cmodel_c.cpp
     src/rnic_device.cpp
+    src/rnic_hw_profile.cpp
     src/session_record.cpp
     src/submission.cpp
     src/work_queue.cpp
@@ -163,6 +166,33 @@ if(SIMLLM_RNIC_BUILD_TESTS)
     endif()
     add_test(NAME simllm_rnic_device_test
              COMMAND simllm_rnic_device_test)
+
+    add_executable(simllm_rnic_cmodel_test
+        tests/rnic_cmodel_test.cpp
+    )
+    target_link_libraries(simllm_rnic_cmodel_test PRIVATE simllm::rnic)
+    target_include_directories(simllm_rnic_cmodel_test PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(simllm_rnic_cmodel_test PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+        )
+        if(SIMLLM_RNIC_WARNINGS_AS_ERRORS)
+            target_compile_options(simllm_rnic_cmodel_test PRIVATE -Werror)
+        endif()
+    endif()
+    # The generated anomaly-table projection and the design document it
+    # projects both live in the repository docs tree, so the byte comparison
+    # runs against the sources rather than a copy.
+    set(SIMLLM_RNIC_DOC_DIR
+        "${CMAKE_CURRENT_SOURCE_DIR}/../../../docs/design")
+    add_test(NAME simllm_rnic_cmodel_test
+             COMMAND simllm_rnic_cmodel_test
+                     "${SIMLLM_RNIC_DOC_DIR}/rnic-anomaly-table.md"
+                     "${SIMLLM_RNIC_DOC_DIR}/rnic-cmodel.md")
 endif()
 
 if(SIMLLM_RNIC_BUILD_TOOLS)

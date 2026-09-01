@@ -40,22 +40,29 @@ backend submodules.
   allocation, page, submission, ownership and canonical-hash rejection. The
   reusable bypass checker guards the full reference input tuple and compares
   the four frozen behavioral artifact classes byte for byte.
-- The RNIC golden-model surface is registered, not landed. It has three named
-  parts, owned by BACK-54 through BACK-58 and specified in
-  [the golden-model design](../design/rnic-cmodel.md). `RnicHwProfile` is the
+- `RnicHwProfile` + the RNIC anomaly table + `rnic_cmodel_c.h`: the
+  golden-model surface of the native endpoint, specified in
+  [the golden-model design](../design/rnic-cmodel.md). The profile is the
   versioned hardware-parameter object carrying link, initiation,
-  outstanding-work, packet-rate, ingress, transport, congestion-control, flow-
-  control and counter fields with one evidence class per field, a measured
-  ConnectX-5 100G set and a ConnectX-7 400G set derived by rate scaling; it
-  gets its own schema string and hash and is never mixed into the existing
-  effective-hardware schemas or their hash inputs. The anomaly table is the
-  measured performance-anomaly list carried as data (trigger, effect,
-  mechanism kind, evidence class) with a Markdown projection, so a reviewer
-  can see which silicon behavior is reproduced by a mechanism and which is
-  injected by rule. The C facade is an `extern "C"` entry set over plain
-  fixed-width structs and picosecond timestamps, so an RTL testbench can drive
-  the same stimulus through DPI-C and compare timestamps, counters and a
-  replayable transaction trace against this model.
+  outstanding-work, packet-rate, ingress, transport, congestion-control,
+  flow-control and counter fields with one evidence class per field. It has a
+  measured `cx5_100g` set and a `cx7_400g` set produced by `scaleProfile`,
+  which scales the link, goodput, packet-rate and threshold fields, keeps the
+  initiation, MTU, header, outstanding-work, transport and flow-control
+  fields, and marks every scaled field `declared`. Its five work-queue service
+  stages plus the wire round-trip floor sum to the lumped measured `t_eff_ps`.
+  It is a separate versioned record, `simllm-rnic-hw-profile-v1`, with its own
+  hash, and it is not mixed into the effective-hardware schemas or their hash
+  inputs. The anomaly table is the measured performance-anomaly list carried
+  as a `constexpr` array with a generated Markdown projection, so a reviewer
+  can see which silicon behavior is reproduced by a named mechanism and which
+  is injected by rule. The C facade is the `extern "C"` entry set over plain
+  fixed-width structs and picosecond timestamps that lets an RTL testbench
+  drive the same stimulus through DPI-C and compare timestamps, counters and a
+  replayable transaction trace; it reproduces the C++ device's completion
+  timestamps exactly, and two identical stimulus sequences trace identically.
+  Its receive entry point and control-event kinds fail closed until BACK-56
+  and BACK-57 land.
 - `ComposedRnicObservations` + `ComposedRnicSession`: strict validation and
   transactional projection of the frozen composed native rows into the core
   structural RNIC seam. The external native session owns WQE lifecycle and
@@ -1485,25 +1492,19 @@ created" statement stands and refers to different, never-registered work.
   contention; this landing is contention-free by construction with zero bus
   cost, and the default composition must preserve every accepted artifact
   byte for byte. COMP-49 owns the xPU counterpart, a streaming crossbar.
-- BACK-54 (Completeness; P1; M): land the golden model's hardware profile,
-  anomaly table and C-linkage facade. Today the native device carries no
-  hardware-parameter object, no explicit record of the measured anomalies it
-  is supposed to reproduce, and no C boundary an RTL testbench can drive. Add
-  `RnicHwProfile` with an evidence class per field, a measured ConnectX-5 100G
-  set, a ConnectX-7 400G set produced by scaling only the rate and threshold
-  fields and marking every scaled field declared, and a versioned profile
-  record with its own schema string and stable hash that leaves the existing
-  effective-hardware schemas and hash inputs untouched. Add the anomaly table
-  as data with a generated Markdown projection. Add the `extern "C"` facade
-  over plain structs with no exception crossing the boundary and a text
-  transaction trace with picosecond timestamps. Acceptance: the facade
-  reproduces the C++ device timestamps exactly for the same stimulus, two
-  identical stimulus sequences produce byte-identical traces (the deterministic
-  replay guard, exact), the rendered anomaly table equals the committed
-  projection byte for byte, and the profile hash is reproducible and distinct
-  from the effective-hardware hash. Remaining after the transmit slice: the
-  receive-side facade entry points, which cannot be exercised until BACK-56
-  lands.
+- BACK-54 (Completeness; P1; S) (remaining half): complete the golden model's
+  C facade on the receive side. The profile, the anomaly table with its
+  generated projection, and the transmit and control halves of the facade are
+  landed: the facade reproduces the C++ device timestamps exactly, two
+  identical stimulus sequences trace byte-identically, the rendered anomaly
+  table equals the committed projection byte for byte, and the profile record
+  hashes reproducibly and separately from the effective-hardware record. What
+  remains is `rnic_cm_rx_packet` and the control-event kinds, which fail
+  closed with an unsupported status today because the pipelines behind them
+  are BACK-56 and BACK-57. Acceptance: a delivered wire packet advances the
+  receive side through the facade with the same timestamps the C++ device
+  produces, and a control event reaches the rate-control gate, both under the
+  same trace-determinism guard.
 - BACK-55 (Completeness; P1; L): land the transmit pipeline behind an opt-in
   network configuration, default off and byte-identical. It has three parts:
   a packetizer that segments a WQE into MTU-sized packets with wire header

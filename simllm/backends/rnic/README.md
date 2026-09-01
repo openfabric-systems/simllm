@@ -201,6 +201,56 @@ parameters, then
 compares completion CSV, canonical completions, `StepResult` tuples and replay
 TTFT or TPOT summaries byte for byte.
 
+## Hardware profile, anomaly table and C facade
+
+`rnic_hw_profile.h` carries the hardware parameter set with one evidence class
+per field: `documented`, `driver-inferred`, `calibrated-opaque` or `declared`.
+`kConnectX5_100G` is the measured mlx5-campaign set. `kConnectX7_400G` is
+`scaleProfile(kConnectX5_100G, 4)`, which scales the link, goodput,
+packet-rate and threshold fields, keeps the initiation, MTU, header,
+outstanding-work, transport and flow-control fields, and marks every scaled
+field `declared`. Rates are integers of bits or packets per second, so scaling
+is exact and a rendered profile has no floating-point spelling.
+
+The lumped fixed offset is the profile invariant worth knowing: the five
+work-queue service stages plus `wire_round_trip_floor_ps` sum to `t_eff_ps`.
+The campaign fitted one offset that already contains the wire round trip, so a
+model that charges the round trip explicitly subtracts it from the lump rather
+than adding to it. The split across the five stages is declared, and it is
+constrained by the requirement that no serialized stage binds before the
+transmit pacer does.
+
+The profile is its own versioned record: `simllm-rnic-hw-profile-v1` with
+`renderRnicHwProfileJson` and `rnicHwProfileSha256`. It is deliberately not
+part of the effective-hardware schemas or their hash inputs, which identify a
+composed device so a policy comparison cannot silently change hardware.
+
+`rnic_anomaly_table.h` carries the measured performance anomalies as a
+`constexpr` array: identity, trigger, the rendered effect cell, a short
+machine-readable magnitude handle, the mechanism kind and the campaign
+evidence. `renderRnicAnomalyTableMarkdown` projects it to
+[`docs/design/rnic-anomaly-table.md`](../../../docs/design/rnic-anomaly-table.md),
+and the native test compares the render to that file byte for byte and checks
+that the design document still carries every row.
+
+`rnic_cmodel_c.h` is the `extern "C"` facade an RTL testbench drives through
+DPI-C: create, post, doorbell, receive, event, progress, next-event, poll,
+transmit drain, counters, trace and destroy over plain fixed-width structs
+with picosecond timestamps. No exception crosses the boundary; every entry
+point returns a status code. Two struct typedefs are spelled
+`rnic_cm_event_info` and `rnic_cm_counter_set` because C gives a typedef and a
+function the same name space and the entry points `rnic_cm_event` and
+`rnic_cm_counters` are the contract.
+
+Determinism is the contract that makes the facade a golden reference: the same
+stimulus sequence against the same profile and configuration produces a
+byte-identical trace, one line per stimulus and per observed transition. The
+native test proves the facade reproduces the C++ device's completion
+timestamps exactly and that two identical stimulus sequences trace
+identically. The receive entry point and the control-event kinds fail closed
+with `RNIC_CM_ERROR_UNSUPPORTED` rather than pretending to model a path that
+is not landed.
+
 ## Standalone build
 
 ```bash
