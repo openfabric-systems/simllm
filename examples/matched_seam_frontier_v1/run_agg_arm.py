@@ -688,7 +688,7 @@ def _full_evaluation_worker(*, external_python: Path) -> dict[str, Any]:
             ("agg" in row["label"] or "disagg" in row["label"])
             and any(
                 word in row["label"]
-                for word in ("request mix", "traffic", "handoff")
+                for word in ("co-located mix", "split P/D", "unpriced P/D", "packet P/D", "zero-byte P/D")
             )
             for row in figure_series
         )
