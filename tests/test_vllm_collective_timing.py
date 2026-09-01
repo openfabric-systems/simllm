@@ -31,6 +31,7 @@ from simllm.traffic import (
 _STUDY_PATH = (
     Path(__file__).parents[1] / "examples" / "vllm_collective_timing_v1" / "run_study.py"
 )
+_RESULT_PATH = _STUDY_PATH.with_name("results.json")
 _STUDY_SPEC = importlib.util.spec_from_file_location("vllm48_run_study", _STUDY_PATH)
 assert _STUDY_SPEC is not None and _STUDY_SPEC.loader is not None
 run_study = importlib.util.module_from_spec(_STUDY_SPEC)
@@ -431,6 +432,60 @@ def test_metadata_mutations_flip_after_masking_only_refuted_kind_cell():
         True,
         {"cross_environment_acknowledged": True},
     )
+    assert all(control["baseline_pass"] for control in transitions.values())
+    assert not any(control["mutant_pass"] for control in transitions.values())
+    assert all(control["pass_to_fail"] for control in transitions.values())
+
+
+def test_published_fix_round_discloses_void_and_fresh_attempts():
+    result = json.loads(_RESULT_PATH.read_text(encoding="utf-8"))
+    attempts = {attempt["name"]: attempt for attempt in result["attempts"]}
+    attempt_2 = attempts["live-study-attempt-2-20260901"]
+    assert attempt_2["status"] == "VOID"
+    assert attempt_2["behavioral_score"] is None
+    assert attempt_2["failed_fatal_guards"] == [
+        "run-1-request-identity",
+        "run-2-request-identity",
+    ]
+    assert attempt_2["counterfactual_final_scorer"] == {
+        "qualifying": False,
+        "all_current_fatal_guards_pass": True,
+        "behavioral_score": {"passed": 5, "total": 7},
+    }
+    attempt_4 = attempts["live-study-attempt-4-20260901"]
+    assert attempt_4["qualifying"]
+    assert attempt_4["all_fatal_guards_pass"]
+    assert result["qualifying_evidence_attempt"] == "live-study-attempt-4-20260901"
+    assert result["behavioral_score"] == {"passed": 5, "total": 7}
+
+
+def test_published_timings_and_mutation_transitions_are_exact():
+    result = json.loads(_RESULT_PATH.read_text(encoding="utf-8"))
+    attempt_3 = next(
+        attempt
+        for attempt in result["attempts"]
+        if attempt["name"] == "live-study-attempt-3-20260901"
+    )
+    timing = attempt_3["timing_diagnostics_ps"]
+    assert timing["minimum"] == 171_305_000
+    assert timing["minimum_location"] == {
+        "run": 1,
+        "phase": "decode",
+        "ordinal": 33,
+        "layer_index": 16,
+        "layer_name": "model.layers.16",
+    }
+    assert timing["maximum"] == 373_712_983_000
+    assert timing["maximum_location"] == {
+        "run": 1,
+        "phase": "prefill",
+        "ordinal": 0,
+        "layer_index": None,
+        "layer_name": None,
+        "character": "first-call-cold-start-rendezvous",
+    }
+    transitions = result["mutation_control_transitions"]
+    assert len(transitions) == 6
     assert all(control["baseline_pass"] for control in transitions.values())
     assert not any(control["mutant_pass"] for control in transitions.values())
     assert all(control["pass_to_fail"] for control in transitions.values())

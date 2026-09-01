@@ -843,17 +843,34 @@ is scoped to this scheduler pin and must be re-earned after every pin bump.
   reproduction over two fresh live runs, strict old-load and new-round-trip
   schema evidence, mutation controls for every scored family, and both the
   comparator refusal and acknowledgement paths. Local service values remain
-  environment-labeled and unscored. The first pinned campaign at expectation
-  commit `2808a04` passed every fatal guard but scored five of seven: both M1
-  instances expected a final logits `gather`, while stock vLLM executed
-  `all_gather`. The retained refutation leaves this task open; it must not be
-  relabeled after observation or counted as mechanism closure.
+  environment-labeled and unscored. The retained campaign includes attempt 2,
+  in which both live runs completed and captured 100 calls but the original
+  request-identity guards failed, making that attempt VOID with no behavioral
+  score. A post-attempt-2 harness-reality amendment at `ad98074` pins vLLM's
+  exact logical-ID plus eight-hex-character internal suffix rule from
+  `vllm/v1/engine/input_processor.py:249` and requires fresh evidence. Attempt
+  3 predates that amendment and is diagnostic only. Fresh attempt 4 passed
+  every fatal guard under the amendment but scored five of seven: both M1
+  instances expected a final logits `gather`, while standard vLLM executed
+  `all_gather`. `LogitsProcessor` stores the platform's all-gather preference
+  (`vllm/model_executor/layers/logits_processor.py:55`), the platform interface
+  default returns true (`vllm/platforms/interface.py:1102`), and CPU inherits
+  that default (`vllm/platforms/cpu.py:42`), so the freeze was wrong about the
+  standard cross-platform logits path rather than this CPU build. The retained
+  refutation leaves this task open. Closing the kind family requires successor
+  expectations committed before another pair of fresh runs; no observed run
+  may be relabeled as closure.
 - VLLM-49 (Precision; P1; L): run the VLLM-48 in-situ seam on the A100
   multi-GPU lane and score real collective service against an aggregate-floor
-  calibration from the same A100 environment. Freeze payload, rank and
-  collective-kind sweeps before capture; state serialization and topology
-  bounds before reading service values; require exact coordinate coverage and
-  explain every floor violation or residual outside the registered band. A
+  calibration from the same A100 environment. The standard tensor-parallel
+  logits path is expected to use `all_gather`, following the pinned platform
+  default identified by VLLM-48, unless the A100 source pin explicitly
+  overrides it. Freeze payload, rank and collective-kind sweeps before capture;
+  state serialization and topology bounds before reading service values;
+  require exact coordinate coverage and explain every floor violation or
+  residual outside the registered band. Exercise the deferred CUDA event
+  resolver, confirm that the model-step thread does not wait for event
+  synchronization, and prove ordered record flush at process shutdown. A
   cross-environment acknowledgement is diagnostic only and cannot close this
   task. Carry the accepted service comparison into at least one signed time to
   first token or time per output token consequence while the capture-disabled
