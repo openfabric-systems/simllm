@@ -75,7 +75,39 @@ backend submodules.
   `sq_depth` to HTSIM-34, `rx_ingress_meter_bytes` to HTSIM-35, and the two
   packet-rate ceilings to HTSIM-36. Switch buffers, seeds, the
   selective-repeat window and the DCQCN rate floor are fabric or policy
-  parameters and stay with the study.
+  parameters and stay with the study, except the switch buffers and the
+  marking policy, which `FabricProfile` now owns.
+- `FabricProfile` + `HACC_LEAF_4X100G` + `render_dcqcn` + `render_topology` +
+  `dcqcn_port_gbps` + `fabric_gap_fields` (BACK-60): the fabric constants
+  carrier, the counterpart of `NicProfile` for the switching fabric rather
+  than the endpoint. A frozen profile holds the switch and host-port counts,
+  the port rate, the per-pipe latency and the pipe count that set the latency
+  floor, the per-port tail-drop egress buffer, the marking policy, PFC, whether
+  the switch acts on a pause frame it receives, and the path count, with one
+  evidence class per field (`documented`, `inferred` or `declared`) and a
+  provenance string naming the campaign records. `inferred` is the class for a
+  constant bracketed by measurement taken somewhere other than the device it
+  describes, which is what endpoint probing of a switch produces.
+  `HACC_LEAF_4X100G` is the measured HACC leaf: one non-blocking switch, four
+  100 G ports, 515 ns per pipe over a four-pipe path, a 5.2 MB per-port
+  tail-drop buffer, `ecn = "none"`, PFC off, pause emitted by the hosts and
+  ignored by the switch, and one path. `render_dcqcn(nic, fabric)` returns the
+  topology file's text and the comparator flag dict together, reusing
+  `dcqcn_flags` for the NIC half and then letting the fabric override the rate,
+  the buffers and the marking policy. `-link_bps` renders the fabric's port
+  rate rather than the NIC's goodput asymptote, because the comparator has one
+  rate and the asymptote is exactly the `link_bps` gap the NIC profile already
+  registers; a NIC and a fabric that disagree about PFC are refused, since
+  `-pfc` is one flag for both ends. `render_topology` expresses a single-switch
+  fabric as the degenerate two-tier Clos whose whole node set hangs off one
+  leaf, which is what makes every pair one hop apart and fixes the path count
+  at 1. `fabric_gap_fields` is the fabric gap ledger and has exactly one
+  possible member: a drop-only switch is inexpressible, because the runtime
+  requires `0 <= Kmin < Kmax < egress buffer` with a nonzero Pmax, so the
+  renderer parks the marking band in the last two bytes of the buffer at one
+  part per million and `FABRIC_GAP_TASKS` points at HTSIM-38. The module's own
+  `EVIDENCE_CLASSES` and `MODEL_FIELDS` stay module-local, because
+  `nic_profile` owns those names in the package namespace.
 - `HtsimUecConfig` + `build_htsim_uec_command`: argv construction for
   GOAL-driven `htsim_uec` runs.
 - `LogGopsimConfig` + `build_loggopsim_command` + `run_loggopsim` +
