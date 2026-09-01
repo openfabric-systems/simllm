@@ -78,6 +78,18 @@ backend submodules.
   and it emits the one extent terminal when the last packet of a WQE retires.
   Its measured behavior is in
   [the golden-model slice-B study](../../examples/rnic_cmodel_v1/RESULTS.md).
+- `RnicRxPipeline` (BACK-57): the opt-in receive slice, selected by an enabled
+  receive block on the same ABI v2 network configuration. The default leaves it
+  off, which is the slice-B code path unchanged. Selected, it is three blocks
+  in series: an ingress meter that admits wire bytes into a finite buffer
+  drained at a service rate and discards the overflow at the PHY with no
+  transport signal, a receive processor that applies per-QP RC and UD receive
+  packet-rate ceilings and a per-NIC one, checks the RC responder's PSN and
+  emits an ACK or a NAK, and delivers UD with a silent drop beyond its
+  ceiling, and a requester transport that tracks PSNs and ACKs and recovers by
+  go-back-N on a NAK or on the retransmission timeout. Its sweep, bands and
+  fatal guards are frozen in
+  [the slice-C expectations](../../examples/rnic_cmodel_rx_v1/expectations.md).
 - `ComposedRnicObservations` + `ComposedRnicSession`: strict validation and
   transactional projection of the frozen composed native rows into the core
   structural RNIC seam. The external native session owns WQE lifecycle and
