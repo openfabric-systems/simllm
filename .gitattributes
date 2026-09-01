@@ -195,6 +195,7 @@ examples/deployment_curve_v1/core65_*.py text eol=lf
 examples/deployment_curve_v1/core65_*.txt text eol=lf
 tests/test_deployment_curve_core65*.py text eol=lf
 notes/2026-08-28-core66-worker-sizing.md text eol=lf
+notes/2026-09-01-traf73run-worker-sizing.md text eol=lf
 examples/deployment_curve_v1/core66_*.json text eol=lf
 examples/deployment_curve_v1/core66_*.jsonl text eol=lf
 examples/deployment_curve_v1/core66_*.md text eol=lf
