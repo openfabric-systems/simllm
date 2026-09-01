@@ -1166,9 +1166,33 @@ leaves 12 undocumented. The deciding correction is that the documented family
 unit is a 128-bit, 16-byte flit and a packet occupies 1 through 18 flits; 272
 bytes is therefore one 17-flit occupancy, not the universal unit. The
 [mechanism record](../design/nvlink-mechanism-reverse-engineering.md) makes the
-public evidence boundary literal and closes TRAF-79. TRAF-80 owns the model
+public evidence boundary literal and closes TRAF-79. TRAF-80 delivers the model
 alignment, while TRAF-73 remains open to identify the A100-specific credit and
 arbitration parameters after that structure lands.
+
+TRAF-80 aligns the three-module domain without moving an inherited result. The
+aligned authority packetizes generation-scoped 16-byte flits, records optional
+control occupancy, link acknowledgement and replay, explicit traffic class and
+virtual channel, receiver-owned credit release and ordered visibility. Its
+NVSwitch path owns input ports, destination virtual output queues and two-sided
+crossbar grants behind an identity policy. The compatibility authority remains
+the sole owner for every merged consumer that ran before this alignment.
+
+The frozen 1 MiB sanity job reaches 94.117647 GB/s for repeated 17-flit packets
+and 88.888889 GB/s for repeated 18-flit packets on four 25 GB/s links. The
+optional flit raises serialization by exactly 5.882352941176471 percent. At
+12.5 GB/s per link both serialization terms double exactly. All 13 fatal guards
+pass, including receiver ownership, byte conservation, error-free replay,
+direct-mesh identity and physical bounds. The first attempt is retained as void
+because a historical source lock was initially evaluated against the evolving
+working file; the preserved Git blob and all current behavior artifacts pass
+on the final run. The 22 consumer roots and 95 recursively inherited artifacts
+have zero failures. Flow dynamics, both transport comparisons, incast
+validation, the analytical frontier and two-network map, and deployment pricing
+publish signed shifts of +0 on their pinned authorities. This is the literal
+TRAF-80 mechanism and evidence deliverable. TRAF-73 remains open and owns every
+unidentified A100 credit, buffer, virtual-channel, return-encoding, striping
+and arbiter value.
 
 ## Open tasks
 
@@ -1193,35 +1217,6 @@ arbitration parameters after that structure lands.
   result. The evidence remains shape-only across architectures: no A100
   absolute latency, bandwidth, floor or slope calibrates H200. This study
   changes no installed authority or signature metric by itself.
-- TRAF-80 (Precision; P1; L): align the three-module NVLink packet, credit and
-  switch domain with the public mechanism boundary established by TRAF-79.
-  The surrogate being replaced treats one fixed 272-byte extent as the packet
-  and credit unit, frees the sender credit on a fixed timer, models one
-  implicit virtual channel, exposes destination service without explicit
-  receive-buffer ownership, and gives the switch no port, virtual-output-queue
-  or crossbar contention. Replace it with generation-scoped 16-byte flit
-  packetization with optional control flits, link-local acknowledgement and
-  replay accounting, explicit traffic-class and virtual-channel state,
-  receiver-owned credit release, ordering visibility, and an NVSwitch policy
-  seam over input ports, virtual output queues and crossbar outputs. Do not
-  promote an exact A100 credit quantum, pool scope, virtual-channel count,
-  buffer depth, credit-return encoding, striping granularity or product arbiter:
-  public documents leave those parameters unidentified, so TRAF-73 remains
-  their measurement owner. Preserve the profile-absent path and the NV4
-  direct-mesh structural pass-through path exactly, and make the identity
-  arbitration policy preserve every accepted timestamp, wire byte, random
-  draw and completion order. Land an expectations-only commit before the
-  behavioral implementation. Its minimum physical oracles are 94.117647 GB/s
-  payload for repeated 17-flit packets and 88.888889 GB/s for repeated 18-flit
-  packets on four 25 GB/s A100 links, a nonnegative 5.882 percent serialization
-  change when the optional flit is present, credit release never preceding
-  receive-buffer release, and error-free replay producing zero added bytes and
-  time while injected errors add neither negative quantity. The sanity study
-  varies packet occupancy and link rate, measures one fixed job-completion
-  time, and checks the frozen serialization relation. Publish the signed shift
-  in every inherited envelope before TRAF-73 begins identification; a result
-  that violates any conservation, ownership or identity guard is void.
-
 - TRAF-86 (Precision; P1; L): replace the NVLink domain's declared packetization
   service conversion identified by the completed TRAF-74 comparison. The
   surrogate being replaced maps each logical flow directly onto the profile's
@@ -1983,12 +1978,13 @@ arbitration parameters after that structure lands.
   node. The surrogate being replaced is the pair-keyed credit ledger plus an
   undocumented scheduling choice. Public documents establish credit flow
   control and multiple virtual-channel classes, but not the A100 allocation
-  scope or quantum. Until TRAF-80 replaces the fixed-unit and timer structure,
-  the unchanged 256-credit, 272-byte candidate stays keyed per link for one
-  implicit modeled virtual channel. It does not claim a physical
-  virtual-channel count. Release-aware round robin is the declared baseline
-  candidate; static interleave and greedy capture are explicit alternatives.
-  TRAF-73 measures among those candidates only after the structure is aligned.
+  scope or quantum. The aligned authority separates variable flit occupancy
+  from the unchanged 256-credit and 272-byte accounting candidates, names the
+  active virtual channel and keys candidate pools by link, destination and
+  virtual channel. It does not claim a physical virtual-channel count.
+  Release-aware round robin is the declared NV4 receiver baseline candidate;
+  static interleave and greedy capture are explicit alternatives. TRAF-73
+  measures among those candidates on the aligned structure.
 
   The expectations-only specification is
   [nvlink_credit_arbitration_v1](../../examples/nvlink_credit_arbitration_v1/expectations.md).

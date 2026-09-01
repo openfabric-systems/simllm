@@ -11,22 +11,30 @@ from xml.etree import ElementTree
 import pytest
 
 from simllm.backends.htsim_nvlink import (
+    A100_NVLINK3_PACKET_FORMAT_CANDIDATE,
     DEFAULT_NVLINK_ARBITRATION_POLICY,
     LEGACY_NVLINK_FLOW_POLICY,
+    NVLINK_ALIGNED_PROFILE_IMPLEMENTATION,
     NVLINK_SCORED_EVIDENCE_CLASS,
     NVLINK_SCORED_PROFILE_STATUS,
+    NvlinkAlignedDomainResult,
+    NvlinkAlignedOptions,
     NvlinkArbitrationPolicy,
     NvlinkCandidateProfile,
     NvlinkDomainResult,
     NvlinkDomainService,
     NvlinkFifoPlacement,
+    NvlinkFlowControlConfig,
     NvlinkFlowPolicy,
+    NvlinkIdentitySwitchPolicy,
+    NvlinkMechanismAuthority,
     NvlinkOperation,
     NvlinkPacketDirection,
     NvlinkRx,
     NvlinkSwitch,
     NvlinkSwitchConfig,
     NvlinkSwitchMode,
+    NvlinkTrafficClass,
     NvlinkTransfer,
     NvlinkTx,
     load_nvlink_candidate_profile,
@@ -755,3 +763,313 @@ def test_domain_figure_routes_are_continuous_and_clear_of_blocks_and_text():
         (625.0, 470.0),
         (550.0, 470.0),
     )
+
+
+def test_aligned_defaults_keep_unidentified_values_declared_candidates(candidate):
+    packet_format = A100_NVLINK3_PACKET_FORMAT_CANDIDATE
+    flow_control = NvlinkFlowControlConfig.from_candidate_profile(candidate)
+    options = NvlinkAlignedOptions(flow_control=flow_control)
+
+    assert packet_format.flit_bytes == 16
+    assert packet_format.maximum_packet_flits == 18
+    assert packet_format.evidence_class == (
+        "declared_candidate_not_hardware_measurement"
+    )
+    assert "TRAF-73" in packet_format.provenance
+    assert flow_control.virtual_channels == ("vc0",)
+    assert flow_control.credits_per_pool == 256
+    assert flow_control.credit_quantum_bytes == 272
+    assert "DECLARED CANDIDATES" in flow_control.provenance
+    assert "DECLARED CANDIDATE" in options.arbitration_provenance
+
+
+def test_aligned_packetization_counts_flits_and_optional_fields(candidate):
+    tx = NvlinkTx(candidate.tx)
+    flow_control = NvlinkFlowControlConfig.from_candidate_profile(candidate)
+    base = tx.packetize_flits(
+        NvlinkTransfer(
+            extent_id="base",
+            source=0,
+            destination=1,
+            payload_bytes=257,
+        ),
+        flow_control=flow_control,
+    )
+    optional = tx.packetize_flits(
+        NvlinkTransfer(
+            extent_id="optional",
+            source=0,
+            destination=1,
+            payload_bytes=256,
+            address_extension_flits=1,
+        ),
+        flow_control=flow_control,
+    )
+
+    assert [packet.wire_flits for packet in base] == [17, 2]
+    assert [packet.wire_bytes for packet in base] == [272, 32]
+    assert [packet.padding_bytes for packet in base] == [0, 15]
+    assert base[0].traffic_class is NvlinkTrafficClass.POSTED_REQUEST
+    assert base[0].virtual_channel == "vc0"
+    assert base[0].ordering_domain == "base"
+    assert optional[0].wire_flits == 18
+    assert optional[0].wire_bytes == 288
+
+
+def test_profile_absent_aligned_authority_preserves_object_identity():
+    analytic = object()
+
+    observed = NvlinkDomainService().serve(
+        [],
+        analytic_result=analytic,
+        authority=NvlinkMechanismAuthority.ALIGNED,
+    )
+
+    assert observed is analytic
+
+
+def test_aligned_error_free_and_injected_replay_accounting(candidate):
+    transfer = NvlinkTransfer(
+        extent_id="replay",
+        source=0,
+        destination=1,
+        payload_bytes=256,
+    )
+    service = NvlinkDomainService(candidate)
+    clean = service.serve_aligned([transfer], analytic_result=None)
+    replayed = service.serve_aligned(
+        [transfer],
+        analytic_result=None,
+        options=NvlinkAlignedOptions(
+            replay_counts=(("replay:packet-0", 1),),
+            replay_timeout_ps=100,
+        ),
+    )
+
+    assert isinstance(clean, NvlinkAlignedDomainResult)
+    assert isinstance(replayed, NvlinkAlignedDomainResult)
+    assert clean.implementation == NVLINK_ALIGNED_PROFILE_IMPLEMENTATION
+    assert clean.authority is NvlinkMechanismAuthority.ALIGNED
+    assert clean.replay_wire_bytes == 0
+    assert clean.replay_time_ps == 0
+    assert clean.total_wire_bytes == clean.request_wire_bytes
+    assert clean.acknowledgement_count == 1
+    assert replayed.replay_wire_bytes == clean.request_wire_bytes
+    assert replayed.replay_time_ps > 0
+    assert replayed.total_wire_bytes == 2 * clean.total_wire_bytes
+    assert replayed.completion_time_ps >= clean.completion_time_ps
+    assert replayed.random_draw_count == clean.random_draw_count == 0
+
+
+def test_aligned_credit_reuse_is_owned_by_receiver_release():
+    profile = load_nvlink_candidate_profile(STUDY / "candidate-profile-pre-traf70.json")
+    profile = dataclasses.replace(
+        profile,
+        tx=dataclasses.replace(
+            profile.tx,
+            links_per_peer=1,
+            credits_per_destination=1,
+        ),
+        rx=dataclasses.replace(
+            profile.rx,
+            ingress_rate_bytes_per_second=10_000_000_000,
+            credit_return_latency_ps=100,
+        ),
+    )
+    flow_control = NvlinkFlowControlConfig.from_candidate_profile(profile)
+
+    result = NvlinkDomainService(profile).serve_aligned(
+        [
+            NvlinkTransfer(
+                extent_id="credit",
+                source=0,
+                destination=1,
+                payload_bytes=512,
+            )
+        ],
+        analytic_result=None,
+        options=NvlinkAlignedOptions(flow_control=flow_control),
+    )
+
+    assert isinstance(result, NvlinkAlignedDomainResult)
+    assert result.fixed_point_iterations == 3
+    releases = {release.packet_id: release for release in result.credit_releases}
+    first, second = sorted(result.packets, key=lambda packet: packet.sequence)
+    first_release = releases[first.packet_id]
+    assert first_release.buffer_released_at_ps == first.rx_buffer_released_at_ps
+    assert first_release.credit_available_at_ps == first.credit_available_at_ps
+    assert first_release.credit_available_at_ps >= first_release.buffer_released_at_ps
+    assert second.tx_started_at_ps >= first_release.credit_available_at_ps
+    assert all(
+        release.credit_available_at_ps >= release.buffer_released_at_ps
+        for release in result.credit_releases
+    )
+
+
+def test_aligned_direct_mesh_returns_the_exact_packet_tuple(candidate):
+    tx = NvlinkTx(candidate.tx)
+    packets = tx.packetize_flits(
+        NvlinkTransfer(
+            extent_id="pass",
+            source=0,
+            destination=1,
+            payload_bytes=256,
+        ),
+        flow_control=NvlinkFlowControlConfig.from_candidate_profile(candidate),
+    )
+
+    forwarded, grants = NvlinkSwitch(candidate.switch).forward_flits(
+        packets,
+        policy=NvlinkIdentitySwitchPolicy(),
+    )
+
+    assert forwarded is packets
+    assert grants == ()
+
+
+def test_identity_switch_policy_uses_voqs_and_two_sided_crossbar(candidate):
+    flow_control = NvlinkFlowControlConfig.from_candidate_profile(candidate)
+    tx = NvlinkTx(candidate.tx)
+    endpoints = ((0, 2), (0, 3), (1, 2), (1, 3))
+    packets = tuple(
+        dataclasses.replace(
+            tx.packetize_flits(
+                NvlinkTransfer(
+                    extent_id=f"voq-{index}",
+                    source=source,
+                    destination=destination,
+                    payload_bytes=256,
+                ),
+                flow_control=flow_control,
+            )[0],
+            link_index=0,
+            tx_started_at_ps=0,
+            tx_finished_at_ps=0,
+            acknowledged_at_ps=0,
+            replay_buffer_released_at_ps=0,
+        )
+        for index, (source, destination) in enumerate(endpoints)
+    )
+    switch = NvlinkSwitch(
+        NvlinkSwitchConfig(
+            mode=NvlinkSwitchMode.QUEUED,
+            fifo_placement=NvlinkFifoPlacement.INPUT,
+            service_rate_bytes_per_second=25_000_000_000,
+            buffer_capacity_bytes=1024,
+            arbitration="fifo",
+            head_of_line_blocking=True,
+        )
+    )
+
+    forwarded, grants = switch.forward_flits(
+        packets,
+        policy=NvlinkIdentitySwitchPolicy(),
+    )
+
+    by_start: dict[int, list[object]] = {}
+    for grant in grants:
+        by_start.setdefault(grant.started_at_ps, []).append(grant)
+    assert [len(rows) for rows in by_start.values()] == [2, 2]
+    for rows in by_start.values():
+        assert len({row.input_port for row in rows}) == len(rows)
+        assert len({row.output_port for row in rows}) == len(rows)
+    assert [packet.switch_started_at_ps for packet in forwarded] == [0, 10880, 10880, 0]
+
+
+def test_identity_switch_policy_ignores_traffic_class_labels(candidate):
+    flow_control = NvlinkFlowControlConfig.from_candidate_profile(candidate)
+    tx = NvlinkTx(candidate.tx)
+    packets = tuple(
+        dataclasses.replace(
+            tx.packetize_flits(
+                NvlinkTransfer(
+                    extent_id=f"class-{source}",
+                    source=source,
+                    destination=3,
+                    payload_bytes=256,
+                ),
+                flow_control=flow_control,
+            )[0],
+            link_index=0,
+            tx_started_at_ps=0,
+            tx_finished_at_ps=0,
+            acknowledged_at_ps=0,
+            replay_buffer_released_at_ps=0,
+        )
+        for source in (0, 1, 2)
+    )
+    permuted = tuple(
+        dataclasses.replace(
+            packet,
+            traffic_class=(
+                NvlinkTrafficClass.NON_POSTED_REQUEST
+                if index % 2
+                else NvlinkTrafficClass.RESPONSE
+            ),
+        )
+        for index, packet in enumerate(packets)
+    )
+    switch = NvlinkSwitch(
+        NvlinkSwitchConfig(
+            mode=NvlinkSwitchMode.QUEUED,
+            fifo_placement=NvlinkFifoPlacement.INPUT,
+            service_rate_bytes_per_second=25_000_000_000,
+            buffer_capacity_bytes=1024,
+            arbitration="fifo",
+            head_of_line_blocking=True,
+        )
+    )
+
+    baseline, _ = switch.forward_flits(packets)
+    relabeled, _ = switch.forward_flits(permuted)
+    projection = lambda rows: [
+        (
+            packet.packet_id,
+            packet.switch_started_at_ps,
+            packet.switch_finished_at_ps,
+            packet.wire_bytes,
+            packet.random_draw_count,
+        )
+        for packet in rows
+    ]
+
+    assert projection(relabeled) == projection(baseline)
+
+
+def test_receive_visibility_waits_for_prior_sequence(candidate):
+    flow_control = NvlinkFlowControlConfig.from_candidate_profile(candidate)
+    packets = NvlinkTx(candidate.tx).packetize_flits(
+        NvlinkTransfer(
+            extent_id="order",
+            source=0,
+            destination=1,
+            payload_bytes=512,
+        ),
+        flow_control=flow_control,
+    )
+    first = dataclasses.replace(
+        packets[0],
+        link_index=0,
+        tx_started_at_ps=0,
+        tx_finished_at_ps=100,
+        acknowledged_at_ps=100,
+        replay_buffer_released_at_ps=100,
+    )
+    second = dataclasses.replace(
+        packets[1],
+        link_index=1,
+        tx_started_at_ps=0,
+        tx_finished_at_ps=0,
+        acknowledged_at_ps=0,
+        replay_buffer_released_at_ps=0,
+    )
+
+    delivered, _, _, visibility = NvlinkRx(candidate.rx).receive_flits(
+        (second, first),
+        flow_control=flow_control,
+    )
+    by_sequence = {packet.sequence: packet for packet in delivered}
+
+    assert by_sequence[1].rx_finished_at_ps < by_sequence[0].rx_finished_at_ps
+    assert by_sequence[1].visible_at_ps == by_sequence[0].visible_at_ps
+    assert all(event.visible_at_ps >= event.rx_finished_at_ps for event in visibility)
