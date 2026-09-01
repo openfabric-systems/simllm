@@ -1,0 +1,30 @@
+{
+  "access_log": "examples/pd_session_batching_service_v1/access_ledger.jsonl",
+  "allowed_modes": {
+    "keys": "Return only the immediate key names of one addressed object.",
+    "length": "Return only the element count of one addressed array.",
+    "scalar": "Return one addressed non-container value of at most 4096 encoded bytes."
+  },
+  "forbidden": {
+    "empty_or_root_pointer": true,
+    "markdown_record": "examples/pd_session_queue_onset_v1/RESULTS.md",
+    "pre_freeze_observed_value_access": true,
+    "returned_containers": true,
+    "shell_or_editor_reads": true,
+    "whole_file_streams": true
+  },
+  "forbidden_access_ledger": "examples/pd_session_batching_service_v1/forbidden_access_ledger.json",
+  "guarded_record": "examples/pd_session_queue_onset_v1/results.json",
+  "protocol": [
+    "The access-control commit precedes every guarded-record read.",
+    "The sizing commit and expectations-only freeze precede every observed-value read.",
+    "Only field_reader.py may read the guarded JSON record.",
+    "Every invocation appends an audit row before it returns or prints a projection.",
+    "Rejected production requests stop the study and enter the forbidden-access ledger.",
+    "The prose result record is never read because it has no field-addressed interface.",
+    "No VLLM-41 observed value participates in predictor derivation or band construction.",
+    "Held-out successor cells are first compared only after non-held-out results are published."
+  ],
+  "schema": "simllm-pd-session-batching-service-access-protocol-v1",
+  "status": "ACCESS_PROTOCOL_ONLY"
+}
