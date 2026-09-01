@@ -843,7 +843,11 @@ is scoped to this scheduler pin and must be re-earned after every pin bump.
   reproduction over two fresh live runs, strict old-load and new-round-trip
   schema evidence, mutation controls for every scored family, and both the
   comparator refusal and acknowledgement paths. Local service values remain
-  environment-labeled and unscored.
+  environment-labeled and unscored. The first pinned campaign at expectation
+  commit `2808a04` passed every fatal guard but scored five of seven: both M1
+  instances expected a final logits `gather`, while stock vLLM executed
+  `all_gather`. The retained refutation leaves this task open; it must not be
+  relabeled after observation or counted as mechanism closure.
 - VLLM-49 (Precision; P1; L): run the VLLM-48 in-situ seam on the A100
   multi-GPU lane and score real collective service against an aggregate-floor
   calibration from the same A100 environment. Freeze payload, rank and

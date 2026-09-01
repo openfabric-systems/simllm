@@ -1,0 +1,82 @@
+{
+  "schema": "simllm-vllm-collective-timing-result-v1",
+  "task": "VLLM-48",
+  "status": "FAIL",
+  "expectation_commit": "2808a0450308121c7b25ce9a4a6292273a1014d4",
+  "implementation_commit": "6dcc69bc856f6e0e72f19174e6f7473ba3f57b14",
+  "evidence_attempt": "live-study-attempt-3-20260901",
+  "live_environment": {
+    "framework": "vllm",
+    "framework_version": "0.27.1+cpu",
+    "device": "cpu",
+    "collective_backend": "gloo",
+    "tensor_parallel_size": 2,
+    "timer": "host-monotonic-ns",
+    "timing_score": "unscored"
+  },
+  "population": {
+    "fresh_runs": 2,
+    "steps_per_run": [2, 2],
+    "calls_per_run": [100, 100],
+    "calls_per_step": 50,
+    "kind_counts_per_run": {
+      "all_reduce": 98,
+      "all_gather": 2
+    },
+    "capture_sha256": [
+      "a17ef54be24e23c0866a20a8770bb4a75c81e38b2c3e937d72a4466d83125908",
+      "d4c616f44842be18872645f1638511440919cbb4d8e86213e0e8afdcd417d07c"
+    ]
+  },
+  "metadata_conservation": {
+    "call_count": [true, true],
+    "payload_bytes": [true, true],
+    "world_size": [true, true],
+    "dtype_and_width": [true, true],
+    "group_and_layer": [true, true],
+    "native_kind": [false, false],
+    "finding": "The frozen logits call was gather; pinned vLLM executed all_gather at ordinal 49 in both steps of both runs."
+  },
+  "shape_determinism": {
+    "passed": true,
+    "projection_sha256": "f7b6aca23563816baf1ba57494199d8a2360d57d789ff7a6b78b6e205013a9ae"
+  },
+  "timing_diagnostics_ps": {
+    "values_recorded": 200,
+    "minimum": 171305000,
+    "maximum": 373712983000,
+    "scored": false
+  },
+  "schema_compatibility": {
+    "old_capture_exact_bytes": true,
+    "new_capture_exact_round_trip": true
+  },
+  "comparator": {
+    "default_cross_environment_refusal": true,
+    "acknowledged_cross_environment_use": true,
+    "acknowledgement_stamped_on_result": true,
+    "coordinate": {
+      "kind": "all_reduce",
+      "payload_bytes": 24576,
+      "ranks": 2
+    }
+  },
+  "fatal_guards": "PASS",
+  "mutation_controls": "PASS",
+  "families": {
+    "M1": [false, false],
+    "M2": [true],
+    "M3": [true, true],
+    "M4": [true],
+    "M5": [true]
+  },
+  "behavioral_score": {
+    "passed": 5,
+    "total": 7
+  },
+  "project_consequence": {
+    "VLLM-48": "remains open",
+    "VLLM-49": "remains open for matched A100 floor evidence",
+    "VLLM-50": "not consumed because the pinned CPU build succeeded"
+  }
+}
