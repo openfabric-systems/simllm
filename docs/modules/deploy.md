@@ -191,25 +191,25 @@ fresh-process scored records are byte-identical, and the original register is
 MIXED with S 13 of 13, R 10 of 10, F 12 of 13, M 2 of 2 and W 1 of 1. The valid
 claim is narrow: every scored value bypasses SimLLM's `RooflineProvider`, all
 eight external adjustments and their remove-one sensitivities are published,
-and the packet-priced network is compared only with an arm that charges zero
-network service. DEPLOY-12 remains open solely for the missing
-LogGOPSim-priced reference required before an isolated network-mechanism claim.
-DEPLOY-13 retains the rounded-axis residual. DEPLOY-9 through DEPLOY-11 retain
-their breadth and silicon-precision scopes.
+and the protected two-arm record continues to compare the packet-priced
+network with an arm that charges zero network service. Its append-only
+[LogGOPSim third arm](../../examples/matched_seam_frontier_v1/DEPLOY12_RESULTS.md)
+is nonvoid: all 15 fatal guards hold, two complete fresh-process evaluations
+are byte-identical, and the explicit bypass reproduces the corrected unpriced
+points and frontier byte for byte. LogGOP latency and sender serialization
+price 2.295752 to 2.295758 ms of the network leg. At TP2 the packet leg is
+4.661283 ms, leaving a 2.365525 ms residual beyond those terms and a maximum
+frontier-visible penalty of 1.021231 on rows 1 through 3. The TP2 receiver
+floor is 4.587520 ms, while TP4 and TP8 leave only 0.035927 to 0.036014 ms
+network residuals; receiver-side shared-ingress serialization is therefore
+identified only for this TP4-to-TP2 schedule shape. DEPLOY-13 retains the
+rounded-axis residual. DEPLOY-9 through DEPLOY-11 retain their breadth and
+silicon-precision scopes.
 
 ## Open tasks
 
 ### Precision
 
-- DEPLOY-12 (Precision; P1; M): replace the explicit zero-network diagnostic
-  with the corrected freeze's third arm that charges LogGOPSim L, o, g and G
-  service before attributing any packet gap to receiver-side serialization.
-  Preserve both the void first publication and the corrected nonvoid record
-  byte-for-byte, keep the original bands unchanged, and retain the current
-  no-isolated-mechanism wording until the third arm identifies a residual
-  beyond the priced LogGOP terms. Acceptance requires two complete
-  fresh-process scored records to remain byte-identical with wall time excluded
-  by name and the explicit bypass to reproduce the corrected unpriced arm.
 - DEPLOY-13 (Precision; P1; M): replace the rounded external x coordinate as
   an exact step-frontier threshold with source-carried unrounded coordinates
   or explicit publication intervals. The matched-seam study's F-2-09 surrogate
