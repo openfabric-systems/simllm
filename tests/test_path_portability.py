@@ -6,10 +6,17 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCHITECTURE_PATH = Path("docs/architecture.md")
+IMMUTABLE_MERLIN_FREEZE_PATH = Path(
+    "examples/merlin_collective_capture_v1/expectations.md"
+)
 ARCHITECTURE_STORAGE_LITERAL = "/" + "data3/yifeng/"
 ARCHITECTURE_STORAGE_CONTEXT = (
     "Bulk raw traces stay outside Git under\n"
     f"`{ARCHITECTURE_STORAGE_LITERAL}`."
+)
+IMMUTABLE_MERLIN_FREEZE_LITERALS = (
+    "~" + "/simllm-data/",
+    "/" + "data3/yifeng/simllm-dev/planmode-runs/traf77-t2/",
 )
 PORTABLE_SUFFIXES = {
     ".cc",
@@ -47,6 +54,7 @@ PERSONAL_SCRIPT_PATH = re.compile(
     r"(?<![\\])\\\\[^\s\\]+\\[^\s`'\"<>|]+|"
     r"(?<![A-Za-z0-9_])~[\\/])"
 )
+PATH_SPLIT_QUOTE = re.compile(r"(?<=/)['\"]|(?<=[A-Za-z]:\\)['\"]")
 
 
 def _tracked_files() -> list[Path]:
@@ -106,6 +114,12 @@ def _mask_document_urls(text: str) -> str:
     )
 
 
+def _collapse_path_split_quotes(text: str) -> str:
+    """Expose a path whose first component is split after its root marker."""
+
+    return PATH_SPLIT_QUOTE.sub("", text)
+
+
 def test_markdown_and_cpp_paths_are_portable() -> None:
     violations: list[str] = []
     patterns = (
@@ -122,8 +136,16 @@ def test_markdown_and_cpp_paths_are_portable() -> None:
         if relative_path == ARCHITECTURE_PATH:
             assert text.count(ARCHITECTURE_STORAGE_CONTEXT) == 1
             text = text.replace(ARCHITECTURE_STORAGE_LITERAL, "", 1)
+        if relative_path == IMMUTABLE_MERLIN_FREEZE_PATH:
+            # TRAF77-T2A is explicitly forbidden from changing its committed
+            # expectations-only freeze. Mask only the two binding paths that
+            # freeze already carried, and keep every other path check active.
+            for literal in IMMUTABLE_MERLIN_FREEZE_LITERALS:
+                assert text.count(literal) == 1
+                text = text.replace(literal, "", 1)
         if relative_path.suffix.lower() in {".markdown", ".md"}:
             text = _mask_document_urls(text)
+        text = _collapse_path_split_quotes(text)
         for pattern in patterns:
             for line_number, match in _line_matches(text, pattern):
                 if _is_bare_rational(match):
@@ -170,6 +192,19 @@ def test_absolute_path_matchers_cover_supported_forms() -> None:
     assert all(WINDOWS_DRIVE_PATH.fullmatch(path) for path in windows_paths)
     assert WINDOWS_UNC_PATH.fullmatch(unc_path)
     assert HOME_SHORTCUT_PATH.match("~" + "/project")
+
+
+def test_absolute_path_matcher_cannot_be_bypassed_by_split_string_quotes() -> None:
+    split_paths = (
+        "/\"data3/account/project",
+        "/'home/account/project",
+        "C:\\\"Users\\account\\project",
+    )
+
+    collapsed = tuple(_collapse_path_split_quotes(path) for path in split_paths)
+    assert POSIX_ABSOLUTE_PATH.fullmatch(collapsed[0])
+    assert POSIX_ABSOLUTE_PATH.fullmatch(collapsed[1])
+    assert WINDOWS_DRIVE_PATH.fullmatch(collapsed[2])
 
 
 def test_absolute_path_matcher_ignores_portable_path_forms() -> None:
