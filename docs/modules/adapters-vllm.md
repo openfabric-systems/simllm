@@ -668,9 +668,15 @@ after five non-queue-dominated segments. The run conserves 4,992 admissions,
 handoffs and terminals plus 19,968 decode tokens at zero TTFT residual. All 30
 held-out scheduler-wait bands hold, while only 14 of 30 separately scored
 batching-service bands hold. VLLM-41 closes on the common sub-250 onset;
-VLLM-42 owns the batching-service band residual. The validated 250 to 8,000
-requests/s direction was preserved and not rescored; see
-[the lower-load onset result](../../examples/pd_session_queue_onset_v1/RESULTS.md).
+the successor phase-complete, service-only predictor advances the shared clock
+through independently frozen prompt service and handoff before pricing decode
+batch membership from the independent measured service surface. All 48
+non-held-out and all 30 held-out bands hold, conserving 4,992 admissions,
+handoffs and terminals plus 19,968 decode tokens at zero TTFT residual. This
+qualifies VLLM-42 for the integrator's atomic registry and index closure with
+no VLLM-50 residual. The common 210 to 220 requests/s onset and validated 250
+to 8,000 requests/s direction remain settled and were not rescored; see
+[the batching-service result](../../examples/pd_session_batching_service_v1/RESULTS.md).
 
 The same live driver now accepts pool-specific content-addressed lookup
 bindings for CORE-53. The retained candidate study selected its exact decode

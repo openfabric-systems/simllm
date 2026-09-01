@@ -195,6 +195,12 @@ def test_publisher_combines_only_released_unique_splits() -> None:
             "expectations_sha256": publisher.EXPECTATIONS_SHA256,
             "split": split,
             "run_head": "a" * 40,
+            "preservation": {
+                "artifact_count": 1,
+                "queue_onset_artifact_count": 1,
+                "manifest_sha256": "e" * 64,
+                "worktree_bytes_held": True,
+            },
             "non_held_out_publication": (
                 {"commit": "b" * 40, "sha256": "c" * 64}
                 if split == "held-out"
@@ -219,7 +225,10 @@ def test_publisher_combines_only_released_unique_splits() -> None:
 
     assert combined["status"] == "PASS"
     assert combined["service_band_summary"]["held"] == 78
-    assert combined["closure"] == {"VLLM-42": "CLOSED", "VLLM-50": "UNUSED"}
+    assert combined["closure"] == {
+        "VLLM-42": "QUALIFIED_PENDING_INTEGRATOR_REGISTRY_COMMIT",
+        "VLLM-50": "UNUSED",
+    }
 
 
 def test_merge_accepts_one_complete_non_held_out_shard_set() -> None:

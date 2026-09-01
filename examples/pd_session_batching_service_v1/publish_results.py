@@ -46,6 +46,10 @@ def _microseconds(value: dict[str, int]) -> str:
     return f"{float(_fraction(value) / 1_000_000):.6f}"
 
 
+def _fraction_json(value: Fraction) -> dict[str, int]:
+    return {"numerator": value.numerator, "denominator": value.denominator}
+
+
 def publish_split(result: dict[str, Any], raw_sha256: str) -> dict[str, Any]:
     """Reduce one raw external result to its tracked scored projection."""
 
@@ -202,6 +206,24 @@ def combine_publications(
     )
     if len(rows) != 78 or len({tuple(row["cell"]) for row in rows}) != 78:
         raise ValueError("combined result does not contain 78 unique cells")
+    if (
+        non_held_out["provenance"]["preservation"]
+        != held_out["provenance"]["preservation"]
+    ):
+        raise ValueError("split preservation projections disagree")
+    non_held_sanity = non_held_out["physical_sanity"]
+    held_sanity = held_out["physical_sanity"]
+    if (
+        non_held_sanity["floor_service_per_token_ps"]
+        != held_sanity["floor_service_per_token_ps"]
+        or non_held_sanity["ceiling_service_per_token_ps"]
+        != held_sanity["ceiling_service_per_token_ps"]
+    ):
+        raise ValueError("split physical bounds disagree")
+    expectations = _load_json(EXPECTATIONS_PATH)
+    forbidden_access = _load_json(STUDY_DIR / "forbidden_access_ledger.json")
+    if forbidden_access:
+        raise ValueError("forbidden-access ledger is not empty")
     fatal = [
         *non_held_out["fatal_guards"]["findings"],
         *held_out["fatal_guards"]["findings"],
@@ -226,6 +248,64 @@ def combine_publications(
         "fatal_guards": {
             "status": "HELD" if not fatal else "VIOLATED",
             "findings": fatal,
+        },
+        "predictor": {
+            "name": expectations["predictor"]["name"],
+            "derivation": expectations["predictor"]["derivation"],
+            "old_model_refutation_mechanism": expectations["predictor"][
+                "old_model_refutation_mechanism"
+            ],
+            "observed_curve_inputs": expectations["predictor"][
+                "observed_curve_inputs"
+            ],
+            "fit_parameters": expectations["predictor"]["fit_parameters"],
+        },
+        "holdout": {
+            **expectations["holdout"],
+            "non_held_out_publication_commit": release["commit"],
+            "non_held_out_publication_sha256": release["sha256"],
+            "disclosure_order_held": True,
+        },
+        "physical_sanity": {
+            "floor_service_per_token_ps": non_held_sanity[
+                "floor_service_per_token_ps"
+            ],
+            "ceiling_service_per_token_ps": non_held_sanity[
+                "ceiling_service_per_token_ps"
+            ],
+            "observed_minimum_service_per_token_ps": _fraction_json(
+                min(
+                    _fraction(
+                        non_held_sanity["observed_minimum_service_per_token_ps"]
+                    ),
+                    _fraction(held_sanity["observed_minimum_service_per_token_ps"]),
+                )
+            ),
+            "observed_maximum_service_per_token_ps": _fraction_json(
+                max(
+                    _fraction(
+                        non_held_sanity["observed_maximum_service_per_token_ps"]
+                    ),
+                    _fraction(held_sanity["observed_maximum_service_per_token_ps"]),
+                )
+            ),
+            "maximum_absolute_prediction_error_ps": _fraction_json(
+                max(
+                    _fraction(non_held_sanity["maximum_absolute_prediction_error_ps"]),
+                    _fraction(held_sanity["maximum_absolute_prediction_error_ps"]),
+                )
+            ),
+            "all_observations_inside_physical_bounds": (
+                non_held_sanity["all_observations_inside_physical_bounds"]
+                and held_sanity["all_observations_inside_physical_bounds"]
+            ),
+            "scored": False,
+        },
+        "preservation": non_held_out["provenance"]["preservation"],
+        "guarded_record_access": {
+            "successful_field_accesses": 0,
+            "whole_record_loaded": False,
+            "forbidden_access_ledger": forbidden_access,
         },
         "conservation": {
             key: (
@@ -252,7 +332,11 @@ def combine_publications(
             "monotonic_250_to_8000": "PRESERVED_NOT_RESCORED",
         },
         "closure": {
-            "VLLM-42": "CLOSED" if status == "PASS" else "OPEN",
+            "VLLM-42": (
+                "QUALIFIED_PENDING_INTEGRATOR_REGISTRY_COMMIT"
+                if status == "PASS"
+                else "OPEN"
+            ),
             "VLLM-50": "UNUSED" if status == "PASS" else "REGISTER_RESIDUAL",
         },
     }
@@ -263,17 +347,27 @@ def render_combined_markdown(result: dict[str, Any]) -> str:
 
     summary = result["service_band_summary"]
     conservation = result["conservation"]
+    sanity = result["physical_sanity"]
     rows = [
         "# VLLM-42 batching-service result",
         "",
         f"Status: `{result['status']}`. {summary['held']} of {summary['evaluated']} frozen service bands held; {summary['missed']} missed.",
         "",
-        "The phase-complete predictor advances the shared clock through prompt service",
-        "and handoff before decode eligibility, then prices only predicted decode batch",
-        "membership with the independent measured service surface. It has no observed",
-        "curve inputs and no fitted parameters.",
+        "The old predictor made prefill and handoff zero-time boundaries. That granted",
+        "decode too early near a transition, predicted batches that were too small, and",
+        "therefore biased service per request-token high. The phase-complete replacement",
+        "advances the shared clock through prompt service and handoff before decode",
+        "eligibility, then prices only predicted decode batch membership with the",
+        "independent measured service surface. It has no observed curve inputs and no",
+        "fitted parameters.",
         "",
         f"Conservation held for {conservation['admissions']} admissions, {conservation['handoffs']} handoffs, {conservation['terminals']} terminals, and {conservation['terminal_decode_tokens']} decode tokens. The maximum time-to-first-token residual was {conservation['maximum_ttft_residual_ps']} picoseconds.",
+        "",
+        f"The unscored physical check places all observations at {_microseconds(sanity['observed_minimum_service_per_token_ps'])} to {_microseconds(sanity['observed_maximum_service_per_token_ps'])} microseconds per request-token, inside the frozen {_microseconds(sanity['floor_service_per_token_ps'])} to {_microseconds(sanity['ceiling_service_per_token_ps'])} microsecond bounds. The largest absolute prediction error is {_microseconds(sanity['maximum_absolute_prediction_error_ps'])} microseconds.",
+        "",
+        "The 48 non-held-out cells were published and committed before the 30 held-out",
+        "cells ran. No guarded predecessor field was accessed, no whole record was",
+        "loaded, and the forbidden-access ledger is empty.",
         "",
         f"VLLM-42 is `{result['closure']['VLLM-42']}`. VLLM-50 is `{result['closure']['VLLM-50']}`. The settled onset and high-load monotonic claims remain preserved and unscored.",
         "",

@@ -8,6 +8,7 @@ from pathlib import Path
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 STUDY_DIR = REPOSITORY_ROOT / "examples" / "pd_session_batching_service_v1"
 RESULT_PATH = STUDY_DIR / "non_held_out_results.json"
+COMBINED_RESULT_PATH = STUDY_DIR / "results.json"
 
 
 def _module(path: Path, name: str):
@@ -111,3 +112,74 @@ def test_non_held_out_markdown_is_a_projection_of_json() -> None:
     )
 
     assert publisher.render_split_markdown(result) == markdown
+
+
+def test_combined_result_qualifies_vllm42_without_a_residual() -> None:
+    result = json.loads(COMBINED_RESULT_PATH.read_text(encoding="utf-8"))
+
+    assert result["status"] == "PASS"
+    assert result["closure"] == {
+        "VLLM-42": "QUALIFIED_PENDING_INTEGRATOR_REGISTRY_COMMIT",
+        "VLLM-50": "UNUSED",
+    }
+    assert result["service_band_summary"] == {
+        "held": 78,
+        "missed": 0,
+        "evaluated": 78,
+        "non_held_out_held": 48,
+        "held_out_held": 30,
+    }
+    assert len(result["service_band_verdicts"]) == 78
+    assert len({tuple(row["cell"]) for row in result["service_band_verdicts"]}) == 78
+
+
+def test_combined_result_preserves_chronology_access_and_prior_claims() -> None:
+    result = json.loads(COMBINED_RESULT_PATH.read_text(encoding="utf-8"))
+
+    assert result["holdout"]["disclosure_order_held"] is True
+    assert result["holdout"]["non_held_out_publication_commit"]
+    assert result["guarded_record_access"] == {
+        "successful_field_accesses": 0,
+        "whole_record_loaded": False,
+        "forbidden_access_ledger": [],
+    }
+    assert result["preservation"]["worktree_bytes_held"] is True
+    assert result["settled_claims"] == {
+        "onset": "PRESERVED_NOT_RESCORED",
+        "monotonic_250_to_8000": "PRESERVED_NOT_RESCORED",
+    }
+    assert result["predictor"]["observed_curve_inputs"] == []
+    assert result["predictor"]["fit_parameters"] == []
+
+
+def test_combined_conservation_and_physical_sanity_hold() -> None:
+    result = json.loads(COMBINED_RESULT_PATH.read_text(encoding="utf-8"))
+
+    assert result["conservation"] == {
+        "cells": 78,
+        "admissions": 4992,
+        "handoffs": 4992,
+        "terminals": 4992,
+        "terminal_decode_tokens": 19968,
+        "maximum_ttft_residual_ps": 0,
+    }
+    sanity = result["physical_sanity"]
+    assert sanity["all_observations_inside_physical_bounds"] is True
+    assert sanity["scored"] is False
+    assert _fraction(sanity["floor_service_per_token_ps"]) <= _fraction(
+        sanity["observed_minimum_service_per_token_ps"]
+    )
+    assert _fraction(sanity["observed_maximum_service_per_token_ps"]) <= _fraction(
+        sanity["ceiling_service_per_token_ps"]
+    )
+
+
+def test_combined_markdown_is_a_projection_of_json() -> None:
+    publisher = _module(
+        STUDY_DIR / "publish_results.py",
+        "vllm42_combined_result_publisher",
+    )
+    result = json.loads(COMBINED_RESULT_PATH.read_text(encoding="utf-8"))
+    markdown = (STUDY_DIR / "RESULTS.md").read_text(encoding="utf-8")
+
+    assert publisher.render_combined_markdown(result) == markdown
