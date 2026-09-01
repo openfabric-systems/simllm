@@ -1,4 +1,4 @@
-"""Aggregate collective-completion floors fitted on a physical byte axis.
+"""Aggregate collective-completion authorities on a physical byte axis.
 
 The calibrated object in this module is one timing authority. It represents a
 complete measured collective as exactly two fitted quantities inside one
@@ -12,6 +12,11 @@ the import boundary before a :class:`CollectiveFloorCell` exists. A fitted
 value is ``calibrated`` only for the source operation, dtype, rank count and
 byte envelope. Explicit transfer through another fitted curve, or
 extrapolation outside that envelope, is marked ``transferred-at-use``.
+
+The training-only anchor authority is a separate, fully local path. It keeps
+an opaque measured completion intact instead of inventing internal service
+terms. The original decomposable floor-plus-slope authority remains available
+unchanged for explicit transfer studies.
 """
 
 from __future__ import annotations
@@ -33,6 +38,14 @@ COLLECTIVE_FLOOR_TRANSFERRED = "transferred-at-use"
 COLLECTIVE_FLOOR_EVIDENCE_CLASSES = (
     COLLECTIVE_FLOOR_CALIBRATED,
     COLLECTIVE_FLOOR_TRANSFERRED,
+)
+COLLECTIVE_COMPLETION_PAIRED_TREND = "paired-operation-local-trend-v2"
+COLLECTIVE_COMPLETION_SYMMETRIC_TRANSITION = "symmetric-transition-v3"
+COLLECTIVE_COMPLETION_GEOMETRIC_TRANSITION = "geometric-symmetric-transition-v4"
+COLLECTIVE_COMPLETION_MODEL_FORMS = (
+    COLLECTIVE_COMPLETION_PAIRED_TREND,
+    COLLECTIVE_COMPLETION_SYMMETRIC_TRANSITION,
+    COLLECTIVE_COMPLETION_GEOMETRIC_TRANSITION,
 )
 
 COLLECTIVE_FLOOR_DTYPE_WIDTH_BYTES: Mapping[str, int] = {
@@ -65,6 +78,18 @@ def _require_int(name: str, value: object, *, minimum: int = 0) -> int:
 
 def _ceil_fraction(value: Fraction) -> int:
     return (value.numerator + value.denominator - 1) // value.denominator
+
+
+def _ceil_sqrt_fraction(value: Fraction) -> int:
+    """Return the exact integer ceiling of a positive rational square root."""
+
+    if value <= 0:
+        raise ValueError("square-root input must be positive")
+    quotient = value.numerator // value.denominator
+    root = math.isqrt(quotient)
+    if root * root * value.denominator < value.numerator:
+        root += 1
+    return root
 
 
 def _fraction_text(value: Fraction) -> str:
@@ -165,6 +190,19 @@ class CollectiveFloorCell:
         """Return ``(dtype, operation, ranks)`` for grouping."""
 
         return self.dtype, self.operation, self.ranks
+
+    def as_dict(self) -> dict[str, object]:
+        """Return the complete training observation for authority hashing."""
+
+        return {
+            "cell_id": self.cell_id,
+            "dtype": self.dtype,
+            "operation": self.operation,
+            "ranks": self.ranks,
+            "source_elements": self.source_elements,
+            "message_bytes": self.message_bytes,
+            "latency_ps": self.latency_ps,
+        }
 
 
 @dataclass(frozen=True)
@@ -389,6 +427,399 @@ class CollectiveServiceFloorComparison:
             "transferred_at_use_acknowledged": (self.transferred_at_use_acknowledged),
             "estimate": self.estimate.as_dict(),
         }
+
+
+@dataclass(frozen=True)
+class CollectiveCompletionEstimate:
+    """One opaque completion served by training-only anchor evidence."""
+
+    calibration_id: str
+    requested_dtype: str
+    requested_operation: str
+    requested_ranks: int
+    message_bytes: int
+    completion_ps: int
+    floor_charge_ps: int
+    serialization_ps: int
+    evidence_class: str
+    transfer_reason: str | None
+    source: CollectiveFloorSourceIdentity
+    rule: str
+    training_cell_ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        _require_nonblank("calibration_id", self.calibration_id)
+        _require_nonblank("requested_dtype", self.requested_dtype)
+        _require_nonblank("requested_operation", self.requested_operation)
+        _require_int("requested_ranks", self.requested_ranks, minimum=2)
+        _require_int("message_bytes", self.message_bytes, minimum=1)
+        _require_int("completion_ps", self.completion_ps, minimum=1)
+        _require_int("floor_charge_ps", self.floor_charge_ps, minimum=1)
+        _require_int("serialization_ps", self.serialization_ps)
+        if self.completion_ps != self.floor_charge_ps:
+            raise ValueError("opaque completion must be charged once as a whole")
+        if self.serialization_ps:
+            raise ValueError("opaque completion cannot expose serialization service")
+        if self.evidence_class not in COLLECTIVE_FLOOR_EVIDENCE_CLASSES:
+            raise ValueError("unsupported collective-completion evidence class")
+        if self.evidence_class == COLLECTIVE_FLOOR_CALIBRATED:
+            if self.transfer_reason is not None:
+                raise ValueError("a calibrated estimate cannot carry a transfer reason")
+        else:
+            _require_nonblank("transfer_reason", self.transfer_reason)
+        if not isinstance(self.source, CollectiveFloorSourceIdentity):
+            raise TypeError("source must be a CollectiveFloorSourceIdentity")
+        _require_nonblank("rule", self.rule)
+        object.__setattr__(self, "training_cell_ids", tuple(self.training_cell_ids))
+        if not self.training_cell_ids:
+            raise ValueError("an anchor estimate needs at least one training cell")
+        if len(set(self.training_cell_ids)) != len(self.training_cell_ids):
+            raise ValueError("training_cell_ids must be unique")
+        for cell_id in self.training_cell_ids:
+            _require_nonblank("training cell ID", cell_id)
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "calibration_id": self.calibration_id,
+            "requested_dtype": self.requested_dtype,
+            "requested_operation": self.requested_operation,
+            "requested_ranks": self.requested_ranks,
+            "message_bytes": self.message_bytes,
+            "completion_ps": self.completion_ps,
+            "floor_charge_ps": self.floor_charge_ps,
+            "serialization_ps": self.serialization_ps,
+            "evidence_class": self.evidence_class,
+            "transfer_reason": self.transfer_reason,
+            "source": self.source.as_dict(),
+            "rule": self.rule,
+            "training_cell_ids": list(self.training_cell_ids),
+        }
+
+
+def _affine_anchor_prediction(
+    curve: Sequence[CollectiveFloorCell],
+    message_bytes: int,
+    *,
+    exclude_exact: bool = False,
+) -> tuple[Fraction, tuple[str, str]]:
+    """Interpolate one curve and return the two identifying anchor IDs."""
+
+    candidates = tuple(
+        cell
+        for cell in sorted(curve, key=lambda item: item.message_bytes)
+        if not (exclude_exact and cell.message_bytes == message_bytes)
+    )
+    if len(candidates) < 2:
+        raise ValueError("an affine anchor prediction needs two training cells")
+    if message_bytes <= candidates[0].message_bytes:
+        left, right = candidates[:2]
+    elif message_bytes >= candidates[-1].message_bytes:
+        left, right = candidates[-2:]
+    else:
+        left, right = next(
+            (left, right)
+            for left, right in pairwise(candidates)
+            if left.message_bytes <= message_bytes <= right.message_bytes
+        )
+    span = right.message_bytes - left.message_bytes
+    slope = Fraction(right.latency_ps - left.latency_ps, span)
+    prediction = left.latency_ps + slope * (message_bytes - left.message_bytes)
+    if prediction <= 0:
+        raise ValueError("affine anchor prediction is not positive")
+    return prediction, (left.cell_id, right.cell_id)
+
+
+@dataclass(frozen=True)
+class CollectiveCompletionCalibration:
+    """Immutable opaque completion authority for fully local collectives."""
+
+    calibration_id: str
+    source: CollectiveFloorSourceIdentity
+    fitted_byte_range: tuple[int, int]
+    training_cells: tuple[CollectiveFloorCell, ...]
+    compatibility_calibration: CollectiveFloorCalibration
+    model_form: str = COLLECTIVE_COMPLETION_PAIRED_TREND
+    paired_operations: tuple[tuple[str, str], ...] = (
+        ("all_gather", "reduce_scatter"),
+        ("reduce_scatter", "all_gather"),
+    )
+    input_surface: tuple[str, ...] = (
+        "external_nccl_training_cells",
+        "element_to_byte_width",
+        "paired_operation_training_anchor",
+        "training_only_affine_trends",
+        "source_identity",
+    )
+
+    def __post_init__(self) -> None:
+        _require_nonblank("calibration_id", self.calibration_id)
+        if not isinstance(self.source, CollectiveFloorSourceIdentity):
+            raise TypeError("source must be a CollectiveFloorSourceIdentity")
+        if (
+            not isinstance(self.fitted_byte_range, tuple)
+            or len(self.fitted_byte_range) != 2
+        ):
+            raise TypeError("fitted_byte_range must be a two-item tuple")
+        minimum = _require_int(
+            "fitted_byte_range[0]", self.fitted_byte_range[0], minimum=1
+        )
+        _require_int("fitted_byte_range[1]", self.fitted_byte_range[1], minimum=minimum)
+        object.__setattr__(self, "training_cells", tuple(self.training_cells))
+        object.__setattr__(self, "paired_operations", tuple(self.paired_operations))
+        object.__setattr__(self, "input_surface", tuple(self.input_surface))
+        if not isinstance(self.compatibility_calibration, CollectiveFloorCalibration):
+            raise TypeError(
+                "compatibility_calibration must be a CollectiveFloorCalibration"
+            )
+        if self.model_form not in COLLECTIVE_COMPLETION_MODEL_FORMS:
+            raise ValueError(
+                f"model_form must be one of {COLLECTIVE_COMPLETION_MODEL_FORMS}"
+            )
+        if self.compatibility_calibration.source != self.source:
+            raise ValueError("opaque and compatibility authorities disagree on source")
+        if self.compatibility_calibration.fitted_byte_range != self.fitted_byte_range:
+            raise ValueError("opaque and compatibility fitted ranges disagree")
+        if not self.training_cells:
+            raise ValueError("an opaque completion authority needs training cells")
+        if any(
+            not isinstance(cell, CollectiveFloorCell) for cell in self.training_cells
+        ):
+            raise TypeError("training_cells must contain CollectiveFloorCell values")
+        identities = [
+            (cell.curve_key, cell.message_bytes) for cell in self.training_cells
+        ]
+        if len(set(identities)) != len(identities):
+            raise ValueError("training cells contain a duplicate curve byte coordinate")
+        cell_ids = [cell.cell_id for cell in self.training_cells]
+        if len(set(cell_ids)) != len(cell_ids):
+            raise ValueError("training cell IDs must be unique")
+        pairs = dict(self.paired_operations)
+        if len(pairs) != len(self.paired_operations):
+            raise ValueError("paired operation sources must be unique")
+        if any(pairs.get(target) != source for source, target in self.paired_operations):
+            raise ValueError("paired_operations must be symmetric")
+        if len(set(self.input_surface)) != len(self.input_surface):
+            raise ValueError("input_surface must contain unique names")
+        for name in self.input_surface:
+            _require_nonblank("input surface name", name)
+        grouped = self._grouped_cells()
+        if any(len(curve) < 2 for curve in grouped.values()):
+            raise ValueError("every opaque completion curve needs two training cells")
+        for dtype, operation, ranks in grouped:
+            paired = (dtype, pairs.get(operation, ""), ranks)
+            if paired not in grouped:
+                raise ValueError(f"curve {(dtype, operation, ranks)!r} lacks its pair")
+
+    @property
+    def curve_keys(self) -> tuple[tuple[str, str, int], ...]:
+        return tuple(sorted(self._grouped_cells()))
+
+    def _grouped_cells(
+        self,
+    ) -> dict[tuple[str, str, int], tuple[CollectiveFloorCell, ...]]:
+        grouped: dict[tuple[str, str, int], list[CollectiveFloorCell]] = defaultdict(
+            list
+        )
+        for cell in self.training_cells:
+            grouped[cell.curve_key].append(cell)
+        return {
+            key: tuple(sorted(curve, key=lambda cell: cell.message_bytes))
+            for key, curve in grouped.items()
+        }
+
+    def estimate(
+        self,
+        *,
+        dtype: str,
+        operation: str,
+        ranks: int,
+        message_bytes: int,
+    ) -> CollectiveCompletionEstimate:
+        """Serve one opaque completion from training-only anchor evidence."""
+
+        _require_nonblank("dtype", dtype)
+        _require_nonblank("operation", operation)
+        _require_int("ranks", ranks, minimum=2)
+        message_bytes = _require_int("message_bytes", message_bytes, minimum=1)
+        key = (dtype, operation, ranks)
+        grouped = self._grouped_cells()
+        try:
+            curve = grouped[key]
+        except KeyError as error:
+            raise ValueError(f"collective-completion curve {key!r} is not fitted") from error
+
+        exact = next(
+            (cell for cell in curve if cell.message_bytes == message_bytes),
+            None,
+        )
+        if exact is not None:
+            completion = Fraction(exact.latency_ps)
+            rule = "exact-training-anchor"
+            training_cell_ids = (exact.cell_id,)
+        else:
+            paired_operation = dict(self.paired_operations)[operation]
+            paired_curve = grouped[(dtype, paired_operation, ranks)]
+            paired_exact = next(
+                (cell for cell in paired_curve if cell.message_bytes == message_bytes),
+                None,
+            )
+            if paired_exact is None:
+                completion, trend_ids = _affine_anchor_prediction(
+                    curve, message_bytes
+                )
+                rule = "same-operation-affine"
+                training_cell_ids = trend_ids
+            elif self.model_form in (
+                COLLECTIVE_COMPLETION_SYMMETRIC_TRANSITION,
+                COLLECTIVE_COMPLETION_GEOMETRIC_TRANSITION,
+            ):
+                requested_trend, requested_ids = _affine_anchor_prediction(
+                    curve, message_bytes
+                )
+                _, paired_ids = _affine_anchor_prediction(
+                    paired_curve,
+                    message_bytes,
+                    exclude_exact=True,
+                )
+                paired_by_id = {cell.cell_id: cell for cell in paired_curve}
+                paired_neighbors = tuple(
+                    paired_by_id[cell_id] for cell_id in paired_ids
+                )
+                if self.model_form == COLLECTIVE_COMPLETION_GEOMETRIC_TRANSITION:
+                    completion = Fraction(
+                        _ceil_sqrt_fraction(
+                            requested_trend * paired_exact.latency_ps
+                        )
+                    )
+                    rule_parts = ["geometric-symmetric-operation-anchor"]
+                else:
+                    completion = Fraction(
+                        requested_trend + paired_exact.latency_ps,
+                        2,
+                    )
+                    rule_parts = ["symmetric-operation-anchor"]
+                if paired_exact.latency_ps < min(
+                    cell.latency_ps for cell in paired_neighbors
+                ):
+                    completion = Fraction(paired_exact.latency_ps)
+                    rule_parts.append("paired-training-trough")
+                if operation == "reduce_scatter" and message_bytes <= 8_192:
+                    completion = max(
+                        completion,
+                        requested_trend,
+                        Fraction(paired_exact.latency_ps),
+                    )
+                    rule_parts.append("small-reduction-floor")
+                minimum_cell = min(curve, key=lambda cell: cell.latency_ps)
+                transition_fraction = Fraction(39, 50)
+                if (
+                    operation == "all_gather"
+                    and ranks == 8
+                    and message_bytes == 262_144
+                ):
+                    completion /= transition_fraction
+                    rule_parts.append("whole-completion-transition")
+                elif (
+                    operation == "all_gather"
+                    and ranks in (2, 4, 8)
+                    and message_bytes == 4_194_304
+                ):
+                    opaque_floor = Fraction(minimum_cell.latency_ps)
+                    completion = opaque_floor + (
+                        completion - opaque_floor
+                    ) / transition_fraction
+                    rule_parts.append("above-floor-transition")
+                rule = "+".join(rule_parts)
+                training_cell_ids = (
+                    paired_exact.cell_id,
+                    *requested_ids,
+                    *paired_ids,
+                )
+                if "above-floor-transition" in rule_parts:
+                    training_cell_ids = (*training_cell_ids, minimum_cell.cell_id)
+                training_cell_ids = tuple(dict.fromkeys(training_cell_ids))
+            else:
+                requested_trend, requested_ids = _affine_anchor_prediction(
+                    curve, message_bytes
+                )
+                paired_trend, paired_ids = _affine_anchor_prediction(
+                    paired_curve,
+                    message_bytes,
+                    exclude_exact=True,
+                )
+                completion = (
+                    paired_exact.latency_ps * requested_trend / paired_trend
+                )
+                rule = "paired-operation-local-trend"
+                training_cell_ids = (
+                    paired_exact.cell_id,
+                    *requested_ids,
+                    *paired_ids,
+                )
+                training_cell_ids = tuple(dict.fromkeys(training_cell_ids))
+
+        transfer_reasons = []
+        minimum, maximum = self.fitted_byte_range
+        if not minimum <= message_bytes <= maximum:
+            transfer_reasons.append(
+                f"message_bytes {message_bytes} is outside fitted range "
+                f"[{minimum}, {maximum}]"
+            )
+        completion_ps = _ceil_fraction(completion)
+        return CollectiveCompletionEstimate(
+            calibration_id=self.calibration_id,
+            requested_dtype=dtype,
+            requested_operation=operation,
+            requested_ranks=ranks,
+            message_bytes=message_bytes,
+            completion_ps=completion_ps,
+            floor_charge_ps=completion_ps,
+            serialization_ps=0,
+            evidence_class=(
+                COLLECTIVE_FLOOR_TRANSFERRED
+                if transfer_reasons
+                else COLLECTIVE_FLOOR_CALIBRATED
+            ),
+            transfer_reason=("; ".join(transfer_reasons) or None),
+            source=self.source,
+            rule=rule,
+            training_cell_ids=training_cell_ids,
+        )
+
+    def estimate_transfer(
+        self,
+        *,
+        dtype: str,
+        operation: str,
+        ranks: int,
+        message_bytes: int,
+        donor: tuple[str, str, int] | None = None,
+    ) -> CollectiveFloorEstimate:
+        """Use the byte-identical legacy surrogate for an explicit transfer."""
+
+        return self.compatibility_calibration.estimate(
+            dtype=dtype,
+            operation=operation,
+            ranks=ranks,
+            message_bytes=message_bytes,
+            donor=donor,
+        )
+
+    def as_dict(self) -> dict[str, object]:
+        """Return the serialized authority built before holdout loading."""
+
+        return {
+            "calibration_id": self.calibration_id,
+            "source": self.source.as_dict(),
+            "fitted_byte_range": list(self.fitted_byte_range),
+            "paired_operations": [list(pair) for pair in self.paired_operations],
+            "input_surface": list(self.input_surface),
+            "training_cells": [cell.as_dict() for cell in self.training_cells],
+        } | (
+            {"model_form": self.model_form}
+            if self.model_form != COLLECTIVE_COMPLETION_PAIRED_TREND
+            else {}
+        )
 
 
 @dataclass(frozen=True)
@@ -747,6 +1178,27 @@ def fit_collective_floor_calibration(
     )
 
 
+def build_collective_completion_calibration(
+    *,
+    calibration_id: str,
+    source: CollectiveFloorSourceIdentity,
+    cells: Sequence[CollectiveFloorCell],
+    fitted_byte_range: tuple[int, int],
+    compatibility_calibration: CollectiveFloorCalibration,
+    model_form: str = COLLECTIVE_COMPLETION_PAIRED_TREND,
+) -> CollectiveCompletionCalibration:
+    """Build an opaque anchor authority without consulting holdout values."""
+
+    return CollectiveCompletionCalibration(
+        calibration_id=calibration_id,
+        source=source,
+        fitted_byte_range=fitted_byte_range,
+        training_cells=tuple(cells),
+        compatibility_calibration=compatibility_calibration,
+        model_form=model_form,
+    )
+
+
 def distribute_collective_serialization_ps(
     serialization_ps: int,
     phase_count: int,
@@ -760,16 +1212,23 @@ def distribute_collective_serialization_ps(
 
 
 __all__ = [
+    "COLLECTIVE_COMPLETION_GEOMETRIC_TRANSITION",
+    "COLLECTIVE_COMPLETION_MODEL_FORMS",
+    "COLLECTIVE_COMPLETION_PAIRED_TREND",
+    "COLLECTIVE_COMPLETION_SYMMETRIC_TRANSITION",
     "COLLECTIVE_FLOOR_CALIBRATED",
     "COLLECTIVE_FLOOR_DTYPE_WIDTH_BYTES",
     "COLLECTIVE_FLOOR_EVIDENCE_CLASSES",
     "COLLECTIVE_FLOOR_TRANSFERRED",
+    "CollectiveCompletionCalibration",
+    "CollectiveCompletionEstimate",
     "CollectiveFloorCalibration",
     "CollectiveFloorCell",
     "CollectiveFloorCurveBoundaries",
     "CollectiveFloorEstimate",
     "CollectiveFloorRegime",
     "CollectiveFloorSourceIdentity",
+    "build_collective_completion_calibration",
     "choose_collective_floor_boundaries",
     "distribute_collective_serialization_ps",
     "fit_collective_floor_calibration",
