@@ -152,41 +152,60 @@ def _routing_observation(
     nodes: dict[str, Any],
     config: dict[str, Any],
 ) -> dict[str, Any]:
-    """Classify one counter window without inventing signal for small cells."""
+    """Classify one counter window without pooling directional fractions."""
 
     rule = config["routing_proof"]
     observations = {}
     for node, node_row in sorted(nodes.items()):
-        traffic = {
-            interface: int(values["rx_delta_bytes"]) + int(values["tx_delta_bytes"])
-            for interface, values in node_row["ports"].items()
-            if interface in config["interfaces"]
+        directional_traffic = {
+            direction: {
+                interface: int(values[f"{direction}_delta_bytes"])
+                for interface, values in node_row["ports"].items()
+                if interface in config["interfaces"]
+            }
+            for direction in ("tx", "rx")
         }
-        total = sum(traffic.values())
-        fractions = {
-            interface: value / total if total else 0.0
-            for interface, value in sorted(traffic.items())
-        }
-        enough_signal = total >= int(rule["minimum_total_delta_bytes"])
-        if concentration == "one-port":
-            matches = fractions.get("hsn0", 0.0) >= float(
-                rule["one_port_primary_min_fraction"]
-            )
-        else:
-            matches = all(
-                fractions.get(interface, 0.0) >= float(
-                    rule["four_port_each_min_fraction"]
-                )
-                for interface in config["interfaces"]
-            )
-        status = (
-            "insufficient-signal"
-            if not enough_signal
-            else ("proven" if matches else "contradicted")
+        total = sum(
+            sum(traffic.values()) for traffic in directional_traffic.values()
         )
+        enough_signal = total >= int(rule["minimum_total_delta_bytes"])
+        directions = {}
+        for direction, traffic in directional_traffic.items():
+            direction_total = sum(traffic.values())
+            fractions = {
+                interface: value / direction_total if direction_total else 0.0
+                for interface, value in sorted(traffic.items())
+            }
+            if concentration == "one-port":
+                matches = fractions.get("hsn0", 0.0) >= float(
+                    rule["one_port_primary_min_fraction"]
+                )
+            else:
+                matches = all(
+                    fractions.get(interface, 0.0) >= float(
+                        rule["four_port_each_min_fraction"]
+                    )
+                    for interface in config["interfaces"]
+                )
+            directions[direction] = {
+                "total_delta_bytes": direction_total,
+                "fractions": fractions,
+                "status": (
+                    "insufficient-signal"
+                    if not enough_signal
+                    else ("proven" if matches else "contradicted")
+                ),
+            }
+        direction_statuses = {row["status"] for row in directions.values()}
+        if "contradicted" in direction_statuses:
+            status = "contradicted"
+        elif directions and direction_statuses == {"proven"}:
+            status = "proven"
+        else:
+            status = "insufficient-signal"
         observations[node] = {
             "total_rx_plus_tx_delta_bytes": total,
-            "fractions": fractions,
+            "directions": directions,
             "status": status,
         }
     statuses = {row["status"] for row in observations.values()}

@@ -1,10 +1,400 @@
 {
   "achieved_concentration": {
+    "cell_routing": {
+      "cell_ids_by_status": {
+        "CONTRADICTED": [
+          "w2/four-port/all_gather/16384",
+          "w2/four-port/all_gather/65536",
+          "w2/four-port/all_gather/131072",
+          "w2/four-port/all_gather/196608",
+          "w2/four-port/all_gather/262144",
+          "w2/four-port/all_gather/393216",
+          "w2/four-port/all_gather/524288",
+          "w2/four-port/all_gather/786432",
+          "w2/four-port/all_gather/1048576",
+          "w2/four-port/all_gather/1572864",
+          "w2/four-port/all_gather/2097152",
+          "w2/four-port/all_gather/3145728",
+          "w2/four-port/all_gather/4194304",
+          "w2/four-port/all_gather/8388608",
+          "w2/four-port/all_gather/16777216",
+          "w2/four-port/all_gather/33554432",
+          "w2/four-port/all_gather/67108864",
+          "w2/four-port/all_gather/134217728",
+          "w2/four-port/all_reduce/64",
+          "w2/four-port/all_reduce/512",
+          "w2/four-port/all_reduce/4096",
+          "w2/four-port/all_reduce/16384",
+          "w2/four-port/all_reduce/65536",
+          "w2/four-port/all_reduce/131072",
+          "w2/four-port/all_reduce/196608",
+          "w2/four-port/all_reduce/262144",
+          "w2/four-port/all_reduce/393216",
+          "w2/four-port/all_reduce/524288",
+          "w2/four-port/all_reduce/786432",
+          "w2/four-port/all_reduce/1048576",
+          "w2/four-port/all_reduce/1572864",
+          "w2/four-port/all_reduce/2097152",
+          "w2/four-port/all_reduce/3145728",
+          "w2/four-port/all_reduce/4194304",
+          "w2/four-port/all_reduce/8388608",
+          "w2/four-port/all_reduce/16777216",
+          "w2/four-port/all_reduce/33554432",
+          "w2/four-port/all_reduce/67108864",
+          "w2/four-port/all_reduce/134217728",
+          "w2/four-port/all_to_allv/8",
+          "w2/four-port/all_to_allv/64",
+          "w2/four-port/all_to_allv/512",
+          "w2/four-port/all_to_allv/4096",
+          "w2/four-port/all_to_allv/16384",
+          "w2/four-port/all_to_allv/65536",
+          "w2/four-port/all_to_allv/131072",
+          "w2/four-port/all_to_allv/196608",
+          "w2/four-port/all_to_allv/262144",
+          "w2/four-port/all_to_allv/393216",
+          "w2/four-port/all_to_allv/524288",
+          "w2/four-port/all_to_allv/786432",
+          "w2/four-port/all_to_allv/1048576",
+          "w2/four-port/all_to_allv/1572864",
+          "w2/four-port/all_to_allv/2097152",
+          "w2/four-port/all_to_allv/3145728",
+          "w2/four-port/all_to_allv/4194304",
+          "w2/four-port/all_to_allv/8388608",
+          "w2/four-port/all_to_allv/16777216",
+          "w2/four-port/all_to_allv/33554432",
+          "w2/four-port/all_to_allv/67108864",
+          "w2/four-port/all_to_allv/134217728",
+          "w2/four-port/reduce_scatter/8",
+          "w2/four-port/reduce_scatter/64",
+          "w2/four-port/reduce_scatter/512",
+          "w2/four-port/reduce_scatter/4096",
+          "w2/four-port/reduce_scatter/16384",
+          "w2/four-port/reduce_scatter/65536",
+          "w2/four-port/reduce_scatter/131072",
+          "w2/four-port/reduce_scatter/196608",
+          "w2/four-port/reduce_scatter/262144",
+          "w2/four-port/reduce_scatter/393216",
+          "w2/four-port/reduce_scatter/524288",
+          "w2/four-port/reduce_scatter/786432",
+          "w2/four-port/reduce_scatter/1048576",
+          "w2/four-port/reduce_scatter/1572864",
+          "w2/four-port/reduce_scatter/2097152",
+          "w2/four-port/reduce_scatter/3145728",
+          "w2/four-port/reduce_scatter/4194304",
+          "w2/four-port/reduce_scatter/8388608",
+          "w2/four-port/reduce_scatter/16777216",
+          "w2/four-port/reduce_scatter/33554432",
+          "w2/four-port/reduce_scatter/67108864",
+          "w2/four-port/reduce_scatter/134217728",
+          "w2/one-port/all_gather/512",
+          "w2/one-port/all_gather/4096",
+          "w2/one-port/all_gather/16384",
+          "w2/one-port/all_gather/65536",
+          "w2/one-port/all_gather/131072",
+          "w2/one-port/all_gather/196608",
+          "w2/one-port/all_gather/262144",
+          "w2/one-port/all_gather/393216",
+          "w2/one-port/all_gather/524288",
+          "w2/one-port/all_gather/786432",
+          "w2/one-port/all_gather/1048576",
+          "w2/one-port/all_gather/1572864",
+          "w2/one-port/all_gather/2097152",
+          "w2/one-port/all_gather/3145728",
+          "w2/one-port/all_gather/4194304",
+          "w2/one-port/all_gather/8388608",
+          "w2/one-port/all_gather/16777216",
+          "w2/one-port/all_gather/33554432",
+          "w2/one-port/all_gather/67108864",
+          "w2/one-port/all_gather/134217728",
+          "w2/one-port/all_reduce/64",
+          "w2/one-port/all_reduce/512",
+          "w2/one-port/all_reduce/4096",
+          "w2/one-port/all_reduce/16384",
+          "w2/one-port/all_reduce/65536",
+          "w2/one-port/all_reduce/131072",
+          "w2/one-port/all_reduce/196608",
+          "w2/one-port/all_reduce/262144",
+          "w2/one-port/all_reduce/393216",
+          "w2/one-port/all_reduce/524288",
+          "w2/one-port/all_reduce/786432",
+          "w2/one-port/all_reduce/1048576",
+          "w2/one-port/all_reduce/1572864",
+          "w2/one-port/all_reduce/2097152",
+          "w2/one-port/all_reduce/3145728",
+          "w2/one-port/all_reduce/4194304",
+          "w2/one-port/all_reduce/8388608",
+          "w2/one-port/all_reduce/16777216",
+          "w2/one-port/all_reduce/33554432",
+          "w2/one-port/all_reduce/67108864",
+          "w2/one-port/all_reduce/134217728",
+          "w2/one-port/all_to_allv/8",
+          "w2/one-port/all_to_allv/64",
+          "w2/one-port/all_to_allv/512",
+          "w2/one-port/all_to_allv/4096",
+          "w2/one-port/all_to_allv/16384",
+          "w2/one-port/all_to_allv/65536",
+          "w2/one-port/all_to_allv/131072",
+          "w2/one-port/all_to_allv/196608",
+          "w2/one-port/all_to_allv/262144",
+          "w2/one-port/all_to_allv/393216",
+          "w2/one-port/all_to_allv/524288",
+          "w2/one-port/all_to_allv/786432",
+          "w2/one-port/all_to_allv/1048576",
+          "w2/one-port/all_to_allv/1572864",
+          "w2/one-port/all_to_allv/2097152",
+          "w2/one-port/all_to_allv/3145728",
+          "w2/one-port/all_to_allv/4194304",
+          "w2/one-port/all_to_allv/8388608",
+          "w2/one-port/all_to_allv/16777216",
+          "w2/one-port/all_to_allv/33554432",
+          "w2/one-port/all_to_allv/67108864",
+          "w2/one-port/all_to_allv/134217728",
+          "w2/one-port/reduce_scatter/8",
+          "w2/one-port/reduce_scatter/64",
+          "w2/one-port/reduce_scatter/512",
+          "w2/one-port/reduce_scatter/4096",
+          "w2/one-port/reduce_scatter/16384",
+          "w2/one-port/reduce_scatter/65536",
+          "w2/one-port/reduce_scatter/131072",
+          "w2/one-port/reduce_scatter/196608",
+          "w2/one-port/reduce_scatter/262144",
+          "w2/one-port/reduce_scatter/393216",
+          "w2/one-port/reduce_scatter/524288",
+          "w2/one-port/reduce_scatter/786432",
+          "w2/one-port/reduce_scatter/1048576",
+          "w2/one-port/reduce_scatter/1572864",
+          "w2/one-port/reduce_scatter/2097152",
+          "w2/one-port/reduce_scatter/3145728",
+          "w2/one-port/reduce_scatter/4194304",
+          "w2/one-port/reduce_scatter/8388608",
+          "w2/one-port/reduce_scatter/16777216",
+          "w2/one-port/reduce_scatter/33554432",
+          "w2/one-port/reduce_scatter/67108864",
+          "w2/one-port/reduce_scatter/134217728",
+          "w8/four-port/all_gather/4096",
+          "w8/four-port/all_gather/16384",
+          "w8/four-port/all_gather/65536",
+          "w8/four-port/all_gather/131072",
+          "w8/four-port/all_gather/196608",
+          "w8/four-port/all_gather/262144",
+          "w8/four-port/all_gather/393216",
+          "w8/four-port/all_gather/524288",
+          "w8/four-port/all_gather/786432",
+          "w8/four-port/all_gather/1048576",
+          "w8/four-port/all_gather/1572864",
+          "w8/four-port/all_gather/2097152",
+          "w8/four-port/all_gather/3145728",
+          "w8/four-port/all_gather/4194304",
+          "w8/four-port/all_gather/8388608",
+          "w8/four-port/all_gather/16777216",
+          "w8/four-port/all_gather/33554432",
+          "w8/four-port/all_gather/67108864",
+          "w8/four-port/all_gather/134217728",
+          "w8/four-port/all_reduce/65536",
+          "w8/four-port/all_reduce/131072",
+          "w8/four-port/all_reduce/196608",
+          "w8/four-port/all_reduce/262144",
+          "w8/four-port/all_reduce/393216",
+          "w8/four-port/all_reduce/524288",
+          "w8/four-port/all_reduce/786432",
+          "w8/four-port/all_reduce/1048576",
+          "w8/four-port/all_reduce/1572864",
+          "w8/four-port/all_reduce/2097152",
+          "w8/four-port/all_reduce/3145728",
+          "w8/four-port/all_reduce/4194304",
+          "w8/four-port/all_reduce/8388608",
+          "w8/four-port/all_reduce/16777216",
+          "w8/four-port/all_reduce/33554432",
+          "w8/four-port/all_reduce/67108864",
+          "w8/four-port/all_reduce/134217728",
+          "w8/four-port/all_to_allv/4096",
+          "w8/four-port/all_to_allv/16384",
+          "w8/four-port/all_to_allv/65536",
+          "w8/four-port/all_to_allv/131072",
+          "w8/four-port/all_to_allv/196608",
+          "w8/four-port/all_to_allv/262144",
+          "w8/four-port/all_to_allv/393216",
+          "w8/four-port/all_to_allv/524288",
+          "w8/four-port/all_to_allv/786432",
+          "w8/four-port/all_to_allv/1048576",
+          "w8/four-port/all_to_allv/1572864",
+          "w8/four-port/all_to_allv/2097152",
+          "w8/four-port/all_to_allv/3145728",
+          "w8/four-port/all_to_allv/4194304",
+          "w8/four-port/all_to_allv/8388608",
+          "w8/four-port/all_to_allv/16777216",
+          "w8/four-port/all_to_allv/33554432",
+          "w8/four-port/all_to_allv/67108864",
+          "w8/four-port/all_to_allv/134217728",
+          "w8/four-port/reduce_scatter/4096",
+          "w8/four-port/reduce_scatter/16384",
+          "w8/four-port/reduce_scatter/65536",
+          "w8/four-port/reduce_scatter/131072",
+          "w8/four-port/reduce_scatter/196608",
+          "w8/four-port/reduce_scatter/262144",
+          "w8/four-port/reduce_scatter/393216",
+          "w8/four-port/reduce_scatter/524288",
+          "w8/four-port/reduce_scatter/786432",
+          "w8/four-port/reduce_scatter/1048576",
+          "w8/four-port/reduce_scatter/1572864",
+          "w8/four-port/reduce_scatter/2097152",
+          "w8/four-port/reduce_scatter/3145728",
+          "w8/four-port/reduce_scatter/4194304",
+          "w8/four-port/reduce_scatter/8388608",
+          "w8/four-port/reduce_scatter/16777216",
+          "w8/four-port/reduce_scatter/33554432",
+          "w8/four-port/reduce_scatter/67108864",
+          "w8/four-port/reduce_scatter/134217728",
+          "w8/one-port/all_gather/4096",
+          "w8/one-port/all_gather/16384",
+          "w8/one-port/all_gather/65536",
+          "w8/one-port/all_gather/131072",
+          "w8/one-port/all_gather/196608",
+          "w8/one-port/all_gather/262144",
+          "w8/one-port/all_gather/393216",
+          "w8/one-port/all_gather/524288",
+          "w8/one-port/all_gather/786432",
+          "w8/one-port/all_gather/1048576",
+          "w8/one-port/all_gather/1572864",
+          "w8/one-port/all_gather/2097152",
+          "w8/one-port/all_gather/3145728",
+          "w8/one-port/all_gather/4194304",
+          "w8/one-port/all_gather/8388608",
+          "w8/one-port/all_gather/16777216",
+          "w8/one-port/all_gather/33554432",
+          "w8/one-port/all_gather/67108864",
+          "w8/one-port/all_gather/134217728",
+          "w8/one-port/all_reduce/16384",
+          "w8/one-port/all_reduce/65536",
+          "w8/one-port/all_reduce/131072",
+          "w8/one-port/all_reduce/196608",
+          "w8/one-port/all_reduce/262144",
+          "w8/one-port/all_reduce/393216",
+          "w8/one-port/all_reduce/524288",
+          "w8/one-port/all_reduce/786432",
+          "w8/one-port/all_reduce/1048576",
+          "w8/one-port/all_reduce/1572864",
+          "w8/one-port/all_reduce/2097152",
+          "w8/one-port/all_reduce/3145728",
+          "w8/one-port/all_reduce/4194304",
+          "w8/one-port/all_reduce/8388608",
+          "w8/one-port/all_reduce/16777216",
+          "w8/one-port/all_reduce/33554432",
+          "w8/one-port/all_reduce/67108864",
+          "w8/one-port/all_reduce/134217728",
+          "w8/one-port/all_to_allv/4096",
+          "w8/one-port/all_to_allv/16384",
+          "w8/one-port/all_to_allv/65536",
+          "w8/one-port/all_to_allv/131072",
+          "w8/one-port/all_to_allv/196608",
+          "w8/one-port/all_to_allv/262144",
+          "w8/one-port/all_to_allv/393216",
+          "w8/one-port/all_to_allv/524288",
+          "w8/one-port/all_to_allv/786432",
+          "w8/one-port/all_to_allv/1048576",
+          "w8/one-port/all_to_allv/1572864",
+          "w8/one-port/all_to_allv/2097152",
+          "w8/one-port/all_to_allv/3145728",
+          "w8/one-port/all_to_allv/4194304",
+          "w8/one-port/all_to_allv/8388608",
+          "w8/one-port/all_to_allv/16777216",
+          "w8/one-port/all_to_allv/33554432",
+          "w8/one-port/all_to_allv/67108864",
+          "w8/one-port/all_to_allv/134217728",
+          "w8/one-port/reduce_scatter/4096",
+          "w8/one-port/reduce_scatter/16384",
+          "w8/one-port/reduce_scatter/65536",
+          "w8/one-port/reduce_scatter/131072",
+          "w8/one-port/reduce_scatter/196608",
+          "w8/one-port/reduce_scatter/262144",
+          "w8/one-port/reduce_scatter/393216",
+          "w8/one-port/reduce_scatter/524288",
+          "w8/one-port/reduce_scatter/786432",
+          "w8/one-port/reduce_scatter/1048576",
+          "w8/one-port/reduce_scatter/1572864",
+          "w8/one-port/reduce_scatter/2097152",
+          "w8/one-port/reduce_scatter/3145728",
+          "w8/one-port/reduce_scatter/4194304",
+          "w8/one-port/reduce_scatter/8388608",
+          "w8/one-port/reduce_scatter/16777216",
+          "w8/one-port/reduce_scatter/33554432",
+          "w8/one-port/reduce_scatter/67108864",
+          "w8/one-port/reduce_scatter/134217728"
+        ],
+        "INSUFFICIENT-SIGNAL": [
+          "w2/four-port/all_gather/8",
+          "w2/four-port/all_gather/64",
+          "w2/four-port/all_gather/512",
+          "w2/four-port/all_gather/4096",
+          "w2/four-port/all_reduce/8",
+          "w2/one-port/all_gather/8",
+          "w2/one-port/all_gather/64",
+          "w2/one-port/all_reduce/8",
+          "w8/four-port/all_gather/8",
+          "w8/four-port/all_gather/64",
+          "w8/four-port/all_gather/512",
+          "w8/four-port/all_reduce/8",
+          "w8/four-port/all_reduce/64",
+          "w8/four-port/all_reduce/512",
+          "w8/four-port/all_reduce/4096",
+          "w8/four-port/all_reduce/16384",
+          "w8/four-port/all_to_allv/8",
+          "w8/four-port/all_to_allv/64",
+          "w8/four-port/all_to_allv/512",
+          "w8/four-port/reduce_scatter/8",
+          "w8/four-port/reduce_scatter/64",
+          "w8/four-port/reduce_scatter/512",
+          "w8/one-port/all_gather/8",
+          "w8/one-port/all_gather/64",
+          "w8/one-port/all_gather/512",
+          "w8/one-port/all_reduce/8",
+          "w8/one-port/all_reduce/64",
+          "w8/one-port/all_reduce/512",
+          "w8/one-port/all_reduce/4096",
+          "w8/one-port/all_to_allv/8",
+          "w8/one-port/all_to_allv/64",
+          "w8/one-port/all_to_allv/512",
+          "w8/one-port/reduce_scatter/8",
+          "w8/one-port/reduce_scatter/64",
+          "w8/one-port/reduce_scatter/512"
+        ],
+        "PROVEN": []
+      },
+      "minimum_total_delta_bytes": 1048576,
+      "scope": "per cell and per direction",
+      "signal_scope": "node-level TX-plus-RX total",
+      "status_counts": {
+        "CONTRADICTED": 317,
+        "INSUFFICIENT-SIGNAL": 35,
+        "PROVEN": 0
+      }
+    },
     "node_summaries": [
       {
         "attempt_id": "w2_four-port_job202416",
-        "attempt_routing_status": "contradicted",
         "declared_concentration": "four-port",
+        "directional_routing": {
+          "rx": {
+            "fractions": {
+              "hsn0": 0.49705480018178,
+              "hsn1": 0.4970326672916616,
+              "hsn2": 0.00590758228857355,
+              "hsn3": 4.950237984814969e-06
+            },
+            "status": "CONTRADICTED",
+            "total_delta_bytes": 6285758401
+          },
+          "tx": {
+            "fractions": {
+              "hsn0": 0.0004416125909424167,
+              "hsn1": 0.00036289066559958005,
+              "hsn2": 0.9991924199976372,
+              "hsn3": 3.0767458207819134e-06
+            },
+            "status": "CONTRADICTED",
+            "total_delta_bytes": 66498830881
+          }
+        },
         "dominant_rx_fraction": 0.49705480018178,
         "dominant_rx_port": "hsn0",
         "dominant_tx_fraction": 0.9991924199976372,
@@ -13,6 +403,7 @@
         "measured_cell_rx_sum_bytes": 5218346683,
         "measured_cell_tx_sum_bytes": 55171274111,
         "node": "gpu101",
+        "node_routing_status": "CONTRADICTED",
         "observed_over_projected_rx": 1.0037914916419388,
         "observed_over_projected_tx": 1.0044301730161531,
         "projected_job_rx_bytes": 6262016019.599999,
@@ -28,8 +419,29 @@
       },
       {
         "attempt_id": "w2_four-port_job202416",
-        "attempt_routing_status": "contradicted",
         "declared_concentration": "four-port",
+        "directional_routing": {
+          "rx": {
+            "fractions": {
+              "hsn0": 0.4963127510816972,
+              "hsn1": 0.006663712487330984,
+              "hsn2": 1.0712596688013718e-05,
+              "hsn3": 0.4970128238342838
+            },
+            "status": "CONTRADICTED",
+            "total_delta_bytes": 6295205725
+          },
+          "tx": {
+            "fractions": {
+              "hsn0": 0.00032270768770498897,
+              "hsn1": 0.9992633940881944,
+              "hsn2": 0.00013664319957623354,
+              "hsn3": 0.00027725502452430036
+            },
+            "status": "CONTRADICTED",
+            "total_delta_bytes": 66501867844
+          }
+        },
         "dominant_rx_fraction": 0.4970128238342838,
         "dominant_rx_port": "hsn3",
         "dominant_tx_fraction": 0.9992633940881944,
@@ -38,6 +450,7 @@
         "measured_cell_rx_sum_bytes": 5219005889,
         "measured_cell_tx_sum_bytes": 55179908034,
         "node": "gpu102",
+        "node_routing_status": "CONTRADICTED",
         "observed_over_projected_rx": 1.005173184780312,
         "observed_over_projected_tx": 1.0043188757978083,
         "projected_job_rx_bytes": 6262807066.8,
@@ -53,8 +466,29 @@
       },
       {
         "attempt_id": "w2_one-port_job202415",
-        "attempt_routing_status": "contradicted",
         "declared_concentration": "one-port",
+        "directional_routing": {
+          "rx": {
+            "fractions": {
+              "hsn0": 0.49705421285678003,
+              "hsn1": 0.4970347866193785,
+              "hsn2": 0.005906119305445048,
+              "hsn3": 4.881218396453492e-06
+            },
+            "status": "CONTRADICTED",
+            "total_delta_bytes": 6285725716
+          },
+          "tx": {
+            "fractions": {
+              "hsn0": 0.0004096069697592872,
+              "hsn1": 0.0003628512707879515,
+              "hsn2": 0.9992244737258398,
+              "hsn3": 3.068033612944362e-06
+            },
+            "status": "CONTRADICTED",
+            "total_delta_bytes": 66496663902
+          }
+        },
         "dominant_rx_fraction": 0.49705421285678003,
         "dominant_rx_port": "hsn0",
         "dominant_tx_fraction": 0.9992244737258398,
@@ -63,6 +497,7 @@
         "measured_cell_rx_sum_bytes": 5165756234,
         "measured_cell_tx_sum_bytes": 54684830282,
         "node": "gpu101",
+        "node_routing_status": "CONTRADICTED",
         "observed_over_projected_rx": 1.0140054090932804,
         "observed_over_projected_tx": 1.0133319660907858,
         "projected_job_rx_bytes": 6198907480.8,
@@ -78,8 +513,29 @@
       },
       {
         "attempt_id": "w2_one-port_job202415",
-        "attempt_routing_status": "contradicted",
         "declared_concentration": "one-port",
+        "directional_routing": {
+          "rx": {
+            "fractions": {
+              "hsn0": 0.49631312895018476,
+              "hsn1": 0.0066629836155428085,
+              "hsn2": 1.0586492331205016e-05,
+              "hsn3": 0.49701330094194124
+            },
+            "status": "CONTRADICTED",
+            "total_delta_bytes": 6295191827
+          },
+          "tx": {
+            "fractions": {
+              "hsn0": 0.00032270142708959074,
+              "hsn1": 0.9992634820635155,
+              "hsn2": 0.00013662956450181442,
+              "hsn3": 0.00027718694489318975
+            },
+            "status": "CONTRADICTED",
+            "total_delta_bytes": 66501844115
+          }
+        },
         "dominant_rx_fraction": 0.49701330094194124,
         "dominant_rx_port": "hsn3",
         "dominant_tx_fraction": 0.9992634820635155,
@@ -88,6 +544,7 @@
         "measured_cell_rx_sum_bytes": 5167871011,
         "measured_cell_tx_sum_bytes": 54686388517,
         "node": "gpu102",
+        "node_routing_status": "CONTRADICTED",
         "observed_over_projected_rx": 1.0151168978483365,
         "observed_over_projected_tx": 1.013382030373777,
         "projected_job_rx_bytes": 6201445213.2,
@@ -103,8 +560,29 @@
       },
       {
         "attempt_id": "w8_four-port_job202418",
-        "attempt_routing_status": "contradicted",
         "declared_concentration": "four-port",
+        "directional_routing": {
+          "rx": {
+            "fractions": {
+              "hsn0": 0.24819847062352735,
+              "hsn1": 0.24842347655936914,
+              "hsn2": 0.2549865122047187,
+              "hsn3": 0.24839154061238478
+            },
+            "status": "PROVEN",
+            "total_delta_bytes": 24997473862
+          },
+          "tx": {
+            "fractions": {
+              "hsn0": 0.0001709152681707913,
+              "hsn1": 0.00015660007962548555,
+              "hsn2": 0.999534426049543,
+              "hsn3": 0.00013805860266067742
+            },
+            "status": "CONTRADICTED",
+            "total_delta_bytes": 255945144446
+          }
+        },
         "dominant_rx_fraction": 0.2549865122047187,
         "dominant_rx_port": "hsn2",
         "dominant_tx_fraction": 0.999534426049543,
@@ -113,6 +591,7 @@
         "measured_cell_rx_sum_bytes": 20829819543,
         "measured_cell_tx_sum_bytes": 213280490098,
         "node": "gpu101",
+        "node_routing_status": "CONTRADICTED",
         "observed_over_projected_rx": 1.0000676278222396,
         "observed_over_projected_tx": 1.000033431438869,
         "projected_job_rx_bytes": 24995783451.6,
@@ -128,8 +607,29 @@
       },
       {
         "attempt_id": "w8_four-port_job202418",
-        "attempt_routing_status": "contradicted",
         "declared_concentration": "four-port",
+        "directional_routing": {
+          "rx": {
+            "fractions": {
+              "hsn0": 0.25509253886943967,
+              "hsn1": 0.2483791354708395,
+              "hsn2": 0.24820681671673,
+              "hsn3": 0.2483215089429908
+            },
+            "status": "PROVEN",
+            "total_delta_bytes": 24938063313
+          },
+          "tx": {
+            "fractions": {
+              "hsn0": 0.9995298067097473,
+              "hsn1": 0.00011907434390183925,
+              "hsn2": 0.00019491482519227028,
+              "hsn3": 0.00015620412115858212
+            },
+            "status": "CONTRADICTED",
+            "total_delta_bytes": 256113063492
+          }
+        },
         "dominant_rx_fraction": 0.25509253886943967,
         "dominant_rx_port": "hsn0",
         "dominant_tx_fraction": 0.9995298067097473,
@@ -138,6 +638,7 @@
         "measured_cell_rx_sum_bytes": 20776276692,
         "measured_cell_tx_sum_bytes": 213368417341,
         "node": "gpu105",
+        "node_routing_status": "CONTRADICTED",
         "observed_over_projected_rx": 1.0002619687627716,
         "observed_over_projected_tx": 1.0002771524002332,
         "projected_job_rx_bytes": 24931532030.399998,
@@ -153,8 +654,29 @@
       },
       {
         "attempt_id": "w8_one-port_job202417",
-        "attempt_routing_status": "contradicted",
         "declared_concentration": "one-port",
+        "directional_routing": {
+          "rx": {
+            "fractions": {
+              "hsn0": 0.9938533559439956,
+              "hsn1": 2.2658382718541205e-06,
+              "hsn2": 0.00614182516383517,
+              "hsn3": 2.5530538973379286e-06
+            },
+            "status": "PROVEN",
+            "total_delta_bytes": 25527859035
+          },
+          "tx": {
+            "fractions": {
+              "hsn0": 0.0006386516596134514,
+              "hsn1": 8.53661842693981e-06,
+              "hsn2": 0.999344371417222,
+              "hsn3": 8.440304737600836e-06
+            },
+            "status": "CONTRADICTED",
+            "total_delta_bytes": 262776768014
+          }
+        },
         "dominant_rx_fraction": 0.9938533559439956,
         "dominant_rx_port": "hsn0",
         "dominant_tx_fraction": 0.999344371417222,
@@ -163,6 +685,7 @@
         "measured_cell_rx_sum_bytes": 21268107469,
         "measured_cell_tx_sum_bytes": 218859858895,
         "node": "gpu101",
+        "node_routing_status": "CONTRADICTED",
         "observed_over_projected_rx": 1.000240190318177,
         "observed_over_projected_tx": 1.000551865094296,
         "projected_job_rx_bytes": 25521728962.8,
@@ -178,8 +701,29 @@
       },
       {
         "attempt_id": "w8_one-port_job202417",
-        "attempt_routing_status": "contradicted",
         "declared_concentration": "one-port",
+        "directional_routing": {
+          "rx": {
+            "fractions": {
+              "hsn0": 0.9998470506460929,
+              "hsn1": 9.128410919541866e-05,
+              "hsn2": 1.5141753497871261e-05,
+              "hsn3": 4.6523491213766225e-05
+            },
+            "status": "PROVEN",
+            "total_delta_bytes": 25595714529
+          },
+          "tx": {
+            "fractions": {
+              "hsn0": 0.9999661645972863,
+              "hsn1": 1.50537462962077e-05,
+              "hsn2": 1.2470614734170537e-05,
+              "hsn3": 6.311041683383327e-06
+            },
+            "status": "PROVEN",
+            "total_delta_bytes": 262100471362
+          }
+        },
         "dominant_rx_fraction": 0.9998470506460929,
         "dominant_rx_port": "hsn0",
         "dominant_tx_fraction": 0.9999661645972863,
@@ -188,6 +732,7 @@
         "measured_cell_rx_sum_bytes": 21316381656,
         "measured_cell_tx_sum_bytes": 218386640492,
         "node": "gpu105",
+        "node_routing_status": "PROVEN",
         "observed_over_projected_rx": 1.0006277074465981,
         "observed_over_projected_tx": 1.000139289547496,
         "projected_job_rx_bytes": 25579657987.2,
@@ -1679,15 +2224,15 @@
       "unexpected_cell_ids": []
     },
     "R": {
-      "denominator": null,
+      "denominator": 0,
       "evidence_class": "behavioral-direction",
       "id": "R",
       "outcomes": {
         "E1": {
-          "denominator": null,
-          "diagnostic_held_rows_if_fg2_ignored": 59,
-          "diagnostic_status_if_fg2_ignored": "REFUTED",
+          "denominator": 0,
           "id": "E1",
+          "passed": 0,
+          "refuted": 0,
           "rows": [
             {
               "cell_ids": [
@@ -1700,10 +2245,14 @@
                 "payload_bytes": 8,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/8": "INSUFFICIENT-SIGNAL",
+                "w8/one-port/all_gather/8": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E1-001",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -1716,10 +2265,14 @@
                 "payload_bytes": 64,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/64": "INSUFFICIENT-SIGNAL",
+                "w8/one-port/all_gather/64": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E1-002",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -1732,10 +2285,14 @@
                 "payload_bytes": 512,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/512": "INSUFFICIENT-SIGNAL",
+                "w8/one-port/all_gather/512": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E1-003",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -1748,8 +2305,12 @@
                 "payload_bytes": 4096,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/4096": "CONTRADICTED",
+                "w8/one-port/all_gather/4096": "CONTRADICTED"
+              },
               "row_id": "E1-004",
               "status": "VOID"
             },
@@ -1764,8 +2325,12 @@
                 "payload_bytes": 16384,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/16384": "CONTRADICTED",
+                "w8/one-port/all_gather/16384": "CONTRADICTED"
+              },
               "row_id": "E1-005",
               "status": "VOID"
             },
@@ -1780,8 +2345,12 @@
                 "payload_bytes": 65536,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/65536": "CONTRADICTED",
+                "w8/one-port/all_gather/65536": "CONTRADICTED"
+              },
               "row_id": "E1-006",
               "status": "VOID"
             },
@@ -1796,8 +2365,12 @@
                 "payload_bytes": 131072,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/131072": "CONTRADICTED",
+                "w8/one-port/all_gather/131072": "CONTRADICTED"
+              },
               "row_id": "E1-007",
               "status": "VOID"
             },
@@ -1812,8 +2385,12 @@
                 "payload_bytes": 196608,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/196608": "CONTRADICTED",
+                "w8/one-port/all_gather/196608": "CONTRADICTED"
+              },
               "row_id": "E1-008",
               "status": "VOID"
             },
@@ -1828,8 +2405,12 @@
                 "payload_bytes": 262144,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/262144": "CONTRADICTED",
+                "w8/one-port/all_gather/262144": "CONTRADICTED"
+              },
               "row_id": "E1-009",
               "status": "VOID"
             },
@@ -1844,8 +2425,12 @@
                 "payload_bytes": 393216,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/393216": "CONTRADICTED",
+                "w8/one-port/all_gather/393216": "CONTRADICTED"
+              },
               "row_id": "E1-010",
               "status": "VOID"
             },
@@ -1860,8 +2445,12 @@
                 "payload_bytes": 524288,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/524288": "CONTRADICTED",
+                "w8/one-port/all_gather/524288": "CONTRADICTED"
+              },
               "row_id": "E1-011",
               "status": "VOID"
             },
@@ -1876,8 +2465,12 @@
                 "payload_bytes": 786432,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/786432": "CONTRADICTED",
+                "w8/one-port/all_gather/786432": "CONTRADICTED"
+              },
               "row_id": "E1-012",
               "status": "VOID"
             },
@@ -1892,8 +2485,12 @@
                 "payload_bytes": 1048576,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/1048576": "CONTRADICTED",
+                "w8/one-port/all_gather/1048576": "CONTRADICTED"
+              },
               "row_id": "E1-013",
               "status": "VOID"
             },
@@ -1908,8 +2505,12 @@
                 "payload_bytes": 1572864,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/1572864": "CONTRADICTED",
+                "w8/one-port/all_gather/1572864": "CONTRADICTED"
+              },
               "row_id": "E1-014",
               "status": "VOID"
             },
@@ -1924,8 +2525,12 @@
                 "payload_bytes": 2097152,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/2097152": "CONTRADICTED",
+                "w8/one-port/all_gather/2097152": "CONTRADICTED"
+              },
               "row_id": "E1-015",
               "status": "VOID"
             },
@@ -1940,8 +2545,12 @@
                 "payload_bytes": 3145728,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/3145728": "CONTRADICTED",
+                "w8/one-port/all_gather/3145728": "CONTRADICTED"
+              },
               "row_id": "E1-016",
               "status": "VOID"
             },
@@ -1956,8 +2565,12 @@
                 "payload_bytes": 4194304,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/4194304": "CONTRADICTED",
+                "w8/one-port/all_gather/4194304": "CONTRADICTED"
+              },
               "row_id": "E1-017",
               "status": "VOID"
             },
@@ -1972,8 +2585,12 @@
                 "payload_bytes": 8388608,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/8388608": "CONTRADICTED",
+                "w8/one-port/all_gather/8388608": "CONTRADICTED"
+              },
               "row_id": "E1-018",
               "status": "VOID"
             },
@@ -1988,8 +2605,12 @@
                 "payload_bytes": 16777216,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/16777216": "CONTRADICTED",
+                "w8/one-port/all_gather/16777216": "CONTRADICTED"
+              },
               "row_id": "E1-019",
               "status": "VOID"
             },
@@ -2004,8 +2625,12 @@
                 "payload_bytes": 33554432,
                 "required_minimum": 2.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/33554432": "CONTRADICTED",
+                "w8/one-port/all_gather/33554432": "CONTRADICTED"
+              },
               "row_id": "E1-020",
               "status": "VOID"
             },
@@ -2020,8 +2645,12 @@
                 "payload_bytes": 67108864,
                 "required_minimum": 2.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/67108864": "CONTRADICTED",
+                "w8/one-port/all_gather/67108864": "CONTRADICTED"
+              },
               "row_id": "E1-021",
               "status": "VOID"
             },
@@ -2036,8 +2665,12 @@
                 "payload_bytes": 134217728,
                 "required_minimum": 2.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/134217728": "CONTRADICTED",
+                "w8/one-port/all_gather/134217728": "CONTRADICTED"
+              },
               "row_id": "E1-022",
               "status": "VOID"
             },
@@ -2052,10 +2685,14 @@
                 "payload_bytes": 8,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/8": "INSUFFICIENT-SIGNAL",
+                "w8/one-port/reduce_scatter/8": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E1-023",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -2068,10 +2705,14 @@
                 "payload_bytes": 64,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/64": "INSUFFICIENT-SIGNAL",
+                "w8/one-port/reduce_scatter/64": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E1-024",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -2084,10 +2725,14 @@
                 "payload_bytes": 512,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/512": "INSUFFICIENT-SIGNAL",
+                "w8/one-port/reduce_scatter/512": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E1-025",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -2100,8 +2745,12 @@
                 "payload_bytes": 4096,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/4096": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/4096": "CONTRADICTED"
+              },
               "row_id": "E1-026",
               "status": "VOID"
             },
@@ -2116,8 +2765,12 @@
                 "payload_bytes": 16384,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/16384": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/16384": "CONTRADICTED"
+              },
               "row_id": "E1-027",
               "status": "VOID"
             },
@@ -2132,8 +2785,12 @@
                 "payload_bytes": 65536,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/65536": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/65536": "CONTRADICTED"
+              },
               "row_id": "E1-028",
               "status": "VOID"
             },
@@ -2148,8 +2805,12 @@
                 "payload_bytes": 131072,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/131072": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/131072": "CONTRADICTED"
+              },
               "row_id": "E1-029",
               "status": "VOID"
             },
@@ -2164,8 +2825,12 @@
                 "payload_bytes": 196608,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/196608": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/196608": "CONTRADICTED"
+              },
               "row_id": "E1-030",
               "status": "VOID"
             },
@@ -2180,8 +2845,12 @@
                 "payload_bytes": 262144,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/262144": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/262144": "CONTRADICTED"
+              },
               "row_id": "E1-031",
               "status": "VOID"
             },
@@ -2196,8 +2865,12 @@
                 "payload_bytes": 393216,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/393216": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/393216": "CONTRADICTED"
+              },
               "row_id": "E1-032",
               "status": "VOID"
             },
@@ -2212,8 +2885,12 @@
                 "payload_bytes": 524288,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/524288": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/524288": "CONTRADICTED"
+              },
               "row_id": "E1-033",
               "status": "VOID"
             },
@@ -2228,8 +2905,12 @@
                 "payload_bytes": 786432,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/786432": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/786432": "CONTRADICTED"
+              },
               "row_id": "E1-034",
               "status": "VOID"
             },
@@ -2244,8 +2925,12 @@
                 "payload_bytes": 1048576,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/1048576": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/1048576": "CONTRADICTED"
+              },
               "row_id": "E1-035",
               "status": "VOID"
             },
@@ -2260,8 +2945,12 @@
                 "payload_bytes": 1572864,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/1572864": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/1572864": "CONTRADICTED"
+              },
               "row_id": "E1-036",
               "status": "VOID"
             },
@@ -2276,8 +2965,12 @@
                 "payload_bytes": 2097152,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/2097152": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/2097152": "CONTRADICTED"
+              },
               "row_id": "E1-037",
               "status": "VOID"
             },
@@ -2292,8 +2985,12 @@
                 "payload_bytes": 3145728,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/3145728": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/3145728": "CONTRADICTED"
+              },
               "row_id": "E1-038",
               "status": "VOID"
             },
@@ -2308,8 +3005,12 @@
                 "payload_bytes": 4194304,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/4194304": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/4194304": "CONTRADICTED"
+              },
               "row_id": "E1-039",
               "status": "VOID"
             },
@@ -2324,8 +3025,12 @@
                 "payload_bytes": 8388608,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/8388608": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/8388608": "CONTRADICTED"
+              },
               "row_id": "E1-040",
               "status": "VOID"
             },
@@ -2340,8 +3045,12 @@
                 "payload_bytes": 16777216,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/16777216": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/16777216": "CONTRADICTED"
+              },
               "row_id": "E1-041",
               "status": "VOID"
             },
@@ -2356,8 +3065,12 @@
                 "payload_bytes": 33554432,
                 "required_minimum": 2.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/33554432": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/33554432": "CONTRADICTED"
+              },
               "row_id": "E1-042",
               "status": "VOID"
             },
@@ -2372,8 +3085,12 @@
                 "payload_bytes": 67108864,
                 "required_minimum": 2.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/67108864": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/67108864": "CONTRADICTED"
+              },
               "row_id": "E1-043",
               "status": "VOID"
             },
@@ -2388,8 +3105,12 @@
                 "payload_bytes": 134217728,
                 "required_minimum": 2.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/134217728": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/134217728": "CONTRADICTED"
+              },
               "row_id": "E1-044",
               "status": "VOID"
             },
@@ -2404,10 +3125,14 @@
                 "payload_bytes": 8,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/8": "INSUFFICIENT-SIGNAL",
+                "w8/one-port/all_reduce/8": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E1-045",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -2420,10 +3145,14 @@
                 "payload_bytes": 64,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/64": "INSUFFICIENT-SIGNAL",
+                "w8/one-port/all_reduce/64": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E1-046",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -2436,10 +3165,14 @@
                 "payload_bytes": 512,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/512": "INSUFFICIENT-SIGNAL",
+                "w8/one-port/all_reduce/512": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E1-047",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -2452,10 +3185,14 @@
                 "payload_bytes": 4096,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/4096": "INSUFFICIENT-SIGNAL",
+                "w8/one-port/all_reduce/4096": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E1-048",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -2468,8 +3205,12 @@
                 "payload_bytes": 16384,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/16384": "INSUFFICIENT-SIGNAL",
+                "w8/one-port/all_reduce/16384": "CONTRADICTED"
+              },
               "row_id": "E1-049",
               "status": "VOID"
             },
@@ -2484,8 +3225,12 @@
                 "payload_bytes": 65536,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/65536": "CONTRADICTED",
+                "w8/one-port/all_reduce/65536": "CONTRADICTED"
+              },
               "row_id": "E1-050",
               "status": "VOID"
             },
@@ -2500,8 +3245,12 @@
                 "payload_bytes": 131072,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/131072": "CONTRADICTED",
+                "w8/one-port/all_reduce/131072": "CONTRADICTED"
+              },
               "row_id": "E1-051",
               "status": "VOID"
             },
@@ -2516,8 +3265,12 @@
                 "payload_bytes": 196608,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/196608": "CONTRADICTED",
+                "w8/one-port/all_reduce/196608": "CONTRADICTED"
+              },
               "row_id": "E1-052",
               "status": "VOID"
             },
@@ -2532,8 +3285,12 @@
                 "payload_bytes": 262144,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/262144": "CONTRADICTED",
+                "w8/one-port/all_reduce/262144": "CONTRADICTED"
+              },
               "row_id": "E1-053",
               "status": "VOID"
             },
@@ -2548,8 +3305,12 @@
                 "payload_bytes": 393216,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/393216": "CONTRADICTED",
+                "w8/one-port/all_reduce/393216": "CONTRADICTED"
+              },
               "row_id": "E1-054",
               "status": "VOID"
             },
@@ -2564,8 +3325,12 @@
                 "payload_bytes": 524288,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/524288": "CONTRADICTED",
+                "w8/one-port/all_reduce/524288": "CONTRADICTED"
+              },
               "row_id": "E1-055",
               "status": "VOID"
             },
@@ -2580,8 +3345,12 @@
                 "payload_bytes": 786432,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/786432": "CONTRADICTED",
+                "w8/one-port/all_reduce/786432": "CONTRADICTED"
+              },
               "row_id": "E1-056",
               "status": "VOID"
             },
@@ -2596,8 +3365,12 @@
                 "payload_bytes": 1048576,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/1048576": "CONTRADICTED",
+                "w8/one-port/all_reduce/1048576": "CONTRADICTED"
+              },
               "row_id": "E1-057",
               "status": "VOID"
             },
@@ -2612,8 +3385,12 @@
                 "payload_bytes": 1572864,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/1572864": "CONTRADICTED",
+                "w8/one-port/all_reduce/1572864": "CONTRADICTED"
+              },
               "row_id": "E1-058",
               "status": "VOID"
             },
@@ -2628,8 +3405,12 @@
                 "payload_bytes": 2097152,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/2097152": "CONTRADICTED",
+                "w8/one-port/all_reduce/2097152": "CONTRADICTED"
+              },
               "row_id": "E1-059",
               "status": "VOID"
             },
@@ -2644,8 +3425,12 @@
                 "payload_bytes": 3145728,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/3145728": "CONTRADICTED",
+                "w8/one-port/all_reduce/3145728": "CONTRADICTED"
+              },
               "row_id": "E1-060",
               "status": "VOID"
             },
@@ -2660,8 +3445,12 @@
                 "payload_bytes": 4194304,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/4194304": "CONTRADICTED",
+                "w8/one-port/all_reduce/4194304": "CONTRADICTED"
+              },
               "row_id": "E1-061",
               "status": "VOID"
             },
@@ -2676,8 +3465,12 @@
                 "payload_bytes": 8388608,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/8388608": "CONTRADICTED",
+                "w8/one-port/all_reduce/8388608": "CONTRADICTED"
+              },
               "row_id": "E1-062",
               "status": "VOID"
             },
@@ -2692,8 +3485,12 @@
                 "payload_bytes": 16777216,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/16777216": "CONTRADICTED",
+                "w8/one-port/all_reduce/16777216": "CONTRADICTED"
+              },
               "row_id": "E1-063",
               "status": "VOID"
             },
@@ -2708,8 +3505,12 @@
                 "payload_bytes": 33554432,
                 "required_minimum": 2.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/33554432": "CONTRADICTED",
+                "w8/one-port/all_reduce/33554432": "CONTRADICTED"
+              },
               "row_id": "E1-064",
               "status": "VOID"
             },
@@ -2724,8 +3525,12 @@
                 "payload_bytes": 67108864,
                 "required_minimum": 2.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/67108864": "CONTRADICTED",
+                "w8/one-port/all_reduce/67108864": "CONTRADICTED"
+              },
               "row_id": "E1-065",
               "status": "VOID"
             },
@@ -2740,8 +3545,12 @@
                 "payload_bytes": 134217728,
                 "required_minimum": 2.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/134217728": "CONTRADICTED",
+                "w8/one-port/all_reduce/134217728": "CONTRADICTED"
+              },
               "row_id": "E1-066",
               "status": "VOID"
             },
@@ -2756,10 +3565,14 @@
                 "payload_bytes": 8,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/8": "INSUFFICIENT-SIGNAL",
+                "w8/one-port/all_to_allv/8": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E1-067",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -2772,10 +3585,14 @@
                 "payload_bytes": 64,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/64": "INSUFFICIENT-SIGNAL",
+                "w8/one-port/all_to_allv/64": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E1-068",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -2788,10 +3605,14 @@
                 "payload_bytes": 512,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/512": "INSUFFICIENT-SIGNAL",
+                "w8/one-port/all_to_allv/512": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E1-069",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -2804,8 +3625,12 @@
                 "payload_bytes": 4096,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/4096": "CONTRADICTED",
+                "w8/one-port/all_to_allv/4096": "CONTRADICTED"
+              },
               "row_id": "E1-070",
               "status": "VOID"
             },
@@ -2820,8 +3645,12 @@
                 "payload_bytes": 16384,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/16384": "CONTRADICTED",
+                "w8/one-port/all_to_allv/16384": "CONTRADICTED"
+              },
               "row_id": "E1-071",
               "status": "VOID"
             },
@@ -2836,8 +3665,12 @@
                 "payload_bytes": 65536,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/65536": "CONTRADICTED",
+                "w8/one-port/all_to_allv/65536": "CONTRADICTED"
+              },
               "row_id": "E1-072",
               "status": "VOID"
             },
@@ -2852,8 +3685,12 @@
                 "payload_bytes": 131072,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/131072": "CONTRADICTED",
+                "w8/one-port/all_to_allv/131072": "CONTRADICTED"
+              },
               "row_id": "E1-073",
               "status": "VOID"
             },
@@ -2868,8 +3705,12 @@
                 "payload_bytes": 196608,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/196608": "CONTRADICTED",
+                "w8/one-port/all_to_allv/196608": "CONTRADICTED"
+              },
               "row_id": "E1-074",
               "status": "VOID"
             },
@@ -2884,8 +3725,12 @@
                 "payload_bytes": 262144,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/262144": "CONTRADICTED",
+                "w8/one-port/all_to_allv/262144": "CONTRADICTED"
+              },
               "row_id": "E1-075",
               "status": "VOID"
             },
@@ -2900,8 +3745,12 @@
                 "payload_bytes": 393216,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/393216": "CONTRADICTED",
+                "w8/one-port/all_to_allv/393216": "CONTRADICTED"
+              },
               "row_id": "E1-076",
               "status": "VOID"
             },
@@ -2916,8 +3765,12 @@
                 "payload_bytes": 524288,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/524288": "CONTRADICTED",
+                "w8/one-port/all_to_allv/524288": "CONTRADICTED"
+              },
               "row_id": "E1-077",
               "status": "VOID"
             },
@@ -2932,8 +3785,12 @@
                 "payload_bytes": 786432,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/786432": "CONTRADICTED",
+                "w8/one-port/all_to_allv/786432": "CONTRADICTED"
+              },
               "row_id": "E1-078",
               "status": "VOID"
             },
@@ -2948,8 +3805,12 @@
                 "payload_bytes": 1048576,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/1048576": "CONTRADICTED",
+                "w8/one-port/all_to_allv/1048576": "CONTRADICTED"
+              },
               "row_id": "E1-079",
               "status": "VOID"
             },
@@ -2964,8 +3825,12 @@
                 "payload_bytes": 1572864,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/1572864": "CONTRADICTED",
+                "w8/one-port/all_to_allv/1572864": "CONTRADICTED"
+              },
               "row_id": "E1-080",
               "status": "VOID"
             },
@@ -2980,8 +3845,12 @@
                 "payload_bytes": 2097152,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/2097152": "CONTRADICTED",
+                "w8/one-port/all_to_allv/2097152": "CONTRADICTED"
+              },
               "row_id": "E1-081",
               "status": "VOID"
             },
@@ -2996,8 +3865,12 @@
                 "payload_bytes": 3145728,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/3145728": "CONTRADICTED",
+                "w8/one-port/all_to_allv/3145728": "CONTRADICTED"
+              },
               "row_id": "E1-082",
               "status": "VOID"
             },
@@ -3012,8 +3885,12 @@
                 "payload_bytes": 4194304,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/4194304": "CONTRADICTED",
+                "w8/one-port/all_to_allv/4194304": "CONTRADICTED"
+              },
               "row_id": "E1-083",
               "status": "VOID"
             },
@@ -3028,8 +3905,12 @@
                 "payload_bytes": 8388608,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/8388608": "CONTRADICTED",
+                "w8/one-port/all_to_allv/8388608": "CONTRADICTED"
+              },
               "row_id": "E1-084",
               "status": "VOID"
             },
@@ -3044,8 +3925,12 @@
                 "payload_bytes": 16777216,
                 "required_minimum": 1.0
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/16777216": "CONTRADICTED",
+                "w8/one-port/all_to_allv/16777216": "CONTRADICTED"
+              },
               "row_id": "E1-085",
               "status": "VOID"
             },
@@ -3060,8 +3945,12 @@
                 "payload_bytes": 33554432,
                 "required_minimum": 2.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/33554432": "CONTRADICTED",
+                "w8/one-port/all_to_allv/33554432": "CONTRADICTED"
+              },
               "row_id": "E1-086",
               "status": "VOID"
             },
@@ -3076,8 +3965,12 @@
                 "payload_bytes": 67108864,
                 "required_minimum": 2.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/67108864": "CONTRADICTED",
+                "w8/one-port/all_to_allv/67108864": "CONTRADICTED"
+              },
               "row_id": "E1-087",
               "status": "VOID"
             },
@@ -3092,20 +3985,26 @@
                 "payload_bytes": 134217728,
                 "required_minimum": 2.0
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/134217728": "CONTRADICTED",
+                "w8/one-port/all_to_allv/134217728": "CONTRADICTED"
+              },
               "row_id": "E1-088",
               "status": "VOID"
             }
           ],
-          "status": "VOID",
-          "void_rows": 88
+          "scoreable_rows": 0,
+          "status": "UNEVALUABLE",
+          "unevaluable_rows": 13,
+          "void_rows": 75
         },
         "E2": {
-          "denominator": null,
-          "diagnostic_held_rows_if_fg2_ignored": 10,
-          "diagnostic_status_if_fg2_ignored": "REFUTED",
+          "denominator": 0,
           "id": "E2",
+          "passed": 0,
+          "refuted": 0,
           "rows": [
             {
               "cell_ids": [
@@ -3117,10 +4016,14 @@
                 "payload_bytes": 8,
                 "width8_over_width2": 1.0748745481445328
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/8": "INSUFFICIENT-SIGNAL",
+                "w8/one-port/all_reduce/8": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E2-001",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -3132,8 +4035,12 @@
                 "payload_bytes": 64,
                 "width8_over_width2": 0.8771945279955701
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/64": "CONTRADICTED",
+                "w8/one-port/all_reduce/64": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E2-002",
               "status": "VOID"
             },
@@ -3147,8 +4054,12 @@
                 "payload_bytes": 512,
                 "width8_over_width2": 0.9914520314062026
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/512": "CONTRADICTED",
+                "w8/one-port/all_reduce/512": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E2-003",
               "status": "VOID"
             },
@@ -3162,8 +4073,12 @@
                 "payload_bytes": 4096,
                 "width8_over_width2": 1.06252070310413
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/4096": "CONTRADICTED",
+                "w8/one-port/all_reduce/4096": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E2-004",
               "status": "VOID"
             },
@@ -3177,8 +4092,12 @@
                 "payload_bytes": 16384,
                 "width8_over_width2": 0.9530839029744891
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/16384": "CONTRADICTED",
+                "w8/one-port/all_reduce/16384": "CONTRADICTED"
+              },
               "row_id": "E2-005",
               "status": "VOID"
             },
@@ -3192,8 +4111,12 @@
                 "payload_bytes": 65536,
                 "width8_over_width2": 1.6459435119184487
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/65536": "CONTRADICTED",
+                "w8/one-port/all_reduce/65536": "CONTRADICTED"
+              },
               "row_id": "E2-006",
               "status": "VOID"
             },
@@ -3207,8 +4130,12 @@
                 "payload_bytes": 131072,
                 "width8_over_width2": 1.3682607342581503
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/131072": "CONTRADICTED",
+                "w8/one-port/all_reduce/131072": "CONTRADICTED"
+              },
               "row_id": "E2-007",
               "status": "VOID"
             },
@@ -3222,8 +4149,12 @@
                 "payload_bytes": 196608,
                 "width8_over_width2": 1.032455160494868
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/196608": "CONTRADICTED",
+                "w8/one-port/all_reduce/196608": "CONTRADICTED"
+              },
               "row_id": "E2-008",
               "status": "VOID"
             },
@@ -3237,8 +4168,12 @@
                 "payload_bytes": 262144,
                 "width8_over_width2": 0.9573662211672429
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/262144": "CONTRADICTED",
+                "w8/one-port/all_reduce/262144": "CONTRADICTED"
+              },
               "row_id": "E2-009",
               "status": "VOID"
             },
@@ -3252,8 +4187,12 @@
                 "payload_bytes": 393216,
                 "width8_over_width2": 0.8631896882840909
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/393216": "CONTRADICTED",
+                "w8/one-port/all_reduce/393216": "CONTRADICTED"
+              },
               "row_id": "E2-010",
               "status": "VOID"
             },
@@ -3267,8 +4206,12 @@
                 "payload_bytes": 524288,
                 "width8_over_width2": 0.8279675389164967
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/524288": "CONTRADICTED",
+                "w8/one-port/all_reduce/524288": "CONTRADICTED"
+              },
               "row_id": "E2-011",
               "status": "VOID"
             },
@@ -3282,8 +4225,12 @@
                 "payload_bytes": 786432,
                 "width8_over_width2": 0.8432616691162791
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/786432": "CONTRADICTED",
+                "w8/one-port/all_reduce/786432": "CONTRADICTED"
+              },
               "row_id": "E2-012",
               "status": "VOID"
             },
@@ -3297,8 +4244,12 @@
                 "payload_bytes": 1048576,
                 "width8_over_width2": 1.685649817281044
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/1048576": "CONTRADICTED",
+                "w8/one-port/all_reduce/1048576": "CONTRADICTED"
+              },
               "row_id": "E2-013",
               "status": "VOID"
             },
@@ -3312,8 +4263,12 @@
                 "payload_bytes": 1572864,
                 "width8_over_width2": 1.8016117055671943
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/1572864": "CONTRADICTED",
+                "w8/one-port/all_reduce/1572864": "CONTRADICTED"
+              },
               "row_id": "E2-014",
               "status": "VOID"
             },
@@ -3327,8 +4282,12 @@
                 "payload_bytes": 2097152,
                 "width8_over_width2": 0.8617557332082763
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/2097152": "CONTRADICTED",
+                "w8/one-port/all_reduce/2097152": "CONTRADICTED"
+              },
               "row_id": "E2-015",
               "status": "VOID"
             },
@@ -3342,8 +4301,12 @@
                 "payload_bytes": 3145728,
                 "width8_over_width2": 0.7785254297688616
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/3145728": "CONTRADICTED",
+                "w8/one-port/all_reduce/3145728": "CONTRADICTED"
+              },
               "row_id": "E2-016",
               "status": "VOID"
             },
@@ -3357,8 +4320,12 @@
                 "payload_bytes": 4194304,
                 "width8_over_width2": 0.7630774471039943
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/4194304": "CONTRADICTED",
+                "w8/one-port/all_reduce/4194304": "CONTRADICTED"
+              },
               "row_id": "E2-017",
               "status": "VOID"
             },
@@ -3372,8 +4339,12 @@
                 "payload_bytes": 8388608,
                 "width8_over_width2": 0.7023052574448446
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/8388608": "CONTRADICTED",
+                "w8/one-port/all_reduce/8388608": "CONTRADICTED"
+              },
               "row_id": "E2-018",
               "status": "VOID"
             },
@@ -3387,8 +4358,12 @@
                 "payload_bytes": 16777216,
                 "width8_over_width2": 0.6366514029424141
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/16777216": "CONTRADICTED",
+                "w8/one-port/all_reduce/16777216": "CONTRADICTED"
+              },
               "row_id": "E2-019",
               "status": "VOID"
             },
@@ -3402,8 +4377,12 @@
                 "payload_bytes": 33554432,
                 "width8_over_width2": 0.6049081715953823
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/33554432": "CONTRADICTED",
+                "w8/one-port/all_reduce/33554432": "CONTRADICTED"
+              },
               "row_id": "E2-020",
               "status": "VOID"
             },
@@ -3417,8 +4396,12 @@
                 "payload_bytes": 67108864,
                 "width8_over_width2": 0.5841437882043655
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/67108864": "CONTRADICTED",
+                "w8/one-port/all_reduce/67108864": "CONTRADICTED"
+              },
               "row_id": "E2-021",
               "status": "VOID"
             },
@@ -3432,8 +4415,12 @@
                 "payload_bytes": 134217728,
                 "width8_over_width2": 0.5268379978648925
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/134217728": "CONTRADICTED",
+                "w8/one-port/all_reduce/134217728": "CONTRADICTED"
+              },
               "row_id": "E2-022",
               "status": "VOID"
             },
@@ -3447,10 +4434,14 @@
                 "payload_bytes": 8,
                 "width8_over_width2": 1.1864311375262817
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/8": "INSUFFICIENT-SIGNAL",
+                "w8/four-port/all_reduce/8": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E2-023",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -3462,8 +4453,12 @@
                 "payload_bytes": 64,
                 "width8_over_width2": 0.8767760741408833
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/64": "CONTRADICTED",
+                "w8/four-port/all_reduce/64": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E2-024",
               "status": "VOID"
             },
@@ -3477,8 +4472,12 @@
                 "payload_bytes": 512,
                 "width8_over_width2": 0.9299068574514039
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/512": "CONTRADICTED",
+                "w8/four-port/all_reduce/512": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E2-025",
               "status": "VOID"
             },
@@ -3492,8 +4491,12 @@
                 "payload_bytes": 4096,
                 "width8_over_width2": 0.9458726620995656
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/4096": "CONTRADICTED",
+                "w8/four-port/all_reduce/4096": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E2-026",
               "status": "VOID"
             },
@@ -3507,8 +4510,12 @@
                 "payload_bytes": 16384,
                 "width8_over_width2": 0.6782045600365121
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/16384": "CONTRADICTED",
+                "w8/four-port/all_reduce/16384": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E2-027",
               "status": "VOID"
             },
@@ -3522,8 +4529,12 @@
                 "payload_bytes": 65536,
                 "width8_over_width2": 0.5891450248030348
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/65536": "CONTRADICTED",
+                "w8/four-port/all_reduce/65536": "CONTRADICTED"
+              },
               "row_id": "E2-028",
               "status": "VOID"
             },
@@ -3537,8 +4548,12 @@
                 "payload_bytes": 131072,
                 "width8_over_width2": 0.49204377583144754
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/131072": "CONTRADICTED",
+                "w8/four-port/all_reduce/131072": "CONTRADICTED"
+              },
               "row_id": "E2-029",
               "status": "VOID"
             },
@@ -3552,8 +4567,12 @@
                 "payload_bytes": 196608,
                 "width8_over_width2": 1.0616264389157073
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/196608": "CONTRADICTED",
+                "w8/four-port/all_reduce/196608": "CONTRADICTED"
+              },
               "row_id": "E2-030",
               "status": "VOID"
             },
@@ -3567,8 +4586,12 @@
                 "payload_bytes": 262144,
                 "width8_over_width2": 1.020181061176731
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/262144": "CONTRADICTED",
+                "w8/four-port/all_reduce/262144": "CONTRADICTED"
+              },
               "row_id": "E2-031",
               "status": "VOID"
             },
@@ -3582,8 +4605,12 @@
                 "payload_bytes": 393216,
                 "width8_over_width2": 0.8451078939772997
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/393216": "CONTRADICTED",
+                "w8/four-port/all_reduce/393216": "CONTRADICTED"
+              },
               "row_id": "E2-032",
               "status": "VOID"
             },
@@ -3597,8 +4624,12 @@
                 "payload_bytes": 524288,
                 "width8_over_width2": 0.7115635320164752
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/524288": "CONTRADICTED",
+                "w8/four-port/all_reduce/524288": "CONTRADICTED"
+              },
               "row_id": "E2-033",
               "status": "VOID"
             },
@@ -3612,8 +4643,12 @@
                 "payload_bytes": 786432,
                 "width8_over_width2": 0.1971650592598379
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/786432": "CONTRADICTED",
+                "w8/four-port/all_reduce/786432": "CONTRADICTED"
+              },
               "row_id": "E2-034",
               "status": "VOID"
             },
@@ -3627,8 +4662,12 @@
                 "payload_bytes": 1048576,
                 "width8_over_width2": 0.40037372034065083
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/1048576": "CONTRADICTED",
+                "w8/four-port/all_reduce/1048576": "CONTRADICTED"
+              },
               "row_id": "E2-035",
               "status": "VOID"
             },
@@ -3642,8 +4681,12 @@
                 "payload_bytes": 1572864,
                 "width8_over_width2": 0.3634616896646617
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/1572864": "CONTRADICTED",
+                "w8/four-port/all_reduce/1572864": "CONTRADICTED"
+              },
               "row_id": "E2-036",
               "status": "VOID"
             },
@@ -3657,8 +4700,12 @@
                 "payload_bytes": 2097152,
                 "width8_over_width2": 0.3633910023282062
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/2097152": "CONTRADICTED",
+                "w8/four-port/all_reduce/2097152": "CONTRADICTED"
+              },
               "row_id": "E2-037",
               "status": "VOID"
             },
@@ -3672,8 +4719,12 @@
                 "payload_bytes": 3145728,
                 "width8_over_width2": 0.34911025372029775
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/3145728": "CONTRADICTED",
+                "w8/four-port/all_reduce/3145728": "CONTRADICTED"
+              },
               "row_id": "E2-038",
               "status": "VOID"
             },
@@ -3687,8 +4738,12 @@
                 "payload_bytes": 4194304,
                 "width8_over_width2": 0.3336460336879217
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/4194304": "CONTRADICTED",
+                "w8/four-port/all_reduce/4194304": "CONTRADICTED"
+              },
               "row_id": "E2-039",
               "status": "VOID"
             },
@@ -3702,8 +4757,12 @@
                 "payload_bytes": 8388608,
                 "width8_over_width2": 0.2751277227615055
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/8388608": "CONTRADICTED",
+                "w8/four-port/all_reduce/8388608": "CONTRADICTED"
+              },
               "row_id": "E2-040",
               "status": "VOID"
             },
@@ -3717,8 +4776,12 @@
                 "payload_bytes": 16777216,
                 "width8_over_width2": 0.277901227102109
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/16777216": "CONTRADICTED",
+                "w8/four-port/all_reduce/16777216": "CONTRADICTED"
+              },
               "row_id": "E2-041",
               "status": "VOID"
             },
@@ -3732,8 +4795,12 @@
                 "payload_bytes": 33554432,
                 "width8_over_width2": 0.2768823712832988
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/33554432": "CONTRADICTED",
+                "w8/four-port/all_reduce/33554432": "CONTRADICTED"
+              },
               "row_id": "E2-042",
               "status": "VOID"
             },
@@ -3747,8 +4814,12 @@
                 "payload_bytes": 67108864,
                 "width8_over_width2": 0.27961117363933224
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/67108864": "CONTRADICTED",
+                "w8/four-port/all_reduce/67108864": "CONTRADICTED"
+              },
               "row_id": "E2-043",
               "status": "VOID"
             },
@@ -3762,20 +4833,26 @@
                 "payload_bytes": 134217728,
                 "width8_over_width2": 0.2806914873920662
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/134217728": "CONTRADICTED",
+                "w8/four-port/all_reduce/134217728": "CONTRADICTED"
+              },
               "row_id": "E2-044",
               "status": "VOID"
             }
           ],
-          "status": "VOID",
-          "void_rows": 44
+          "scoreable_rows": 0,
+          "status": "UNEVALUABLE",
+          "unevaluable_rows": 2,
+          "void_rows": 42
         },
         "E3": {
-          "denominator": null,
-          "diagnostic_held_rows_if_fg2_ignored": 3,
-          "diagnostic_status_if_fg2_ignored": "REFUTED",
+          "denominator": 0,
           "id": "E3",
+          "passed": 0,
+          "refuted": 0,
           "rows": [
             {
               "cell_ids": [
@@ -3790,8 +4867,12 @@
                 "payload_bytes": 33554432,
                 "spacing_ratio": 0.8969467224014284
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/33554432": "CONTRADICTED",
+                "w8/one-port/all_gather/33554432": "CONTRADICTED"
+              },
               "row_id": "E3-001",
               "status": "VOID"
             },
@@ -3808,8 +4889,12 @@
                 "payload_bytes": 67108864,
                 "spacing_ratio": 0.9004518528509228
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/67108864": "CONTRADICTED",
+                "w8/one-port/all_gather/67108864": "CONTRADICTED"
+              },
               "row_id": "E3-002",
               "status": "VOID"
             },
@@ -3826,8 +4911,12 @@
                 "payload_bytes": 134217728,
                 "spacing_ratio": 0.8982407444119771
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_gather/134217728": "CONTRADICTED",
+                "w8/one-port/all_gather/134217728": "CONTRADICTED"
+              },
               "row_id": "E3-003",
               "status": "VOID"
             },
@@ -3844,8 +4933,12 @@
                 "payload_bytes": 33554432,
                 "spacing_ratio": 0.9989415003558849
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/33554432": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/33554432": "CONTRADICTED"
+              },
               "row_id": "E3-004",
               "status": "VOID"
             },
@@ -3862,8 +4955,12 @@
                 "payload_bytes": 67108864,
                 "spacing_ratio": 0.9695113742628656
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/67108864": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/67108864": "CONTRADICTED"
+              },
               "row_id": "E3-005",
               "status": "VOID"
             },
@@ -3880,8 +4977,12 @@
                 "payload_bytes": 134217728,
                 "spacing_ratio": 0.9643341895296292
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/reduce_scatter/134217728": "CONTRADICTED",
+                "w8/one-port/reduce_scatter/134217728": "CONTRADICTED"
+              },
               "row_id": "E3-006",
               "status": "VOID"
             },
@@ -3898,8 +4999,12 @@
                 "payload_bytes": 33554432,
                 "spacing_ratio": 1.8847690683920777
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/33554432": "CONTRADICTED",
+                "w8/one-port/all_reduce/33554432": "CONTRADICTED"
+              },
               "row_id": "E3-007",
               "status": "VOID"
             },
@@ -3916,8 +5021,12 @@
                 "payload_bytes": 67108864,
                 "spacing_ratio": 1.8735751449817932
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/67108864": "CONTRADICTED",
+                "w8/one-port/all_reduce/67108864": "CONTRADICTED"
+              },
               "row_id": "E3-008",
               "status": "VOID"
             },
@@ -3934,8 +5043,12 @@
                 "payload_bytes": 134217728,
                 "spacing_ratio": 1.8849486559623938
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/134217728": "CONTRADICTED",
+                "w8/one-port/all_reduce/134217728": "CONTRADICTED"
+              },
               "row_id": "E3-009",
               "status": "VOID"
             },
@@ -3952,8 +5065,12 @@
                 "payload_bytes": 33554432,
                 "spacing_ratio": 0.9769281144981758
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/33554432": "CONTRADICTED",
+                "w8/one-port/all_to_allv/33554432": "CONTRADICTED"
+              },
               "row_id": "E3-010",
               "status": "VOID"
             },
@@ -3970,8 +5087,12 @@
                 "payload_bytes": 67108864,
                 "spacing_ratio": 0.9641375418573559
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/67108864": "CONTRADICTED",
+                "w8/one-port/all_to_allv/67108864": "CONTRADICTED"
+              },
               "row_id": "E3-011",
               "status": "VOID"
             },
@@ -3988,20 +5109,26 @@
                 "payload_bytes": 134217728,
                 "spacing_ratio": 0.8447335339725776
               },
-              "diagnostic_held_if_fg2_ignored": false,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": false,
+              "reason": "At least one consumed cell contradicts its declared concentration under separate TX and RX evaluation; the frozen rule voids that cell and forbids relabeling",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/134217728": "CONTRADICTED",
+                "w8/one-port/all_to_allv/134217728": "CONTRADICTED"
+              },
               "row_id": "E3-012",
               "status": "VOID"
             }
           ],
+          "scoreable_rows": 0,
           "status": "VOID",
+          "unevaluable_rows": 0,
           "void_rows": 12
         },
         "E4": {
-          "denominator": null,
-          "diagnostic_held_rows_if_fg2_ignored": 6,
-          "diagnostic_status_if_fg2_ignored": "PASS",
+          "denominator": 0,
           "id": "E4",
+          "passed": 0,
+          "refuted": 0,
           "rows": [
             {
               "cell_ids": [
@@ -4015,10 +5142,13 @@
                 ],
                 "observed_over_anchor": 1.6333257342485883
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w2/one-port/all_reduce/8": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E4-001",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -4032,10 +5162,13 @@
                 ],
                 "observed_over_anchor": 1.504778218291071
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w2/four-port/all_reduce/8": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E4-002",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -4049,10 +5182,13 @@
                 ],
                 "observed_over_anchor": 1.3875172278007482
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w8/one-port/all_reduce/8": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E4-003",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -4066,10 +5202,13 @@
                 ],
                 "observed_over_anchor": 1.410986414648553
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w8/four-port/all_reduce/8": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E4-004",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -4083,10 +5222,13 @@
                 ],
                 "observed_over_anchor": 1.281732642948611
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w8/one-port/all_to_allv/8": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E4-005",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             },
             {
               "cell_ids": [
@@ -4100,19 +5242,28 @@
                 ],
                 "observed_over_anchor": 1.4075719614720783
               },
-              "diagnostic_held_if_fg2_ignored": true,
-              "reason": "FG-2 contradicted the declared concentration at attempt scope; the frozen rule voids the consumed cells and forbids relabeling",
+              "diagnostic_held": true,
+              "reason": "At least one consumed cell moved less than the frozen 1 MiB signal minimum; the row has no routing verdict",
+              "routing_cell_statuses": {
+                "w8/four-port/all_to_allv/8": "INSUFFICIENT-SIGNAL"
+              },
               "row_id": "E4-006",
-              "status": "VOID"
+              "status": "UNEVALUABLE"
             }
           ],
-          "status": "VOID",
-          "void_rows": 6
+          "scoreable_rows": 0,
+          "status": "UNEVALUABLE",
+          "unevaluable_rows": 6,
+          "void_rows": 0
         }
       },
-      "reason": "FG-2 failed for all four attempts. No E1 through E4 row enters a behavioral pass denominator.",
-      "status": "VOID",
-      "void_rows": 150
+      "passed": 0,
+      "reason": "FG-2 is applied to each consumed cell. Contradicted cells make a row VOID, insufficient-signal cells make it UNEVALUABLE, and only rows whose cells are all proven enter the behavioral denominator.",
+      "refuted": 0,
+      "scoreable_rows": 0,
+      "status": "UNEVALUABLE",
+      "unevaluable_rows": 21,
+      "void_rows": 129
     },
     "W": {
       "analysis_ceiling_seconds": 600.0,
@@ -4206,13 +5357,19 @@
       "status": "PASS"
     },
     "FG-2": {
+      "cell_status_counts": {
+        "CONTRADICTED": 317,
+        "INSUFFICIENT-SIGNAL": 35,
+        "PROVEN": 0
+      },
       "contradicted_attempts": [
         "w2_four-port_job202416",
         "w2_one-port_job202415",
         "w8_four-port_job202418",
         "w8_one-port_job202417"
       ],
-      "effect": "The failed concentration proof voids the run and every Family R row. Captured cells are not relabeled.",
+      "effect": "The concentration proof is cell-scoped. Contradicted cells are VOID for Family R, cells below 1 MiB are UNEVALUABLE, and captured cells are not relabeled.",
+      "scope": "per cell, with TX and RX evaluated separately",
       "status": "FAIL"
     },
     "FG-3": {
@@ -4451,7 +5608,7 @@
       "Width-8 logs contain both P2P/CUMEM/read intra-node connectors and NET/Socket cross-node connectors, so their completion times combine NVLink and fabric stages."
     ],
     "inference": "NCCL_SOCKET_IFNAME selected the local socket address and advertised listener. The outgoing Linux route, provider, or Cassini driver layer remained free to choose or account a different TX interface.",
-    "strongest_tx_rx_finding": "Opposite-node packet totals agree closely and every captured error and drop delta is zero, while TX byte counters average about 7.6 to 7.9 KiB per packet and RX byte counters average about 0.73 to 0.75 KiB per packet. The roughly tenfold byte asymmetry is therefore a counter-semantics mismatch, not evidence for tenfold wire retransmission.",
+    "strongest_tx_rx_finding": "Opposite-node packet totals agree closely and every captured error and drop delta is zero, while TX byte counters average about 7.6 to 7.9 KiB per packet and RX byte counters average about 0.73 to 0.75 KiB per packet. Linux TX and RX byte fields are therefore not symmetric wire-byte authorities. The ip-link packet and error counters cannot exclude retransmission below the offload accounting boundary, and the exact byte-field semantics remain unexplained.",
     "unexplained": [
       "The capture did not record ip route, ip rule, route-get, socket binding, or provider state, so it cannot identify which lower layer selected gpu101 hsn2.",
       "The compute image lacked ethtool and tc. No authoritative Cassini hardware byte counter was captured, so the exact definitions of ip-link TX and RX bytes remain unidentified.",
@@ -4459,12 +5616,13 @@
     ]
   },
   "physical_sanity": {
-    "counter_conservation": "Opposite-node packet totals are close and errors plus drops are zero, while byte totals differ by about tenfold; byte counters cannot be treated as symmetric wire-byte authorities.",
+    "counter_conservation": "Opposite-node packet totals are close and errors plus drops are zero, while byte totals differ by about tenfold. Linux TX and RX byte fields are not symmetric wire-byte authorities; ip-link packet and error counters cannot exclude retransmission below the offload accounting boundary.",
     "coverage_arithmetic": "2 widths * 2 declarations * 4 operations * 22 payloads = 352 cells",
     "ladder_sum": "Per-cell RX deltas cover 25 measured repeats. Scaling their sum by 30/25 for five warmups predicts each job-level RX snapshot within the recorded node-summary ratio.",
     "serialization_floor": "Every published median is at or above its configured payload-over-declared-port-rate floor."
   },
-  "run_state": "void",
+  "run_state": "nonvoid",
+  "run_state_rule": "Only FG-4 voids the campaign; FG-2 voids contradicted cells.",
   "schema": "simllm-merlin-collective-scored-record-v1",
   "source_manifest": [
     {
@@ -4477,15 +5635,19 @@
     },
     {
       "path": "examples/merlin_collective_capture_v1/RUNBOOK.md",
-      "sha256": "a85a177c6ef504316840ec1976cb8a023f23637be1d1bc8943cdb4cc09ef8f30"
+      "sha256": "9d84cbeca0941797d4f0534bb197f8f94e2a57397203a0049b85e2e8616c4294"
     },
     {
       "path": "examples/merlin_collective_capture_v1/harness/study_config.json",
       "sha256": "e62e5e1af81b57f4d07d3cf10996cb43527ab1ec999946d892d31cebae398c2f"
     },
     {
+      "path": "examples/merlin_collective_capture_v1/harness/analyze_capture.py",
+      "sha256": "988e1aac3295a41dbb5eeb0e5aa6e05ee6717bd31189593134d6b0a0b90289f7"
+    },
+    {
       "path": "examples/merlin_collective_capture_v1/run_study.py",
-      "sha256": "ce139cc153871f9e4cd63a21db6aaab7069f0bd1b3df015e0d0ae9752969e337"
+      "sha256": "d10880e2807bd54e49c16e2fe037727d1000735aff3c13878847926af50bb7d1"
     }
   ],
   "study": "merlin_collective_capture_v1",
@@ -4495,5 +5657,5 @@
     "literal_evidence": "phase timing at widths 2 and 8 with anchors held; endpoint proxies captured; concentration control refuted pending a working pinning mechanism; switch occupancy remains unobservable",
     "not_changed": "No transport calibration, H200 evidence, switch occupancy, receiver occupancy, queue-wait, buffer high-water, TTFT, or TPOT acceptance clause is satisfied."
   },
-  "verdict": "VOID_FG_2_CONCENTRATION_CONTROL_REFUTED"
+  "verdict": "NONVOID_FG_2_CELL_SCOPED_CONCENTRATION_CONTROL_REFUTED"
 }

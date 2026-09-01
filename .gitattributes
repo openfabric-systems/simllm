@@ -62,6 +62,7 @@ examples/merlin_collective_capture_v1/*.py text eol=lf
 examples/merlin_collective_capture_v1/*.json text eol=lf
 examples/merlin_collective_capture_v1/*.csv text eol=lf
 tests/test_merlin_collective_capture_results.py text eol=lf
+tests/test_path_portability.py text eol=lf
 examples/a100_kernel_constants_v1/*.json text eol=lf
 examples/a100_kernel_constants_v1/*.md text eol=lf
 examples/a100_kernel_constants_v1/*.cu text eol=lf

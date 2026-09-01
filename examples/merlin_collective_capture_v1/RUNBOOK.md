@@ -26,7 +26,7 @@ Run on the integration host from this repository:
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "${REPO_ROOT}"
 LOCAL_HARNESS="${REPO_ROOT}/examples/merlin_collective_capture_v1/harness"
-LOCAL_EVIDENCE_ROOT=/"data3/yifeng/simllm-dev/planmode-runs/traf77-t2"
+LOCAL_EVIDENCE_ROOT="${SIMLLM_TRAF77_EVIDENCE_ROOT:?set SIMLLM_TRAF77_EVIDENCE_ROOT}"
 LOCAL_STAGE="$(mktemp -d)"
 mkdir -p "${LOCAL_EVIDENCE_ROOT}"
 git merge-base --is-ancestor 9c9a42e HEAD

@@ -1225,10 +1225,13 @@ arbitration parameters after that structure lands.
   with anchors held; endpoint proxies captured; concentration control refuted
   pending a working pinning mechanism; switch occupancy remains unobservable.
   All 352 frozen cells and all three consistency anchors were captured, but
-  fatal guard FG-2 failed because every attempt's counters contradicted its
-  declared concentration. The frozen rule therefore voids every directional
-  Family R row without relabeling it. The phase timings and ladder
-  completeness remain independent observations, not transport calibration.
+  cell-scoped fatal guard FG-2 finds 317 contradicted cells, 35 cells below the
+  frozen 1 MiB signal minimum and zero proven cells when TX and RX are tested
+  separately. Family R therefore publishes 129 VOID rows, 21 UNEVALUABLE rows
+  and no scoreable row. Only FG-4 can void this campaign, and it held, so the
+  campaign is nonvoid while its concentration-control refutation stands. The
+  phase timings and ladder completeness remain independent observations, not
+  transport calibration.
   H200 capture, working concentration, receiver occupancy, queue waits, buffer
   high-water marks, switch occupancy, holdout reproduction and the supported
   TTFT or TPOT effect all remain open. TRAF-81 owns the next concentration
@@ -1245,16 +1248,21 @@ arbitration parameters after that structure lands.
   payload-matched 25.5 GB of RX arrived on hsn0. Four-port width-8 jobs spread
   RX across all four ports but charged more than 99.95 percent of TX to one
   port per node. Opposite-node packet totals remained close and errors plus
-  drops stayed zero while `ip link` TX bytes were about ten times RX bytes, so
-  the exact driver or hardware counter definition remains unidentified.
+  drops stayed zero while `ip link` TX bytes were about ten times RX bytes.
+  Those packet and error fields cannot exclude retransmission below the
+  offload accounting boundary. Linux TX and RX byte fields are not symmetric
+  wire-byte authorities, and their exact semantics remain unidentified.
   Capture route, rule, route-get, socket-binding and provider state; obtain
   authoritative Cassini hardware bytes and packets; and reconcile them with
   `ip link` before using byte fractions as routing proof. Freeze the repair
   before a new capture. One-port acceptance requires hsn0 to carry at least
   95 percent of TX and at least 95 percent of RX separately on every node.
   Four-port acceptance requires every hsn port to carry at least 5 percent of
-  TX and at least 5 percent of RX separately, with no frozen band widened and
-  with packet, byte, error and drop conservation disclosed. Preserve an
+  TX and at least 5 percent of RX separately, with no frozen band widened. The
+  fatal per-cell conservation guard passes only when packet and byte totals,
+  after documented header and offload normalization, reconcile to within 2
+  percent of the larger nonzero opposite-end total and error and drop deltas
+  are exactly zero. Any miss voids that cell before routing scoring. Preserve an
   explicit uncontrolled capture path and prove its submitted bytes unchanged.
   Also make the NCCL wheel finder architecture aware and select a Python 3.7+
   interpreter portably on login and compute nodes so the supported runner

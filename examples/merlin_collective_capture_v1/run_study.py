@@ -4,8 +4,8 @@
 The runner reads the append-only evidence in place, verifies its submitted-source
 and normalization hashes, evaluates the immutable C, R, L and W families, and
 emits the tracked record and CSV. Set ``SIMLLM_TRAF77_EVIDENCE_ROOT`` or pass
-``--evidence-root``. A correct run exits zero even though FG-2 makes the frozen
-campaign run state void.
+``--evidence-root``. A correct run exits zero after publishing FG-2 at its
+frozen cell scope; only an FG-4 miss makes the campaign run state void.
 """
 
 from __future__ import annotations
@@ -115,6 +115,7 @@ def _source_manifest() -> list[dict[str, str]]:
         STUDY_DIR / "pre_capture_addendum.md",
         STUDY_DIR / "RUNBOOK.md",
         CONFIG_PATH,
+        HARNESS_DIR / "analyze_capture.py",
         Path(__file__).resolve(),
     )
     return [
@@ -292,7 +293,7 @@ def _attempt_wall(root: Path, normalized: dict[str, Any]) -> dict[str, Any]:
 
 
 def _counter_rows(
-    root: Path, normalized: dict[str, Any]
+    root: Path, normalized: dict[str, Any], config: dict[str, Any]
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     rows = []
     summaries = []
@@ -373,14 +374,36 @@ def _counter_rows(
             projected_tx = measured_tx * warmup_scale
             tx_port = max(ports, key=lambda row: row["tx_delta_bytes"])["port"]
             rx_port = max(ports, key=lambda row: row["rx_delta_bytes"])["port"]
+            routing_directions = {
+                direction: _directional_routing_status(
+                    attempt["routing_proof"]["concentration"],
+                    {
+                        row["port"]: int(row[f"{direction}_delta_bytes"])
+                        for row in ports
+                    },
+                    config,
+                    enough_signal=(tx_bytes + rx_bytes)
+                    >= int(config["routing_proof"]["minimum_total_delta_bytes"]),
+                )
+                for direction in ("tx", "rx")
+            }
+            routing_direction_statuses = {
+                row["status"] for row in routing_directions.values()
+            }
+            if "CONTRADICTED" in routing_direction_statuses:
+                node_routing_status = "CONTRADICTED"
+            elif routing_direction_statuses == {"PROVEN"}:
+                node_routing_status = "PROVEN"
+            else:
+                node_routing_status = "INSUFFICIENT-SIGNAL"
             summaries.append(
                 {
                     "attempt_id": attempt_id,
                     "declared_concentration": attempt["routing_proof"][
                         "concentration"
                     ],
-                    "attempt_routing_status": attempt["routing_proof"]["status"],
                     "node": node,
+                    "node_routing_status": node_routing_status,
                     "tx_total_bytes": tx_bytes,
                     "rx_total_bytes": rx_bytes,
                     "tx_over_rx_bytes": tx_bytes / rx_bytes,
@@ -398,6 +421,7 @@ def _counter_rows(
                         row["rx_delta_bytes"] for row in ports if row["port"] == rx_port
                     )
                     / rx_bytes,
+                    "directional_routing": routing_directions,
                     "measured_cell_rx_sum_bytes": measured_rx,
                     "measured_cell_tx_sum_bytes": measured_tx,
                     "warmup_scale": warmup_scale,
@@ -418,6 +442,131 @@ def _counter_rows(
                 }
             )
     return rows, summaries
+
+
+def _directional_routing_status(
+    concentration: str,
+    traffic: dict[str, int],
+    config: dict[str, Any],
+    *,
+    enough_signal: bool,
+) -> dict[str, Any]:
+    """Evaluate one direction against the declared concentration."""
+
+    rule = config["routing_proof"]
+    total = sum(traffic.values())
+    fractions = {
+        port: traffic.get(port, 0) / total if total else 0.0 for port in PORTS
+    }
+    if concentration == "one-port":
+        matches = fractions["hsn0"] >= float(
+            rule["one_port_primary_min_fraction"]
+        )
+    else:
+        matches = all(
+            fractions[port] >= float(rule["four_port_each_min_fraction"])
+            for port in PORTS
+        )
+    return {
+        "status": (
+            "INSUFFICIENT-SIGNAL"
+            if not enough_signal
+            else ("PROVEN" if matches else "CONTRADICTED")
+        ),
+        "total_delta_bytes": total,
+        "fractions": fractions,
+    }
+
+
+def _cell_routing(normalized: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
+    """Recompute FG-2 from immutable per-cell deltas, with TX and RX separate."""
+
+    rows = []
+    for cell in normalized["normalized_rows"]:
+        node_observations = {}
+        for node, node_row in sorted(cell["per_cell_port_deltas"].items()):
+            traffic = {
+                direction: {
+                    port: int(node_row["ports"][port][f"{direction}_delta_bytes"])
+                    for port in PORTS
+                }
+                for direction in ("tx", "rx")
+            }
+            pooled_total = sum(
+                sum(direction_values.values())
+                for direction_values in traffic.values()
+            )
+            enough_signal = pooled_total >= int(
+                config["routing_proof"]["minimum_total_delta_bytes"]
+            )
+            directions = {
+                direction: _directional_routing_status(
+                    str(cell["concentration"]),
+                    values,
+                    config,
+                    enough_signal=enough_signal,
+                )
+                for direction, values in traffic.items()
+            }
+            direction_statuses = {row["status"] for row in directions.values()}
+            if "CONTRADICTED" in direction_statuses:
+                status = "CONTRADICTED"
+            elif directions and direction_statuses == {"PROVEN"}:
+                status = "PROVEN"
+            else:
+                status = "INSUFFICIENT-SIGNAL"
+            node_observations[node] = {
+                "status": status,
+                "total_rx_plus_tx_delta_bytes": pooled_total,
+                "directions": directions,
+            }
+        node_statuses = {row["status"] for row in node_observations.values()}
+        if "CONTRADICTED" in node_statuses:
+            status = "CONTRADICTED"
+        elif node_observations and node_statuses == {"PROVEN"}:
+            status = "PROVEN"
+        else:
+            status = "INSUFFICIENT-SIGNAL"
+        rows.append(
+            {
+                "cell_id": cell["cell_id"],
+                "attempt_id": cell["attempt_id"],
+                "status": status,
+                "nodes": node_observations,
+            }
+        )
+    counts = Counter(row["status"] for row in rows)
+    return {
+        "scope": "per cell and per direction",
+        "signal_scope": "node-level TX-plus-RX total",
+        "minimum_total_delta_bytes": int(
+            config["routing_proof"]["minimum_total_delta_bytes"]
+        ),
+        "status_counts": {
+            status: counts[status]
+            for status in ("CONTRADICTED", "INSUFFICIENT-SIGNAL", "PROVEN")
+        },
+        "rows": rows,
+    }
+
+
+def _published_cell_routing(cell_routing: dict[str, Any]) -> dict[str, Any]:
+    """Project corrected cell verdicts without duplicating immutable counters."""
+
+    return {
+        "scope": cell_routing["scope"],
+        "signal_scope": cell_routing["signal_scope"],
+        "minimum_total_delta_bytes": cell_routing["minimum_total_delta_bytes"],
+        "status_counts": cell_routing["status_counts"],
+        "cell_ids_by_status": {
+            status: [
+                row["cell_id"]
+                for row in cell_routing["rows"]
+                if row["status"] == status
+            ]
+            for status in ("CONTRADICTED", "INSUFFICIENT-SIGNAL", "PROVEN")
+        },
+    }
 
 
 def _parse_nccl_attempt(attempt_dir: Path) -> dict[str, Any]:
@@ -529,8 +678,10 @@ def _nccl_mechanism(root: Path, normalized: dict[str, Any]) -> dict[str, Any]:
             "Opposite-node packet totals agree closely and every captured error and "
             "drop delta is zero, while TX byte counters average about 7.6 to 7.9 "
             "KiB per packet and RX byte counters average about 0.73 to 0.75 KiB per "
-            "packet. The roughly tenfold byte asymmetry is therefore a counter-"
-            "semantics mismatch, not evidence for tenfold wire retransmission."
+            "packet. Linux TX and RX byte fields are therefore not symmetric "
+            "wire-byte authorities. The ip-link packet and error counters cannot "
+            "exclude retransmission below the offload accounting boundary, and the "
+            "exact byte-field semantics remain unexplained."
         ),
         "inference": (
             "NCCL_SOCKET_IFNAME selected the local socket address and advertised "
@@ -587,7 +738,21 @@ def _direction_cell_ids(identifier: str, row: dict[str, Any]) -> list[str]:
     return [row["cell_id"]]
 
 
-def _family_r(normalized: dict[str, Any]) -> dict[str, Any]:
+def _routing_family_status(rows: list[dict[str, Any]]) -> str:
+    scoreable = [row for row in rows if row["status"] in {"PASS", "REFUTED"}]
+    if scoreable:
+        return "REFUTED" if any(row["status"] == "REFUTED" for row in scoreable) else "PASS"
+    if any(row["status"] == "UNEVALUABLE" for row in rows):
+        return "UNEVALUABLE"
+    return "VOID"
+
+
+def _family_r(
+    normalized: dict[str, Any], cell_routing: dict[str, Any]
+) -> dict[str, Any]:
+    cell_status = {
+        row["cell_id"]: row["status"] for row in cell_routing["rows"]
+    }
     outcomes = {}
     all_rows = []
     for evaluation in normalized["directional_evaluations"]:
@@ -595,41 +760,71 @@ def _family_r(normalized: dict[str, Any]) -> dict[str, Any]:
         rows = []
         for index, diagnostic in enumerate(evaluation["rows"], 1):
             cell_ids = _direction_cell_ids(identifier, diagnostic)
+            consumed_statuses = {
+                cell_id: cell_status[cell_id] for cell_id in cell_ids
+            }
+            if "CONTRADICTED" in consumed_statuses.values():
+                status = "VOID"
+                reason = (
+                    "At least one consumed cell contradicts its declared "
+                    "concentration under separate TX and RX evaluation; the frozen "
+                    "rule voids that cell and forbids relabeling"
+                )
+            elif "INSUFFICIENT-SIGNAL" in consumed_statuses.values():
+                status = "UNEVALUABLE"
+                reason = (
+                    "At least one consumed cell moved less than the frozen 1 MiB "
+                    "signal minimum; the row has no routing verdict"
+                )
+            else:
+                status = "PASS" if bool(diagnostic["held"]) else "REFUTED"
+                reason = "Every consumed cell has proven routing concentration"
             row = {
                 "row_id": f"{identifier}-{index:03d}",
-                "status": "VOID",
+                "status": status,
                 "cell_ids": cell_ids,
-                "reason": (
-                    "FG-2 contradicted the declared concentration at attempt scope; "
-                    "the frozen rule voids the consumed cells and forbids relabeling"
-                ),
-                "diagnostic_held_if_fg2_ignored": bool(diagnostic["held"]),
+                "routing_cell_statuses": consumed_statuses,
+                "reason": reason,
+                "diagnostic_held": bool(diagnostic["held"]),
                 "diagnostic": {
                     key: value for key, value in diagnostic.items() if key != "held"
                 },
             }
             rows.append(row)
             all_rows.append(row)
+        scoreable = [row for row in rows if row["status"] in {"PASS", "REFUTED"}]
         outcomes[identifier] = {
             "id": identifier,
-            "status": "VOID",
-            "denominator": None,
-            "void_rows": len(rows),
-            "diagnostic_status_if_fg2_ignored": evaluation["status"],
-            "diagnostic_held_rows_if_fg2_ignored": sum(
-                row["diagnostic_held_if_fg2_ignored"] for row in rows
+            "status": _routing_family_status(rows),
+            "denominator": len(scoreable),
+            "passed": sum(row["status"] == "PASS" for row in scoreable),
+            "refuted": sum(row["status"] == "REFUTED" for row in scoreable),
+            "scoreable_rows": len(scoreable),
+            "void_rows": sum(row["status"] == "VOID" for row in rows),
+            "unevaluable_rows": sum(
+                row["status"] == "UNEVALUABLE" for row in rows
             ),
             "rows": rows,
         }
+    scoreable = [
+        row for row in all_rows if row["status"] in {"PASS", "REFUTED"}
+    ]
     return {
         "id": "R",
         "evidence_class": "behavioral-direction",
-        "status": "VOID",
-        "denominator": None,
-        "void_rows": len(all_rows),
+        "status": _routing_family_status(all_rows),
+        "denominator": len(scoreable),
+        "passed": sum(row["status"] == "PASS" for row in scoreable),
+        "refuted": sum(row["status"] == "REFUTED" for row in scoreable),
+        "scoreable_rows": len(scoreable),
+        "void_rows": sum(row["status"] == "VOID" for row in all_rows),
+        "unevaluable_rows": sum(
+            row["status"] == "UNEVALUABLE" for row in all_rows
+        ),
         "reason": (
-            "FG-2 failed for all four attempts. No E1 through E4 row enters a "
-            "behavioral pass denominator."
+            "FG-2 is applied to each consumed cell. Contradicted cells make a row "
+            "VOID, insufficient-signal cells make it UNEVALUABLE, and only rows "
+            "whose cells are all proven enter the behavioral denominator."
         ),
         "outcomes": outcomes,
     }
@@ -683,12 +878,12 @@ def _fatal_guards(
     sacct_rows: list[dict[str, Any]],
     normalization: dict[str, Any],
     analysis_within_bound: bool,
+    cell_routing: dict[str, Any],
 ) -> dict[str, Any]:
     attempts_complete = all(
         row["state"] == "COMPLETED" and row["exit_code"] == "0:0"
         for row in sacct_rows
     )
-    fg2 = next(row for row in normalized["fatal_guards"] if row["id"] == "FG-2")
     fg4 = next(row for row in normalized["fatal_guards"] if row["id"] == "FG-4")
     ping = _require_file(root, "flagship_ping_and_reply.txt").read_text(
         encoding="utf-8"
@@ -702,12 +897,27 @@ def _fatal_guards(
             "effect": "All compute rows carry Slurm job identity and every submitted-source hash matches across local, remote, and attempt copies.",
         },
         "FG-2": {
-            "status": "PASS" if fg2["held"] else "FAIL",
-            "effect": "The failed concentration proof voids the run and every Family R row. Captured cells are not relabeled.",
+            "status": (
+                "PASS"
+                if cell_routing["status_counts"] == {
+                    "CONTRADICTED": 0,
+                    "INSUFFICIENT-SIGNAL": 0,
+                    "PROVEN": len(cell_routing["rows"]),
+                }
+                else "FAIL"
+            ),
+            "effect": "The concentration proof is cell-scoped. Contradicted cells are VOID for Family R, cells below 1 MiB are UNEVALUABLE, and captured cells are not relabeled.",
+            "scope": "per cell, with TX and RX evaluated separately",
+            "cell_status_counts": cell_routing["status_counts"],
             "contradicted_attempts": [
-                attempt["attempt_id"]
-                for attempt in normalized["attempts"]
-                if attempt["routing_proof"]["status"] == "contradicted"
+                attempt_id
+                for attempt_id in sorted(
+                    {
+                        row["attempt_id"]
+                        for row in cell_routing["rows"]
+                        if row["status"] == "CONTRADICTED"
+                    }
+                )
             ],
         },
         "FG-3": {
@@ -784,7 +994,7 @@ def _csv_rows(
                 {
                     "family": f"R/{identifier}",
                     "row_id": row["row_id"],
-                    "status": "VOID",
+                    "status": row["status"],
                     "cell_ids": ";".join(row["cell_ids"]),
                     "width": diagnostic.get("width", ""),
                     "concentration": diagnostic.get("concentration", ""),
@@ -880,10 +1090,11 @@ def build_outputs(
         raise RuntimeError(f"unexpected submitted jobs: {job_ids}")
     sacct_rows = _sacct_jobs(evidence_root, job_ids)
     attempt_wall = _attempt_wall(evidence_root, normalized)
-    counters, counter_summaries = _counter_rows(evidence_root, normalized)
+    counters, counter_summaries = _counter_rows(evidence_root, normalized, config)
     mechanism = _nccl_mechanism(evidence_root, normalized)
+    cell_routing = _cell_routing(normalized, config)
     family_c = _family_c(normalized)
-    family_r = _family_r(normalized)
+    family_r = _family_r(normalized, cell_routing)
     family_l = _family_l(normalized)
     family_w = _family_w(sacct_rows, attempt_wall, analysis_within_bound)
     families = {"C": family_c, "R": family_r, "L": family_l, "W": family_w}
@@ -894,12 +1105,9 @@ def build_outputs(
         sacct_rows,
         normalization,
         analysis_within_bound,
+        cell_routing,
     )
-    run_state = (
-        "void"
-        if any(row["status"] == "FAIL" for row in fatal_guards.values())
-        else "nonvoid"
-    )
+    run_state = "void" if fatal_guards["FG-4"]["status"] == "FAIL" else "nonvoid"
     deviations = _parse_key_values(
         _require_file(evidence_root, "runbook_deviations.txt")
     )
@@ -910,7 +1118,8 @@ def build_outputs(
         "schema": "simllm-merlin-collective-scored-record-v1",
         "study": "merlin_collective_capture_v1",
         "run_state": run_state,
-        "verdict": "VOID_FG_2_CONCENTRATION_CONTROL_REFUTED",
+        "run_state_rule": "Only FG-4 voids the campaign; FG-2 voids contradicted cells.",
+        "verdict": "NONVOID_FG_2_CELL_SCOPED_CONCENTRATION_CONTROL_REFUTED",
         "evidence_root": {
             "configuration": f"--evidence-root or {EVIDENCE_ENV}",
             "tracked_paths_are_relative_to_evidence_root": True,
@@ -955,13 +1164,14 @@ def build_outputs(
             "source": "ip -s -j link stats64 before/after snapshots",
             "rows": counters,
             "node_summaries": counter_summaries,
+            "cell_routing": _published_cell_routing(cell_routing),
         },
         "mechanism": mechanism,
         "physical_sanity": {
             "coverage_arithmetic": "2 widths * 2 declarations * 4 operations * 22 payloads = 352 cells",
             "serialization_floor": "Every published median is at or above its configured payload-over-declared-port-rate floor.",
             "ladder_sum": "Per-cell RX deltas cover 25 measured repeats. Scaling their sum by 30/25 for five warmups predicts each job-level RX snapshot within the recorded node-summary ratio.",
-            "counter_conservation": "Opposite-node packet totals are close and errors plus drops are zero, while byte totals differ by about tenfold; byte counters cannot be treated as symmetric wire-byte authorities.",
+            "counter_conservation": "Opposite-node packet totals are close and errors plus drops are zero, while byte totals differ by about tenfold. Linux TX and RX byte fields are not symmetric wire-byte authorities; ip-link packet and error counters cannot exclude retransmission below the offload accounting boundary.",
         },
         "task_effect": {
             "TRAF-77": "NARROWED, remains open",
@@ -970,8 +1180,8 @@ def build_outputs(
             "not_changed": "No transport calibration, H200 evidence, switch occupancy, receiver occupancy, queue-wait, buffer high-water, TTFT, or TPOT acceptance clause is satisfied.",
         },
     }
-    if run_state != "void":
-        raise RuntimeError("FG-2 was expected to make the scored run void")
+    if run_state != "nonvoid":
+        raise RuntimeError("FG-4 unexpectedly voided the scored campaign")
     csv_rows = _csv_rows(normalized, families)
     return _json_bytes(record), _csv_bytes(csv_rows)
 
@@ -1025,8 +1235,8 @@ def main(argv: list[str] | None = None) -> int:
     args.csv_output.parent.mkdir(parents=True, exist_ok=True)
     args.record_output.write_bytes(first_record)
     args.csv_output.write_bytes(first_csv)
-    print("run_state=void")
-    print("C=PASS R=VOID L=PASS W=PASS")
+    print("run_state=nonvoid")
+    print("C=PASS R=UNEVALUABLE L=PASS W=PASS")
     return 0
 
 
