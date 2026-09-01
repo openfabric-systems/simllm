@@ -3,6 +3,10 @@
 
 set -euo pipefail
 
+# The site login and compute images default to python 3.6; the manifest
+# tooling needs 3.7 or newer, so select the newest available interpreter.
+PYTHON3="$(command -v python3.12 || command -v python3.11 || command -v python3)"
+
 STAGE="${TRAF77_STAGE_ROOT:?set TRAF77_STAGE_ROOT}"
 DATA_ROOT="${TRAF77_DATA_ROOT:?set TRAF77_DATA_ROOT}"
 NCCL_ROOT="${TRAF77_NCCL_ROOT:?set TRAF77_NCCL_ROOT}"
@@ -34,9 +38,9 @@ trap finish EXIT
 
 [ -f "${CONFIG}" ] || fail "missing study configuration"
 [ -f "${MANIFEST}" ] || fail "missing local submitted-source manifest"
-python3 "${STAGE}/hash_manifest.py" --root "${STAGE}" --check "${MANIFEST}" \
+"${PYTHON3}" "${STAGE}/hash_manifest.py" --root "${STAGE}" --check "${MANIFEST}" \
   || fail "staged source manifest does not match the integrator copy"
-python3 "${STAGE}/hash_manifest.py" --root "${STAGE}" \
+"${PYTHON3}" "${STAGE}/hash_manifest.py" --root "${STAGE}" \
   --output "${OUT}/submitted_scripts.remote.sha256"
 cp "${MANIFEST}" "${OUT}/submitted_scripts.local.sha256"
 cmp "${OUT}/submitted_scripts.local.sha256" \
@@ -48,15 +52,15 @@ while read -r _digest relative; do
   mkdir -p "${OUT}/submitted/$(dirname "${relative}")"
   cp "${STAGE}/${relative}" "${OUT}/submitted/${relative}"
 done < "${MANIFEST}"
-python3 "${OUT}/submitted/hash_manifest.py" --root "${OUT}/submitted" \
+"${PYTHON3}" "${OUT}/submitted/hash_manifest.py" --root "${OUT}/submitted" \
   --check "${MANIFEST}" || fail "attempt source copy failed verification"
 
 SCRIPT_SHA256="$(awk -v name="${SUBMITTED_SCRIPT}" '$2 == name {print $1}' "${MANIFEST}")"
 [ -n "${SCRIPT_SHA256}" ] || fail "submitted script is absent from the manifest"
 CONFIG_SHA256="$(sha256sum "${CONFIG}" | awk '{print $1}')"
-REPEATS="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["measured_repeats"])' "${CONFIG}")"
-WARMUPS="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["excluded_warmups"])' "${CONFIG}")"
-CHUNK_BYTES="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["chunk_limit_bytes"])' "${CONFIG}")"
+REPEATS="$("${PYTHON3}" -c 'import json,sys; print(json.load(open(sys.argv[1]))["measured_repeats"])' "${CONFIG}")"
+WARMUPS="$("${PYTHON3}" -c 'import json,sys; print(json.load(open(sys.argv[1]))["excluded_warmups"])' "${CONFIG}")"
+CHUNK_BYTES="$("${PYTHON3}" -c 'import json,sys; print(json.load(open(sys.argv[1]))["chunk_limit_bytes"])' "${CONFIG}")"
 
 if [ "${SLURM_NTASKS}" != "${WIDTH}" ]; then
   fail "allocation has ${SLURM_NTASKS} tasks for declared width ${WIDTH}"
@@ -149,7 +153,7 @@ srun --ntasks="${SLURM_NTASKS}" "${STAGE}/capture_rank_identity.sh" \
   "${OUT}/rank_identity"
 
 log "snapshotting job-level counters before"
-srun --ntasks-per-node=1 python3 "${STAGE}/snapshot_counters.py" \
+srun --ntasks-per-node=1 "${PYTHON3}" "${STAGE}/snapshot_counters.py" \
   --out-dir "${OUT}/counter_snapshots" --tag before \
   --net-class-root /sys/class/net --interfaces hsn0 hsn1 hsn2 hsn3
 
@@ -176,7 +180,7 @@ lane_status=$?
 set -e
 
 log "snapshotting job-level counters after"
-srun --ntasks-per-node=1 python3 "${STAGE}/snapshot_counters.py" \
+srun --ntasks-per-node=1 "${PYTHON3}" "${STAGE}/snapshot_counters.py" \
   --out-dir "${OUT}/counter_snapshots" --tag after \
   --net-class-root /sys/class/net --interfaces hsn0 hsn1 hsn2 hsn3 \
   || true
