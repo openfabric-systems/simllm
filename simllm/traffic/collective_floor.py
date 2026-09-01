@@ -23,6 +23,11 @@ from dataclasses import dataclass
 from fractions import Fraction
 from itertools import combinations, pairwise
 
+from simllm.core.step import (
+    CollectiveServiceEnvironment,
+    CollectiveServiceInvocation,
+)
+
 COLLECTIVE_FLOOR_CALIBRATED = "calibrated"
 COLLECTIVE_FLOOR_TRANSFERRED = "transferred-at-use"
 COLLECTIVE_FLOOR_EVIDENCE_CLASSES = (
@@ -34,6 +39,14 @@ COLLECTIVE_FLOOR_DTYPE_WIDTH_BYTES: Mapping[str, int] = {
     "half": 2,
     "int8": 1,
 }
+
+
+class CollectiveFloorEnvironmentMismatchError(ValueError):
+    """Raised when in-situ service and floor environments differ by default."""
+
+
+class CollectiveServiceFloorTransferError(ValueError):
+    """Raised when an in-situ comparison would consume a transferred floor."""
 
 
 def _require_nonblank(name: str, value: object) -> str:
@@ -69,9 +82,7 @@ def source_elements_for_bytes(dtype: str, message_bytes: int) -> int:
         raise ValueError(f"unsupported collective-floor dtype {dtype!r}") from error
     elements, remainder = divmod(message_bytes, width)
     if remainder:
-        raise ValueError(
-            f"message_bytes {message_bytes} is not divisible by {dtype} width {width}"
-        )
+        raise ValueError(f"message_bytes {message_bytes} is not divisible by {dtype} width {width}")
     return elements
 
 
@@ -91,8 +102,7 @@ class CollectiveFloorSourceIdentity:
 
     def __post_init__(self) -> None:
         if len(self.artifact_sha256) != 64 or any(
-            character not in "0123456789abcdef"
-            for character in self.artifact_sha256
+            character not in "0123456789abcdef" for character in self.artifact_sha256
         ):
             raise ValueError("artifact_sha256 must be a lowercase SHA-256 digest")
         for name in (
@@ -146,9 +156,7 @@ class CollectiveFloorCell:
         try:
             width = COLLECTIVE_FLOOR_DTYPE_WIDTH_BYTES[self.dtype]
         except KeyError as error:
-            raise ValueError(
-                f"unsupported collective-floor dtype {self.dtype!r}"
-            ) from error
+            raise ValueError(f"unsupported collective-floor dtype {self.dtype!r}") from error
         if self.message_bytes != self.source_elements * width:
             raise ValueError("message_bytes disagrees with source elements and dtype")
 
@@ -213,10 +221,7 @@ class CollectiveFloorRegime:
         _require_int("upper_bytes", self.upper_bytes, minimum=self.lower_bytes)
         if not isinstance(self.floor_ps, Fraction) or self.floor_ps <= 0:
             raise ValueError("floor_ps must be a positive Fraction")
-        if (
-            not isinstance(self.slope_ps_per_byte, Fraction)
-            or self.slope_ps_per_byte <= 0
-        ):
+        if not isinstance(self.slope_ps_per_byte, Fraction) or self.slope_ps_per_byte <= 0:
             raise ValueError("slope_ps_per_byte must be a positive Fraction")
         object.__setattr__(self, "training_cell_ids", tuple(self.training_cell_ids))
         if len(self.training_cell_ids) < 2:
@@ -311,6 +316,82 @@ class CollectiveFloorEstimate:
 
 
 @dataclass(frozen=True)
+class CollectiveServiceFloorComparison:
+    """One exact-coordinate comparison of observed service with its floor."""
+
+    invocation: CollectiveServiceInvocation
+    environment: CollectiveServiceEnvironment
+    estimate: CollectiveFloorEstimate
+    residual_ps: int
+    observed_to_floor_ratio: Fraction
+    cross_environment_acknowledged: bool
+    transferred_at_use_acknowledged: bool
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.invocation, CollectiveServiceInvocation):
+            raise TypeError("invocation must be a CollectiveServiceInvocation")
+        if not isinstance(self.environment, CollectiveServiceEnvironment):
+            raise TypeError("environment must be a CollectiveServiceEnvironment")
+        if not isinstance(self.estimate, CollectiveFloorEstimate):
+            raise TypeError("estimate must be a CollectiveFloorEstimate")
+        if type(self.residual_ps) is not int:
+            raise TypeError("residual_ps must be an integer")
+        if not isinstance(self.observed_to_floor_ratio, Fraction):
+            raise TypeError("observed_to_floor_ratio must be a Fraction")
+        for name in (
+            "cross_environment_acknowledged",
+            "transferred_at_use_acknowledged",
+        ):
+            if type(getattr(self, name)) is not bool:
+                raise TypeError(f"{name} must be a boolean")
+        if self.invocation.kind != self.estimate.requested_operation:
+            raise ValueError("collective kind disagrees with floor operation")
+        if self.invocation.payload_bytes != self.estimate.message_bytes:
+            raise ValueError("collective payload disagrees with floor byte coordinate")
+        if self.invocation.world_size != self.estimate.requested_ranks:
+            raise ValueError("collective world size disagrees with floor rank coordinate")
+        if self.residual_ps != (self.invocation.service_ps - self.estimate.completion_ps):
+            raise ValueError("residual_ps disagrees with observation and floor")
+        expected_ratio = Fraction(self.invocation.service_ps, self.estimate.completion_ps)
+        if self.observed_to_floor_ratio != expected_ratio:
+            raise ValueError("observed_to_floor_ratio is inconsistent")
+        environment_differs = (
+            self.environment.system,
+            self.environment.backend,
+        ) != (self.estimate.source.system, self.estimate.source.backend)
+        if self.cross_environment_acknowledged != environment_differs:
+            raise ValueError("cross-environment use requires an acknowledgement stamp")
+        estimate_transferred = self.estimate.evidence_class == COLLECTIVE_FLOOR_TRANSFERRED
+        if self.transferred_at_use_acknowledged != estimate_transferred:
+            raise ValueError("transferred-at-use floor requires an acknowledgement stamp")
+
+    def as_dict(self) -> dict[str, object]:
+        """Return the score and both acknowledgement stamps as JSON-ready data."""
+
+        return {
+            "sequence": self.invocation.sequence,
+            "kind": self.invocation.kind,
+            "payload_bytes": self.invocation.payload_bytes,
+            "world_size": self.invocation.world_size,
+            "observed_service_ps": self.invocation.service_ps,
+            "floor_completion_ps": self.estimate.completion_ps,
+            "residual_ps": self.residual_ps,
+            "observed_to_floor_ratio": _fraction_text(self.observed_to_floor_ratio),
+            "capture_environment": {
+                "system": self.environment.system,
+                "backend": self.environment.backend,
+            },
+            "floor_environment": {
+                "system": self.estimate.source.system,
+                "backend": self.estimate.source.backend,
+            },
+            "cross_environment_acknowledged": (self.cross_environment_acknowledged),
+            "transferred_at_use_acknowledged": (self.transferred_at_use_acknowledged),
+            "estimate": self.estimate.as_dict(),
+        }
+
+
+@dataclass(frozen=True)
 class CollectiveFloorCalibration:
     """Immutable piecewise aggregate completion authority."""
 
@@ -329,14 +410,9 @@ class CollectiveFloorCalibration:
         _require_nonblank("calibration_id", self.calibration_id)
         if not isinstance(self.source, CollectiveFloorSourceIdentity):
             raise TypeError("source must be a CollectiveFloorSourceIdentity")
-        if (
-            not isinstance(self.fitted_byte_range, tuple)
-            or len(self.fitted_byte_range) != 2
-        ):
+        if not isinstance(self.fitted_byte_range, tuple) or len(self.fitted_byte_range) != 2:
             raise TypeError("fitted_byte_range must be a two-item tuple")
-        minimum = _require_int(
-            "fitted_byte_range[0]", self.fitted_byte_range[0], minimum=1
-        )
+        minimum = _require_int("fitted_byte_range[0]", self.fitted_byte_range[0], minimum=1)
         _require_int("fitted_byte_range[1]", self.fitted_byte_range[1], minimum=minimum)
         object.__setattr__(self, "regimes", tuple(self.regimes))
         object.__setattr__(self, "input_surface", tuple(self.input_surface))
@@ -417,19 +493,14 @@ class CollectiveFloorCalibration:
 
         transfer_reasons = []
         if requested_key != donor_key:
-            transfer_reasons.append(
-                f"requested curve {requested_key!r} uses donor {donor_key!r}"
-            )
+            transfer_reasons.append(f"requested curve {requested_key!r} uses donor {donor_key!r}")
         minimum, maximum = self.fitted_byte_range
         if not minimum <= message_bytes <= maximum:
             transfer_reasons.append(
-                f"message_bytes {message_bytes} is outside fitted range "
-                f"[{minimum}, {maximum}]"
+                f"message_bytes {message_bytes} is outside fitted range [{minimum}, {maximum}]"
             )
         evidence_class = (
-            COLLECTIVE_FLOOR_TRANSFERRED
-            if transfer_reasons
-            else COLLECTIVE_FLOOR_CALIBRATED
+            COLLECTIVE_FLOOR_TRANSFERRED if transfer_reasons else COLLECTIVE_FLOOR_CALIBRATED
         )
         return CollectiveFloorEstimate(
             calibration_id=self.calibration_id,
@@ -445,6 +516,71 @@ class CollectiveFloorCalibration:
             source=self.source,
             regime=regime,
         )
+
+
+def compare_collective_service_to_floor(
+    *,
+    invocation: CollectiveServiceInvocation,
+    environment: CollectiveServiceEnvironment,
+    calibration: CollectiveFloorCalibration,
+    floor_dtype: str,
+    acknowledge_cross_environment: bool = False,
+    acknowledge_floor_transfer: bool = False,
+) -> CollectiveServiceFloorComparison:
+    """Score one observation at matching kind, byte and rank coordinates.
+
+    System/backend disagreement and the aggregate authority's existing
+    transferred-at-use state are separate refusal surfaces. Each deliberate
+    override is stamped into the returned comparison record.
+    """
+
+    if not isinstance(invocation, CollectiveServiceInvocation):
+        raise TypeError("invocation must be a CollectiveServiceInvocation")
+    if not isinstance(environment, CollectiveServiceEnvironment):
+        raise TypeError("environment must be a CollectiveServiceEnvironment")
+    if not isinstance(calibration, CollectiveFloorCalibration):
+        raise TypeError("calibration must be a CollectiveFloorCalibration")
+    _require_nonblank("floor_dtype", floor_dtype)
+    if type(acknowledge_cross_environment) is not bool:
+        raise TypeError("acknowledge_cross_environment must be a boolean")
+    if type(acknowledge_floor_transfer) is not bool:
+        raise TypeError("acknowledge_floor_transfer must be a boolean")
+
+    environment_differs = (environment.system, environment.backend) != (
+        calibration.source.system,
+        calibration.source.backend,
+    )
+    if environment_differs and not acknowledge_cross_environment:
+        raise CollectiveFloorEnvironmentMismatchError(
+            "in-situ collective comparison refuses capture environment "
+            f"{(environment.system, environment.backend)!r} against floor "
+            f"environment {(calibration.source.system, calibration.source.backend)!r}. "
+            "Pass acknowledge_cross_environment=True only for a deliberate "
+            "cross-environment diagnostic."
+        )
+
+    estimate = calibration.estimate(
+        dtype=floor_dtype,
+        operation=invocation.kind,
+        ranks=invocation.world_size,
+        message_bytes=invocation.payload_bytes,
+    )
+    estimate_transferred = estimate.evidence_class == COLLECTIVE_FLOOR_TRANSFERRED
+    if estimate_transferred and not acknowledge_floor_transfer:
+        raise CollectiveServiceFloorTransferError(
+            "in-situ collective comparison refuses transferred-at-use floor "
+            f"estimate: {estimate.transfer_reason}. Pass "
+            "acknowledge_floor_transfer=True only for a deliberate transferred run."
+        )
+    return CollectiveServiceFloorComparison(
+        invocation=invocation,
+        environment=environment,
+        estimate=estimate,
+        residual_ps=invocation.service_ps - estimate.completion_ps,
+        observed_to_floor_ratio=Fraction(invocation.service_ps, estimate.completion_ps),
+        cross_environment_acknowledged=environment_differs,
+        transferred_at_use_acknowledged=estimate_transferred,
+    )
 
 
 def _weighted_relative_fit(
@@ -465,17 +601,11 @@ def _weighted_relative_fit(
         Fraction(),
     )
     sum_wxx = sum(
-        (
-            weight * cell.message_bytes * cell.message_bytes
-            for weight, cell in zip(weights, cells)
-        ),
+        (weight * cell.message_bytes * cell.message_bytes for weight, cell in zip(weights, cells)),
         Fraction(),
     )
     sum_wxy = sum(
-        (
-            weight * cell.message_bytes * cell.latency_ps
-            for weight, cell in zip(weights, cells)
-        ),
+        (weight * cell.message_bytes * cell.latency_ps for weight, cell in zip(weights, cells)),
         Fraction(),
     )
     denominator = sum_w * sum_wxx - sum_wx * sum_wx
@@ -484,11 +614,7 @@ def _weighted_relative_fit(
     slope = (sum_w * sum_wxy - sum_wx * sum_wy) / denominator
     floor = (sum_wy - slope * sum_wx) / sum_w
     relative_sse = sum(
-        (
-            (floor + slope * cell.message_bytes - cell.latency_ps)
-            / cell.latency_ps
-        )
-        ** 2
+        ((floor + slope * cell.message_bytes - cell.latency_ps) / cell.latency_ps) ** 2
         for cell in cells
     )
     return floor, slope, relative_sse
@@ -517,17 +643,12 @@ def choose_collective_floor_boundaries(
         for cuts in combinations(range(1, count), regime_count - 1):
             starts = (0, *cuts)
             ends = (*cuts, count)
-            if any(
-                end - start < minimum_cells_per_regime
-                for start, end in zip(starts, ends)
-            ):
+            if any(end - start < minimum_cells_per_regime for start, end in zip(starts, ends)):
                 continue
             relative_sse = Fraction()
             positive = True
             for start, end in zip(starts, ends):
-                floor, slope, segment_sse = _weighted_relative_fit(
-                    ordered[start:end]
-                )
+                floor, slope, segment_sse = _weighted_relative_fit(ordered[start:end])
                 if floor <= 0 or slope <= 0:
                     positive = False
                     break
@@ -571,14 +692,10 @@ def fit_collective_floor_calibration(
             raise ValueError(f"duplicate training cell ID {cell.cell_id!r}")
         cell_ids.add(cell.cell_id)
         grouped[cell.curve_key].append(cell)
-    boundary_by_key: dict[
-        tuple[str, str, int], CollectiveFloorCurveBoundaries
-    ] = {}
+    boundary_by_key: dict[tuple[str, str, int], CollectiveFloorCurveBoundaries] = {}
     for boundary in boundaries:
         if not isinstance(boundary, CollectiveFloorCurveBoundaries):
-            raise TypeError(
-                "boundaries must contain CollectiveFloorCurveBoundaries values"
-            )
+            raise TypeError("boundaries must contain CollectiveFloorCurveBoundaries values")
         if boundary.curve_key in boundary_by_key:
             raise ValueError(f"duplicate boundary curve {boundary.curve_key!r}")
         boundary_by_key[boundary.curve_key] = boundary
@@ -608,9 +725,7 @@ def fit_collective_floor_calibration(
             training = curve[start:end]
             floor, slope, _ = _weighted_relative_fit(training)
             if floor <= 0 or slope <= 0:
-                raise ValueError(
-                    f"curve {key!r} regime {regime_index} does not fit positive terms"
-                )
+                raise ValueError(f"curve {key!r} regime {regime_index} does not fit positive terms")
             regimes.append(
                 CollectiveFloorRegime(
                     dtype=key[0],
@@ -641,10 +756,7 @@ def distribute_collective_serialization_ps(
     serialization_ps = _require_int("serialization_ps", serialization_ps)
     phase_count = _require_int("phase_count", phase_count, minimum=1)
     quotient, remainder = divmod(serialization_ps, phase_count)
-    return tuple(
-        quotient + (1 if index < remainder else 0)
-        for index in range(phase_count)
-    )
+    return tuple(quotient + (1 if index < remainder else 0) for index in range(phase_count))
 
 
 __all__ = [
