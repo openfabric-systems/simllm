@@ -205,8 +205,8 @@ void toCProfile(const RnicHwProfile& profile, rnic_cm_profile* out) {
 bool sameProfileValues(RnicHwProfile lhs, RnicHwProfile rhs) {
     lhs.name = "fingerprint";
     rhs.name = "fingerprint";
-    lhs.derived_from = "";
-    rhs.derived_from = "";
+    lhs.derived_from = "base";
+    rhs.derived_from = "base";
     lhs.evidence = simllm::rnic::RnicHwProfileEvidence{};
     rhs.evidence = simllm::rnic::RnicHwProfileEvidence{};
     try {
@@ -246,7 +246,11 @@ RnicHwProfile valuesFromCProfile(const rnic_cm_profile& source) {
     RnicHwProfile profile;
     profile.version = source.version;
     profile.name = "";
-    profile.derived_from = "";
+    // Caller-supplied identity strings are not carried into the native
+    // profile, whose identity is static storage. A derived parameter set
+    // keeps its factor and names an unnamed base rather than failing
+    // validation for a missing string.
+    profile.derived_from = source.derived_link_factor != 0 ? "unnamed" : "";
     profile.derived_link_factor = source.derived_link_factor;
     profile.link_bps = source.link_bps;
     profile.goodput_bps = source.goodput_bps;
@@ -426,12 +430,6 @@ rnic_cm_device* rnic_cm_create(
     if (config->version != SIMLLM_RNIC_CM_ABI_VERSION) {
         return nullptr;
     }
-    if (config->packetization != 0) {
-        // The transmit pipeline is BACK-55. Refusing is the honest answer;
-        // silently running the flow-extent path under a packetized request
-        // would report packet timing that was never modelled.
-        return nullptr;
-    }
     try {
         auto handle = std::make_unique<rnic_cm_device>();
         handle->profile = fromCProfile(*profile);
@@ -475,9 +473,36 @@ rnic_cm_device* rnic_cm_create(
             handle->profile.cqe_write_service_ps;
         device_config.network.enabled = true;
 
+        const std::uint64_t operating_mtu = config->mtu_bytes != 0
+            ? config->mtu_bytes
+            : handle->profile.mtu_bytes;
+        if (handle->packetized) {
+            simllm::rnic::RnicTxPipelineConfig pipeline;
+            pipeline.enabled = true;
+            pipeline.mtu_bytes = operating_mtu;
+            pipeline.wire_header_bytes = handle->profile.wire_header_bytes;
+            pipeline.max_inflight_wqes = config->max_inflight_wqes != 0
+                ? config->max_inflight_wqes
+                : config->sq_depth;
+            pipeline.max_inflight_bytes = config->max_inflight_bytes;
+            pipeline.max_inflight_packets =
+                handle->profile.max_inflight_packets;
+            // The pacer runs at the rate that makes a full calibration-MTU
+            // packet deliver exactly the profile's goodput, so the header
+            // bytes are paid once, here.
+            const std::uint64_t wire_bps =
+                simllm::rnic::effectiveWireBps(handle->profile);
+            pipeline.wire_bps_per_qp = wire_bps;
+            pipeline.wire_bps_per_nic = wire_bps;
+            pipeline.message_rate_per_qp = handle->profile.tx_pps_per_qp;
+            pipeline.message_rate_per_nic = handle->profile.tx_pps_per_nic;
+            device_config.network.abi_version = kNetworkPortAbiVersionV2;
+            device_config.network.packetization = pipeline;
+        }
+
         handle->port = std::make_unique<CapturePort>(
             handle->packetized,
-            handle->profile.mtu_bytes,
+            operating_mtu,
             handle->profile.wire_header_bytes);
         RnicDeviceAttachments attachments;
         attachments.network_port = handle->port.get();
@@ -871,6 +896,20 @@ int rnic_cm_counters(rnic_cm_device* device, rnic_cm_counter_set* out) {
         static_cast<std::uint64_t>(counters.sq_high_watermark);
     out->cq_high_watermark =
         static_cast<std::uint64_t>(counters.cq_high_watermark);
+    const simllm::rnic::RnicTxPipeline* pipeline =
+        device->device->txPipeline();
+    if (pipeline != nullptr) {
+        const auto& tx = pipeline->counters();
+        out->tx_packets = tx.packets_issued;
+        out->tx_payload_bytes = tx.payload_bytes;
+        out->tx_wire_bytes = tx.wire_bytes;
+        out->tx_window_stalls = tx.window_stalls;
+        out->tx_pacer_stalls = tx.pacer_stalls;
+        out->tx_inflight_wqes = tx.inflight_wqes;
+        out->tx_inflight_bytes = tx.inflight_bytes;
+        out->tx_late_releases = tx.late_releases;
+        out->tx_packets_dropped = tx.packets_dropped;
+    }
     return RNIC_CM_OK;
 }
 

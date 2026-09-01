@@ -13,10 +13,13 @@
 #include <string>
 #include <vector>
 
+#include "fake_network.h"
+
 #include "simllm/rnic/rnic_anomaly_table.h"
 #include "simllm/rnic/rnic_cmodel_c.h"
 #include "simllm/rnic/rnic_device.h"
 #include "simllm/rnic/rnic_hw_profile.h"
+#include "simllm/rnic/rnic_tx_pipeline.h"
 #include "simllm/rnic/session_record.h"
 
 namespace {
@@ -391,6 +394,15 @@ std::vector<CompletionRow> runFacade(
     return rows;
 }
 
+// Built from a separator character rather than a literal so no tracked source
+// carries something that reads as an absolute path.
+std::string joinPath(const std::string& directory, const std::string& name) {
+    if (directory.empty()) {
+        return name;
+    }
+    return directory + '/' + name;
+}
+
 std::string readFile(const std::string& path) {
     std::ifstream stream(path, std::ios::binary);
     if (!stream.is_open()) {
@@ -590,7 +602,249 @@ void testAnomalyTable(
     }
 }
 
-void testFacade(TestRunner& test) {
+struct PipelineRun {
+    Picoseconds last_completion_ps{0};
+    std::uint64_t completions{0};
+    std::uint64_t errors{0};
+    std::uint64_t packets{0};
+    std::uint64_t packets_dropped{0};
+    std::uint64_t payload_bytes{0};
+    std::uint64_t wire_bytes{0};
+    std::uint64_t late_releases{0};
+    Picoseconds first_packet_ps{0};
+    Picoseconds last_packet_ps{0};
+};
+
+// Drives one closed-loop cell through the device with the transmit pipeline
+// enabled and the v2 fake wire behind it.
+PipelineRun runPipeline(
+    const RnicHwProfile& profile,
+    std::uint64_t message_bytes,
+    std::size_t depth,
+    std::uint64_t mtu_bytes,
+    std::uint64_t messages,
+    bool drop_first_packet) {
+    simllm::rnic::testing::FakeV2NetworkConfig wire_config;
+    wire_config.link_bps = profile.link_bps;
+    wire_config.one_way_latency_ps = profile.wire_round_trip_floor_ps / 2;
+    wire_config.capacity = 1 << 20;
+    simllm::rnic::testing::FakeV2NetworkPort wire(wire_config);
+    wire.setWireHeaderBytes(profile.wire_header_bytes);
+    if (drop_first_packet) {
+        wire.dropNext();
+    }
+
+    RnicDeviceConfig config;
+    config.identity.qpn = kQpn;
+    config.identity.policy_context_token = kPolicyToken;
+    config.work_queue.qpn = kQpn;
+    config.work_queue.policy_context_token = kPolicyToken;
+    config.work_queue.sq_depth = depth;
+    config.work_queue.cq_depth = depth * 2;
+    config.work_queue.doorbell_service_ps = profile.doorbell_service_ps;
+    config.work_queue.wqe_fetch_service_ps = profile.wqe_fetch_service_ps;
+    config.work_queue.qpc_lookup_service_ps = profile.qpc_lookup_service_ps;
+    config.work_queue.scheduler_service_ps = profile.scheduler_service_ps;
+    config.work_queue.cqe_write_service_ps = profile.cqe_write_service_ps;
+    config.network.enabled = true;
+    config.network.abi_version = simllm::rnic::kNetworkPortAbiVersionV2;
+    config.network.packetization.enabled = true;
+    config.network.packetization.mtu_bytes = mtu_bytes;
+    config.network.packetization.wire_header_bytes = profile.wire_header_bytes;
+    config.network.packetization.max_inflight_wqes = depth;
+    const std::uint64_t wire_bps = simllm::rnic::effectiveWireBps(profile);
+    config.network.packetization.wire_bps_per_qp = wire_bps;
+    config.network.packetization.wire_bps_per_nic = wire_bps;
+    config.network.packetization.message_rate_per_qp = profile.tx_pps_per_qp;
+    config.network.packetization.message_rate_per_nic = profile.tx_pps_per_nic;
+    RnicDeviceAttachments attachments;
+    attachments.network_port = &wire;
+    RnicDevice device(config, attachments);
+
+    PipelineRun run;
+    std::uint64_t next_wr = 1;
+    Picoseconds now_ps = 0;
+    std::size_t guard = 0;
+    while (run.completions + run.errors < messages) {
+        if (++guard > 4000000) {
+            throw std::runtime_error("pipeline loop did not converge");
+        }
+        for (const NetworkEvent& event : wire.takeDue(now_ps)) {
+            device.onNetworkEvent(event);
+        }
+        bool posted = false;
+        while (next_wr <= messages && device.occupiedSqEntries() < depth) {
+            WorkRequest request;
+            request.wr_id = next_wr;
+            request.destination = 3;
+            request.payload_bytes = message_bytes;
+            request.signaled = true;
+            if (device.postSend(request, now_ps).status
+                != PostStatus::Accepted) {
+                break;
+            }
+            ++next_wr;
+            posted = true;
+        }
+        if (posted) {
+            device.ringDoorbell(now_ps);
+        }
+        device.progress(now_ps);
+        for (const CompletionEntry& entry : device.pollCompletionQueue(
+                 std::numeric_limits<std::size_t>::max(), now_ps)) {
+            if (entry.status == simllm::rnic::CompletionStatus::Success) {
+                ++run.completions;
+            } else {
+                ++run.errors;
+            }
+            run.last_completion_ps = entry.polled_at_ps;
+        }
+        const auto next = earlier(device.nextEventTime(), wire.nextEventTime());
+        if (!next.has_value()) {
+            // The endpoint is idle. If work is still waiting to be posted,
+            // the next stimulus is the post itself, at this same timestamp.
+            if (next_wr <= messages) {
+                continue;
+            }
+            break;
+        }
+        now_ps = std::max(now_ps, *next);
+    }
+    device.validateInvariants();
+
+    const simllm::rnic::RnicTxPipeline* pipeline = device.txPipeline();
+    run.packets = pipeline->counters().packets_issued;
+    run.packets_dropped = pipeline->counters().packets_dropped;
+    run.payload_bytes = pipeline->counters().payload_bytes;
+    run.wire_bytes = pipeline->counters().wire_bytes;
+    run.late_releases = pipeline->counters().late_releases;
+    for (const simllm::rnic::WqeRecord& record : device.records()) {
+        if (record.timeline.first_packet_at_ps.has_value()) {
+            if (run.first_packet_ps == 0) {
+                run.first_packet_ps = *record.timeline.first_packet_at_ps;
+            }
+            run.last_packet_ps = *record.timeline.last_packet_at_ps;
+        }
+    }
+    return run;
+}
+
+void testTxPipeline(TestRunner& test) {
+    const RnicHwProfile& profile = kConnectX5_100G;
+
+    RnicDeviceConfig defaults;
+    test.check(
+        defaults.network.abi_version
+                == simllm::rnic::kNetworkPortAbiVersionV1
+            && !defaults.network.packetization.enabled,
+        "the default network configuration is the unchanged v1 path");
+
+    const PipelineRun one = runPipeline(profile, 1048576, 1, 4096, 1, false);
+    test.check(
+        one.completions == 1 && one.errors == 0 && one.packets == 256
+            && one.packets_dropped == 0 && one.payload_bytes == 1048576
+            && one.wire_bytes == 1048576 + 256 * 64,
+        "one 1 MiB message segments into 256 MTU packets with header bytes");
+    test.check(
+        one.late_releases == 0,
+        "an event-stepping caller never forces a late packet release");
+    test.check(
+        one.first_packet_ps != 0 && one.last_packet_ps > one.first_packet_ps,
+        "first and last packet issue come from real TX-start events");
+
+    // Depth-1 closed form: the lumped fixed offset plus the paced
+    // serialization of the message. The wire serializes the last packet at the
+    // link rate rather than the pacer rate, which is the only residual.
+    const double serialization = static_cast<double>(one.wire_bytes) * 8.0
+        / static_cast<double>(simllm::rnic::effectiveWireBps(profile));
+    const double expected = static_cast<double>(profile.t_eff_ps) / 1e12
+        + serialization;
+    const double measured = static_cast<double>(one.last_completion_ps) / 1e12;
+    test.check(
+        measured > expected * 0.99 && measured < expected * 1.01,
+        "a depth-1 message costs the lumped offset plus its paced wire time");
+
+    const PipelineRun ragged = runPipeline(profile, 5000, 1, 4096, 1, false);
+    test.check(
+        ragged.packets == 2 && ragged.payload_bytes == 5000
+            && ragged.wire_bytes == 5000 + 2 * 64,
+        "a ragged message segments into a full packet and a short one");
+
+    const PipelineRun empty = runPipeline(profile, 0, 1, 4096, 1, false);
+    test.check(
+        empty.packets == 1 && empty.payload_bytes == 0
+            && empty.wire_bytes == 64,
+        "a zero-byte message is still one packet of header bytes");
+
+    const PipelineRun dropped = runPipeline(profile, 8192, 1, 4096, 1, true);
+    test.check(
+        dropped.errors == 1 && dropped.completions == 0
+            && dropped.packets_dropped == 1,
+        "a dropped packet retires its WQE with a transport error");
+
+    // Depth raises throughput because the window, not the fixed offset, is
+    // what a deep queue removes. Small messages then run into the pacer.
+    const PipelineRun shallow = runPipeline(profile, 8192, 1, 4096, 64, false);
+    const PipelineRun deep = runPipeline(profile, 8192, 64, 4096, 64, false);
+    test.check(
+        deep.last_completion_ps < shallow.last_completion_ps,
+        "a deeper outstanding-work window finishes the same bytes sooner");
+    const double deep_bps = 64.0 * 8192.0 * 8.0
+        / (static_cast<double>(deep.last_completion_ps) / 1e12);
+    test.check(
+        deep_bps < static_cast<double>(profile.goodput_bps) * 1.001,
+        "a saturated pipeline never exceeds the profile goodput ceiling");
+
+    const PipelineRun paced = runPipeline(profile, 1024, 64, 4096, 512, false);
+    const double packet_rate = 512.0
+        / (static_cast<double>(paced.last_completion_ps) / 1e12);
+    test.check(
+        packet_rate < static_cast<double>(profile.tx_pps_per_qp) * 1.02,
+        "the per-QP message-rate ceiling caps small messages");
+
+    // Configuration must fail closed rather than resolve a contradiction.
+    const auto expectRejected = [&test](
+                                    RnicDeviceConfig config,
+                                    NetworkPort* port,
+                                    const std::string& message) {
+        RnicDeviceAttachments attachments;
+        attachments.network_port = port;
+        test.expectThrowAs<std::invalid_argument>(
+            [&config, &attachments]() {
+                RnicDevice device(config, attachments);
+            },
+            message);
+    };
+    simllm::rnic::testing::FakeV2NetworkPort wire(
+        simllm::rnic::testing::FakeV2NetworkConfig{});
+    RnicDeviceConfig mismatched;
+    mismatched.network.enabled = true;
+    mismatched.network.abi_version = simllm::rnic::kNetworkPortAbiVersionV2;
+    expectRejected(mismatched, &wire, "ABI v2 without a packetizer is refused");
+    RnicDeviceConfig orphan;
+    orphan.network.enabled = true;
+    orphan.network.packetization.enabled = true;
+    expectRejected(
+        orphan, &wire, "a packetizer without ABI v2 is refused");
+    RnicDeviceConfig detached;
+    detached.network.enabled = false;
+    detached.network.abi_version = simllm::rnic::kNetworkPortAbiVersionV2;
+    detached.network.packetization.enabled = true;
+    expectRejected(
+        detached, nullptr, "a packetizer without an external port is refused");
+
+    simllm::rnic::testing::FakeNetworkPort flow_extent_port(4, 0);
+    RnicDeviceConfig v1_only;
+    v1_only.network.enabled = true;
+    v1_only.network.abi_version = simllm::rnic::kNetworkPortAbiVersionV2;
+    v1_only.network.packetization.enabled = true;
+    expectRejected(
+        v1_only,
+        &flow_extent_port,
+        "a packetizer over a flow-extent port is refused");
+}
+
+void testFacade(TestRunner& test, const std::string& scratch_dir) {
     rnic_cm_profile profile;
     test.check(
         rnic_cm_profile_preset("cx5_100g", &profile) == RNIC_CM_OK,
@@ -610,6 +864,15 @@ void testFacade(TestRunner& test) {
         rnic_cm_profile_sha256(&profile, digest, 8) == RNIC_CM_ERROR_ARGUMENT,
         "a short digest buffer is refused");
 
+    rnic_cm_profile derived;
+    test.check(
+        rnic_cm_profile_preset("cx7_400g", &derived) == RNIC_CM_OK
+            && rnic_cm_profile_sha256(&derived, digest, sizeof(digest))
+                == RNIC_CM_OK
+            && std::string(digest)
+                == simllm::rnic::rnicHwProfileSha256(kConnectX7_400G),
+        "the derived preset round-trips through the facade with its identity");
+
     const std::vector<CompletionRow> oracle = runOracle(kConnectX5_100G);
     const std::vector<CompletionRow> facade =
         runFacade(profile, false, std::string(), test);
@@ -624,8 +887,10 @@ void testFacade(TestRunner& test) {
         identical,
         "the facade reproduces the C++ device timestamps exactly");
 
-    const std::string trace_a = "rnic_cmodel_trace_a.txt";
-    const std::string trace_b = "rnic_cmodel_trace_b.txt";
+    const std::string prefix =
+        scratch_dir.empty() ? std::string(".") : scratch_dir;
+    const std::string trace_a = joinPath(prefix, "rnic_cmodel_trace_a.txt");
+    const std::string trace_b = joinPath(prefix, "rnic_cmodel_trace_b.txt");
     const std::vector<CompletionRow> replay_a =
         runFacade(profile, true, trace_a, test);
     const std::vector<CompletionRow> replay_b =
@@ -654,11 +919,6 @@ void testFacade(TestRunner& test) {
     config.policy_context_token = kPolicyToken;
     config.sq_depth = 4;
     config.cq_depth = 8;
-    config.packetization = 1;
-    test.check(
-        rnic_cm_create(&profile, &config) == nullptr,
-        "a packetized request is refused until the transmit pipeline lands");
-    config.packetization = 0;
     config.version = SIMLLM_RNIC_CM_ABI_VERSION + 1;
     test.check(
         rnic_cm_create(&profile, &config) == nullptr,
@@ -695,7 +955,8 @@ void testFacade(TestRunner& test) {
                 && counters.posted_wqes == 0 && counters.tx_packets == 0,
             "counters read back zeroed on a fresh device");
         test.check(
-            rnic_cm_trace(device, "unused.txt") == RNIC_CM_ERROR_STATE,
+            rnic_cm_trace(device, joinPath(prefix, "unused.txt").c_str())
+                == RNIC_CM_ERROR_STATE,
             "a trace request without tracing enabled is refused");
         rnic_cm_destroy(device);
     }
@@ -711,6 +972,7 @@ int main(int argc, char** argv) {
     try {
         std::string projection_path;
         std::string design_path;
+        std::string scratch_dir;
         if (argc == 2
             && std::string(argv[1]) == "--render-anomaly-table") {
             std::cout << simllm::rnic::renderRnicAnomalyTableMarkdown();
@@ -722,15 +984,20 @@ int main(int argc, char** argv) {
         if (argc >= 3) {
             design_path = argv[2];
         }
-        if (argc > 3) {
+        if (argc >= 4) {
+            scratch_dir = argv[3];
+        }
+        if (argc > 4) {
             std::cerr
-                << "usage: simllm_rnic_cmodel_test [projection.md [design.md]]\n";
+                << "usage: simllm_rnic_cmodel_test "
+                   "[projection.md [design.md [scratch-dir]]]\n";
             return 2;
         }
         TestRunner test;
         testProfile(test);
         testAnomalyTable(test, projection_path, design_path);
-        testFacade(test);
+        testTxPipeline(test);
+        testFacade(test, scratch_dir);
         if (test.failures() != 0) {
             std::cerr << test.failures() << " golden-model checks failed\n";
             return 1;

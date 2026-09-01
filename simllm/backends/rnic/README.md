@@ -201,6 +201,58 @@ parameters, then
 compares completion CSV, canonical completions, `StepResult` tuples and replay
 TTFT or TPOT summaries byte for byte.
 
+## Transmit pipeline
+
+`rnic_tx_pipeline.h` is the opt-in transmit slice of the golden model. It is
+selected by `RnicNetworkConfig::abi_version = 2` together with an enabled
+`packetization` block; the two must agree, and a contradiction is refused at
+construction. The default configuration is ABI v1 with packetization off,
+which is not merely equivalent to the old path but literally the same code:
+the work queue binds straight to the injected port, so every accepted v1
+timestamp, counter and completion order is unchanged.
+
+With the pipeline selected, it becomes the port the work queue binds to and
+the injected port becomes its downstream packet face. The queue keeps
+submitting one flow extent per WQE and never learns about packets. The
+pipeline has three parts:
+
+- the **packetizer** segments an extent at the MTU, charges the wire header
+  bytes per packet, assigns a per-QP PSN, and submits one
+  `NetworkTxDescriptor` per packet with `extent_index` and `extent_count`
+  carrying the packet index and count. The PSN stays inside the endpoint and
+  the facade, because it is transport state the fabric does not need;
+- the **outstanding-work window** bounds in-flight WQEs, bytes and packets per
+  QP. A WQE is in flight from the issue of its first packet to the terminal of
+  its last, so the window is what is on the wire, not what the send queue
+  holds. It gates packet issue rather than admission, which is why the
+  pipeline never returns Busy: it has no way to promise a retry time for an
+  acknowledgement it has not seen, and admission is a real, separate instant
+  from first packet issue;
+- the **pacer** applies per-QP and per-NIC bits-per-second and message-rate
+  ceilings, shared across the QPs of one device. Rate arithmetic is exact
+  rational: a remainder carries the fractional picoseconds forward, so a
+  million-packet run has bounded error rather than one truncation per packet.
+  The bit rate is charged on wire bytes at the effective wire rate, which is
+  the rate at which a full calibration-MTU packet delivers the profile's
+  goodput. The measured small-message ceiling is charged once per work
+  request, not once per wire packet, because what the campaign measured is a
+  host-bound message rate; at or below the MTU the two readings coincide,
+  which is where it was measured.
+
+The downstream packet-port contract is narrow: the port returns one token per
+accepted attempt and later reports TX finish, RX arrival and one terminal for
+it. The pipeline stamps the TX start itself at the paced issue instant,
+because the packetizer is the transmit authority, and it is that event that
+fills `first_packet_at_ps` and `last_packet_at_ps`. `tests/fake_network.h`
+carries `FakeV2NetworkPort`, which serializes at a link rate, adds a fixed
+one-way latency and acknowledges per packet.
+
+The caller must step to the times `nextEventTime()` reports. A release forced
+later than an announced paced instant is counted as a late release, and a
+study treats a nonzero count as a voided run rather than a measurement.
+Evidence is in
+[`examples/rnic_cmodel_v1`](../../../examples/rnic_cmodel_v1/RESULTS.md).
+
 ## Hardware profile, anomaly table and C facade
 
 `rnic_hw_profile.h` carries the hardware parameter set with one evidence class

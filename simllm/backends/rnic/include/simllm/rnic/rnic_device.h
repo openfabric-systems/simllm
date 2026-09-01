@@ -9,6 +9,7 @@
 
 #include "simllm/rnic/host_memory.h"
 #include "simllm/rnic/pcie_fabric.h"
+#include "simllm/rnic/rnic_tx_pipeline.h"
 #include "simllm/rnic/work_queue.h"
 
 namespace simllm::rnic {
@@ -17,7 +18,7 @@ inline constexpr std::uint32_t kRnicDeviceConfigVersion = 2;
 inline constexpr std::uint32_t kRnicDeviceIdentityVersion = 1;
 inline constexpr std::uint32_t kRnicQpcConfigVersion = 1;
 inline constexpr std::uint32_t kRnicDmaConfigVersion = 1;
-inline constexpr std::uint32_t kRnicNetworkConfigVersion = 1;
+inline constexpr std::uint32_t kRnicNetworkConfigVersion = 2;
 inline constexpr std::uint32_t kRnicHostMemoryConfigVersion = 1;
 
 struct RnicDeviceIdentity {
@@ -57,6 +58,13 @@ struct RnicNetworkConfig {
     // Enabled requires an injected external NetworkPort. Disabled selects
     // the owned inert port and rejects an external pointer.
     bool enabled{false};
+    // The ABI the device speaks to the injected port. V1 is the identity-off
+    // default: the work queue submits one flow extent per WQE straight to the
+    // port, which is the same code path and the same timestamps as before this
+    // field existed. V2 selects the owned transmit pipeline, which requires an
+    // enabled packetization block and an ABI v2 packet-attempt port.
+    std::uint32_t abi_version{kNetworkPortAbiVersionV1};
+    RnicTxPipelineConfig packetization;
 };
 
 struct RnicHostMemoryConfig {
@@ -182,6 +190,8 @@ public:
 
     const RnicDeviceConfig& config() const noexcept;
     const RnicDeviceStageReport& stageReport() const noexcept;
+    // Null unless the transmit pipeline is selected.
+    const RnicTxPipeline* txPipeline() const noexcept;
     bool usesSharedPcieFabric() const noexcept;
     std::optional<WorkQueuePcieBinding> pcieBinding() const;
     const PcieFabric* pcieFabric() const noexcept;
@@ -217,6 +227,7 @@ private:
     std::shared_ptr<PcieFabric> pcie_fabric_;
     std::shared_ptr<VirtualHostMemory> host_memory_;
     std::unique_ptr<InertNetworkPort> inert_network_port_;
+    std::unique_ptr<RnicTxPipeline> tx_pipeline_;
     NetworkPort* network_port_{nullptr};
     std::unique_ptr<WorkQueue> work_queue_;
     bool claimed_ordering_domains_{false};

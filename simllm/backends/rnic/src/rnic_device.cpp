@@ -385,6 +385,28 @@ RnicDevice::RnicDevice(
         throw std::invalid_argument(
             "RNIC network-disabled device rejects an external port");
     }
+    if (config_.network.packetization.version
+        != kRnicTxPipelineConfigVersion) {
+        throw std::invalid_argument(
+            "unsupported RNIC transmit pipeline config version");
+    }
+    // The two selections must agree in both directions, so a v2 device
+    // without a packetizer and a packetizer on a v1 device are both refused
+    // rather than silently resolved.
+    if ((config_.network.abi_version == kNetworkPortAbiVersionV2)
+        != config_.network.packetization.enabled) {
+        throw std::invalid_argument(
+            "RNIC network ABI v2 and packetization must be selected together");
+    }
+    if (config_.network.abi_version != kNetworkPortAbiVersionV1
+        && config_.network.abi_version != kNetworkPortAbiVersionV2) {
+        throw std::invalid_argument(
+            "unsupported RNIC network ABI version");
+    }
+    if (config_.network.packetization.enabled && !config_.network.enabled) {
+        throw std::invalid_argument(
+            "RNIC packetization requires an external network port");
+    }
     if (config_.dma.enabled && attachments.shared_pcie_fabric
         && !samePcieFabricConfig(
             config_.dma.fabric,
@@ -465,6 +487,14 @@ RnicDevice::RnicDevice(
         stage_report_.external_network = RnicStageApplicability::Applicable;
         stage_report_.inert_network = RnicStageApplicability::NotApplicable;
         network_port_ = attachments.network_port;
+        if (config_.network.packetization.enabled) {
+            // The pipeline is the port the work queue binds to. The injected
+            // port becomes its downstream packet face, so the queue keeps
+            // submitting one extent per WQE and never learns about packets.
+            tx_pipeline_ = std::make_unique<RnicTxPipeline>(
+                config_.network.packetization, *network_port_);
+            network_port_ = tx_pipeline_.get();
+        }
     } else {
         inert_network_port_ = std::make_unique<InertNetworkPort>();
         network_port_ = inert_network_port_.get();
@@ -669,13 +699,42 @@ void RnicDevice::onNetworkEvent(const NetworkEvent& event) {
             "external RNIC network event supplied to the inert port");
     }
     validateCallerTime(event.event_time_ps);
-    work_queue_->onNetworkEvent(event);
+    if (tx_pipeline_) {
+        // The pipeline owns the packet vocabulary. It hands back the
+        // packet-attempt events the timeline is built from and, when the last
+        // packet of a WQE retires, the one extent terminal the queue expects.
+        for (const NetworkEvent& upstream :
+             tx_pipeline_->onDownstreamEvent(event)) {
+            work_queue_->onNetworkEvent(upstream);
+        }
+    } else {
+        work_queue_->onNetworkEvent(event);
+    }
     advanceCallerTime(event.event_time_ps);
 }
 
 std::size_t RnicDevice::progress(Picoseconds now_ps) {
     requireHostMemoryLive();
     observeCallerTime(now_ps);
+    if (tx_pipeline_) {
+        std::size_t changes = 0;
+        for (;;) {
+            const std::vector<NetworkEvent> issued =
+                tx_pipeline_->releaseDue(now_ps);
+            for (const NetworkEvent& event : issued) {
+                work_queue_->onNetworkEvent(event);
+            }
+            changes += issued.size();
+            const std::size_t queue_changes = work_queue_->progress(now_ps);
+            changes += queue_changes;
+            // Admitting a WQE can make its first packet due at this same
+            // timestamp, so the two halves are pumped until neither moves.
+            if (issued.empty() && queue_changes == 0) {
+                break;
+            }
+        }
+        return changes;
+    }
     if (config_.network.enabled) {
         return work_queue_->progress(now_ps);
     }
@@ -765,6 +824,9 @@ std::optional<Picoseconds> RnicDevice::nextEventTime() const {
     requireHostMemoryLive();
     const std::optional<Picoseconds> queue_time =
         work_queue_->nextEventTime();
+    if (tx_pipeline_) {
+        return earlier(queue_time, tx_pipeline_->nextEventTime());
+    }
     if (config_.network.enabled) {
         return queue_time;
     }
@@ -772,6 +834,9 @@ std::optional<Picoseconds> RnicDevice::nextEventTime() const {
 }
 
 bool RnicDevice::hasPendingPhysicalWork() const noexcept {
+    if (tx_pipeline_ && tx_pipeline_->hasPendingWork()) {
+        return true;
+    }
     return work_queue_->hasPendingPhysicalWork();
 }
 
@@ -797,6 +862,10 @@ const RnicDeviceConfig& RnicDevice::config() const noexcept {
 
 const RnicDeviceStageReport& RnicDevice::stageReport() const noexcept {
     return stage_report_;
+}
+
+const RnicTxPipeline* RnicDevice::txPipeline() const noexcept {
+    return tx_pipeline_.get();
 }
 
 bool RnicDevice::usesSharedPcieFabric() const noexcept {
@@ -857,6 +926,9 @@ const WqeRecord& RnicDevice::wqe(WqeId wqe_id) const {
 
 void RnicDevice::validateInvariants() const {
     work_queue_->validateInvariants();
+    if (tx_pipeline_) {
+        tx_pipeline_->validateInvariants();
+    }
     if (pcie_fabric_) {
         pcie_fabric_->validateInvariants();
     }

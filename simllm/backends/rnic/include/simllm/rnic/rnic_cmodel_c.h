@@ -164,6 +164,11 @@ typedef struct rnic_cm_config {
     uint64_t max_inflight_wqes;
     /* 0 means no byte bound. */
     uint64_t max_inflight_bytes;
+    /* The operating segmentation size. 0 uses the profile's MTU. The
+     * profile's MTU stays the calibration MTU that defines the effective wire
+     * rate, so running at a smaller MTU pays more header bytes on the same
+     * wire instead of silently speeding the wire up. */
+    uint64_t mtu_bytes;
 } rnic_cm_config;
 
 typedef struct rnic_cm_wqe {
@@ -253,6 +258,11 @@ typedef struct rnic_cm_counter_set {
     uint64_t tx_pacer_stalls;
     uint64_t tx_inflight_wqes;
     uint64_t tx_inflight_bytes;
+    uint64_t tx_packets_dropped;
+    /* Releases the caller forced later than the instant the pipeline had
+     * already announced. Nonzero means the caller did not step to the times
+     * it was given, which voids a pacing measurement. */
+    uint64_t tx_late_releases;
 } rnic_cm_counter_set;
 
 /* Fills `out` with a named preset ("cx5_100g" or "cx7_400g"). */

@@ -63,6 +63,21 @@ backend submodules.
   timestamps exactly, and two identical stimulus sequences trace identically.
   Its receive entry point and control-event kinds fail closed until BACK-56
   and BACK-57 land.
+- `RnicTxPipeline` (BACK-55): the opt-in transmit slice, selected by
+  `RnicNetworkConfig::abi_version = 2` with an enabled packetization block.
+  The default stays ABI v1 with packetization off, which is the same code path
+  as before the field existed, so every accepted v1 timestamp, counter and
+  completion order is unchanged. Selected, it becomes the port the work queue
+  binds to and the injected port becomes its downstream packet face: the queue
+  still submits one flow extent per WQE, and the pipeline segments it at the
+  MTU with wire header bytes and a per-QP PSN, bounds in-flight WQEs, bytes
+  and packets per QP from first packet issue to last packet terminal, and
+  paces issue against per-QP and per-NIC bit-rate and message-rate ceilings
+  with exact rational arithmetic. It stamps the TX start at the paced issue
+  instant, which is what fills `first_packet_at_ps` and `last_packet_at_ps`,
+  and it emits the one extent terminal when the last packet of a WQE retires.
+  Its measured behavior is in
+  [the golden-model slice-B study](../../examples/rnic_cmodel_v1/RESULTS.md).
 - `ComposedRnicObservations` + `ComposedRnicSession`: strict validation and
   transactional projection of the frozen composed native rows into the core
   structural RNIC seam. The external native session owns WQE lifecycle and
@@ -1505,26 +1520,22 @@ created" statement stands and refers to different, never-registered work.
   receive side through the facade with the same timestamps the C++ device
   produces, and a control event reaches the rate-control gate, both under the
   same trace-determinism guard.
-- BACK-55 (Completeness; P1; L): land the transmit pipeline behind an opt-in
-  network configuration, default off and byte-identical. It has three parts:
-  a packetizer that segments a WQE into MTU-sized packets with wire header
-  bytes and a per-QP PSN and emits one packet attempt per packet through an
-  ABI v2 port, populating first and last packet issue from TX-start events
-  only; an outstanding-work window that bounds in-flight WQEs and bytes per QP
-  and is released by delivery or acknowledgement; and a packet-rate pacer with
-  per-QP and per-NIC packets-per-second and bits-per-second ceilings shared
-  across the QPs of one device. Acceptance, against the study frozen in
-  `examples/rnic_cmodel_v1/expectations.md`: the depth-1 goodput curve is
-  within 15 percent of `B = S / (T_eff + S / C)` at every size and for both
-  profiles; the depth-1024 over depth-1 ratio is within 20 percent of the
-  measured 5.9 at 8 KiB and 1.57 at 64 KiB; the MTU 1024 versus 4096 tax is
-  5.6 plus or minus 2 percentage points; the ConnectX-7 curve equals the
-  ConnectX-5 curve with C scaled by four at the same T_eff; the per-QP
-  packet-rate ceiling caps 1 KiB at 3.87 Mpps within 5 percent; and
-  deterministic replay identity holds exactly as a fatal guard. A cell that
-  saturates at the lossless goodput ceiling where silicon sat in a loss
-  equilibrium is a BACK-56 residual, not a pipeline defect, and must be
-  reported as such rather than rebanded.
+- BACK-55 (Completeness; P1; M) (remaining half): reconcile the transmit
+  pipeline's depth-ratio residual and extend it past one QP. The packetizer,
+  the outstanding-work window and the pacer are landed behind an opt-in whose
+  off path is the unchanged v1 code, and
+  [the slice-B study](../../examples/rnic_cmodel_v1/RESULTS.md) meets every
+  registered band except one: the depth-1024 over depth-1 ratio at 8 KiB is
+  7.62 against the measured 5.9, because a lossless pipeline saturates at the
+  goodput ceiling where the silicon sat in the loss equilibrium BACK-56 owns.
+  The model-internal ratio check passes at the same cell, which localizes the
+  disagreement to the missing mechanism. What remains here: re-run the frozen
+  grid once the ingress meter exists and close the measured band, and give the
+  pacer real per-NIC arbitration across several QPs, which one QP cannot
+  exercise. Acceptance: the 8 KiB measured-ratio row passes with the ingress
+  meter enabled and the lossless numbers stay byte-identical with it disabled,
+  and a multi-QP cell shows the per-NIC ceiling binding while each per-QP
+  ceiling does not.
 - BACK-56 (Completeness; P1; L): land the receive pipeline: a finite ingress
   meter drained at a service rate whose overflow discards at the PHY with no
   transport signal, a receive processor with a per-QP receive packet-rate cap,

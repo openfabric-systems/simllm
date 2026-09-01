@@ -26,6 +26,7 @@ add_library(simllm_rnic STATIC
     src/rnic_cmodel_c.cpp
     src/rnic_device.cpp
     src/rnic_hw_profile.cpp
+    src/rnic_tx_pipeline.cpp
     src/session_record.cpp
     src/submission.cpp
     src/work_queue.cpp
@@ -192,7 +193,8 @@ if(SIMLLM_RNIC_BUILD_TESTS)
     add_test(NAME simllm_rnic_cmodel_test
              COMMAND simllm_rnic_cmodel_test
                      "${SIMLLM_RNIC_DOC_DIR}/rnic-anomaly-table.md"
-                     "${SIMLLM_RNIC_DOC_DIR}/rnic-cmodel.md")
+                     "${SIMLLM_RNIC_DOC_DIR}/rnic-cmodel.md"
+                     "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
 if(SIMLLM_RNIC_BUILD_TOOLS)
@@ -208,6 +210,21 @@ if(SIMLLM_RNIC_BUILD_TOOLS)
         )
         if(SIMLLM_RNIC_WARNINGS_AS_ERRORS)
             target_compile_options(simllm_rnic_pcie_probe PRIVATE -Werror)
+        endif()
+    endif()
+
+    add_executable(simllm_rnic_cmodel_probe
+        tools/cmodel_probe.cpp
+    )
+    target_link_libraries(simllm_rnic_cmodel_probe PRIVATE simllm::rnic)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(simllm_rnic_cmodel_probe PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+        )
+        if(SIMLLM_RNIC_WARNINGS_AS_ERRORS)
+            target_compile_options(simllm_rnic_cmodel_probe PRIVATE -Werror)
         endif()
     endif()
 
