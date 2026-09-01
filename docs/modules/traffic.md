@@ -1274,12 +1274,12 @@ and arbiter value.
   transport calibration.
   H200 capture, working concentration, receiver occupancy, queue waits, buffer
   high-water marks, switch occupancy, holdout reproduction and the supported
-  TTFT or TPOT effect all remain open. TRAF-81 owns the next concentration
+  TTFT or TPOT effect all remain open. TRAF-87 owns the next concentration
   mechanism and counter authority. TRAF-78 owns observed assignment geometry,
   TRAF-75 owns
   directional precision selection, TRAF-26 supplies complete peer workloads,
   and COMP-89 separately owns the donor NCCL extrapolation.
-- TRAF-81 (Precision; P1; L): replace the refuted
+- TRAF-87 (Precision; P1; L): replace the refuted
   `NCCL_SOCKET_IFNAME` concentration surrogate with a working TX-side route or
   provider control and identify authoritative Cassini TX and RX counter
   semantics. The first TRAF-77 capture selected NCCL's built-in Socket
@@ -1412,7 +1412,7 @@ and arbiter value.
   both floor-fraction decompositions fail their frozen bands at the first
   locality crossing, a boundary that on the measured cluster combines node
   locality with a transport-stack change (NVLink inside the node, NCCL Socket
-  over Slingshot with GPU Direct RDMA disabled between nodes). TRAF-81 remains
+  over Slingshot with GPU Direct RDMA disabled between nodes). TRAF-87 remains
   formally blocked on rank 16, so it does not supply an error-growth result,
   but the available rank-8 evidence removes unqualified shape confidence from
   the EP 32 and EP 128 donor transfers. It neither transfers an A100 absolute

@@ -16,7 +16,7 @@ L publishes all 352 cells without a duplicate, and Family W passes.
 What it changes: TRAF-77 narrows to the literal achieved evidence: phase
 timing at widths 2 and 8 with anchors held; endpoint proxies captured;
 concentration control refuted pending a working pinning mechanism; switch
-occupancy remains unobservable. TRAF-77 stays open. TRAF-81 now owns working
+occupancy remains unobservable. TRAF-77 stays open. TRAF-87 now owns working
 TX-side routing control, the unresolved TX and RX counter semantics, and the
 two capture-harness portability defects.
 
@@ -218,7 +218,7 @@ while RX averages roughly 0.73 to 0.75 KiB per counted packet. The independently
 reconstructed RX total matches the payload ladder and warmup arithmetic, but
 the capture contains no authoritative Cassini hardware counter that identifies
 the wire-byte relation. The exact TX and RX field semantics remain unexplained
-and are assigned to TRAF-81.
+and are assigned to TRAF-87.
 
 ## Width-8 interpretation limit
 

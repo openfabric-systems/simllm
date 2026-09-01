@@ -1175,7 +1175,7 @@ def build_outputs(
         },
         "task_effect": {
             "TRAF-77": "NARROWED, remains open",
-            "TRAF-81": "OPENED for TX-side routing control, counter semantics, and harness portability",
+            "TRAF-87": "OPENED for TX-side routing control, counter semantics, and harness portability",
             "literal_evidence": "phase timing at widths 2 and 8 with anchors held; endpoint proxies captured; concentration control refuted pending a working pinning mechanism; switch occupancy remains unobservable",
             "not_changed": "No transport calibration, H200 evidence, switch occupancy, receiver occupancy, queue-wait, buffer high-water, TTFT, or TPOT acceptance clause is satisfied.",
         },
