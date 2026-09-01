@@ -9,7 +9,7 @@ All cells used dummy weights, one GPU, one rank and no network.
 What came out: the published four-layer graph measured 1,290.176 us of cold
 native kernel service against the frozen 1,343.872 us composition. Measured
 minus predicted is -53.696 us, or -3.996 percent, inside the frozen
-+/-67.1936 us band. All eight fatal guards, all three behavioral relations and
+band of plus or minus 67.1936 us. All eight fatal guards, all three behavioral relations and
 all seven preservation locks pass.
 
 What it changes: the compute half of the standard-decode model now uses
