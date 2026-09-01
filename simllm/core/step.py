@@ -26,6 +26,7 @@ from typing import Any
 STEP_SCHEMA = "atlahs-closed-loop-step-v1"
 LEGACY_RESULT_SCHEMA = "atlahs-closed-loop-result-v1"
 RESULT_SCHEMA = "simllm-step-result-v2"
+COLLECTIVE_SERVICE_SCHEMA = "simllm-collective-service-v1"
 
 
 class RequestPhase(enum.Enum):
@@ -47,6 +48,113 @@ class ScheduledRequest:
     context_length: int = 0
 
 
+def _require_nonblank_string(name: str, value: object) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{name} must be a nonblank string")
+    return value
+
+
+def _require_plain_int(name: str, value: object, *, minimum: int = 0) -> int:
+    if isinstance(value, bool) or type(value) is not int:
+        raise TypeError(f"{name} must be an integer")
+    if value < minimum:
+        raise ValueError(f"{name} must be at least {minimum}")
+    return value
+
+
+@dataclass(frozen=True)
+class CollectiveServiceEnvironment:
+    """Environment identity for one in-situ collective capture envelope."""
+
+    system: str
+    backend: str
+    device_type: str
+    framework: str
+    framework_version: str
+    timer: str
+
+    def __post_init__(self) -> None:
+        for name in (
+            "system",
+            "backend",
+            "device_type",
+            "framework",
+            "framework_version",
+            "timer",
+        ):
+            _require_nonblank_string(name, getattr(self, name))
+
+
+@dataclass(frozen=True)
+class CollectiveServiceInvocation:
+    """One timed communicator call executed inside a live model step."""
+
+    sequence: int
+    kind: str
+    payload_bytes: int
+    world_size: int
+    dtype: str
+    element_width_bytes: int
+    tensor_shape: tuple[int, ...]
+    group_tag: str
+    service_ps: int
+    layer_index: int | None = None
+    layer_name: str | None = None
+
+    def __post_init__(self) -> None:
+        _require_plain_int("sequence", self.sequence)
+        _require_nonblank_string("kind", self.kind)
+        _require_plain_int("payload_bytes", self.payload_bytes, minimum=1)
+        _require_plain_int("world_size", self.world_size, minimum=2)
+        _require_nonblank_string("dtype", self.dtype)
+        _require_plain_int("element_width_bytes", self.element_width_bytes, minimum=1)
+        object.__setattr__(self, "tensor_shape", tuple(self.tensor_shape))
+        if not self.tensor_shape:
+            raise ValueError("tensor_shape must not be empty")
+        element_count = 1
+        for index, extent in enumerate(self.tensor_shape):
+            element_count *= _require_plain_int(f"tensor_shape[{index}]", extent, minimum=1)
+        if element_count * self.element_width_bytes != self.payload_bytes:
+            raise ValueError("tensor_shape and element_width_bytes disagree with payload_bytes")
+        _require_nonblank_string("group_tag", self.group_tag)
+        _require_plain_int("service_ps", self.service_ps, minimum=1)
+        if self.layer_index is not None:
+            _require_plain_int("layer_index", self.layer_index)
+        if self.layer_name is not None:
+            _require_nonblank_string("layer_name", self.layer_name)
+        if (self.layer_index is None) != (self.layer_name is None):
+            raise ValueError("layer_index and layer_name must be present together")
+
+
+@dataclass(frozen=True)
+class CollectiveServiceCapture:
+    """Schema-tagged optional collective timing evidence for one step."""
+
+    environment: CollectiveServiceEnvironment
+    invocations: tuple[CollectiveServiceInvocation, ...]
+    schema: str = COLLECTIVE_SERVICE_SCHEMA
+
+    def __post_init__(self) -> None:
+        if self.schema != COLLECTIVE_SERVICE_SCHEMA:
+            raise ValueError(
+                f"unsupported collective-service schema {self.schema!r}; "
+                f"expected {COLLECTIVE_SERVICE_SCHEMA!r}"
+            )
+        if not isinstance(self.environment, CollectiveServiceEnvironment):
+            raise TypeError("environment must be a CollectiveServiceEnvironment")
+        object.__setattr__(self, "invocations", tuple(self.invocations))
+        if not self.invocations:
+            raise ValueError("collective-service capture must contain invocations")
+        if any(
+            not isinstance(invocation, CollectiveServiceInvocation)
+            for invocation in self.invocations
+        ):
+            raise TypeError("invocations must contain CollectiveServiceInvocation records")
+        sequences = tuple(invocation.sequence for invocation in self.invocations)
+        if sequences != tuple(range(len(self.invocations))):
+            raise ValueError("collective invocation sequence must be contiguous from zero")
+
+
 @dataclass
 class StepRecord:
     """What the frontend scheduler decided to run in one engine step."""
@@ -63,6 +171,8 @@ class StepRecord:
     num_tokens_after_padding: int | None = None
     #: exact identities sampled this step; None retains the legacy count-only form
     sampled_request_ids: list[str] | None = None
+    #: optional in-situ communicator service; absence retains every old record
+    collective_service: CollectiveServiceCapture | None = None
 
     def __post_init__(self) -> None:
         if self.num_sampled is not None:
@@ -95,16 +205,13 @@ class StepRecord:
             scheduled_ids = {request.request_id for request in self.scheduled}
             unknown = sorted(set(self.sampled_request_ids) - scheduled_ids)
             if unknown:
-                raise ValueError(
-                    f"sampled_request_ids contains unscheduled requests: {unknown}"
-                )
-            if (
-                self.num_sampled is not None
-                and len(self.sampled_request_ids) != self.num_sampled
-            ):
-                raise ValueError(
-                    "sampled_request_ids cardinality must equal num_sampled"
-                )
+                raise ValueError(f"sampled_request_ids contains unscheduled requests: {unknown}")
+            if self.num_sampled is not None and len(self.sampled_request_ids) != self.num_sampled:
+                raise ValueError("sampled_request_ids cardinality must equal num_sampled")
+        if self.collective_service is not None and not isinstance(
+            self.collective_service, CollectiveServiceCapture
+        ):
+            raise TypeError("collective_service must be a CollectiveServiceCapture or None")
 
     @property
     def total_new_tokens(self) -> int:
@@ -313,6 +420,41 @@ def step_record_to_json(record: StepRecord) -> dict[str, Any]:
         payload["num_tokens_after_padding"] = record.num_tokens_after_padding
     if record.sampled_request_ids is not None:
         payload["sampled_request_ids"] = list(record.sampled_request_ids)
+    if record.collective_service is not None:
+        capture = record.collective_service
+        payload["collective_service"] = {
+            "schema": capture.schema,
+            "environment": {
+                "system": capture.environment.system,
+                "backend": capture.environment.backend,
+                "device_type": capture.environment.device_type,
+                "framework": capture.environment.framework,
+                "framework_version": capture.environment.framework_version,
+                "timer": capture.environment.timer,
+            },
+            "invocations": [
+                {
+                    "sequence": invocation.sequence,
+                    "kind": invocation.kind,
+                    "payload_bytes": invocation.payload_bytes,
+                    "world_size": invocation.world_size,
+                    "dtype": invocation.dtype,
+                    "element_width_bytes": invocation.element_width_bytes,
+                    "tensor_shape": list(invocation.tensor_shape),
+                    "group_tag": invocation.group_tag,
+                    "service_ps": invocation.service_ps,
+                    **(
+                        {
+                            "layer_index": invocation.layer_index,
+                            "layer_name": invocation.layer_name,
+                        }
+                        if invocation.layer_index is not None
+                        else {}
+                    ),
+                }
+                for invocation in capture.invocations
+            ],
+        }
     return payload
 
 
@@ -344,6 +486,37 @@ def step_record_from_json(payload: dict[str, Any]) -> StepRecord:
         )
         for entry in payload.get("scheduled", [])
     ]
+    capture_payload = payload.get("collective_service")
+    collective_service = None
+    if capture_payload is not None:
+        environment_payload = capture_payload["environment"]
+        collective_service = CollectiveServiceCapture(
+            schema=capture_payload["schema"],
+            environment=CollectiveServiceEnvironment(
+                system=environment_payload["system"],
+                backend=environment_payload["backend"],
+                device_type=environment_payload["device_type"],
+                framework=environment_payload["framework"],
+                framework_version=environment_payload["framework_version"],
+                timer=environment_payload["timer"],
+            ),
+            invocations=tuple(
+                CollectiveServiceInvocation(
+                    sequence=entry["sequence"],
+                    kind=entry["kind"],
+                    payload_bytes=entry["payload_bytes"],
+                    world_size=entry["world_size"],
+                    dtype=entry["dtype"],
+                    element_width_bytes=entry["element_width_bytes"],
+                    tensor_shape=tuple(entry["tensor_shape"]),
+                    group_tag=entry["group_tag"],
+                    service_ps=entry["service_ps"],
+                    layer_index=entry.get("layer_index"),
+                    layer_name=entry.get("layer_name"),
+                )
+                for entry in capture_payload["invocations"]
+            ),
+        )
     return StepRecord(
         step_index=payload["step_index"],
         virtual_time_ps=payload["virtual_time_ps"],
@@ -357,6 +530,7 @@ def step_record_from_json(payload: dict[str, Any]) -> StepRecord:
             if payload.get("sampled_request_ids") is not None
             else None
         ),
+        collective_service=collective_service,
     )
 
 
