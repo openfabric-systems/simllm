@@ -251,6 +251,18 @@ silicon-precision scopes.
   timestamp or metric byte. Acceptance is a median surrogate-to-live ratio at
   or below 0.01 over seven runs on the same disclosed machine and pin, with
   every exact passing family still byte-identical.
+- DEPLOY-22 (Precision; P1; M): add the matched-seam SimLLM aggregate arm for
+  the co-located Qwen3-32B-FP8 in-flight TP pool over all 25 frozen external
+  operating points. Compose mixed and generation-only service only from the
+  imported measured database, keep the concurrency-dependent TTFT as a
+  decomposed operating-point quantity, publish remove-one sensitivity for
+  every aggregate-reachable external adjustment, and require each composed
+  TPOT quotient against the frozen aggregate table to stay in [0.98, 1.02].
+  The unpriced and packet P/D handoff modes must remain exact identities at
+  zero bytes for the co-located pool, while the new figure series name both
+  strategy and traffic definition. Preserve every existing matched-seam
+  artifact byte exactly and close only on a nonvoid two-process record plus
+  both visually inspected aggregate-qualified figure pairs.
 - DEPLOY-4 (Precision; P1; M): Replace the single input-local decode batch
   surface with content-addressed per-width coverage beyond the frozen 8, 16
   and 72 GPU shapes. Identify every width by measured entry keys and accept
