@@ -40,6 +40,22 @@ backend submodules.
   allocation, page, submission, ownership and canonical-hash rejection. The
   reusable bypass checker guards the full reference input tuple and compares
   the four frozen behavioral artifact classes byte for byte.
+- The RNIC golden-model surface is registered, not landed. It has three named
+  parts, owned by BACK-54 through BACK-58 and specified in
+  [the golden-model design](../design/rnic-cmodel.md). `RnicHwProfile` is the
+  versioned hardware-parameter object carrying link, initiation,
+  outstanding-work, packet-rate, ingress, transport, congestion-control, flow-
+  control and counter fields with one evidence class per field, a measured
+  ConnectX-5 100G set and a ConnectX-7 400G set derived by rate scaling; it
+  gets its own schema string and hash and is never mixed into the existing
+  effective-hardware schemas or their hash inputs. The anomaly table is the
+  measured performance-anomaly list carried as data (trigger, effect,
+  mechanism kind, evidence class) with a Markdown projection, so a reviewer
+  can see which silicon behavior is reproduced by a mechanism and which is
+  injected by rule. The C facade is an `extern "C"` entry set over plain
+  fixed-width structs and picosecond timestamps, so an RTL testbench can drive
+  the same stimulus through DPI-C and compare timestamps, counters and a
+  replayable transaction trace against this model.
 - `ComposedRnicObservations` + `ComposedRnicSession`: strict validation and
   transactional projection of the frozen composed native rows into the core
   structural RNIC seam. The external native session owns WQE lifecycle and
@@ -1469,6 +1485,83 @@ created" statement stands and refers to different, never-registered work.
   contention; this landing is contention-free by construction with zero bus
   cost, and the default composition must preserve every accepted artifact
   byte for byte. COMP-49 owns the xPU counterpart, a streaming crossbar.
+- BACK-54 (Completeness; P1; M): land the golden model's hardware profile,
+  anomaly table and C-linkage facade. Today the native device carries no
+  hardware-parameter object, no explicit record of the measured anomalies it
+  is supposed to reproduce, and no C boundary an RTL testbench can drive. Add
+  `RnicHwProfile` with an evidence class per field, a measured ConnectX-5 100G
+  set, a ConnectX-7 400G set produced by scaling only the rate and threshold
+  fields and marking every scaled field declared, and a versioned profile
+  record with its own schema string and stable hash that leaves the existing
+  effective-hardware schemas and hash inputs untouched. Add the anomaly table
+  as data with a generated Markdown projection. Add the `extern "C"` facade
+  over plain structs with no exception crossing the boundary and a text
+  transaction trace with picosecond timestamps. Acceptance: the facade
+  reproduces the C++ device timestamps exactly for the same stimulus, two
+  identical stimulus sequences produce byte-identical traces (the deterministic
+  replay guard, exact), the rendered anomaly table equals the committed
+  projection byte for byte, and the profile hash is reproducible and distinct
+  from the effective-hardware hash. Remaining after the transmit slice: the
+  receive-side facade entry points, which cannot be exercised until BACK-56
+  lands.
+- BACK-55 (Completeness; P1; L): land the transmit pipeline behind an opt-in
+  network configuration, default off and byte-identical. It has three parts:
+  a packetizer that segments a WQE into MTU-sized packets with wire header
+  bytes and a per-QP PSN and emits one packet attempt per packet through an
+  ABI v2 port, populating first and last packet issue from TX-start events
+  only; an outstanding-work window that bounds in-flight WQEs and bytes per QP
+  and is released by delivery or acknowledgement; and a packet-rate pacer with
+  per-QP and per-NIC packets-per-second and bits-per-second ceilings shared
+  across the QPs of one device. Acceptance, against the study frozen in
+  `examples/rnic_cmodel_v1/expectations.md`: the depth-1 goodput curve is
+  within 15 percent of `B = S / (T_eff + S / C)` at every size and for both
+  profiles; the depth-1024 over depth-1 ratio is within 20 percent of the
+  measured 5.9 at 8 KiB and 1.57 at 64 KiB; the MTU 1024 versus 4096 tax is
+  5.6 plus or minus 2 percentage points; the ConnectX-7 curve equals the
+  ConnectX-5 curve with C scaled by four at the same T_eff; the per-QP
+  packet-rate ceiling caps 1 KiB at 3.87 Mpps within 5 percent; and
+  deterministic replay identity holds exactly as a fatal guard. A cell that
+  saturates at the lossless goodput ceiling where silicon sat in a loss
+  equilibrium is a BACK-56 residual, not a pipeline defect, and must be
+  reported as such rather than rebanded.
+- BACK-56 (Completeness; P1; L): land the receive pipeline: a finite ingress
+  meter drained at a service rate whose overflow discards at the PHY with no
+  transport signal, a receive processor with a per-QP receive packet-rate cap,
+  an RC responder PSN check with ACK and NAK and UD delivery that drops
+  silently beyond the cap, and a requester transport with PSN and ACK
+  tracking, go-back-N recovery on NAK or timeout and the retransmission
+  counters whose semantics differ by firmware variant. This is the mechanism
+  that turns a lossless transmit pipeline into the measured saturated
+  equilibrium, so it also owns the depth-ratio residual BACK-55 reports.
+  Acceptance: a saturated single RC QP settles inside the measured 78 to
+  92 Gb/s window; the gap sweep at 8 KiB and 64 KiB drives discards to zero
+  across the measured threshold and matches the duty model within 15 percent;
+  a single UD QP offered above its cap delivers and discards within 10 percent
+  of the measured split; and the bidirectional pair stays cleaner than the
+  unidirectional one.
+- BACK-57 (Completeness; P2; L): land rate control and the internal arbiter.
+  Rate control is the DCQCN notification point that emits a CNP on a
+  congestion experienced mark, the reaction point whose per-QP state persists
+  across WQEs, and the ECT(0) stamp the silicon applies to every RoCEv2
+  transmit regardless of the requested ECN bits. The internal arbiter is one
+  processing budget shared by loopback ingress and wire ingress with wire
+  priority. Acceptance: the wire and loopback shares under a combined offered
+  load above the internal budget are within 5 percent of the measured split;
+  the marking counter stays inert while CNPs are generated, as silicon does;
+  and, with fabric loss supplied by the composed port, the incast tax identity
+  holds within 25 percent and the fair-share split within 2 percentage points.
+  HTSIM-5 remains the owner of the policy-side DCQCN state in the backend
+  repo; this task owns only the hardware notification point, reaction gate and
+  stamp.
+- BACK-58 (Completeness; P2; M): make the golden model usable as an RTL
+  reference from a UVM testbench. The facade trace is the expected-result file
+  and the DPI-C import declarations plus a stimulus reader are the missing
+  half. Acceptance: a recorded trace replays through the DPI-C boundary and
+  compares timestamps and counters transaction by transaction, a divergence
+  localizes to the first differing line, and the comparison runs without a
+  SystemVerilog simulator in the native gate by driving the same reader from
+  C. The trace format stays append-only per stimulus and per observed
+  transition so a longer run is a prefix-compatible extension.
 
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
@@ -1605,6 +1698,17 @@ model the two flows as separate nodes and say so.
   from co-hosted sources, so no source-side sharing study can run until
   the depth is declarable; registered by the wave-21 recalibration
   alongside HTSIM-32, which it gates.
+- HTSIM-34 (Completeness; P2; M): accept the golden model's per-packet
+  attempts on the composed port. BACK-55 emits one descriptor per packet with
+  an extent index and count, and expects the TX-start, TX-finish, RX-arrival
+  and terminal events per packet that the endpoint's timeline and window are
+  clocked by. The composed wrapper currently relays the ABI v2 vocabulary for
+  flow extents; per-packet attempts have never been driven end to end through
+  it. Acceptance: a composed run segments one WQE into MTU-sized attempts,
+  returns the four-event lifecycle per attempt with stable tokens, terminates
+  the parent extent only after the last attempt, and reproduces the frozen
+  fake-network study numbers within their registered bands. The current
+  flow-extent relay stays the exact off path.
 - HTSIM-35 (Completeness; P1; L): a responder ingress meter at the DCQCN
   endpoint. The packet path drops only at switch queues; the endpoint host
   queue is egress-only and has no discard path, so a measured responder-side
