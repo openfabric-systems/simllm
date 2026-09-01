@@ -41,9 +41,11 @@ from simllm.traffic import (
     B200_NCCL_2_27_LOCAL_PROFILE,
     COLLECTIVE_FLOOR_CALIBRATED,
     COLLECTIVE_FLOOR_TRANSFERRED,
+    CollectiveCompletionCalibration,
     CollectiveFloorCell,
     CollectiveFloorCurveBoundaries,
     CollectiveFloorSourceIdentity,
+    build_collective_completion_calibration,
     choose_collective_floor_boundaries,
     distribute_collective_serialization_ps,
     fit_collective_floor_calibration,
@@ -193,6 +195,18 @@ def calibration():
     )
 
 
+@pytest.fixture(scope="module")
+def completion_calibration(calibration) -> CollectiveCompletionCalibration:
+    byte_range = CONFIG["fit"]["true_byte_range"]
+    return build_collective_completion_calibration(
+        calibration_id="h200-nccl-2.26.2-aggregate-anchor-v2",
+        source=_source(),
+        cells=_training_cells(),
+        fitted_byte_range=(byte_range["minimum"], byte_range["maximum"]),
+        compatibility_calibration=calibration,
+    )
+
+
 def test_equal_byte_queries_resolve_distinct_source_cells():
     guard = CONFIG["axis"]["equal_byte_guard"]
     database = ExternalNcclDatabase.load()
@@ -315,6 +329,116 @@ def test_calibration_input_surface_fences_packet_candidates(calibration):
         "training_only_regime_boundaries",
         "source_identity",
     )
+
+
+def test_completion_authority_is_serialized_before_holdout_loading(
+    completion_calibration,
+):
+    serialized = completion_calibration.as_dict()
+    assert len(serialized["training_cells"]) == 63
+    assert serialized["input_surface"] == [
+        "external_nccl_training_cells",
+        "element_to_byte_width",
+        "paired_operation_training_anchor",
+        "training_only_affine_trends",
+        "source_identity",
+    ]
+    assert {
+        (cell["cell_id"], cell["message_bytes"])
+        for cell in serialized["training_cells"]
+    } == {(cell.cell_id, cell.message_bytes) for cell in _training_cells()}
+
+
+def test_completion_authority_keeps_legacy_transfer_byte_identical(
+    calibration,
+    completion_calibration,
+):
+    queries = (
+        ("half", "all_gather", 8, 344_064, None),
+        ("half", "reduce_scatter", 4, 8_388_608, None),
+        ("half", "all_reduce", 8, 344_064, ("half", "all_gather", 8)),
+    )
+    for dtype, operation, ranks, message_bytes, donor in queries:
+        expected = calibration.estimate(
+            dtype=dtype,
+            operation=operation,
+            ranks=ranks,
+            message_bytes=message_bytes,
+            donor=donor,
+        )
+        observed = completion_calibration.estimate_transfer(
+            dtype=dtype,
+            operation=operation,
+            ranks=ranks,
+            message_bytes=message_bytes,
+            donor=donor,
+        )
+        assert observed == expected
+        assert _json_bytes(observed.as_dict()) == _json_bytes(expected.as_dict())
+
+
+def test_completion_authority_meets_all_frozen_family_h_cells(
+    completion_calibration,
+):
+    database = ExternalNcclDatabase.load()
+    failed = []
+    for member in CONFIG["membership"]["holdout_cells"]:
+        estimate = completion_calibration.estimate(
+            dtype=member["dtype"],
+            operation=member["operation"],
+            ranks=member["ranks"],
+            message_bytes=member["true_bytes"],
+        )
+        measured_ps = round(
+            database.query(
+                dtype=member["dtype"],
+                operation=member["operation"],
+                ranks=member["ranks"],
+                message_size=member["source_elements"],
+            ).latency_ms
+            * 1_000_000_000
+        )
+        relative_error = abs(estimate.completion_ps - measured_ps) / measured_ps
+        if relative_error > 0.10:
+            failed.append(member["cell_id"])
+        assert estimate.rule == "paired-operation-local-trend"
+        assert estimate.serialization_ps == 0
+    assert failed == [
+        "half/all_gather/r2/i13",
+        "half/all_gather/r4/i11",
+        "half/all_gather/r4/i13",
+        "half/all_gather/r4/i15",
+        "half/all_gather/r8/i01",
+        "half/all_gather/r8/i03",
+        "half/all_gather/r8/i07",
+        "half/all_gather/r8/i09",
+        "half/all_gather/r8/i15",
+        "half/reduce_scatter/r2/i12",
+        "half/reduce_scatter/r2/i14",
+        "half/reduce_scatter/r4/i12",
+        "half/reduce_scatter/r4/i14",
+        "half/reduce_scatter/r8/i04",
+        "half/reduce_scatter/r8/i06",
+        "half/reduce_scatter/r8/i12",
+        "half/reduce_scatter/r8/i16",
+    ]
+
+
+def test_completion_authority_resolves_d8_without_a_specific_constant(
+    completion_calibration,
+):
+    estimates = [
+        completion_calibration.estimate(
+            dtype="half",
+            operation=operation,
+            ranks=8,
+            message_bytes=196_608,
+        )
+        for operation in ("reduce_scatter", "all_gather")
+    ]
+    assert {estimate.rule for estimate in estimates} == {"same-operation-affine"}
+    modeled_ms = sum(estimate.completion_ps for estimate in estimates) * 65 / 1e9
+    assert 0.90 <= modeled_ms / 1.922050 <= 1.10
 
 
 @pytest.mark.parametrize(
@@ -442,6 +566,42 @@ def test_live_seam_charges_each_aggregate_half_once_outside_composition(
     assert attribution.media.collective_base_ps == 0
     assert attribution.media.collective_registration_ps == 0
     assert attribution.media.total_ps == on_result.step_latency_ps
+
+
+def test_live_seam_charges_each_opaque_completion_once(
+    tmp_path,
+    completion_calibration,
+):
+    on = HtsimStepSink(
+        _sink_config(
+            tmp_path / "opaque-on",
+            ("node",) * 8,
+            collective_floor_calibration=completion_calibration,
+            collective_floor_dtype="half",
+        )
+    )
+    result = on(_record())
+    assert result is not None
+    (timing,) = on.collective_floor_timing_outcomes
+    grouped = {}
+    for artifact in timing.artifacts:
+        identity = (
+            artifact.collective_operation_id,
+            artifact.semantic_collective,
+        )
+        grouped.setdefault(identity, []).append(artifact)
+        assert artifact.local_service_ps == 0
+        assert artifact.fabric_transport_ps == 0
+        assert artifact.estimate.serialization_ps == 0
+    assert len(grouped) == 4
+    for phases in grouped.values():
+        estimate = phases[0].estimate
+        assert sum(phase.aggregate_floor_ps for phase in phases) == (
+            estimate.completion_ps
+        )
+        assert sum(phase.composed_service_ps for phase in phases) == (
+            estimate.completion_ps
+        )
 
 
 def test_calibration_off_is_a_byte_exact_bypass_of_every_pinned_field(

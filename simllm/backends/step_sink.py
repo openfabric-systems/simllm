@@ -142,6 +142,8 @@ from simllm.traffic import (
     COLLECTIVE_FLOOR_TRANSFERRED,
     DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND,
     ClassifiedCommunicationPhase,
+    CollectiveCompletionCalibration,
+    CollectiveCompletionEstimate,
     CollectiveFixedCostEnvelope,
     CollectiveFloorCalibration,
     CollectiveFloorEstimate,
@@ -239,7 +241,9 @@ class HtsimStepSinkConfig:
     #: one-time channel-and-buffer registration model; None is the exact off path
     collective_registration: str | CollectiveRegistrationModel | None = None
     #: optional aggregate H200 completion authority; None is the exact off path
-    collective_floor_calibration: CollectiveFloorCalibration | None = None
+    collective_floor_calibration: (
+        CollectiveFloorCalibration | CollectiveCompletionCalibration | None
+    ) = None
     #: source dtype named explicitly because a byte width cannot distinguish half
     collective_floor_dtype: str | None = None
     #: deliberate acceptance required before a transferred estimate reaches metrics
@@ -309,11 +313,11 @@ class HtsimStepSinkConfig:
         )
         if self.collective_floor_calibration is not None and not isinstance(
             self.collective_floor_calibration,
-            CollectiveFloorCalibration,
+            (CollectiveFloorCalibration, CollectiveCompletionCalibration),
         ):
             raise TypeError(
-                "collective_floor_calibration must be a CollectiveFloorCalibration "
-                "or None"
+                "collective_floor_calibration must be a collective completion "
+                "authority or None"
             )
         if self.collective_floor_calibration is None:
             if self.collective_floor_dtype is not None:
@@ -758,7 +762,7 @@ class CollectiveFloorArtifactTiming:
     collective_base_latency_ps: int
     registration_cost_ps: int
     composed_service_ps: int
-    estimate: CollectiveFloorEstimate
+    estimate: CollectiveFloorEstimate | CollectiveCompletionEstimate
 
     def __post_init__(self) -> None:
         for name in (
@@ -778,8 +782,11 @@ class CollectiveFloorArtifactTiming:
             "composed_service_ps",
         ):
             _require_nonnegative_timing(name, getattr(self, name))
-        if not isinstance(self.estimate, CollectiveFloorEstimate):
-            raise TypeError("estimate must be a CollectiveFloorEstimate")
+        if not isinstance(
+            self.estimate,
+            (CollectiveFloorEstimate, CollectiveCompletionEstimate),
+        ):
+            raise TypeError("estimate must be an aggregate completion estimate")
         if self.semantic_collective != self.estimate.requested_operation:
             raise ValueError("semantic collective disagrees with its fitted estimate")
         if self.collective_base_latency_ps:
@@ -944,7 +951,9 @@ class _PlannedExecutionArtifact:
     collective_base_latency_ps: int = 0
     aggregate_collective_floor_ps: int = 0
     collective_floor_semantic: str | None = None
-    collective_floor_estimate: CollectiveFloorEstimate | None = None
+    collective_floor_estimate: (
+        CollectiveFloorEstimate | CollectiveCompletionEstimate | None
+    ) = None
     registration_cost_ps: int = 0
 
 
@@ -955,14 +964,14 @@ class _CollectiveFloorPhaseTerm:
     semantic_collective: str
     local_service_ps: int
     aggregate_floor_ps: int
-    estimate: CollectiveFloorEstimate
+    estimate: CollectiveFloorEstimate | CollectiveCompletionEstimate
 
 
 def _ring_collective_floor_terms(
     *,
     work: CollectiveWork,
     phases: tuple[ClassifiedCommunicationPhase, ...],
-    calibration: CollectiveFloorCalibration,
+    calibration: CollectiveFloorCalibration | CollectiveCompletionCalibration,
     dtype: str,
     acknowledge_transfer: bool,
 ) -> dict[str, _CollectiveFloorPhaseTerm]:
@@ -1076,7 +1085,9 @@ class _PlannedStep:
     collective_fixed_cost_envelope_id: str | None
     collective_fixed_cost_arm: str | None
     collective_evidence_class: str | None
-    collective_floor_calibration: CollectiveFloorCalibration | None
+    collective_floor_calibration: (
+        CollectiveFloorCalibration | CollectiveCompletionCalibration | None
+    )
     collective_floor_transfer_acknowledged: bool
     collective_registration: CollectiveRegistrationModel | None
     registration_events: tuple[CollectiveRegistrationEvent, ...]
