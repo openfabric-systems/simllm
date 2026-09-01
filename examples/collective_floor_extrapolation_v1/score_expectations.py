@@ -207,12 +207,12 @@ def _assigned_gpu(text: str) -> tuple[str, str, str]:
     return matches[0]
 
 
-def _nv4_rows(text: str) -> int:
+def _nv4_rows(text: str, expected_gpus: int) -> int:
     count = 0
     for line in text.splitlines():
         fields = line.split()
-        if fields and re.fullmatch(r"GPU[0-3]", fields[0]):
-            count += fields[1:].count("NV4") == 3
+        if fields and re.fullmatch(r"GPU[0-9]+", fields[0]):
+            count += fields[1:].count("NV4") == expected_gpus - 1
     return count
 
 
@@ -344,14 +344,19 @@ def _audit_evidence_cell(
         if host_match is None or cassini_match is None:
             raise StudyError(f"rank {ranks} guard lacks host or port identity")
         host = host_match.group(1)
-        host_topologies[host] = _nv4_rows(before_text)
+        host_topologies[host] = _nv4_rows(
+            before_text, rank_config["gpus_per_node"]
+        )
         cassini_counts[host] = int(cassini_match.group(1))
     if len(set(assigned)) != ranks:
         raise StudyError(f"rank {ranks} does not map ranks to distinct GPUs")
     if len(host_topologies) != rank_config["nodes"]:
         raise StudyError(f"rank {ranks} ran on the wrong node count")
-    if any(value != 4 for value in host_topologies.values()):
-        raise StudyError(f"rank {ranks} node is not a direct four-GPU NV4 mesh")
+    if any(
+        value != rank_config["gpus_per_node"]
+        for value in host_topologies.values()
+    ):
+        raise StudyError(f"rank {ranks} GPUs are not a direct NV4 submesh")
     if ranks in SCORED_RANKS and any(value != 4 for value in cassini_counts.values()):
         raise StudyError(f"rank {ranks} node lacks four Cassini ports")
 
