@@ -1,0 +1,60 @@
+{
+  "schema": "simllm-collective-floor-second-candidate-v1",
+  "study": "collective_floor_calibration_v1",
+  "predecessor": {
+    "expectations_v4_sha256": "882c1d24bb2a9147b29d9e16ca41a508091c448946cad87a97273f3ceafa56c7",
+    "study_config_v2_sha256": "69e019cb546ff87c5e66c6250686d58cb2ca230b21a2174430db5a91197a8c7e",
+    "attempt_0005_authority_sha256": "f204dd7c34a2d99db02c8eb9d58ea5abe1e4f83a02a7fddf7cbfeedfad06eeed",
+    "attempt_0005_family_h": {
+      "passed": 46,
+      "denominator": 63,
+      "median_relative_error": 0.04228825737265415,
+      "p95_relative_error": 0.23435446848541863
+    }
+  },
+  "membership": {
+    "source": "study_config.json",
+    "training_count": 63,
+    "holdout_count": 63
+  },
+  "model": {
+    "model_id": "h200-nccl-2.26.2-aggregate-anchor-v3",
+    "default_rule": "arithmetic mean of same-operation affine training trend and complementary-operation exact training anchor",
+    "paired_trough_rule": "preserve the complementary exact anchor when it is below both adjacent anchors of its own operation",
+    "small_reduce_scatter_rule": {
+      "maximum_true_bytes": 8192,
+      "rule": "maximum of symmetric value, same-operation affine value and complementary all-gather exact anchor"
+    },
+    "transition_prior": {
+      "retained_bandwidth_fraction": "39/50",
+      "source": "examples/collective_regime_curve_v1/RESULTS.md",
+      "rules": [
+        {
+          "operation": "all_gather",
+          "ranks": [8],
+          "true_bytes": 262144,
+          "scaled_term": "complete symmetric value"
+        },
+        {
+          "operation": "all_gather",
+          "ranks": [2, 4, 8],
+          "true_bytes": 4194304,
+          "scaled_term": "symmetric value above the same curve's minimum training latency"
+        }
+      ]
+    },
+    "off_grid_rule": "same-operation affine interpolation on true bytes",
+    "completion_semantics": "opaque fully local completion charged once"
+  },
+  "family_h": {
+    "denominator": 63,
+    "required_passed": 63,
+    "band": "relative error no greater than max(0.10, two H200 GPU cycles divided by measured completion)"
+  },
+  "family_d8": {
+    "operation_buffer_bytes": 196608,
+    "external_arm_ms": 1.92205,
+    "band": [0.9, 1.1],
+    "expected_unchanged_rule": "same-operation-affine"
+  }
+}
