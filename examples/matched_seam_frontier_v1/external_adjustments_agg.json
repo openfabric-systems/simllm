@@ -1,0 +1,130 @@
+{
+  "additional_adjustments": [
+    {
+      "aggregate_tpot_reachable": false,
+      "aggregate_ttft_reachable": true,
+      "documentation": {
+        "end_line": 136,
+        "meaning": "Models the wait of a context request behind earlier context work in one in-flight batch.",
+        "path": "aiconfigurator_core/sdk/backends/base_backend.py",
+        "sha256": "0ad5647459114a726dcce5783bce52a6069bcefcb7b175202a4f6161cbc57f75",
+        "start_line": 127
+      },
+      "id": "aggregate_ttft_queueing_heuristic",
+      "kind": "multiplicative_operating_point_queueing_heuristic",
+      "removal_value": "1.0",
+      "source": {
+        "end_line": 1349,
+        "path": "aiconfigurator_core/sdk/backends/base_backend.py",
+        "sha256": "0ad5647459114a726dcce5783bce52a6069bcefcb7b175202a4f6161cbc57f75",
+        "start_line": 1341
+      },
+      "value": "min(2 + (ceil(isl * batch / ctx_tokens) - 3) / 20, 4)"
+    },
+    {
+      "aggregate_tpot_reachable": true,
+      "aggregate_ttft_reachable": false,
+      "documentation": {
+        "end_line": 72,
+        "meaning": "Reduces the mixed-step count used by TensorRT-LLM TPOT to represent a three-step pipeline drain at the context/decode boundary.",
+        "path": "aiconfigurator_core/sdk/backends/trtllm_backend.py",
+        "sha256": "6a2d13b74a7296ad94d0f2c16e8d579f28a20ab9f95b48b70180a29b004e89e0",
+        "start_line": 68
+      },
+      "id": "trtllm_tpot_mixed_step_reduction",
+      "kind": "integer_mixed_step_count_correction",
+      "removal_value": "0",
+      "source": {
+        "end_line": 1358,
+        "path": "aiconfigurator_core/sdk/backends/base_backend.py",
+        "sha256": "0ad5647459114a726dcce5783bce52a6069bcefcb7b175202a4f6161cbc57f75",
+        "start_line": 1303
+      },
+      "value": "3"
+    }
+  ],
+  "aggregate_reachability": [
+    {
+      "aggregate_tpot_reachable": false,
+      "aggregate_ttft_reachable": false,
+      "base_adjustment_id": "prefill_latency_correction",
+      "reason": "The aggregate path calls mixed and generation-only pass composition without the disaggregated static-prefill correction."
+    },
+    {
+      "aggregate_tpot_reachable": false,
+      "aggregate_ttft_reachable": false,
+      "base_adjustment_id": "decode_latency_correction",
+      "reason": "The aggregate path calls mixed and generation-only pass composition without the disaggregated static-decode correction."
+    },
+    {
+      "aggregate_tpot_reachable": false,
+      "aggregate_ttft_reachable": false,
+      "base_adjustment_id": "prefill_rate_matching_degradation",
+      "reason": "A co-located aggregate pool has no cross-pool prefill rate matching."
+    },
+    {
+      "aggregate_tpot_reachable": false,
+      "aggregate_ttft_reachable": false,
+      "base_adjustment_id": "decode_rate_matching_degradation",
+      "reason": "A co-located aggregate pool has no cross-pool decode rate matching."
+    },
+    {
+      "aggregate_tpot_reachable": false,
+      "aggregate_ttft_reachable": false,
+      "base_adjustment_id": "autoscale_ttft_correction",
+      "reason": "The disaggregated autoscale filter is not called by aggregate in-flight batching."
+    },
+    {
+      "aggregate_tpot_reachable": true,
+      "aggregate_ttft_reachable": true,
+      "base_adjustment_id": "memory_bandwidth_empirical_scale",
+      "reason": "Every aggregate mixed and generation-only pass consumes memory-operation pricing from the imported H200 system record."
+    },
+    {
+      "aggregate_tpot_reachable": true,
+      "aggregate_ttft_reachable": true,
+      "base_adjustment_id": "memory_empirical_constant_latency",
+      "reason": "Every aggregate mixed and generation-only pass consumes memory-operation pricing from the imported H200 system record."
+    },
+    {
+      "aggregate_tpot_reachable": true,
+      "aggregate_ttft_reachable": true,
+      "base_adjustment_id": "context_attention_extra_latency_correction",
+      "reason": "Each aggregate mixed step contains the context-attention extra-latency term."
+    }
+  ],
+  "base_table": {
+    "path": "examples/matched_seam_frontier_v1/external_adjustments.json",
+    "schema": "simllm-matched-seam-external-adjustments-v1",
+    "sha256": "c6778a81cdc6078ce74f06733e4bce9d99a92b4ab3eccba4a83d14e7d063a09e"
+  },
+  "composition_sources": [
+    {
+      "end_line": 1128,
+      "meaning": "One mixed step combines a context-token pass, context attention, and generation attention over the same imported operation database.",
+      "path": "aiconfigurator_core/sdk/backends/base_backend.py",
+      "sha256": "0ad5647459114a726dcce5783bce52a6069bcefcb7b175202a4f6161cbc57f75",
+      "start_line": 994
+    },
+    {
+      "end_line": 1193,
+      "meaning": "One generation-only step is the ordered generation pass over the in-flight generation requests.",
+      "path": "aiconfigurator_core/sdk/backends/base_backend.py",
+      "sha256": "0ad5647459114a726dcce5783bce52a6069bcefcb7b175202a4f6161cbc57f75",
+      "start_line": 1130
+    },
+    {
+      "end_line": 1505,
+      "meaning": "The aggregate scheduler derives mixed and generation-only counts, TTFT, TPOT, output throughput, axes, and published scheduling counters.",
+      "path": "aiconfigurator_core/sdk/backends/base_backend.py",
+      "sha256": "0ad5647459114a726dcce5783bce52a6069bcefcb7b175202a4f6161cbc57f75",
+      "start_line": 1246
+    }
+  ],
+  "external_packages": {
+    "aiconfigurator": "0.11.0",
+    "aiconfigurator-core": "0.11.0"
+  },
+  "schema": "simllm-matched-seam-aggregate-adjustments-v1",
+  "scope": "Additive aggregate-path reachability and empirical adjustments. The protected base table remains byte-identical."
+}
