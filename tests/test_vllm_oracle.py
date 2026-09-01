@@ -2,17 +2,22 @@ import json
 import sys
 from types import SimpleNamespace
 
+import pytest
+
 from simllm.adapters.vllm import oracle
 from simllm.adapters.vllm.oracle import (
     ORACLE_ENABLE_ENV,
     ORACLE_LOG_ENV,
     ORACLE_OBSERVATION_SCHEMA,
+    ORACLE_SCOPE_ENV,
     _observe_allocate_slots,
     _observe_eviction,
+    _observe_free,
     _observe_manager_init,
     _observe_prefix_hit,
     _observe_request_finish,
     _observe_worker_load,
+    _oracle_scope,
     mark_oracle_capture_start,
     mark_oracle_request_mapping,
     mark_oracle_submission_group,
@@ -67,6 +72,13 @@ def test_vllm_oracle_gate_and_request_markers(monkeypatch, tmp_path):
     assert all(value["schema"] == ORACLE_OBSERVATION_SCHEMA for value in values)
 
 
+def test_vllm_oracle_scope_keeps_full_default_and_validates_kv_only():
+    assert _oracle_scope({}) == "full"
+    assert _oracle_scope({ORACLE_SCOPE_ENV: "kv"}) == "kv"
+    with pytest.raises(ValueError, match="must be full or kv"):
+        _oracle_scope({ORACLE_SCOPE_ENV: "scheduler"})
+
+
 def test_vllm_kv_hooks_project_actual_results(monkeypatch, tmp_path):
     path = configure_sidecar(monkeypatch, tmp_path)
     cache = manager()
@@ -93,6 +105,32 @@ def test_vllm_kv_hooks_project_actual_results(monkeypatch, tmp_path):
     assert values[1]["token_count"] == 64
     assert values[2]["block_ids"] == [7, 8]
     assert values[2]["token_count"] == 64
+
+
+def test_vllm_free_hook_records_each_manager_group_in_engine_free_order(
+    monkeypatch, tmp_path
+):
+    path = configure_sidecar(monkeypatch, tmp_path)
+    cache = manager()
+    cache.get_blocks = lambda _request_id: FakeBlocks([1, 2], [7, 8, 9])
+    request = SimpleNamespace(request_id="internal-0")
+
+    returned = _observe_free(
+        lambda _manager, _request: "freed",
+        cache,
+        request,
+    )
+
+    assert returned == "freed"
+    assert rows(path) == [
+        {
+            "block_ids": [2, 1, 9, 8, 7],
+            "kind": "release",
+            "request_id": "internal-0",
+            "schema": ORACLE_OBSERVATION_SCHEMA,
+            "token_count": 160,
+        }
+    ]
 
 
 def test_vllm_eviction_hook_records_only_real_eviction(monkeypatch, tmp_path):
@@ -134,6 +172,55 @@ def test_vllm_final_counter_is_scheduler_owned(monkeypatch, tmp_path):
             "num_preemptions": 3,
             "request_id": "internal-0",
             "schema": ORACLE_OBSERVATION_SCHEMA,
+        }
+    ]
+
+
+def test_vllm_preemption_observer_forwards_0271_drop_stale_output(
+    monkeypatch, tmp_path
+):
+    path = configure_sidecar(monkeypatch, tmp_path)
+    cache = manager()
+    cache.get_blocks = lambda _request_id: FakeBlocks([5, 6])
+    scheduler = SimpleNamespace(kv_cache_manager=cache)
+    request = SimpleNamespace(request_id="pressure-r0")
+    calls = []
+
+    def preempt(
+        observed_scheduler,
+        observed_request,
+        timestamp,
+        *,
+        drop_stale_output=False,
+    ):
+        calls.append(
+            (
+                observed_scheduler,
+                observed_request,
+                timestamp,
+                drop_stale_output,
+            )
+        )
+        return "preempted"
+
+    returned = oracle._observe_preemption(
+        preempt,
+        scheduler,
+        request,
+        1.25,
+        drop_stale_output=True,
+    )
+
+    assert returned == "preempted"
+    assert calls == [(scheduler, request, 1.25, True)]
+    assert rows(path) == [
+        {
+            "block_ids": [5, 6],
+            "kind": "preemption",
+            "reason": "scheduler-recompute",
+            "request_id": "pressure-r0",
+            "schema": ORACLE_OBSERVATION_SCHEMA,
+            "token_count": 64,
         }
     ]
 

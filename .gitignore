@@ -33,6 +33,8 @@ runs/
 !examples/external_db_parity_v1/results.csv
 !examples/matched_seam_frontier_v1/results.csv
 !examples/merlin_collective_capture_v1/results.csv
+!examples/matched_seam_frontier_v1/deploy12_results.csv
+!examples/surrogate_conformance_v1/results.csv
 
 # Local agent rule files (kept out of the public repo on purpose)
 CLAUDE.md

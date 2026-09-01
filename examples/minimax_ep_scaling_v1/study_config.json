@@ -8,6 +8,32 @@
     "frozen_before_implementation": true,
     "oracle_collection": "live pinned SDK in a fresh process"
   },
+  "collective_floor_correction": {
+    "status": "defect correction evaluated against the unchanged expectations_v2.md predicate",
+    "source_config": "examples/collective_floor_calibration_v1/study_config.json",
+    "source_config_sha256": "83de9c82dea918d09e9bb474529f33b146b3a14a6f010b8d85ea1cfa83b35f57",
+    "source_record": "examples/collective_floor_calibration_v1/record.json",
+    "source_record_sha256": "3e41e6ec80e67eed851ca68884da0244ac8f79c338bef06272d8ccb97113026f",
+    "calibration_id": "h200-nccl-2.26.2-aggregate-floor-v1",
+    "donor_ranks": 8,
+    "acknowledge_transferred_at_use": true,
+    "composition": "charge each aggregate floor once outside max(calibrated byte-slope service, unchanged fabric service)",
+    "dense_operation_buffer_coordinate": "tokens_per_rank * hidden_size * expert_parallel * 2 half-precision bytes per semantic phase",
+    "sparse_dispatch_transfer": {
+      "requested_dtype": "int8",
+      "requested_operation": "moe_dispatch",
+      "donor_dtype": "half",
+      "donor_operation": "all_gather",
+      "operation_buffer_coordinate": "tokens_per_rank * top_k * hidden_size * 1 FP8 byte"
+    },
+    "sparse_combine_transfer": {
+      "requested_dtype": "half",
+      "requested_operation": "moe_combine",
+      "donor_dtype": "half",
+      "donor_operation": "reduce_scatter",
+      "operation_buffer_coordinate": "tokens_per_rank * top_k * hidden_size * 2 BF16 bytes"
+    }
+  },
   "source": {
     "tool": "NVIDIA AIConfigurator",
     "aiconfigurator": "0.11.0",
@@ -245,18 +271,21 @@
       "name": "dense SM90 general fallback",
       "logical_traffic_definition": "half-precision all-gather plus reduce-scatter over tokens times hidden times expert-parallel width elements",
       "external_pricing_definition": "opaque eight-rank NCCL table measurement scaled by the donor rank factor, with no source, destination, path or message ledger",
-      "packet_pricing_definition": "dense half-precision element count expanded as synchronized direct all-pairs packet transfers over the declared Clos placement",
+      "packet_pricing_definition": "dense half-precision operation-buffer coordinate priced by the landed aggregate all-gather and reduce-scatter floor authority, each floor charged once outside the maximum of calibrated local byte-slope service and synchronized direct all-pairs fabric service over the declared Clos placement",
+      "superseded_packet_pricing_definition": "dense half-precision element count expanded as synchronized direct all-pairs transfers over the declared Clos placement, with intra-node collective transport and fixed collective overheads omitted",
       "external_dtype_identifier": "half",
       "external_dtype_interpretation": "generic half precision; the table does not identify BF16",
       "external_message_axis_name": "message_bytes",
-      "external_message_argument_interpretation": "the caller passes tokens times hidden times expert-parallel width as an element count, so the table axis unit is unresolved between its byte name and the caller's element semantics"
+      "external_message_argument_interpretation": "the caller passes tokens times hidden times expert-parallel width as an element count; the calibration study proved that the raw table coordinate is ELEMENTS despite the message_bytes interpolation label, and converts it to true bytes using the dtype width"
     },
     "sparse_routed_payload": {
       "name": "sparse routed expert payload",
       "logical_traffic_definition": "top-k token assignments routed only to realized expert-owner ranks, with FP8 dispatch and BF16 combine",
       "dispatch_bytes_per_element": 1,
       "combine_bytes_per_element": 2,
-      "precision_justification": "the represented sparse path quantizes dispatch to FP8 and returns ordinary combine in BF16; low-precision combine is a separate mode and is disabled"
+      "precision_justification": "the represented sparse path quantizes dispatch to FP8 and returns ordinary combine in BF16; low-precision combine is a separate mode and is disabled",
+      "packet_pricing_definition": "realized sparse packet fabric service composed with acknowledged transferred all-gather and reduce-scatter aggregate floors and byte slopes at the logical FP8 dispatch and BF16 combine operation-buffer coordinates",
+      "superseded_packet_pricing_definition": "realized sparse packet transfers with intra-node collective transport and fixed collective overheads omitted"
     }
   },
   "packet_sampling": {
@@ -270,6 +299,8 @@
     "dense_direct_full_population_max_width": 128,
     "dense_widest_anchor_width": 128,
     "dense_widest_extrapolation_rule": "post-specified diagnostic introduced in implementation commit a6ba97f after corrected expectations commit 4d1e41c: multiply the EP 128 measured per-layer makespan by the ratio of EP 256 to EP 128 cross-node bytes per rank, (256 - 8) / (128 - 8) = 31 / 15; message size, link rate, placement rule and represented layer count stay fixed",
+    "dense_widest_extrapolation_rule_status": "superseded because multiplying the whole phase also multiplies the newly bound fixed floor",
+    "dense_widest_corrected_extrapolation_rule": "unscored post-specified diagnostic: for each semantic half, multiply only the EP 128 fabric service by (256 - 8) / (128 - 8) = 31 / 15, query the rank-8 collective-floor donor at the EP 256 operation-buffer byte coordinate, then charge its floor once outside max(calibrated byte-slope service, extrapolated fabric service)",
     "dense_widest_extrapolation_scored": false
   },
   "void_first_run": {

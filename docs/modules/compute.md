@@ -1841,8 +1841,12 @@ as void strategy evidence because the donor's half-precision
 `tokens * hidden * E` buffer and the routed FP8 expert payload are different
 traffic abstractions. Corrected Family D compares an opaque NCCL-table cost
 model with a direct packet Clos cost model on the same requested logical
-element count. It refutes all three measured cells; EP 256 is an unscored
-post-specified diagnostic, and the comparison does not isolate contention.
+element count. Its landed aggregate collective binding corrects the scored
+ratios to 1.109143, 0.435919 and 0.847299: EP 8 passes the unchanged lower
+bound, while EP 32 and EP 128 remain refuted. EP 256 is an unscored
+component-wise diagnostic at 1.218997, and the comparison does not isolate
+contention. The earlier floor-omitting values remain published as superseded
+evidence, and the former single crossover claim is withdrawn.
 COMP-82 through COMP-86 retain their listed identity, surface and live-chain
 gaps.
 COMP-87 specifically owns the imported but undispatched WideEP MoE, MLA BMM,
