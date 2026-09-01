@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 STUDY_DIR = Path(__file__).resolve().parent
+EXPECTATIONS_PATH = STUDY_DIR / "expectations.json"
 FREEZE_COMMIT = "375639c147f39fe4f01ea212855ef9e8efb5d7fa"
 EXPECTATIONS_SHA256 = "95a5921d2075136073189ead7ca7fdc9eca4c8fcb6482cffda7e04eee35989da"
 SPLIT_RESULT_SCHEMA = "simllm-pd-session-batching-service-split-result-v1"
@@ -65,6 +66,20 @@ def publish_split(result: dict[str, Any], raw_sha256: str) -> dict[str, Any]:
         raise ValueError("raw result has an incomplete split score")
     if analysis["conservation"]["cells"] != expected_cells:
         raise ValueError("raw result has an incomplete split conservation ledger")
+    expectations = _load_json(EXPECTATIONS_PATH)
+    rows = analysis["service_band_verdicts"]
+    observed = [
+        _fraction(row["observed_batching_service_per_token_ps"]) for row in rows
+    ]
+    errors = [
+        abs(
+            _fraction(row["observed_batching_service_per_token_ps"])
+            - _fraction(row["predicted_batching_service_per_token_ps"])
+        )
+        for row in rows
+    ]
+    floor = expectations["physical_bounds"]["floor_service_per_token_ps"]
+    ceiling = expectations["physical_bounds"]["ceiling_service_per_token_ps"]
     return {
         "schema": PUBLICATION_SCHEMA,
         "status": analysis["status"],
@@ -81,6 +96,27 @@ def publish_split(result: dict[str, Any], raw_sha256: str) -> dict[str, Any]:
         "conservation": analysis["conservation"],
         "service_band_verdicts": analysis["service_band_verdicts"],
         "service_band_summary": analysis["service_band_summary"],
+        "physical_sanity": {
+            "floor_service_per_token_ps": floor,
+            "ceiling_service_per_token_ps": ceiling,
+            "observed_minimum_service_per_token_ps": {
+                "numerator": min(observed).numerator,
+                "denominator": min(observed).denominator,
+            },
+            "observed_maximum_service_per_token_ps": {
+                "numerator": max(observed).numerator,
+                "denominator": max(observed).denominator,
+            },
+            "maximum_absolute_prediction_error_ps": {
+                "numerator": max(errors).numerator,
+                "denominator": max(errors).denominator,
+            },
+            "all_observations_inside_physical_bounds": all(
+                _fraction(floor) <= value <= _fraction(ceiling)
+                for value in observed
+            ),
+            "scored": False,
+        },
         "separate_fields": {
             "arrival_to_prefill_published": analysis[
                 "arrival_to_prefill_published"
@@ -104,12 +140,15 @@ def render_split_markdown(publication: dict[str, Any]) -> str:
 
     summary = publication["service_band_summary"]
     conservation = publication["conservation"]
+    sanity = publication["physical_sanity"]
     rows = [
         f"# VLLM-42 {publication['split']} batching-service result",
         "",
         f"Status: `{publication['status']}`. {summary['held']} of {summary['evaluated']} frozen service bands held; {summary['missed']} missed.",
         "",
         f"Conservation held for {conservation['admissions']} admissions, {conservation['handoffs']} handoffs, {conservation['terminals']} terminals, and {conservation['terminal_decode_tokens']} decode tokens. The maximum time-to-first-token decomposition residual was {conservation['maximum_ttft_residual_ps']} picoseconds.",
+        "",
+        f"The unscored physical check places the observed service range at {_microseconds(sanity['observed_minimum_service_per_token_ps'])} to {_microseconds(sanity['observed_maximum_service_per_token_ps'])} microseconds per request-token, inside the frozen {_microseconds(sanity['floor_service_per_token_ps'])} to {_microseconds(sanity['ceiling_service_per_token_ps'])} microsecond surface bounds. The largest absolute prediction error is {_microseconds(sanity['maximum_absolute_prediction_error_ps'])} microseconds.",
         "",
         "Arrival-to-prefill wait, handoff-to-decode admission wait, and batching",
         "service remain separate below. Wait fields are diagnostics and are not scored.",
