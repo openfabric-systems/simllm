@@ -1096,6 +1096,24 @@ created" statement stands and refers to different, never-registered work.
   flipping in the registered direction and reports the flip through the
   per-request components, while the far-from-crossing cells keep their measured
   values exactly.
+- BACK-54 (Precision; P1; M): calibrate the RoCEv2 DCQCN endpoint against the
+  measured ConnectX-5 Ex 100 GbE campaign, using `simllm.backends.nic_profile`
+  as the carrier. The profile's `link_bps` and `t_eff_ps` are the two fields
+  the comparator's CLI cannot express: the packet path has one rate rather than
+  a wire rate and a goodput rate, so the measured 100 G line rate and the
+  97.1 Gb/s goodput asymptote collapse into one flag; and its message offset is
+  entirely topology propagation plus store-and-forward, so a configuration can
+  match either the measured 2.08 us latency floor or the measured 4.48 us
+  message offset, never both. The registered evidence is in
+  [examples/cx5_msgsize_v1](../../examples/cx5_msgsize_v1/expectations.md).
+  Acceptance: with an endpoint initiation cost drawn from the RDMA Work Queue's
+  own service stages rather than an added per-message sleep, one configuration
+  reproduces the measured depth-1 WRITE curve within 15 percent at every size
+  at or below 256 KiB, the 2 B latency floor within 15 percent, and the
+  measured MTU-1024 tax within 2 percentage points, with the fitted `C` and
+  `T_eff` reported per profile and the ConnectX-7 arm still derived by scaling
+  alone. The declared ECN thresholds stay declared until an endpoint that
+  exposes them is measured.
 
 ### Completeness
 
@@ -1368,6 +1386,14 @@ created" statement stands and refers to different, never-registered work.
 
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
+Scope note for the ConnectX-5 calibration (BACK-54): the DCQCN comparator
+treats a send whose source and destination are the same node as a fatal error
+and exits, and there is no in-NIC loopback datapath anywhere in the packet
+path. The measured in-NIC contention budget, where a loopback flow and a wire
+flow share one internal ceiling and the wire flow wins, is therefore out of
+scope for this backend and carries no task here; a study that needs it must
+model the two flows as separate nodes and say so.
+
 ### Precision
 
 - HTSIM-5 (Precision; P1; L): persistent DCQCN policy state across hardware
@@ -1416,6 +1442,19 @@ created" statement stands and refers to different, never-registered work.
   HTSIM-6 and BACK-9: policy lookahead removes the repeated declare cost,
   structural WQ backpressure limits how much work can be exposed, and the
   event-loop scaling needs its own look.
+- HTSIM-34 (Precision; P1; M): finite outstanding work at the RoCE sender.
+  `RoceSrc` is a rate-paced open-loop sender with no window, no send queue and
+  no outstanding-bytes cap, so it approximates an infinitely deep pipeline and
+  the only way a study can vary queue depth today is to issue independent
+  flows, which amortize perfectly and therefore measure nothing. The observable
+  that identifies the replacement is the measured send-queue-depth ratio on
+  ConnectX-5: 8 KiB messages run 5.9x faster at depth 1024 than at depth 1, and
+  64 KiB messages 1.57x, while the deep-pipeline arm saturates against a
+  separate loss-induced ceiling rather than against line rate. Drive the cap
+  from `NicProfile.sq_depth` (in-flight WQEs) or its byte equivalent, checked
+  where the sender decides to emit the next packet. Acceptance: the depth-1 and
+  depth-1024 pairs at 8 KiB and 64 KiB reproduce within 20 percent on the
+  ratio, and an unset cap preserves every accepted result byte for byte.
 ### Completeness
 
 - HTSIM-1 (Completeness; P2; L): `rnic-ss` (Slingshot-like) profile
@@ -1463,6 +1502,36 @@ created" statement stands and refers to different, never-registered work.
   from co-hosted sources, so no source-side sharing study can run until
   the depth is declarable; registered by the wave-21 recalibration
   alongside HTSIM-32, which it gates.
+- HTSIM-35 (Completeness; P1; L): a responder ingress meter at the DCQCN
+  endpoint. The packet path drops only at switch queues; the endpoint host
+  queue is egress-only and has no discard path, so a measured responder-side
+  PHY discard can only be reproduced today by mis-attributing it to a switch
+  buffer. This one absent object is the mechanism behind three separate
+  measured behaviors: the 78 to 92 Gb/s single-flow saturated equilibrium, the
+  drain-window effect where a 4 us inter-burst gap at 8 KiB removes the loss
+  entirely and raises goodput 13.8 percent, and the bidirectional case being
+  counter-clean at 91.8 Gb/s per direction while the unidirectional arm at
+  93.4 Gb/s drops. Model a finite receive-side buffer with a service rate,
+  mirroring the existing egress host queue, sized from
+  `NicProfile.rx_ingress_meter_bytes` and dropping when full. The existing
+  `RnicRxPort` and its ring-CAM ingress in the `rnic-cn` family are a tested
+  implementation of exactly this object in another profile and should be read
+  before a new one is written. Acceptance: the gap sweep at 8 and 64 KiB shows
+  the counter-clean transition across the measured threshold, and the off path
+  (no meter configured) keeps every accepted result byte for byte.
+- HTSIM-36 (Completeness; P2; M): a packets-per-second resource at the NIC,
+  separate from bits per second and applied at both transmit and receive, with
+  a per-QP and a per-NIC level. Every rate limit in both backend families is in
+  bits per second, and one flow is one QP with no per-NIC message-rate resource
+  shared across QPs, so the entire measured small-message regime is
+  inexpressible: a single UD receive QP caps at about 3.07 Mpps and silently
+  discards beyond it, sixteen QPs take 9.65 Mpps clean, and 512 B RC WRITE
+  reaches 16.7 Mmsg/s per sender with a 20.5 Mmsg/s aggregate under 2 to 1
+  fan-in. Source the two levels from `NicProfile.pps_ceiling_per_qp` and
+  `pps_ceiling_per_nic`. Acceptance: the 512 B and 4 KiB multi-QP rows are
+  reproduced within 20 percent, the single-QP knee appears at the configured
+  ceiling with the excess discarded and no sender-visible signal, and an unset
+  ceiling preserves every accepted result byte for byte.
 - ATLAHS-1 (Completeness; P2; S): correct the vendored-fallback wording (the
   vendored htsim tree
   cannot satisfy the resolver) and pin a known-good HTSIM commit. Audited on
