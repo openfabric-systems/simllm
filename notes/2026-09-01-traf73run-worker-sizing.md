@@ -10,11 +10,11 @@
   registered fatal guard, publish the identification evidence, and close
   TRAF-73 only when the frozen rules make the outcome literal.
 - Assumptions: TRAF-80 is the merged mechanism authority; the corrected
-  TRAF-70 persistent peer producer and its NVLink-side observables can execute
-  the registered cells without a new capture harness; the existing candidate
-  profile and module implementation remain byte-identical; the maintainer's
-  persistent Merlin connection and one qualified exclusive `a100-hourly`
-  allocation remain available.
+  TRAF-70 persistent peer producer remains the one capture harness and can
+  receive a reproducible build overlay behind an explicit identity off mode;
+  the tracked producer, existing candidate profile and module implementation
+  remain byte-identical; the maintainer's persistent Merlin connection and
+  one qualified exclusive `a100-hourly` allocation remain available.
 - Exclusions: no edit under `simllm/`, no candidate-profile or module-default
   promotion, no README edit, no new CUDA capture harness, no model weights, no
   web access, no IP link statistic as wire evidence, no remote Git mutation,
@@ -39,6 +39,11 @@
   historical pre-alignment expectations and simulation result.
 - Create or materially extend a bounded family of focused freeze tests under
   `tests/test_nvlink_credit_arbitration_*.py`.
+- Create `examples/nvlink_credit_arbitration_v1/producer_traf73.patch` as a
+  SHA-pinned build overlay that adds TRAF-73-only per-repetition timing,
+  per-flow rate and common-window records to a temporary copy of the exact
+  frozen producer. The tracked source remains byte-identical, its existing
+  plan fields remain the identity off mode, and no second CUDA source exists.
 - Create a resumable study-side campaign runner, a serially paced Merlin batch
   entry point and a literal scorer under
   `examples/nvlink_credit_arbitration_v1/`. These reuse the TRAF-70 producer
@@ -51,16 +56,17 @@
   cell, if measured evidence refutes a declared candidate.
 - Modify this sizing note at completion with actual touched-file and line
   accounting.
-- Keep every README, file under `simllm/`, candidate profile, inherited study
-  result and TRAF-70 producer source byte-identical.
+- Keep every README, file under `simllm/`, candidate profile and inherited
+  study result and TRAF-70 producer source byte-identical. The temporary build
+  overlay applies only after the base source digest is checked.
 
 ### Expected handwritten line ranges
 
 - Production lines: zero.
 - Tests and fixtures: 350 to 750 lines.
-- Studies, configuration and documentation: 2,200 to 4,500 lines across the
-  aligned freeze, resumable campaign, scorer, compact publication, registry
-  effect and this note.
+- Studies, configuration and documentation: 3,200 to 6,200 lines across the
+  aligned freeze, in-place producer extension, resumable campaign, scorer,
+  compact publication, registry effect and this note.
 - Mechanically generated expectations JSON, compact result JSON, CSV tables,
   external raw rows, manifests, scheduler logs, binaries and digest inventories
   are listed evidence and count as zero handwritten lines.
@@ -68,11 +74,11 @@
 ### Confidence and uncertainty
 
 - Confidence: low.
-- Dominant uncertainty: the unchanged TRAF-70 producer must express H3's
-  unequal simultaneous offered rates and expose a common steady device window
-  without weakening its lineage or fatal guards. H1 may also remain honestly
-  inconclusive because a return shorter than one link-window serialization
-  produces no observable knee.
+- Dominant uncertainty: the producer's identity off mode must remain exact
+  while the TRAF-73 mode records 200 per-repetition device times and unequal
+  simultaneous offered rates inside one common steady window. H1 may also
+  remain honestly inconclusive because a return shorter than one link-window
+  serialization produces no observable knee.
 - Hardware and waiting work not expressed by line counts: persistent SSH
   health, queue occupancy, serial allocation delay, CUDA compilation, three
   short captures, clean signal handling, lean evidence retrieval and scheduler
