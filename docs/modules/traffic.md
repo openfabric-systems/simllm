@@ -1219,9 +1219,48 @@ arbitration parameters after that structure lands.
   demonstrates an end-to-end TTFT or TPOT change through the supported metric
   chain. The explicit uncalibrated transport mode remains selectable and
   reproduces the corrected result exactly when hardware calibration is
-  disabled. TRAF-78 owns observed assignment geometry, TRAF-75 owns
+  disabled. The first frozen
+  [Merlin multi-node capture](../../examples/merlin_collective_capture_v1/RESULTS.md)
+  narrows this entry to the achieved evidence: phase timing at widths 2 and 8
+  with anchors held; endpoint proxies captured; concentration control refuted
+  pending a working pinning mechanism; switch occupancy remains unobservable.
+  All 352 frozen cells and all three consistency anchors were captured, but
+  fatal guard FG-2 failed because every attempt's counters contradicted its
+  declared concentration. The frozen rule therefore voids every directional
+  Family R row without relabeling it. The phase timings and ladder
+  completeness remain independent observations, not transport calibration.
+  H200 capture, working concentration, receiver occupancy, queue waits, buffer
+  high-water marks, switch occupancy, holdout reproduction and the supported
+  TTFT or TPOT effect all remain open. TRAF-81 owns the next concentration
+  mechanism and counter authority. TRAF-78 owns observed assignment geometry,
+  TRAF-75 owns
   directional precision selection, TRAF-26 supplies complete peer workloads,
   and COMP-89 separately owns the donor NCCL extrapolation.
+- TRAF-81 (Precision; P1; L): replace the refuted
+  `NCCL_SOCKET_IFNAME` concentration surrogate with a working TX-side route or
+  provider control and identify authoritative Cassini TX and RX counter
+  semantics. The first TRAF-77 capture selected NCCL's built-in Socket
+  transport with GDR disabled: one-port logs exposed only hsn0 and listened on
+  hsn0, yet gpu101 charged about 262.6 GB of TX to hsn2 while its
+  payload-matched 25.5 GB of RX arrived on hsn0. Four-port width-8 jobs spread
+  RX across all four ports but charged more than 99.95 percent of TX to one
+  port per node. Opposite-node packet totals remained close and errors plus
+  drops stayed zero while `ip link` TX bytes were about ten times RX bytes, so
+  the exact driver or hardware counter definition remains unidentified.
+  Capture route, rule, route-get, socket-binding and provider state; obtain
+  authoritative Cassini hardware bytes and packets; and reconcile them with
+  `ip link` before using byte fractions as routing proof. Freeze the repair
+  before a new capture. One-port acceptance requires hsn0 to carry at least
+  95 percent of TX and at least 95 percent of RX separately on every node.
+  Four-port acceptance requires every hsn port to carry at least 5 percent of
+  TX and at least 5 percent of RX separately, with no frozen band widened and
+  with packet, byte, error and drop conservation disclosed. Preserve an
+  explicit uncontrolled capture path and prove its submitted bytes unchanged.
+  Also make the NCCL wheel finder architecture aware and select a Python 3.7+
+  interpreter portably on login and compute nodes so the supported runner
+  needs no `PYTHONPATH` or personal absolute-path default. A successful
+  capture unblocks concentration scoring for TRAF-77; it does not supply H200
+  evidence or switch telemetry.
 - TRAF-78 (Precision; P1; L): replace the MiniMax full-population packet
   arm's deterministic balanced assignment surrogate with independently
   observed per-rank expert assignments. The corrected surrogate routes whole
