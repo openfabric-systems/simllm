@@ -65,7 +65,7 @@ PUBLICATION_PDF_PATH = FIGURE_DIR / "matched-seam-frontier-aggregate-publication
 PUBLICATION_PNG_PATH = FIGURE_DIR / "matched-seam-frontier-aggregate-publication.png"
 
 PROTECTED_PRIOR_SHA256 = {
-    "DEPLOY12_RESULTS.md": "502c835fd33fd5bd0abee11ae2548eaf099e39653671d9a1a3c993a76530c6c3",
+    "DEPLOY12_RESULTS.md": "d3f7d001899ff48ec408367c8dc4e43c1533206e8cf6935a39dd7a01f902f4d5",
     "RESULTS.md": "fa1170277fa8f3b9f1a14df353add3dbd4e8e490aeb4847748dd2120d4434e62",
     "deploy12_record.json": "c2b4fa9b8e8c2401d01a36731e9e1989ef27918b5bb170813b436c0e61ab630f",
     "deploy12_results.csv": "4057d5f321ae60bd7e34bd8b3e9ca663694f189788632c34806b4bfe1b7bc4a8",
