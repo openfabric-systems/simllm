@@ -1,0 +1,171 @@
+{
+  "schema": "simllm-collective-floor-extrapolation-freeze-v1",
+  "task_id": "TRAF-81",
+  "base_commit": "aee8cb5",
+  "chronology": {
+    "expectations_only": true,
+    "harness_exists_at_freeze": false,
+    "measurement_started_at_freeze": false
+  },
+  "environment": {
+    "cluster": "gmerlin7",
+    "account": "merlin",
+    "primary_partition": "a100-hourly",
+    "retry_partitions": [
+      "a100-daily",
+      "a100-general"
+    ],
+    "gpu": "NVIDIA A100-SXM4-80GB",
+    "gpus_per_node": 4,
+    "cuda_module": "cuda/12.2.2",
+    "cuda_arch": "sm_80",
+    "nccl_distribution": "nvidia-nccl-cu12",
+    "expected_nccl_version": 23102,
+    "dtype": "half",
+    "dtype_bytes": 2
+  },
+  "harness": {
+    "kind": "minimal-self-built-cuda-nccl",
+    "warmup_iterations": 10,
+    "timed_repetitions": 31,
+    "sample_value": "maximum rank CUDA-event duration for one target collective",
+    "aggregation": "median of 31 observed sample maxima",
+    "percentile_rule": "nearest-rank",
+    "operations": [
+      "all_gather",
+      "reduce_scatter"
+    ],
+    "launch_mode": "one process per GPU, one stream, no graph"
+  },
+  "coordinate": {
+    "name": "operation_buffer_bytes",
+    "convention": "nccl-tests total buffer",
+    "all_gather": "send S/n bytes and receive S bytes per rank",
+    "reduce_scatter": "send S bytes and receive S/n bytes per rank"
+  },
+  "byte_grid": [
+    512,
+    2048,
+    8192,
+    32768,
+    65536,
+    131072,
+    196608,
+    262144,
+    393216,
+    524288,
+    655360,
+    786432,
+    917504,
+    1048576,
+    1179648,
+    1310720,
+    1572864,
+    2097152,
+    3145728,
+    4194304,
+    8388608,
+    16777216,
+    33554432,
+    67108864
+  ],
+  "rank_cells": [
+    {
+      "ranks": 2,
+      "nodes": 1,
+      "gpus_per_node": 2,
+      "locality": "intra-node-nv4",
+      "role": "training",
+      "ceiling_bytes_per_second": 100000000000
+    },
+    {
+      "ranks": 4,
+      "nodes": 1,
+      "gpus_per_node": 4,
+      "locality": "intra-node-nv4",
+      "role": "training-donor",
+      "ceiling_bytes_per_second": 300000000000
+    },
+    {
+      "ranks": 8,
+      "nodes": 2,
+      "gpus_per_node": 4,
+      "locality": "mixed-nv4-fabric",
+      "role": "scored-holdout",
+      "ceiling_bytes_per_second": 100000000000
+    },
+    {
+      "ranks": 16,
+      "nodes": 4,
+      "gpus_per_node": 4,
+      "locality": "mixed-nv4-fabric",
+      "role": "scored-holdout",
+      "ceiling_bytes_per_second": 100000000000
+    }
+  ],
+  "fit": {
+    "function": "T_ps = floor_ps + operation_buffer_bytes * slope_ps_per_byte",
+    "training_ranks": [
+      2,
+      4
+    ],
+    "donor_rank": 4,
+    "weighted_relative_least_squares": true,
+    "weight": "1 / measured_ps^2",
+    "boundary_rule": "training-only Bayesian information criterion",
+    "maximum_regimes": 3,
+    "minimum_cells_per_regime": 2,
+    "wide_descriptive_boundaries": "rank-4 operation boundaries",
+    "wide_fit_affects_score_inputs": false,
+    "rank_factor": "q(n) = (n - 1) / n",
+    "extrapolation": "donor coefficient * q(r)/q(4) * ceiling(4)/ceiling(r)"
+  },
+  "fatal_guards": [
+    "FG-1 chronology and identity",
+    "FG-2 target and placement",
+    "FG-3 topology and transport",
+    "FG-4 coordinate and sample completeness",
+    "FG-5 value conservation",
+    "FG-6 physical ceiling",
+    "FG-7 isolated ownership"
+  ],
+  "scored_families": {
+    "S1": {
+      "quantity": "normalized-efficiency relative error",
+      "per_curve_median_absolute_error_max": 0.25,
+      "per_curve_p95_absolute_error_max": 0.5
+    },
+    "S2": {
+      "quantity": "absolute floor-fraction difference",
+      "per_curve_median_max": 0.2,
+      "per_curve_p95_max": 0.35,
+      "unrepresentable_regime": "fail"
+    },
+    "S3": {
+      "quantity": "error sign and rank-16 growth over rank 8",
+      "p95_growth_max_absolute_points": 0.1,
+      "neutral_signed_median_interval": [
+        -0.05,
+        0.05
+      ],
+      "sign_flip_outside_neutral_interval": "fail"
+    },
+    "S4": {
+      "quantity": "normalized serialization-efficiency dip",
+      "rank": 2,
+      "at_least_one_operation": true,
+      "minimum_depth": 0.15,
+      "minimum_location_bytes": 524288,
+      "maximum_location_bytes": 1572864
+    }
+  },
+  "overall_verdict": "S1 and S2 and S3 must all pass in full",
+  "blocked_policy": {
+    "campaign_window_minutes_per_cell": 120,
+    "pending_at_boundary": "BLOCKED",
+    "pre-timing_nccl_initialization_failure": "BLOCKED when structural target guards remain decidable",
+    "missing_value_policy": "never estimate or substitute",
+    "overall_with_missing_scored_rank": "BLOCKED"
+  },
+  "cross_architecture_rule": "shape-only; no H200 absolute value or band enters an A100 score"
+}

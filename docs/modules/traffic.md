@@ -1162,6 +1162,25 @@ arbitration parameters after that structure lands.
 
 ### Precision
 
+- TRAF-81 (Precision; P1; L): complete the blocked rank-16 cell in the
+  [independent collective-floor extrapolation study](../../examples/collective_floor_extrapolation_v1/RESULTS.md).
+  The frozen rank-2 and rank-4 training cells and rank-8 holdout completed on
+  Merlin A100 GPUs with all fatal guards held and every measured rate inside
+  its physical envelope. At the first locality crossing, rank-4 donor
+  extrapolation misses rank-8 all-gather by 62.889 percent median and 155.593
+  percent p95, and reduce-scatter by 61.111 percent median and 144.544 percent
+  p95, against frozen 25 and 50 percent bands. The floor-fraction family also
+  fails both operations. This refutes normalized-efficiency and
+  floor-versus-slope transfer from one NV4 node to two nodes on the measured
+  A100 system. The formal verdict remains `BLOCKED`, not a completed
+  refutation, because Merlin's per-job quality-of-service limits admit no more
+  than eight GPUs while rank 16 needs 16, leaving the frozen error-growth and
+  sign family unevaluated. Obtain a conforming four-node rank-16 allocation,
+  run only the frozen missing cell without substituting another topology or
+  transport, then publish its descriptive fit, byte-level errors and S3
+  result. The evidence remains shape-only across architectures: no A100
+  absolute latency, bandwidth, floor or slope calibrates H200. This study
+  changes no installed authority or signature metric by itself.
 - TRAF-80 (Precision; P1; L): align the three-module NVLink packet, credit and
   switch domain with the public mechanism boundary established by TRAF-79.
   The surrogate being replaced treats one fixed 272-byte extent as the packet
@@ -1340,6 +1359,17 @@ arbitration parameters after that structure lands.
   denominator. Acceptance requires every newly pre-specified independent cell
   to pass and preserves the current surface and legacy donor authority as
   explicit, separately selectable paths.
+  Independent A100 evidence now tests the shape premise behind that wider-rank
+  transfer. A rank-4 donor misses untouched rank-8 all-gather and
+  reduce-scatter curves by 62.889 and 61.111 percent median respectively, and
+  both floor-fraction decompositions fail their frozen bands at the first
+  locality crossing, a boundary that on the measured cluster combines node
+  locality with a transport-stack change (NVLink inside the node, NCCL Socket
+  over Slingshot with GPU Direct RDMA disabled between nodes). TRAF-81 remains
+  formally blocked on rank 16, so it does not supply an error-growth result,
+  but the available rank-8 evidence removes unqualified shape confidence from
+  the EP 32 and EP 128 donor transfers. It neither transfers an A100 absolute
+  band to H200 nor changes the exact H200 rank-8 measurements.
 - TRAF-20 (Precision; P2; M): qualify the delivered `loggopsim-ideal`
   fast level for schedule-shape studies that do not need per-flow transport
   behavior. The
