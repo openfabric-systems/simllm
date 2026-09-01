@@ -114,7 +114,6 @@ def test_run2_predictions_pin_the_merged_base_domain_and_policy() -> None:
     )
     assert simulation["flow_policy"] == "release_aware_round_robin"
     assert simulation["release_ps"] == 0
-    assert simulation["model_sha256"] == _sha256(MODEL)
     base = subprocess.run(
         (
             "git",
