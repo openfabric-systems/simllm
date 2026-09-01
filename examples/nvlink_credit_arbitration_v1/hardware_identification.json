@@ -1,0 +1,664 @@
+{
+  "aggregate_outstanding_bytes": [
+    {
+      "aggregate_outstanding_payload_bytes": null,
+      "per_sender_knee_payload_bytes": [],
+      "sender_count": 1
+    },
+    {
+      "aggregate_outstanding_payload_bytes": null,
+      "per_sender_knee_payload_bytes": [],
+      "sender_count": 2
+    },
+    {
+      "aggregate_outstanding_payload_bytes": null,
+      "per_sender_knee_payload_bytes": [],
+      "sender_count": 3
+    }
+  ],
+  "execution_head": "f39d24cfec081e3ef17cf0fbe990a92706a18dec",
+  "expectations_commit": "f3f2624e7a96efe3ad67eac5940fee8746e40b98",
+  "expectations_sha256": "a17b9e298d11a4a6ba92b382121c15a5a48f8100b6f343893260419b1d3382f6",
+  "fatal_guards": {
+    "coverage": {
+      "h1": 372,
+      "h2": 93,
+      "h3": 3
+    },
+    "environment": {
+      "h1": {
+        "allocation": true,
+        "competing_processes_clear": true,
+        "topology": true
+      },
+      "h2": {
+        "allocation": true,
+        "competing_processes_clear": true,
+        "topology": true
+      },
+      "h3": {
+        "allocation": true,
+        "competing_processes_clear": true,
+        "topology": true
+      }
+    },
+    "guards": [
+      {
+        "decidable": true,
+        "description": "the committed aligned expectations blob or its commit is not the run authority",
+        "id": "FG01",
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "description": "the aligned module or candidate profile differs from its frozen base identity",
+        "id": "FG02",
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "description": "the corrected TRAF-70 lineage or inherited fatal observables are unavailable",
+        "id": "FG03",
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "description": "the allocation is not one exclusive four-GPU A100 NV4 node",
+        "id": "FG04",
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "description": "a directed H1 pair, H2 source set or rotated H3 greedy role is missing or duplicated",
+        "id": "FG05",
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "description": "a logical byte, terminal extent or completed-window byte is lost or duplicated",
+        "id": "FG06",
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "description": "a destination checksum or order ledger disagrees",
+        "id": "FG07",
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "description": "a required NVLink counter, replay, recovery, CRC or ECC field is undecidable",
+        "id": "FG08",
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "description": "a replay, recovery, CRC or ECC counter increases",
+        "id": "FG09",
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "description": "per-link data and raw TX or RX counters disagree above their frozen quantization allowance",
+        "id": "FG10",
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "description": "a clock throttle, competing process or foreign NVLink transfer contaminates a scored cell",
+        "id": "FG11",
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "description": "an H1 or H2 device time is nonpositive or its randomized order differs from seed 7301",
+        "id": "FG12",
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "description": "the H3 common window is not exactly 500 ms after every stream is active",
+        "id": "FG13",
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "description": "an H3 per-source achieved rate exceeds its offered rate beyond one chunk of quantization",
+        "id": "FG14",
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "description": "an ordered-pair raw rate exceeds 100 GB/s or aggregate raw rate exceeds 207.101921876 GB/s beyond one chunk of quantization",
+        "id": "FG15",
+        "status": "FAIL"
+      },
+      {
+        "decidable": true,
+        "description": "a live ip link stats64 value enters an NVLink wire, byte, rate or classification decision",
+        "id": "FG16",
+        "status": "PASS"
+      },
+      {
+        "decidable": true,
+        "description": "a README, module default, candidate profile or inherited result changes before classification",
+        "id": "FG17",
+        "status": "PASS"
+      }
+    ],
+    "physical_sanity": {
+      "ceiling": "one-link serialization plus 200000 ps return per packet",
+      "floor": "packetized wire bytes divided by 100 GB/s",
+      "maximum_completion_over_loose_ceiling": 7.587253222508061,
+      "minimum_completion_over_wire_floor": 258.363969110444,
+      "status": "FAIL"
+    },
+    "verdict": "VOID"
+  },
+  "h1_credit_window_and_return": {
+    "effective_return_delay_ps": null,
+    "effective_window_payload_bytes": null,
+    "pair_fits": [
+      {
+        "candidate_count": 0,
+        "destination": 1,
+        "matching_repetition_count": 125,
+        "median_fit": {
+          "candidate_count": 0,
+          "payload_bytes": null,
+          "return_delay_ps": null,
+          "status": "NO_REPEATED_PERSISTENT_BREAK"
+        },
+        "payload_bytes": null,
+        "repetition_count": 200,
+        "return_delay_ps": null,
+        "source": 0,
+        "status": "NO_REPEATED_PERSISTENT_BREAK"
+      },
+      {
+        "candidate_count": 0,
+        "destination": 2,
+        "matching_repetition_count": 139,
+        "median_fit": {
+          "candidate_count": 0,
+          "payload_bytes": null,
+          "return_delay_ps": null,
+          "status": "NO_REPEATED_PERSISTENT_BREAK"
+        },
+        "payload_bytes": null,
+        "repetition_count": 200,
+        "return_delay_ps": null,
+        "source": 0,
+        "status": "NO_REPEATED_PERSISTENT_BREAK"
+      },
+      {
+        "candidate_count": 0,
+        "destination": 3,
+        "matching_repetition_count": 138,
+        "median_fit": {
+          "candidate_count": 0,
+          "payload_bytes": null,
+          "return_delay_ps": null,
+          "status": "NO_REPEATED_PERSISTENT_BREAK"
+        },
+        "payload_bytes": null,
+        "repetition_count": 200,
+        "return_delay_ps": null,
+        "source": 0,
+        "status": "NO_REPEATED_PERSISTENT_BREAK"
+      },
+      {
+        "candidate_count": 0,
+        "destination": 0,
+        "matching_repetition_count": 105,
+        "median_fit": {
+          "candidate_count": 0,
+          "payload_bytes": null,
+          "return_delay_ps": null,
+          "status": "NO_REPEATED_PERSISTENT_BREAK"
+        },
+        "payload_bytes": null,
+        "repetition_count": 200,
+        "return_delay_ps": null,
+        "source": 1,
+        "status": "NO_REPEATED_PERSISTENT_BREAK"
+      },
+      {
+        "candidate_count": 2,
+        "destination": 2,
+        "matching_repetition_count": 41,
+        "median_fit": {
+          "candidate_count": 2,
+          "payload_bytes": 131072,
+          "return_delay_ps": 1371861.4802815523,
+          "selected": {
+            "below_mad_us": 0.07982890527684816,
+            "index": 5,
+            "jump_us": 1.3718614802815523,
+            "numeric_floor_us": 9.094947017729282e-13,
+            "payload_bytes": 131072,
+            "persistent_positive_residual_us": [
+              0.9207759465040795,
+              1.9998332799019636,
+              2.539391748600906
+            ],
+            "return_delay_ps": 1371861.4802815523,
+            "threshold_us": 0.3991445263842408
+          },
+          "status": "REPEATED_PERSISTENT_BREAK"
+        },
+        "payload_bytes": null,
+        "repetition_count": 200,
+        "return_delay_ps": null,
+        "source": 1,
+        "status": "NO_REPEATED_PERSISTENT_BREAK"
+      },
+      {
+        "candidate_count": 3,
+        "destination": 3,
+        "matching_repetition_count": 48,
+        "median_fit": {
+          "candidate_count": 3,
+          "payload_bytes": 131072,
+          "return_delay_ps": 1849007.0740359102,
+          "selected": {
+            "below_mad_us": 0.09359050832799554,
+            "index": 5,
+            "jump_us": 1.8490070740359101,
+            "numeric_floor_us": 9.094947017729282e-13,
+            "payload_bytes": 131072,
+            "persistent_positive_residual_us": [
+              1.4451632209758714,
+              2.7224141699221036,
+              3.361069446395163
+            ],
+            "return_delay_ps": 1849007.0740359102,
+            "threshold_us": 0.4679525416399777
+          },
+          "status": "REPEATED_PERSISTENT_BREAK"
+        },
+        "payload_bytes": null,
+        "repetition_count": 200,
+        "return_delay_ps": null,
+        "source": 1,
+        "status": "NO_REPEATED_PERSISTENT_BREAK"
+      },
+      {
+        "candidate_count": 2,
+        "destination": 0,
+        "matching_repetition_count": 42,
+        "median_fit": {
+          "candidate_count": 2,
+          "payload_bytes": 131072,
+          "return_delay_ps": 4478902.764198437,
+          "selected": {
+            "below_mad_us": 0.07982890527684816,
+            "index": 5,
+            "jump_us": 4.478902764198438,
+            "numeric_floor_us": 9.094947017729282e-13,
+            "payload_bytes": 131072,
+            "persistent_positive_residual_us": [
+              0.9207759465040795,
+              1.9998332799019636,
+              2.539391748600906
+            ],
+            "return_delay_ps": 4478902.764198437,
+            "threshold_us": 0.3991445263842408
+          },
+          "status": "REPEATED_PERSISTENT_BREAK"
+        },
+        "payload_bytes": null,
+        "repetition_count": 200,
+        "return_delay_ps": null,
+        "source": 2,
+        "status": "NO_REPEATED_PERSISTENT_BREAK"
+      },
+      {
+        "candidate_count": 0,
+        "destination": 1,
+        "matching_repetition_count": 131,
+        "median_fit": {
+          "candidate_count": 0,
+          "payload_bytes": null,
+          "return_delay_ps": null,
+          "status": "NO_REPEATED_PERSISTENT_BREAK"
+        },
+        "payload_bytes": null,
+        "repetition_count": 200,
+        "return_delay_ps": null,
+        "source": 2,
+        "status": "NO_REPEATED_PERSISTENT_BREAK"
+      },
+      {
+        "candidate_count": 0,
+        "destination": 3,
+        "matching_repetition_count": 153,
+        "median_fit": {
+          "candidate_count": 0,
+          "payload_bytes": null,
+          "return_delay_ps": null,
+          "status": "NO_REPEATED_PERSISTENT_BREAK"
+        },
+        "payload_bytes": null,
+        "repetition_count": 200,
+        "return_delay_ps": null,
+        "source": 2,
+        "status": "NO_REPEATED_PERSISTENT_BREAK"
+      },
+      {
+        "candidate_count": 0,
+        "destination": 0,
+        "matching_repetition_count": 108,
+        "median_fit": {
+          "candidate_count": 0,
+          "payload_bytes": null,
+          "return_delay_ps": null,
+          "status": "NO_REPEATED_PERSISTENT_BREAK"
+        },
+        "payload_bytes": null,
+        "repetition_count": 200,
+        "return_delay_ps": null,
+        "source": 3,
+        "status": "NO_REPEATED_PERSISTENT_BREAK"
+      },
+      {
+        "candidate_count": 2,
+        "destination": 1,
+        "matching_repetition_count": 45,
+        "median_fit": {
+          "candidate_count": 2,
+          "payload_bytes": 131072,
+          "return_delay_ps": 1240444.2240656978,
+          "selected": {
+            "below_mad_us": 0.07982890527684816,
+            "index": 5,
+            "jump_us": 1.2404442240656977,
+            "numeric_floor_us": 9.094947017729282e-13,
+            "payload_bytes": 131072,
+            "persistent_positive_residual_us": [
+              0.9207759465040795,
+              1.9998332799019636,
+              2.539391748600906
+            ],
+            "return_delay_ps": 1240444.2240656978,
+            "threshold_us": 0.3991445263842408
+          },
+          "status": "REPEATED_PERSISTENT_BREAK"
+        },
+        "payload_bytes": null,
+        "repetition_count": 200,
+        "return_delay_ps": null,
+        "source": 3,
+        "status": "NO_REPEATED_PERSISTENT_BREAK"
+      },
+      {
+        "candidate_count": 0,
+        "destination": 2,
+        "matching_repetition_count": 146,
+        "median_fit": {
+          "candidate_count": 0,
+          "payload_bytes": null,
+          "return_delay_ps": null,
+          "status": "NO_REPEATED_PERSISTENT_BREAK"
+        },
+        "payload_bytes": null,
+        "repetition_count": 200,
+        "return_delay_ps": null,
+        "source": 3,
+        "status": "NO_REPEATED_PERSISTENT_BREAK"
+      }
+    ],
+    "promotion_required": false,
+    "verdict": "VOID"
+  },
+  "h2_pool_scope": {
+    "aggregate_outstanding_discriminator": [
+      {
+        "aggregate_outstanding_payload_bytes": null,
+        "per_sender_knee_payload_bytes": [],
+        "sender_count": 1
+      },
+      {
+        "aggregate_outstanding_payload_bytes": null,
+        "per_sender_knee_payload_bytes": [],
+        "sender_count": 2
+      },
+      {
+        "aggregate_outstanding_payload_bytes": null,
+        "per_sender_knee_payload_bytes": [],
+        "sender_count": 3
+      }
+    ],
+    "promotion_required": false,
+    "source_knee_fits": [
+      {
+        "candidate_count": 0,
+        "matching_repetition_count": 87,
+        "median_fit": {
+          "candidate_count": 0,
+          "payload_bytes": null,
+          "return_delay_ps": null,
+          "status": "NO_REPEATED_PERSISTENT_BREAK"
+        },
+        "payload_bytes": null,
+        "repetition_count": 160,
+        "return_delay_ps": null,
+        "sender_count": 1,
+        "source": 0,
+        "status": "NO_REPEATED_PERSISTENT_BREAK"
+      },
+      {
+        "candidate_count": 0,
+        "matching_repetition_count": 102,
+        "median_fit": {
+          "candidate_count": 0,
+          "payload_bytes": null,
+          "return_delay_ps": null,
+          "status": "NO_REPEATED_PERSISTENT_BREAK"
+        },
+        "payload_bytes": null,
+        "repetition_count": 160,
+        "return_delay_ps": null,
+        "sender_count": 2,
+        "source": 0,
+        "status": "NO_REPEATED_PERSISTENT_BREAK"
+      },
+      {
+        "candidate_count": 1,
+        "matching_repetition_count": 32,
+        "median_fit": {
+          "candidate_count": 1,
+          "payload_bytes": 131072,
+          "return_delay_ps": 4877673.341413015,
+          "selected": {
+            "below_mad_us": 0.07982890527684816,
+            "index": 5,
+            "jump_us": 4.877673341413015,
+            "numeric_floor_us": 9.094947017729282e-13,
+            "payload_bytes": 131072,
+            "persistent_positive_residual_us": [
+              1.9447837445040932,
+              1.9998332799019636,
+              2.539391748600906
+            ],
+            "return_delay_ps": 4877673.341413015,
+            "threshold_us": 0.3991445263842408
+          },
+          "status": "REPEATED_PERSISTENT_BREAK"
+        },
+        "payload_bytes": null,
+        "repetition_count": 160,
+        "return_delay_ps": null,
+        "sender_count": 2,
+        "source": 1,
+        "status": "NO_REPEATED_PERSISTENT_BREAK"
+      },
+      {
+        "candidate_count": 0,
+        "matching_repetition_count": 96,
+        "median_fit": {
+          "candidate_count": 0,
+          "payload_bytes": null,
+          "return_delay_ps": null,
+          "status": "NO_REPEATED_PERSISTENT_BREAK"
+        },
+        "payload_bytes": null,
+        "repetition_count": 160,
+        "return_delay_ps": null,
+        "sender_count": 3,
+        "source": 0,
+        "status": "NO_REPEATED_PERSISTENT_BREAK"
+      },
+      {
+        "candidate_count": 1,
+        "matching_repetition_count": 27,
+        "median_fit": {
+          "candidate_count": 1,
+          "payload_bytes": 131072,
+          "return_delay_ps": 1462152.802416199,
+          "selected": {
+            "below_mad_us": 0.07982890527684816,
+            "index": 5,
+            "jump_us": 1.462152802416199,
+            "numeric_floor_us": 9.094947017729282e-13,
+            "payload_bytes": 131072,
+            "persistent_positive_residual_us": [
+              1.9447837445040932,
+              1.9998332799019636,
+              2.539391748600906
+            ],
+            "return_delay_ps": 1462152.802416199,
+            "threshold_us": 0.3991445263842408
+          },
+          "status": "REPEATED_PERSISTENT_BREAK"
+        },
+        "payload_bytes": null,
+        "repetition_count": 160,
+        "return_delay_ps": null,
+        "sender_count": 3,
+        "source": 1,
+        "status": "NO_REPEATED_PERSISTENT_BREAK"
+      },
+      {
+        "candidate_count": 0,
+        "matching_repetition_count": 136,
+        "median_fit": {
+          "candidate_count": 0,
+          "payload_bytes": null,
+          "return_delay_ps": null,
+          "status": "NO_REPEATED_PERSISTENT_BREAK"
+        },
+        "payload_bytes": null,
+        "repetition_count": 160,
+        "return_delay_ps": null,
+        "sender_count": 3,
+        "source": 2,
+        "status": "NO_REPEATED_PERSISTENT_BREAK"
+      }
+    ],
+    "verdict": "VOID"
+  },
+  "h3_arbitration": {
+    "identified_policy": null,
+    "promotion_required": false,
+    "rotations": [
+      {
+        "achieved_raw_gbps_by_source_order": [
+          93.646419968,
+          58.922897408,
+          58.784913408
+        ],
+        "aggregate_achieved_raw_gbps": 211.354230784,
+        "completed_bytes_by_source_order": [
+          6937378816,
+          4487905280,
+          4487905280
+        ],
+        "greedy_source": 0,
+        "selected_policy": "release_aware_round_robin",
+        "source_order": [
+          0,
+          1,
+          2
+        ]
+      },
+      {
+        "achieved_raw_gbps_by_source_order": [
+          94.103437312,
+          59.460319232,
+          59.545339904
+        ],
+        "aggregate_achieved_raw_gbps": 213.109096448,
+        "completed_bytes_by_source_order": [
+          6106906624,
+          4521459712,
+          4529848320
+        ],
+        "greedy_source": 1,
+        "selected_policy": "release_aware_round_robin",
+        "source_order": [
+          1,
+          0,
+          2
+        ]
+      },
+      {
+        "achieved_raw_gbps_by_source_order": [
+          93.463478272,
+          59.302037504,
+          59.143274496
+        ],
+        "aggregate_achieved_raw_gbps": 211.908790272,
+        "completed_bytes_by_source_order": [
+          5821693952,
+          4521459712,
+          4521459712
+        ],
+        "greedy_source": 2,
+        "selected_policy": "release_aware_round_robin",
+        "source_order": [
+          2,
+          0,
+          1
+        ]
+      }
+    ],
+    "verdict": "VOID"
+  },
+  "measurement_validity": "VOID_FATAL_GUARD",
+  "raw_evidence": {
+    "h1": {
+      "attempt_manifest_sha256": "1cfb304e4a77105df4e4bf8835ebe6c589e87407e0f88377914af10a907b5e28",
+      "row_count": 372,
+      "row_sha256": "90bc373a34ece6d0f3a305383f9350226491dbc80bfdefeb5883f55ac4931419"
+    },
+    "h2": {
+      "attempt_manifest_sha256": "49f8875365edd25ecf2fe1f7174bbb19c3c43aaf073974e9e443693bb890896f",
+      "row_count": 93,
+      "row_sha256": "55e3349c5deb253a50f2c3f4280588efee75ec1721f1dbb6537e85a312867f76"
+    },
+    "h3": {
+      "attempt_manifest_sha256": "8ce62e596d3ecf20ff7a8ed600e9e772925c56d7c3af65cd2470484fc2307567",
+      "row_count": 3,
+      "row_sha256": "732da2903f18436121db59b7c05926b66016b0062cec47555685aec8374896f7"
+    }
+  },
+  "scheduler_jobs": {
+    "h1": "202778",
+    "h2": "202796",
+    "h3": "202813"
+  },
+  "schema": "simllm-nvlink-credit-identification-score-v1",
+  "scorer_sha256": "81059a6cda8b7e8787f8ac8d644e54cac9602666afa5eb3312d3f93a42c33a10",
+  "scoring_audit": {
+    "classification_rules": "frozen_aligned_expectations_unchanged",
+    "post_capture_correction": "Removed an implementation-only mirrored endpoint counter equality check that was not part of frozen FG10. The inherited raw-versus-data check remains, and FG15 independently keeps the result void."
+  },
+  "status": "VOID",
+  "task_id": "TRAF-73",
+  "traf85_residual": {
+    "exact_promotion_cells": [],
+    "required": false,
+    "task_id": null
+  }
+}
