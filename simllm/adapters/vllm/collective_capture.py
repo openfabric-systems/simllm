@@ -15,6 +15,7 @@ import os
 import re
 import time
 from collections.abc import Callable, Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from contextvars import ContextVar
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -43,6 +44,7 @@ _active_layers: ContextVar[tuple[tuple[int, str], ...]] = ContextVar(
 )
 _hooks_registered = False
 _writer_started = False
+_cuda_resolver: ThreadPoolExecutor | None = None
 _translator = StepTranslator(emit_sampled_request_ids=True)
 _step_index = 0
 _capture_origin_ns = time.monotonic_ns()
@@ -195,6 +197,11 @@ class _CaptureSession:
             invocations=tuple(invocations),
         )
 
+    def uses_cuda_events(self) -> bool:
+        """Return whether this step needs deferred CUDA event resolution."""
+
+        return any(entry.cuda_end is not None for entry in self.pending)
+
 
 def _cuda_events() -> tuple[Any, Any]:
     import torch
@@ -284,6 +291,20 @@ def _append_record(record: StepRecord) -> None:
     _writer_started = True
 
 
+def _resolve_and_append(record: StepRecord, session: _CaptureSession) -> None:
+    _append_record(replace(record, collective_service=session.resolve()))
+
+
+def _submit_cuda_resolution(record: StepRecord, session: _CaptureSession) -> None:
+    global _cuda_resolver
+    if _cuda_resolver is None:
+        _cuda_resolver = ThreadPoolExecutor(
+            max_workers=1,
+            thread_name_prefix="simllm-collective-capture",
+        )
+    _cuda_resolver.submit(_resolve_and_append, record, session)
+
+
 def _capture_execute(
     original: Callable[..., Any],
     runner: Any,
@@ -306,7 +327,10 @@ def _capture_execute(
         step_index=_step_index,
         virtual_time_ps=(time.monotonic_ns() - _capture_origin_ns) * 1_000,
     )
-    _append_record(replace(translated.record, collective_service=session.resolve()))
+    if session.uses_cuda_events():
+        _submit_cuda_resolution(translated.record, session)
+    else:
+        _resolve_and_append(translated.record, session)
     _step_index += 1
     return result
 
