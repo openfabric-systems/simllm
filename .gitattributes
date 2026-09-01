@@ -144,6 +144,7 @@ examples/deployment_curve_v1/run_traf67_boundary.py text eol=lf
 tests/test_deployment_curve_traf67.py text eol=lf
 notes/2026-08-26-core54run3-worker-sizing.md text eol=lf
 notes/2026-08-27-vllm39-worker-sizing.md text eol=lf
+notes/2026-09-01-vllm42-worker-sizing.md text eol=lf
 docs/modules/adapters-vllm.md text eol=lf
 examples/vllm_collective_timing_v1/*.json text eol=lf
 examples/vllm_collective_timing_v1/*.md text eol=lf
