@@ -1217,35 +1217,6 @@ and arbiter value.
   result. The evidence remains shape-only across architectures: no A100
   absolute latency, bandwidth, floor or slope calibrates H200. This study
   changes no installed authority or signature metric by itself.
-- TRAF-80 (Precision; P1; L): align the three-module NVLink packet, credit and
-  switch domain with the public mechanism boundary established by TRAF-79.
-  The surrogate being replaced treats one fixed 272-byte extent as the packet
-  and credit unit, frees the sender credit on a fixed timer, models one
-  implicit virtual channel, exposes destination service without explicit
-  receive-buffer ownership, and gives the switch no port, virtual-output-queue
-  or crossbar contention. Replace it with generation-scoped 16-byte flit
-  packetization with optional control flits, link-local acknowledgement and
-  replay accounting, explicit traffic-class and virtual-channel state,
-  receiver-owned credit release, ordering visibility, and an NVSwitch policy
-  seam over input ports, virtual output queues and crossbar outputs. Do not
-  promote an exact A100 credit quantum, pool scope, virtual-channel count,
-  buffer depth, credit-return encoding, striping granularity or product arbiter:
-  public documents leave those parameters unidentified, so TRAF-73 remains
-  their measurement owner. Preserve the profile-absent path and the NV4
-  direct-mesh structural pass-through path exactly, and make the identity
-  arbitration policy preserve every accepted timestamp, wire byte, random
-  draw and completion order. Land an expectations-only commit before the
-  behavioral implementation. Its minimum physical oracles are 94.117647 GB/s
-  payload for repeated 17-flit packets and 88.888889 GB/s for repeated 18-flit
-  packets on four 25 GB/s A100 links, a nonnegative 5.882 percent serialization
-  change when the optional flit is present, credit release never preceding
-  receive-buffer release, and error-free replay producing zero added bytes and
-  time while injected errors add neither negative quantity. The sanity study
-  varies packet occupancy and link rate, measures one fixed job-completion
-  time, and checks the frozen serialization relation. Publish the signed shift
-  in every inherited envelope before TRAF-73 begins identification; a result
-  that violates any conservation, ownership or identity guard is void.
-
 - TRAF-86 (Precision; P1; L): replace the NVLink domain's declared packetization
   service conversion identified by the completed TRAF-74 comparison. The
   surrogate being replaced maps each logical flow directly onto the profile's
