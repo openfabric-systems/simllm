@@ -1,0 +1,114 @@
+{
+  "schema": "simllm-merlin-collective-capture-config-v1",
+  "study": "merlin_collective_capture_v1",
+  "evidence_class": "hardware-capture-pending",
+  "frozen_expectations_commit": "9c9a42e",
+  "clock": "CLOCK_MONOTONIC_RAW",
+  "operations": [
+    "all_gather",
+    "reduce_scatter",
+    "all_reduce",
+    "all_to_allv"
+  ],
+  "payload_bytes": [
+    8,
+    64,
+    512,
+    4096,
+    16384,
+    65536,
+    131072,
+    196608,
+    262144,
+    393216,
+    524288,
+    786432,
+    1048576,
+    1572864,
+    2097152,
+    3145728,
+    4194304,
+    8388608,
+    16777216,
+    33554432,
+    67108864,
+    134217728
+  ],
+  "payload_semantics": {
+    "all_gather": "input bytes per rank",
+    "reduce_scatter": "output bytes per rank",
+    "all_reduce": "input bytes per rank",
+    "all_to_allv": "bytes sent to each remote peer"
+  },
+  "measured_repeats": 25,
+  "excluded_warmups": 5,
+  "chunk_limit_bytes": 8388608,
+  "large_payload_min_bytes": 33554432,
+  "widths": [2, 8],
+  "concentrations": ["one-port", "four-port"],
+  "interfaces": ["hsn0", "hsn1", "hsn2", "hsn3"],
+  "interface_controls": {
+    "one-port": {
+      "NCCL_SOCKET_IFNAME": "=hsn0"
+    },
+    "four-port": {
+      "NCCL_SOCKET_IFNAME": "unset, use the site default spread"
+    }
+  },
+  "counter_sources": [
+    {
+      "name": "sysfs-port-statistics",
+      "source": "/sys/class/net/{interface}/statistics/*",
+      "scope": "every readable integer port counter"
+    },
+    {
+      "name": "sysfs-queue-files",
+      "source": "/sys/class/net/{interface}/queues/{queue}/*",
+      "scope": "every readable scalar queue file"
+    },
+    {
+      "name": "ethtool-statistics",
+      "source": "ethtool -S {interface}",
+      "scope": "every unprivileged NIC statistic"
+    },
+    {
+      "name": "traffic-control-qdisc",
+      "source": "tc -s -j qdisc show dev {interface}",
+      "scope": "unprivileged host queue statistics"
+    },
+    {
+      "name": "ip-link-statistics",
+      "source": "ip -s -j link show dev {interface}",
+      "scope": "host interface RX and TX statistics"
+    }
+  ],
+  "routing_proof": {
+    "minimum_total_delta_bytes": 1048576,
+    "one_port_primary_min_fraction": 0.95,
+    "four_port_each_min_fraction": 0.05
+  },
+  "anchors_ps": [
+    {
+      "width": 2,
+      "operation": "all_reduce",
+      "payload_bytes": 8,
+      "completion_ps": 40140799
+    },
+    {
+      "width": 8,
+      "operation": "all_reduce",
+      "payload_bytes": 8,
+      "completion_ps": 50790000
+    },
+    {
+      "width": 8,
+      "operation": "all_to_allv",
+      "payload_bytes": 8,
+      "completion_ps": 89805000
+    }
+  ],
+  "anchor_factor_band": [0.5, 2.0],
+  "port_rate_bytes_per_second": 25000000000,
+  "cuda_module": "cuda/12.2.2",
+  "cuda_arch": "sm_80"
+}
