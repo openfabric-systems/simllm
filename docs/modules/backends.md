@@ -53,6 +53,29 @@ backend submodules.
 - `HtsimDcqcnConfig` + `run_htsim_dcqcn`: GOAL-driven RoCEv2 DCQCN runs
   over a topology-file ns-tm3 Clos (`htsim_dcqcn_atlahs`, landed via the
   backend DCQCN PR); same completion-CSV schema and quiescence contract.
+- `NicProfile` + `CX5_100G` + `CX7_400G` + `scale_profile` + `dcqcn_flags` +
+  `dcqcn_link_bps` + `gap_fields` (BACK-54): the NIC hardware profile carrier,
+  separate from transport and congestion-control policy and independent of any
+  serving framework. A frozen profile holds rates, packetization, the message
+  offset, queue depth, packet-rate ceilings, the responder ingress pool, PFC,
+  recovery mode, timeout and ECN thresholds, and carries one evidence class per
+  model field (`documented`, `driver-inferred`, `calibrated-opaque` or
+  `declared`) plus a provenance string naming the campaign records.
+  `CX5_100G` is the measured ConnectX-5 Ex 100 GbE profile; `CX7_400G` is
+  `scale_profile(CX5_100G, 4.0)`, which multiplies the rate-carrying fields and
+  the ECN byte thresholds (`SCALED_FIELDS`), carries the offset, packetization,
+  depth, recovery, timeout and ingress pool across unchanged, and marks every
+  field `declared` because no ConnectX-7 silicon was measured. `dcqcn_flags`
+  is a pure renderer of the comparator flags a profile can fill, with the rate
+  taken from `goodput_bps` and rounded to whole Gb/s by `dcqcn_link_bps`,
+  because the fat-tree loader parses whole Gb/s and the runtime rejects a
+  topology whose rate differs from `-link_bps`. `gap_fields` returns the
+  complement, the model's gap ledger, and `GAP_TASKS` maps each gap field to
+  the registry task that owns it: `link_bps` and `t_eff_ps` to BACK-54,
+  `sq_depth` to HTSIM-34, `rx_ingress_meter_bytes` to HTSIM-35, and the two
+  packet-rate ceilings to HTSIM-36. Switch buffers, seeds, the
+  selective-repeat window and the DCQCN rate floor are fabric or policy
+  parameters and stay with the study.
 - `HtsimUecConfig` + `build_htsim_uec_command`: argv construction for
   GOAL-driven `htsim_uec` runs.
 - `LogGopsimConfig` + `build_loggopsim_command` + `run_loggopsim` +
