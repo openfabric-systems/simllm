@@ -93,7 +93,7 @@ def test_tracked_record_locks_capture_identity_and_anchor_values() -> None:
     ]
     assert all(not row["path"].startswith("/") for row in record["evidence"]["files"])
     assert record["task_effect"]["TRAF-77"] == "NARROWED, remains open"
-    assert record["task_effect"]["TRAF-81"].startswith("OPENED")
+    assert record["task_effect"]["TRAF-87"].startswith("OPENED")
 
 
 def test_tracked_record_locks_socket_mechanism_and_achieved_ports() -> None:
