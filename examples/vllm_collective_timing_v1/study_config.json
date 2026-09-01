@@ -1,0 +1,68 @@
+{
+  "schema": "simllm-vllm-collective-timing-study-v1",
+  "task": "VLLM-48",
+  "pins": {
+    "vllm_version": "0.27.1+cpu",
+    "vllm_commit": "6e448d0ea9bf3d88d898b65449ca6dc2aec170ac",
+    "parallel_state_sha256": "bbad6969765f3c5eb48ec1b42c458464ba58841c26244a6d42f293ec199bcbe2",
+    "model_runner_sha256": "993f2c926012241bcb8cc7f568c8e82968e4d81ca125641c831ecf501aac02ac",
+    "granite_model_sha256": "73317e05e1940d8434c27dd507a7548055cd8cf3085e581e5a87a1c0819b04d4",
+    "model_id": "ibm-granite/granite-3.0-1b-a400m-instruct",
+    "model_revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
+    "model_config_sha256": "ca4bb3a5c1bdef988ab413e0d731640446da65316e4ed16de3666cd96ecc3a0b"
+  },
+  "engine": {
+    "tensor_parallel_size": 2,
+    "pipeline_parallel_size": 1,
+    "distributed_backend": "gloo",
+    "v1_multiprocessing": false,
+    "enforce_eager": true,
+    "chunked_prefill": false,
+    "max_model_len": 32,
+    "max_num_batched_tokens": 64,
+    "max_num_seqs": 2,
+    "seed": 173
+  },
+  "requests": [
+    {
+      "request_id": "vllm48-short",
+      "prompt_token_ids": [1, 17, 23, 42],
+      "max_tokens": 2,
+      "ignore_eos": true
+    },
+    {
+      "request_id": "vllm48-long",
+      "prompt_token_ids": [1, 5, 8, 13, 21, 34, 55, 89],
+      "max_tokens": 2,
+      "ignore_eos": true
+    }
+  ],
+  "source_population": {
+    "steps_per_run": 2,
+    "calls_per_step": 50,
+    "calls_per_run": 100,
+    "decoder_layers": 24,
+    "per_step_sequence": [
+      "embedding:all_reduce",
+      "repeat-24:attention:all_reduce,moe:all_reduce",
+      "logits:gather"
+    ]
+  },
+  "fresh_run_count": 2,
+  "families": {
+    "M1": 2,
+    "M2": 1,
+    "M3": 2,
+    "M4": 1,
+    "M5": 1
+  },
+  "mutation_controls": [
+    "drop-first-call",
+    "increment-first-payload-byte",
+    "change-second-run-first-kind",
+    "delete-optional-envelope",
+    "bypass-cross-environment-refusal",
+    "drop-cross-environment-acknowledgement-stamp"
+  ],
+  "local_timing_score": "unscored"
+}
