@@ -1,0 +1,38 @@
+# Goodput against message size, ConnectX-5 Ex at 100 GbE, RoCEv2, port MTU 4096.
+# arm p2_perftest_depth1: RESULTS-p2-msgsize, RDMA WRITE, one queue pair,
+#   queue depth 1, post list 1; the mean of the two directions.
+# arm p4_engine_depth1: RESULTS-p4-kernels test E1D1, true send-queue depth 1.
+# arm p4_engine_depth1024: RESULTS-p4-kernels test E1, send-queue depth 1024.
+# goodput_gbps is completion-accounted payload, excluding headers.
+arm,size_bytes,goodput_gbps,repeats
+p2_perftest_depth1,2,0.0041,2
+p2_perftest_depth1,4,0.0081,2
+p2_perftest_depth1,8,0.0163,2
+p2_perftest_depth1,16,0.0326,2
+p2_perftest_depth1,32,0.0648,2
+p2_perftest_depth1,64,0.13,2
+p2_perftest_depth1,128,0.26,2
+p2_perftest_depth1,256,0.515,2
+p2_perftest_depth1,512,1.015,2
+p2_perftest_depth1,1024,1.955,2
+p2_perftest_depth1,2048,3.71,2
+p2_perftest_depth1,4096,7.04,2
+p2_perftest_depth1,8192,12.965,2
+p2_perftest_depth1,16384,21.95,2
+p2_perftest_depth1,32768,33.485,2
+p2_perftest_depth1,65536,49.63,2
+p2_perftest_depth1,131072,65.93,2
+p2_perftest_depth1,262144,79.23,2
+p2_perftest_depth1,524288,87.355,2
+p2_perftest_depth1,1048576,73.955,2
+p2_perftest_depth1,2097152,75.59,2
+p2_perftest_depth1,4194304,77.025,2
+p2_perftest_depth1,8388608,77.06,2
+p4_engine_depth1,8192,13.1991,3
+p4_engine_depth1,65536,51.8115,3
+p4_engine_depth1,262144,79.9879,3
+p4_engine_depth1,524288,88.0792,3
+p4_engine_depth1024,8192,77.2378,3
+p4_engine_depth1024,65536,81.4345,3
+p4_engine_depth1024,262144,82.0853,3
+p4_engine_depth1024,524288,81.9497,3

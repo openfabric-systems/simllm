@@ -1,0 +1,19 @@
+# Switch per-port egress buffer, measured from the endpoints.
+# RESULTS-p6-fabric test E5: two paced senders step from below to above the
+# port rate; b_fill_mb is excess_gbps times the interval from the start of
+# queue build to the buffer-full instant, and b_drain_mb is an independent
+# estimate from the post-overload drain tail. ce_frac is the fraction of
+# arriving packets marked congestion-experienced, and is zero everywhere.
+rep,offered_gbps,excess_gbps,t_drop_ms,b_fill_mb,b_drain_mb,drain_gbps,loss_frac,ce_frac,packets_received
+0,52.5,4.7574,9.1622,5.4486,7.6855,99.9952,0.032689,0.0,44102800
+1,55.0,9.7328,4.1847,5.0911,5.2158,99.9952,0.06359,0.0,44084896
+2,60.0,19.6782,1.4358,3.5318,5.0776,99.9952,0.119139,0.0,44085894
+3,52.5,4.7619,9.4116,5.6022,3.4241,99.9952,0.032881,0.0,44094998
+4,55.0,9.732,4.268,5.1921,7.5474,99.9952,0.063195,0.0,44103339
+5,60.0,19.6825,1.4404,3.5438,4.6213,99.9952,0.119175,0.0,44085291
+6,52.5,4.7754,8.7383,5.2162,4.1693,99.9952,0.033198,0.0,44085980
+7,55.0,9.7463,3.8198,4.6536,1.9925,99.9952,0.0636,0.0,44089817
+8,60.0,19.6672,2.3672,5.8195,7.6353,99.9952,0.118733,0.0,44102804
+9,52.5,4.7651,8.9155,5.3104,9.632,99.9952,0.032952,0.0,44092703
+10,55.0,9.7386,4.302,5.237,3.2232,99.9952,0.063603,0.0,44085751
+11,60.0,19.6827,2.9734,7.3155,8.8994,99.9952,0.119139,0.0,44087041

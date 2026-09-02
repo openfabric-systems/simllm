@@ -1,0 +1,14 @@
+# Drain window: goodput and receiver ingress discards against inter-burst gap.
+# RESULTS-p4-kernels, tests E1 (gap 0) and E5 (gap 4, 100, 368 us), one
+# reliable connected queue pair, send-queue depth 1024, bursts of 128 message
+# completions. rx_discards_phy is the receiver counter delta over the client's
+# datapath window, averaged over the repeats.
+size_bytes,gap_us,burst_goodput_gbps,wall_goodput_gbps,rx_discards_phy,repeats
+8192,0,77.2378,77.1756,4460.3,3
+8192,4,92.197,88.1606,0,3
+8192,100,92.2664,43.8992,0,3
+8192,368,92.2225,18.2707,0,3
+65536,0,81.4345,81.424,31562.7,3
+65536,4,81.429,81.0169,30936.7,3
+65536,100,97.3136,84.9698,0,3
+65536,368,97.3085,63.4409,0,3

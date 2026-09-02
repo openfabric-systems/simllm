@@ -1,0 +1,116 @@
+%% Top-level block architecture.  Pure TikZ, no external assets.
+%% Coordinates are in units of 0.9 cm; the picture is sized to the text width
+%% of a two-column page and does not depend on the document class.
+\begin{tikzpicture}[
+  x=0.9cm, y=0.9cm,
+  font=\scriptsize,
+  blk/.style   = {draw, rounded corners=2pt, align=center, fill=black!4,
+                  text width=18mm, inner sep=2pt, minimum height=7.5mm},
+  tall/.style  = {draw, rounded corners=2pt, align=center, fill=black!4,
+                  text width=15mm, inner sep=2pt, minimum height=48mm},
+  ext/.style   = {align=center, font=\scriptsize},
+  bus/.style   = {draw, fill=black!12, rounded corners=1pt},
+  flow/.style  = {-{Latex[length=1.7mm,width=1.5mm]}, semithick},
+  duplex/.style= {{Latex[length=1.7mm,width=1.5mm]}-%
+                  {Latex[length=1.7mm,width=1.5mm]}, semithick},
+  axi/.style   = {-{Latex[length=1.4mm,width=1.3mm]}, thin, draw=black!65},
+  mon/.style   = {dashed, draw=black!60, thin},
+]
+
+%% ==== monitoring ring, drawn first so blocks sit on top of it =============
+\draw[mon, rounded corners=10pt] (0.3,-1.0) rectangle (18.2,6.5);
+
+%% ==== host and wire, outside the ring =====================================
+\node[ext] (host) at (1.6,7.2) {Host\\PCIe Gen3 $\times$16 / Gen4 $\times$8};
+\node[ext] (wire) at (16.7,7.2) {Wire\\2 $\times$ 100\,GbE};
+
+%% ==== left and right edge blocks ==========================================
+\node[tall] (b1) at (1.6,3.1)
+  {\textbf{B1}\\Host interface\\and BAR map\\[3pt]UAR doorbell pages,
+   CSR BAR, MSI-X};
+\node[tall] (b9) at (16.7,3.1)
+  {\textbf{B9}\\MAC / PHY\\[3pt]100\,GbE cores, global pause emission};
+
+%% ==== lane 1: transmit datapath ===========================================
+\node[blk] (b2)  at (4.6,5.4)  {\textbf{B2} Submission\\SQ/RQ, doorbell};
+\node[blk] (b3)  at (7.2,5.4)  {\textbf{B3} WQE fetch\\DMA, prefetch};
+\node[blk] (b6)  at (9.8,5.4)  {\textbf{B6} Scheduler\\RR, window, pacer};
+\node[blk] (b7)  at (12.4,5.4) {\textbf{B7} Packetizer\\headers, ECT(0),
+  ICRC};
+
+%% ==== lane 2: context, translation, gather, loopback ======================
+\node[blk] (b4)  at (4.6,4.0)  {\textbf{B4} QPC\\cache $+$ HBM};
+\node[blk] (b5)  at (7.2,4.0)  {\textbf{B5} MR / MTT\\MPT, page walks};
+\node[blk] (b8)  at (9.8,4.0)  {\textbf{B8} TX DMA\\gather, MRRS};
+\node[blk] (b17) at (12.4,4.0) {\textbf{B17} Loopback\\internal budget};
+
+%% ==== the AXI4 data path bus ==============================================
+\draw[bus] (3.4,3.04) rectangle (15.0,3.36);
+\node[font=\scriptsize] at (9.2,3.2) {AXI4 data path: host DMA and HBM};
+
+%% ==== lane 3: management and congestion control ===========================
+\node[blk] (b18) at (5.9,2.4)  {\textbf{B18} Management\\GID, MTU, QP
+  transitions};
+\node[blk] (b15) at (11.1,2.4) {\textbf{B15} Reaction pt\\DCQCN rate,
+  $\alpha$};
+\node[blk] (b14) at (13.7,2.4) {\textbf{B14} Notif.\ point\\CNP generation};
+
+%% ==== lane 4: receive datapath ============================================
+\node[blk] (b16) at (4.6,1.0)  {\textbf{B16} Completion\\CQE, EQ, MSI-X};
+\node[blk] (b13) at (7.2,1.0)  {\textbf{B13} Requester\\ACK, go-back-N};
+\node[blk] (b12) at (9.8,1.0)  {\textbf{B12} Responder\\PSN, ACK, placement};
+\node[blk] (b11) at (12.4,1.0) {\textbf{B11} Parser\\classify, ICRC};
+\node[blk] (b10) at (15.0,1.0) {\textbf{B10} Ingress meter\\PHY discard};
+
+%% ==== transmit flow =======================================================
+\draw[flow] (host) -- (b1.north);
+\draw[flow] (b1.east|-b2.west) -- (b2.west);
+\draw[flow] (b2) -- (b3);
+\draw[flow] (b3) -- (b6);
+\draw[flow] (b6) -- (b7);
+\draw[flow] (b7.east) -| ([xshift=-4mm]b9.north);
+\draw[duplex] ([xshift=4mm]b9.north) -- (wire);
+
+%% ==== receive flow ========================================================
+\draw[flow] (b9.south) |- (b10.east);
+\draw[flow] (b10) -- (b11);
+\draw[flow] (b11) -- (b12);
+\draw[flow] (b12) -- (b13);
+\draw[flow] (b13) -- (b16);
+\draw[flow] (b16.west) -- (b1.east|-b16.west);
+
+%% ==== loopback and the shared ingress budget ==============================
+\draw[flow] (b7.south) -- (b17.north);
+\draw[flow] (b17.east) -| ([xshift=8mm]b10.north);
+
+%% ==== congestion control ==================================================
+\draw[flow] (b10.north) -- (b14.south);
+\draw[flow] (b11.north west) -- (b15.south east);
+\draw[flow] (b15.west) -- ++(-0.55,0)
+  node[left, font=\scriptsize] {rate to B6};
+
+%% ==== AXI4 data path attachments ==========================================
+\draw[axi] (b1.east) -- (3.4,3.2);
+\draw[axi] (b4.south)  -- (4.6,3.36);
+\draw[axi] (b5.south)  -- (7.2,3.36);
+\draw[axi] (b8.south)  -- (9.8,3.36);
+\draw[axi] (b17.south) -- (12.4,3.36);
+\draw[axi] (b16.north) -- (4.6,3.04);
+\draw[axi] (b12.north) -- (9.8,3.04);
+\draw[axi] (b3.east) -- (8.5,5.4) -- (8.5,3.36);
+
+%% ==== the monitoring ring endpoints =======================================
+\draw[mon] (b1.west)  -- (0.3,3.1);
+\draw[mon] (b9.east)  -- (18.2,3.1);
+\draw[mon] (b2.north) -- (4.6,6.5);
+\draw[mon] (b6.north) -- (9.8,6.5);
+\draw[mon] (b7.north) -- (12.4,6.5);
+\draw[mon] (b16.south) -- (4.6,-1.0);
+\draw[mon] (b12.south) -- (9.8,-1.0);
+\draw[mon] (b10.south) -- (15.0,-1.0);
+\node[blk, fill=white, text width=24mm] (b19) at (2.4,-1.0)
+  {\textbf{B19} CSR, counters, timestamp};
+\node[font=\scriptsize, anchor=west] at (10.6,-1.4)
+  {AXI4-Lite monitoring ring, one stop per block};
+
+\end{tikzpicture}

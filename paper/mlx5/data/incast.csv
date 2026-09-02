@@ -1,0 +1,13 @@
+# Two-to-one incast, one-to-two fan-out and the solo controls.
+# RESULTS-p5a-incast, reliable connected RDMA WRITE unless the case says UD.
+# wire_gbps is the receiver's physical-layer receive rate; app_goodput_gbps is
+# the receiver's rx_write_requests counter times the message size, which agrees
+# with sender completion accounting to 0.02 percent. Sender identities are
+# replaced by a and b. Solo rows are the mean over both senders.
+case,msg_size_B,wire_gbps,app_goodput_gbps,loss_pct,split_a_pct,split_b_pct,delivered_fraction,points
+solo_1MiB,1048576,99.1322,97.435,0.0,,,0.9982,6
+incast2to1_1MiB,1048576,99.5207,73.8907,1.6502,50.39,49.61,0.9831,3
+fanout1to2_1MiB,1048576,0.0387,97.825,,50.0,50.0,1.0001,3
+solo_512B,512,78.2238,67.8837,0.0024,,,1.0,6
+incast2to1_512B,512,96.7107,83.937,0.0068,50.33,49.67,0.9999,3
+incast2to1_ud_4KiB,4096,99.5207,,50.0011,50.0,50.0,0.5,3
