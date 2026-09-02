@@ -1,0 +1,372 @@
+%% References for the mlx5 reverse-engineering paper.
+%% Venue and year are checked against the published proceedings where the
+%% entry carries no TODO note.  Entries with a TODO note are marked in the
+%% text as well.
+%%
+%% KNOWN GAP: ACM-Reference-Format asks for `address' on every proceedings
+%% entry and for `pages' or `numpages' on all of them, and bibtex warns about
+%% each one that is missing.  Those fields are deliberately absent rather than
+%% guessed; fill them from the ACM Digital Library or the USENIX proceedings
+%% page before submission.  They are the only bibtex warnings the build has.
+
+%% ==== Standards and vendor documentation ==================================
+
+@manual{ibta-vol1,
+  title        = {{InfiniBand} Architecture Specification, Volume 1, Release
+                  1.7},
+  organization = {InfiniBand Trade Association},
+  year         = {2020},
+  note         = {Transport, base transport header, packet sequence numbers,
+                  acknowledgement and negative-acknowledgement semantics}
+}
+
+@manual{ibta-a17,
+  title        = {{InfiniBand} Architecture Specification, Volume 1, Release
+                  1.2.1, Annex A17: {RoCEv2}},
+  organization = {InfiniBand Trade Association},
+  year         = {2014},
+  note         = {{RDMA} over Converged Ethernet version 2: {UDP} over {IP}
+                  encapsulation, {UDP} destination port 4791}
+}
+
+@manual{mlx-prm,
+  title        = {{Mellanox} Adapters Programmer's Reference Manual ({PRM})},
+  organization = {{NVIDIA} Corporation},
+  year         = {2023},
+  note         = {Public reference manual for the {ConnectX} adapter family:
+                  queue-pair context, work-queue-element and
+                  completion-queue-entry layouts, doorbell records, user
+                  access regions, memory translation and protection tables}
+}
+
+@manual{alveo-u55c,
+  title        = {{Alveo U55C} High Performance Compute Card Data Sheet
+                  ({DS978})},
+  organization = {{AMD} (formerly {Xilinx})},
+  year         = {2023},
+  note         = {Logic, on-chip memory, {HBM2}, {QSFP28} cages and {PCIe}
+                  attachment figures used for sizing}
+}
+
+@manual{ernic,
+  title        = {Embedded {RDMA} Enabled {NIC} ({ERNIC}) {LogiCORE IP}
+                  Product Guide ({PG332})},
+  organization = {{AMD} (formerly {Xilinx})},
+  year         = {2023},
+  note         = {Commercial {RoCEv2} endpoint {IP} for the same device family}
+}
+
+@misc{linux-mlx5,
+  key          = {Linux mlx5 drivers},
+  title        = {The {Linux} kernel \texttt{mlx5} {RDMA} and {Ethernet}
+                  drivers},
+  howpublished = {\url{https://github.com/torvalds/linux/tree/master/drivers/infiniband/hw/mlx5}},
+  year         = {2026},
+  note         = {Queue-pair and completion-queue control paths, firmware
+                  command fields, hardware-counter plumbing}
+}
+
+@misc{rdma-core,
+  key          = {rdma-core},
+  title        = {\texttt{rdma-core}: {RDMA} core userspace libraries and
+                  daemons, \texttt{mlx5} provider},
+  howpublished = {\url{https://github.com/linux-rdma/rdma-core}},
+  year         = {2026},
+  note         = {Work-request validation, work-queue-element construction,
+                  doorbell record and user-access-region publication,
+                  completion-queue polling}
+}
+
+@misc{perftest,
+  key          = {perftest},
+  title        = {\texttt{perftest}: {InfiniBand} verbs performance tests},
+  howpublished = {\url{https://github.com/linux-rdma/perftest}},
+  year         = {2026}
+}
+
+@misc{usc1201f,
+  key          = {United States Code},
+  title        = {17 {U.S.C.} \S~1201(f): Circumvention of copyright
+                  protection systems, reverse engineering},
+  howpublished = {United States Code},
+  year         = {1998},
+  note         = {Digital Millennium Copyright Act, interoperability exception}
+}
+
+@misc{sega1992,
+  key          = {Ninth Circuit},
+  title        = {{Sega Enterprises Ltd.\ v.\ Accolade, Inc.}, 977 {F.2d} 1510},
+  howpublished = {United States Court of Appeals for the Ninth Circuit},
+  year         = {1992}
+}
+
+@misc{sony2000,
+  key          = {Ninth Circuit},
+  title        = {{Sony Computer Entertainment, Inc.\ v.\ Connectix Corp.},
+                  203 {F.3d} 596},
+  howpublished = {United States Court of Appeals for the Ninth Circuit},
+  year         = {2000}
+}
+
+%% ==== Measurement and microarchitecture ===================================
+
+@inproceedings{collie2022,
+  author    = {Kong, Xinhao and Zhu, Yibo and Zhou, Huaping and Jiang, Zhuo
+               and Ye, Jianxi and Guo, Chuanxiong and Zhuo, Danyang},
+  title     = {Collie: Finding Performance Anomalies in {RDMA} Subsystems},
+  booktitle = {19th {USENIX} Symposium on Networked Systems Design and
+               Implementation ({NSDI} 22)},
+  year      = {2022},
+  pages     = {287--305},
+  publisher = {{USENIX} Association}
+}
+
+@inproceedings{rnic-micro2023,
+  author    = {Kong, Xinhao and Chen, Jingrong and Bai, Wei and Xu, Yechen and
+               Elhaddad, Mahmoud and Raindel, Shachar and Padhye, Jitendra and
+               Lebeck, Alvin R. and Zhuo, Danyang},
+  title     = {Understanding {RDMA} Microarchitecture Resources for
+               Performance Isolation},
+  booktitle = {20th {USENIX} Symposium on Networked Systems Design and
+               Implementation ({NSDI} 23)},
+  year      = {2023},
+  publisher = {{USENIX} Association}
+}
+
+@inproceedings{kalia2016,
+  author    = {Kalia, Anuj and Kaminsky, Michael and Andersen, David G.},
+  title     = {Design Guidelines for High Performance {RDMA} Systems},
+  booktitle = {2016 {USENIX} Annual Technical Conference ({USENIX} {ATC} 16)},
+  year      = {2016},
+  pages     = {437--450},
+  publisher = {{USENIX} Association}
+}
+
+@inproceedings{fasst2016,
+  author    = {Kalia, Anuj and Kaminsky, Michael and Andersen, David G.},
+  title     = {{FaSST}: Fast, Scalable and Simple Distributed Transactions
+               with Two-Sided ({RDMA}) Datagram {RPCs}},
+  booktitle = {12th {USENIX} Symposium on Operating Systems Design and
+               Implementation ({OSDI} 16)},
+  year      = {2016},
+  pages     = {185--201},
+  publisher = {{USENIX} Association}
+}
+
+@inproceedings{erpc2019,
+  author    = {Kalia, Anuj and Kaminsky, Michael and Andersen, David G.},
+  title     = {Datacenter {RPCs} can be General and Fast},
+  booktitle = {16th {USENIX} Symposium on Networked Systems Design and
+               Implementation ({NSDI} 19)},
+  year      = {2019},
+  pages     = {1--16},
+  publisher = {{USENIX} Association}
+}
+
+@inproceedings{pcie2018,
+  author    = {Neugebauer, Rolf and Antichi, Gianni and Zazo,
+               Jos{\'e} Fernando and Audzevich, Yury and
+               L{\'o}pez-Buedo, Sergio and Moore, Andrew W.},
+  title     = {Understanding {PCIe} Performance for End Host Networking},
+  booktitle = {Proceedings of the 2018 Conference of the {ACM} Special
+               Interest Group on Data Communication ({SIGCOMM} '18)},
+  year      = {2018},
+  pages     = {327--341},
+  publisher = {{ACM}}
+}
+
+%% ==== Congestion control ==================================================
+
+@inproceedings{dcqcn2015,
+  author    = {Zhu, Yibo and Eran, Haggai and Firestone, Daniel and Guo,
+               Chuanxiong and Lipshteyn, Marina and Liron, Yehonatan and
+               Padhye, Jitendra and Raindel, Shachar and
+               Yahia, Mohamad Haj and Zhang, Ming},
+  title     = {Congestion Control for Large-Scale {RDMA} Deployments},
+  booktitle = {Proceedings of the 2015 {ACM} Conference on Special Interest
+               Group on Data Communication ({SIGCOMM} '15)},
+  year      = {2015},
+  pages     = {523--536},
+  publisher = {{ACM}}
+}
+
+@inproceedings{timely2015,
+  author    = {Mittal, Radhika and Lam, Vinh The and Dukkipati, Nandita and
+               Blem, Emily and Wassel, Hassan and Ghobadi, Monia and
+               Vahdat, Amin and Wang, Yaogong and Wetherall, David and
+               Zats, David},
+  title     = {{TIMELY}: {RTT}-based Congestion Control for the Datacenter},
+  booktitle = {Proceedings of the 2015 {ACM} Conference on Special Interest
+               Group on Data Communication ({SIGCOMM} '15)},
+  year      = {2015},
+  pages     = {537--550},
+  publisher = {{ACM}}
+}
+
+@inproceedings{hpcc2019,
+  author    = {Li, Yuliang and Miao, Rui and Liu, Hongqiang Harry and
+               Zhuang, Yan and Feng, Fei and Tang, Lingbo and Cao, Zheng and
+               Zhang, Ming and Kelly, Frank and Alizadeh, Mohammad and
+               Yu, Minlan},
+  title     = {{HPCC}: High Precision Congestion Control},
+  booktitle = {Proceedings of the {ACM} Special Interest Group on Data
+               Communication ({SIGCOMM} '19)},
+  year      = {2019},
+  pages     = {44--58},
+  publisher = {{ACM}}
+}
+
+@inproceedings{swift2020,
+  author    = {Kumar, Gautam and Dukkipati, Nandita and Jang, Keon and
+               Wassel, Hassan M. G. and Wu, Xian and Montazeri, Behnam and
+               Wang, Yaogong and Springborn, Kevin and Alfeld, Christopher and
+               Ryan, Michael and Wetherall, David and Vahdat, Amin},
+  title     = {Swift: Delay is Simple and Effective for Congestion Control in
+               the Datacenter},
+  booktitle = {Proceedings of the Annual Conference of the {ACM} Special
+               Interest Group on Data Communication ({SIGCOMM} '20)},
+  year      = {2020},
+  pages     = {514--528},
+  publisher = {{ACM}}
+}
+
+@inproceedings{irn2018,
+  author    = {Mittal, Radhika and Shpiner, Alexander and Panda, Aurojit and
+               Zahavi, Eitan and Krishnamurthy, Arvind and
+               Ratnasamy, Sylvia and Shenker, Scott},
+  title     = {Revisiting Network Support for {RDMA}},
+  booktitle = {Proceedings of the 2018 Conference of the {ACM} Special
+               Interest Group on Data Communication ({SIGCOMM} '18)},
+  year      = {2018},
+  pages     = {313--326},
+  publisher = {{ACM}}
+}
+
+@inproceedings{onerma2020,
+  author    = {Singhvi, Arjun and Akella, Aditya and Gibson, Dan and
+               Wenisch, Thomas F. and Wong-Chan, Monica and Clark, Sean and
+               Martin, Milo M. K. and McLaren, Moray and Chandra, Prashant and
+               Cauble, Rob and Wassel, Hassan M. G. and Montazeri, Behnam and
+               Sabato, Simon L. and Scherpelz, Joel and Vahdat, Amin},
+  title     = {{1RMA}: Re-envisioning Remote Memory Access for Multi-tenant
+               Datacenters},
+  booktitle = {Proceedings of the Annual Conference of the {ACM} Special
+               Interest Group on Data Communication ({SIGCOMM} '20)},
+  year      = {2020},
+  pages     = {708--721},
+  publisher = {{ACM}}
+}
+
+%% ==== NIC architectures ===================================================
+
+@inproceedings{srnic2023,
+  author    = {Wang, Zilong and Luo, Layong and Ning, Qingsong and
+               Zeng, Chaoliang and Li, Wenxue and Wan, Xinchen and
+               Xie, Peng and Feng, Tao and Cheng, Ke and Geng, Xiongfei and
+               Wang, Tianhao and Ling, Weicheng and Huo, Kejia and
+               An, Pingbo and Ji, Kui and Zhang, Shideng and Xu, Bin and
+               Feng, Ruiqing and Ding, Tao and Chen, Kai and Guo, Chuanxiong},
+  title     = {{SRNIC}: A Scalable Architecture for {RDMA} {NICs}},
+  booktitle = {20th {USENIX} Symposium on Networked Systems Design and
+               Implementation ({NSDI} 23)},
+  year      = {2023},
+  publisher = {{USENIX} Association}
+}
+
+@inproceedings{corundum2020,
+  author    = {Forencich, Alex and Snoeren, Alex C. and Porter, George and
+               Papen, George},
+  title     = {Corundum: An Open-Source 100-{Gbps} {NIC}},
+  booktitle = {2020 {IEEE} 28th Annual International Symposium on
+               Field-Programmable Custom Computing Machines ({FCCM})},
+  year      = {2020},
+  pages     = {38--46},
+  publisher = {{IEEE}}
+}
+
+@inproceedings{strom2020,
+  author    = {Sidler, David and Wang, Zeke and Chiosa, Monica and
+               Kulkarni, Amit and Alonso, Gustavo},
+  title     = {{StRoM}: Smart Remote Memory},
+  booktitle = {Proceedings of the Fifteenth European Conference on Computer
+               Systems ({EuroSys} '20)},
+  year      = {2020},
+  articleno = {29},
+  publisher = {{ACM}}
+}
+
+@inproceedings{coyote2020,
+  author    = {Korolija, Dario and Roscoe, Timothy and Alonso, Gustavo},
+  title     = {Do {OS} Abstractions Make Sense on {FPGAs}?},
+  booktitle = {14th {USENIX} Symposium on Operating Systems Design and
+               Implementation ({OSDI} 20)},
+  year      = {2020},
+  pages     = {991--1010},
+  publisher = {{USENIX} Association},
+  note      = {The Coyote shell. The brief for this draft cited {OSDI} 2021;
+               the paper appeared at {OSDI} 2020}
+}
+
+@inproceedings{flexnic2016,
+  author    = {Kaufmann, Antoine and Peter, Simon and Sharma, Naveen Kr. and
+               Anderson, Thomas and Krishnamurthy, Arvind},
+  title     = {High Performance Packet Processing with {FlexNIC}},
+  booktitle = {Proceedings of the Twenty-First International Conference on
+               Architectural Support for Programming Languages and Operating
+               Systems ({ASPLOS} '16)},
+  year      = {2016},
+  pages     = {67--81},
+  publisher = {{ACM}},
+  note      = {The brief for this draft cited {ASPLOS} 2015; the {ASPLOS}
+               paper is 2016, and the earlier {FlexNIC} position paper is
+               {HotOS} 2015}
+}
+
+@inproceedings{tonic2020,
+  author    = {Arashloo, Mina Tahmasbi and Lavrov, Alexey and Ghobadi, Manya
+               and Rexford, Jennifer and Walker, David and Wentzlaff, David},
+  title     = {Enabling Programmable Transport Protocols in High-Speed
+               {NICs}},
+  booktitle = {17th {USENIX} Symposium on Networked Systems Design and
+               Implementation ({NSDI} 20)},
+  year      = {2020},
+  pages     = {93--109},
+  publisher = {{USENIX} Association},
+  note      = {The Tonic hardware template}
+}
+
+@inproceedings{nica2019,
+  author    = {Eran, Haggai and Zeno, Lior and Tork, Maroun and Malka, Gabi
+               and Silberstein, Mark},
+  title     = {{NICA}: An Infrastructure for Inline Acceleration of Network
+               Applications},
+  booktitle = {2019 {USENIX} Annual Technical Conference ({USENIX} {ATC} 19)},
+  year      = {2019},
+  pages     = {345--362},
+  publisher = {{USENIX} Association}
+}
+
+@misc{uccl2025,
+  key          = {UCCL},
+  title        = {{UCCL}: An Extensible Software Transport Layer for {GPU}
+                  Networking},
+  howpublished = {arXiv preprint arXiv:2504.17307},
+  year         = {2025},
+  note         = {TODO: confirm the title, author list and publication status
+                  before submission}
+}
+
+%% ==== Context =============================================================
+
+@inproceedings{vllm2023,
+  author    = {Kwon, Woosuk and Li, Zhuohan and Zhuang, Siyuan and
+               Sheng, Ying and Zheng, Lianmin and Yu, Cody Hao and
+               Gonzalez, Joseph E. and Zhang, Hao and Stoica, Ion},
+  title     = {Efficient Memory Management for Large Language Model Serving
+               with {PagedAttention}},
+  booktitle = {Proceedings of the 29th Symposium on Operating Systems
+               Principles ({SOSP} '23)},
+  year      = {2023},
+  pages     = {611--626},
+  publisher = {{ACM}}
+}

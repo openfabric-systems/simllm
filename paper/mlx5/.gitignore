@@ -1,0 +1,21 @@
+# Built output and LaTeX auxiliary files. The sources, the curated data and
+# the generated figure PDFs are tracked; the built paper is not.
+main.pdf
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.run.xml
+*.xcp
+comment.cut
+
+# The repository root ignores *.csv behind an allow list. The paper's curated
+# measurement extracts are tracked, so re-include them here.
+!data/*.csv

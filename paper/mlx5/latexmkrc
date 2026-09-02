@@ -1,0 +1,10 @@
+# latexmk configuration for the mlx5 paper.
+# Used automatically by `latexmk -pdf` when run from this directory.
+
+$pdf_mode = 1;                       # pdflatex, not xelatex or lualatex
+$bibtex_use = 2;                     # run bibtex, and clean the .bbl
+$max_repeat = 6;                     # the anomaly table needs a few passes
+$pdflatex = 'pdflatex -interaction=nonstopmode -halt-on-error -file-line-error %O %S';
+
+# latexmk does not know about these by default.
+$clean_ext = 'bbl nav snm run.xml synctex.gz xcp';

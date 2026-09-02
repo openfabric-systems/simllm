@@ -1,0 +1,114 @@
+%% ===========================================================================
+%% Class choice.  This block is the ONLY place that knows which document class
+%% the paper uses.  Everything in sections/ is plain LaTeX (\section,
+%% \subsection, figure, table, tabular, \cite, \label, \ref) plus the small
+%% macro layer defined below, so switching to IEEEtran means editing this file
+%% and nothing else.
+%%
+%%   ACM (SIGCOMM) : \documentclass[sigconf,nonacm]{acmart}
+%%   IEEE          : \documentclass[conference]{IEEEtran}
+%%
+%% See README.md for the switch recipe.
+%% ===========================================================================
+\documentclass[sigconf,nonacm]{acmart}
+
+%% acmart drives natbib and bibtex; the numeric ACM citation style is what
+%% SIGCOMM uses.
+\citestyle{acmnumeric}
+
+%% acmart already provides: booktabs, graphicx, hyperref, xcolor, amsmath,
+%% caption, microtype, url.  Only add what it does not.
+\usepackage{tikz}
+\usetikzlibrary{positioning,fit,calc,arrows.meta,backgrounds,shapes.geometric}
+\usepackage{array}
+\usepackage{multirow}
+
+%% The register-name lists and the block prose are hard to break; give TeX a
+%% little room before it reports an overfull box.
+\setlength{\emergencystretch}{0.8em}
+
+%% ===========================================================================
+%% Portable macro layer.  Sections use only these, never a class-specific
+%% command.  An IEEEtran port redefines the three below and drops the acmart
+%% front-matter block at the bottom of this file.
+%% ===========================================================================
+
+%% Evidence classes from the calibration contract.  Rendered as small caps so
+%% they read as labels rather than prose.  The names are prefixed because
+%% \cal, \dec and \inf already mean something in LaTeX.
+\newcommand{\evd}[1]{\textsc{#1}}
+\newcommand{\evdoc}{\evd{documented}}
+\newcommand{\evdrv}{\evd{driver-inferred}}
+\newcommand{\evcal}{\evd{calibrated-opaque}}
+\newcommand{\evdecl}{\evd{declared}}
+\newcommand{\evinf}{\evd{inferred}}
+
+%% Counter, register and code identifiers.  Both allow a line break after an
+%% underscore, which the register names badly need: without it every list of
+%% counters overfills its column.
+\let\plainunderscore\_
+\newcommand{\breakableunderscore}{\plainunderscore\discretionary{}{}{}}
+\newcommand{\ctr}[1]{{\ttfamily\let\_\breakableunderscore #1}}
+\newcommand{\csr}[1]{{\ttfamily\let\_\breakableunderscore #1}}
+
+%% acmart asks for an accessibility description on every figure.  IEEEtran has
+%% no such command, so the sections stay portable.
+\providecommand{\Description}[1]{}
+
+%% An open question the draft has not closed.  Every one of these is listed in
+%% README.md so the maintainer can find them without grepping.
+\newcommand{\TODO}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+
+%% Anomaly-table cross reference.
+\newcommand{\anom}[1]{\textsc{anom-#1}}
+
+%% Units used often enough to be worth a macro.
+\newcommand{\Gbps}{\,Gb/s}
+\newcommand{\uS}{\,\textmu s}
+\newcommand{\nS}{\,ns}
+\newcommand{\mS}{\,ms}
+
+\setcopyright{none}
+\settopmatter{printacmref=false, printfolios=true}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\acmConference[Preprint]{Draft v0.1}{2026}{Zurich, Switzerland}
+
+\begin{document}
+
+\title{Reverse Engineering a Commodity RDMA NIC into an
+       Implementable Block Architecture}
+\subtitle{ConnectX-5 from public information and black-box measurement to
+          FPGA blocks and a golden C reference}
+
+\author{Yifeng Wang and collaborators}
+\affiliation{%
+  \institution{ETH Zurich}
+  \city{Zurich}
+  \country{Switzerland}}
+
+\renewcommand{\shortauthors}{Wang et al.}
+
+\begin{abstract}
+\input{sections/abstract}
+\end{abstract}
+
+\maketitle
+
+\input{sections/intro}
+\input{sections/legal}
+\input{sections/background}
+\input{sections/measurement}
+\input{sections/architecture}
+\input{sections/verification}
+\input{sections/related}
+\input{sections/status}
+
+\begin{acks}
+\TODO{acknowledgements: funding, the cluster operators, and reviewers of the
+campaign records. Left empty on purpose for the first draft.}
+\end{acks}
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{refs}
+
+\end{document}
