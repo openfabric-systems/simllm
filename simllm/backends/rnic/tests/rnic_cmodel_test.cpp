@@ -455,7 +455,14 @@ void testProfile(TestRunner& test) {
             && kConnectX5_100G.evidence.mtu_bytes == EvidenceClass::Documented
             && kConnectX5_100G.evidence.qpc_lookup_service_ps
                 == EvidenceClass::Declared
+            // The notification interval was the vendor default until the
+            // slice-D study fitted it against the measured notification rate,
+            // which is seventy times slower than that default allows. The
+            // alpha gain beside it has no measurement to fit against and stays
+            // declared.
             && kConnectX5_100G.evidence.cnp_min_interval_ps
+                == EvidenceClass::CalibratedOpaque
+            && kConnectX5_100G.evidence.dcqcn_alpha_gain_ppm
                 == EvidenceClass::Declared,
         "cx5 evidence classes match how each value was established");
 

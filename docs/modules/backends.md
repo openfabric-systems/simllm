@@ -1622,7 +1622,16 @@ created" statement stands and refers to different, never-registered work.
   does nothing (ANOM-17). `out_of_buffer` never moves, so it is not receive
   queue exhaustion, and the fitted drain rate reproduces the average without
   reproducing the structure. That stall process is what ANOM-03's unexplained
-  deficit has narrowed to. Acceptance: the unidirectional cell reports a
+  deficit has narrowed to, and the slice-D study added a second anchor pulling
+  the same latent the other way: because the endpoint's notification point sits
+  on this meter, a congestion-controlled fan-in settles at the meter's drain
+  rate, so the fitted 96.6e9 puts the receiver below the switch's egress rate
+  and the switch buffer never fills. The campaign's receiver absorbed 99.39
+  Gb/s under fan-in while discarding almost nothing at its PHY, so the incast
+  anchor wants a drain near the link rate and the lone-flow anchor wants it
+  below. One value cannot serve both, and the study's post-specified drain
+  sweep shows the incast tax climbing monotonically across that range.
+  Acceptance: the unidirectional cell reports a
   nonzero discard counter at 93.4 Gb/s while the duplex cell at 91.8 stays
   clean, without moving the saturated equilibrium outside its window; and a
   lone-flow cell above 94 Gb/s loses within 30 percent of 0.18 percent in
@@ -1633,12 +1642,39 @@ created" statement stands and refers to different, never-registered work.
   packets-per-second resource in htsim rather than in the endpoint, and
   HTSIM-39 is the admission-fairness half of the same question in the ns-tm3
   egress buffer.
-- BACK-58 (Completeness; P2; L): land rate control. Rate control is the DCQCN
+- BACK-58 (Completeness; P2; L) (remaining half): reconcile the reaction
+  point's cut depth with its operating point, and place the loss locus under
+  fan-in. Rate control is the DCQCN
   notification point, the reaction point whose per-QP state persists across
   WQEs, and the ECT(0) stamp the silicon applies to every RoCEv2 transmit
-  regardless of the requested ECN bits. The internal arbiter used to be part of
-  this task and moved to BACK-57, beside the ingress meter whose service budget
-  it shares. The notification point is a named clause and a post-specified
+  regardless of the requested ECN bits. All three are landed behind an opt-in
+  whose off path is the unchanged slice-C code, together with the tail-drop
+  egress queue the test fabric needed, and
+  [the slice-D study](../../examples/rnic_cmodel_cc_v1/RESULTS.md) validates
+  the notification point outright: the endpoint raises 272 notifications per
+  second per congested queue pair against a measured 283, and exactly zero for
+  a lone flow paced below saturation, on a fabric that marks nothing. The
+  reaction point holds a fair split, keeps the wire full, recovers inside the
+  measured window and carries its rate across a work-request boundary
+  unchanged. Two clauses remain, and they are the same clause seen from two
+  sides. The first is the cut: an established flow takes 293 ms to give up 30
+  percent when a competitor arrives, against a measured 3 to 39 ms, because one
+  alpha has to be both the depth of a cut and the height of the operating
+  point. A large alpha cuts fast and parks the loop far below the link; a small
+  one holds the right rate and cannot react. Real DCQCN separates them with a
+  target rate and a fast-recovery leg, and the campaign's linear recovery hid
+  that half. The second is the loss locus: because the notification point is
+  the receiver's own ingress meter, the loop settles at that meter's drain
+  rate, which slice C fitted below the switch's egress rate, so the switch
+  buffer never fills and the incast tax comes out at 3.17 percent instead of
+  the measured 21 to 27. Acceptance for both: with a target rate and a recovery
+  leg the cut lands inside 3 to 39 ms without moving the steady split outside
+  50 plus or minus 2 or the notification rate outside 30 percent of 283; and
+  the primary incast cell reaches an application goodput within 15 percent of
+  73.89 Gb/s with the tax inside 21 to 27 percent, at a meter drain rate that
+  also satisfies the lone-flow anchors BACK-57 owns, or with the incompatibility
+  between those two anchors resolved and recorded. The notification point is a
+  named clause and a post-specified
   correction: the design assumed a switch congestion-experienced
   mark, and the P6 fabric campaign found the measured fabric marks nothing at
   all (zero marked packets in 670 M, at two DSCP classes, with the egress
@@ -1681,6 +1717,20 @@ created" statement stands and refers to different, never-registered work.
   collapse to a 98.8 percent tax instead of the measured 26.9, while the same
   transport with headroom recovers correctly at 62 recovery episodes for 45
   losses.
+- BACK-62 (Completeness; P2; M): make the requester's sequence-error counter
+  count loss bursts rather than recovery episodes. The campaign measured
+  `packet_seq_err` moving 73 times less often than packets were lost, because
+  silicon raises one of them per loss burst. The model raises one per recovery
+  episode, and a replayed packet that is itself out of sequence opens a fresh
+  episode, so under fan-in the model's count runs from 1.2 to 6.7 times higher
+  than the number of packets lost rather than far lower. That inverts the
+  counter's meaning for any tool that reads it, which is the whole point of
+  spelling the counters the way the NIC spells them. The slice-D study reports
+  the ratio in all eight incast cells. Acceptance: the ratio of packets lost to
+  `packet_seq_err` is at least two in every incast cell and within a factor of
+  three of the measured 73 in the cell that matches the campaign's
+  configuration, without changing the requester's recovery behaviour, which the
+  slice-C rows pin byte for byte.
 - BACK-59 (Completeness; P2; M): make the golden model usable as an RTL
   reference from a UVM testbench. The facade trace is the expected-result file
   and the DPI-C import declarations plus a stimulus reader are the missing

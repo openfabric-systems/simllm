@@ -34,6 +34,8 @@ runs/
 !examples/rnic_cmodel_v1/curves.csv
 !examples/rnic_cmodel_rx_v1/summary.csv
 !examples/rnic_cmodel_rx_v1/curves.csv
+!examples/rnic_cmodel_cc_v1/summary.csv
+!examples/rnic_cmodel_cc_v1/curves.csv
 !examples/external_db_parity_v1/results.csv
 !examples/matched_seam_frontier_v1/results.csv
 !examples/merlin_collective_capture_v1/results.csv

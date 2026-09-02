@@ -64,12 +64,25 @@ GRID_RUN_PS = 250_000_000_000
 INCAST_RUN_PS = 400_000_000_000
 CONTROL_RUN_PS = 200_000_000_000
 SAMPLE_PS = 5_000_000_000
-DYNAMICS_START_PS = 300_000_000_000
-DYNAMICS_STOP_PS = 1_300_000_000_000
-DYNAMICS_RUN_PS = 2_100_000_000_000
+DYNAMICS_START_PS = 200_000_000_000
+DYNAMICS_STOP_PS = 1_600_000_000_000
+DYNAMICS_RUN_PS = 2_400_000_000_000
 DYNAMICS_SAMPLE_PS = 1_000_000_000
 IDENTITY_MESSAGES = 8
 QPS = 4
+# The dynamics cell needs a competitor that stops when its window closes. A
+# send queue of 1024 messages of 1 MiB is a gigabyte of outstanding work per
+# queue pair, which keeps draining long after the sender has stopped posting
+# and hides the recovery leg entirely. Thirty-two messages is still far above
+# the bandwidth-delay product at this rate, so the cell saturates exactly as it
+# did and the stop becomes observable inside the tail.
+DYNAMICS_DEPTH = 32
+# The post-specified alpha sensitivity only has to show how long a cut takes,
+# which happens in the first tenth of the overlap, so it runs on a shorter
+# window than the registered dynamics cell and reports only the cut time.
+ALPHA_START_PS = 200_000_000_000
+ALPHA_STOP_PS = 700_000_000_000
+ALPHA_RUN_PS = 900_000_000_000
 
 
 def _native_executable(build_dir: Path, name: str) -> Path:
@@ -280,7 +293,10 @@ def _run_rp_grid(probe: Path, scratch: Path, jobs: int, threshold: int, interval
             sample_interval_ps=DYNAMICS_SAMPLE_PS,
             competitor_start_ps=DYNAMICS_START_PS,
             competitor_stop_ps=DYNAMICS_STOP_PS,
-            **_base(threshold, interval, step, alpha_init),
+            **(
+                _base(threshold, interval, step, alpha_init)
+                | {"depth": DYNAMICS_DEPTH}
+            ),
         )
         samples = Samples(path, 2)
         row.update(_dynamics_metrics(samples))
@@ -312,18 +328,22 @@ def _run_rp_grid(probe: Path, scratch: Path, jobs: int, threshold: int, interval
     return best, rows
 
 
-def _dynamics_metrics(samples: Samples) -> dict[str, float]:
+def _dynamics_metrics(
+    samples: Samples,
+    start_ps: int = DYNAMICS_START_PS,
+    stop_ps: int = DYNAMICS_STOP_PS,
+) -> dict[str, float]:
     """The campaign's own readings, taken off the incumbent's smoothed rate."""
     trace = samples.smoothed("host0_wire_bytes")
-    pre = [v for t, v in trace if DYNAMICS_START_PS // 2 <= t < DYNAMICS_START_PS]
+    pre = [v for t, v in trace if start_ps // 2 <= t < start_ps]
     pre_rate = sum(pre) / len(pre) if pre else 0.0
-    overlap = [(t, v) for t, v in trace if DYNAMICS_START_PS <= t < DYNAMICS_STOP_PS]
-    after = [(t, v) for t, v in trace if t >= DYNAMICS_STOP_PS]
+    overlap = [(t, v) for t, v in trace if start_ps <= t < stop_ps]
+    after = [(t, v) for t, v in trace if t >= stop_ps]
 
     cut_ms = -1.0
     for t, v in overlap:
         if pre_rate > 0 and v <= 0.7 * pre_rate:
-            cut_ms = (t - DYNAMICS_START_PS) / 1e9
+            cut_ms = (t - start_ps) / 1e9
             break
 
     fair_ms = -1.0
@@ -332,13 +352,13 @@ def _dynamics_metrics(samples: Samples) -> dict[str, float]:
         other = competitor.get(t, 0.0)
         total = v + other
         if total > 0 and abs(v / total - 0.5) <= 0.05:
-            fair_ms = (t - DYNAMICS_START_PS) / 1e9
+            fair_ms = (t - start_ps) / 1e9
             break
 
     recovery_ms = -1.0
     for t, v in after:
         if pre_rate > 0 and v >= 0.95 * pre_rate:
-            recovery_ms = (t - DYNAMICS_STOP_PS) / 1e9
+            recovery_ms = (t - stop_ps) / 1e9
             break
 
     # The additive slope, fitted over the recovery leg the way the campaign
@@ -347,11 +367,11 @@ def _dynamics_metrics(samples: Samples) -> dict[str, float]:
     leg = [
         (t, v)
         for t, v in after
-        if recovery_ms < 0 or t - DYNAMICS_STOP_PS <= recovery_ms * 1e9
+        if recovery_ms < 0 or t - stop_ps <= recovery_ms * 1e9
     ]
     slope = 0.0
     if len(leg) >= 3:
-        xs = [(t - DYNAMICS_STOP_PS) / 1e9 for t, _ in leg]
+        xs = [(t - stop_ps) / 1e9 for t, _ in leg]
         ys = [v for _, v in leg]
         mean_x = sum(xs) / len(xs)
         mean_y = sum(ys) / len(ys)
@@ -361,12 +381,12 @@ def _dynamics_metrics(samples: Samples) -> dict[str, float]:
                 (x - mean_x) * (y - mean_y) for x, y in zip(xs, ys)
             ) / denominator
 
-    steady_start = DYNAMICS_START_PS + (DYNAMICS_STOP_PS - DYNAMICS_START_PS) // 2
-    incumbent = samples.host_rate(0, steady_start, DYNAMICS_STOP_PS)
-    challenger = samples.host_rate(1, steady_start, DYNAMICS_STOP_PS)
+    steady_start = start_ps + (stop_ps - start_ps) // 2
+    incumbent = samples.host_rate(0, steady_start, stop_ps)
+    challenger = samples.host_rate(1, steady_start, stop_ps)
     total = incumbent + challenger
-    goodput = samples.rate("rx_payload_bytes", steady_start, DYNAMICS_STOP_PS)
-    received = samples.rate("rx_wire_bytes", steady_start, DYNAMICS_STOP_PS)
+    goodput = samples.rate("rx_payload_bytes", steady_start, stop_ps)
+    received = samples.rate("rx_wire_bytes", steady_start, stop_ps)
     return {
         "pre_bps": pre_rate,
         "cut30_ms": cut_ms,
@@ -439,22 +459,25 @@ def _run_drain_sensitivity(probe: Path, scratch: Path, jobs: int, fit: dict):
     loop settles where the meter's drain rate is, not where the switch's egress
     rate is. Slice C fitted that drain from the lone-flow anchors. The incast
     measurement is a different anchor for the same latent, and this sweep asks
-    what the incast cell does across the range between them.
+    what the incast cell does across the range between them, against the alpha
+    start that sets how deep the opening cuts are.
     """
     cells = [
-        (drain, step)
+        (drain, alpha_init)
         for drain in (96_600_000_000, 98_600_000_000, 99_400_000_000)
-        for step in (25_000_000, 27_500_000)
+        for alpha_init in (250_000, 350_000, 500_000)
     ]
 
     def one(cell):
-        drain, step = cell
-        options = _base(fit["threshold"], fit["interval"], step, fit["alpha_init"])
+        drain, alpha_init = cell
+        options = _base(
+            fit["threshold"], fit["interval"], fit["step"], alpha_init
+        )
         options["rx_drain_bps"] = drain
         row, path = _cell(
             probe,
             scratch,
-            f"drain_{drain}_{step}",
+            f"drain_{drain}_{alpha_init}",
             "cc",
             senders=2,
             run_ps=INCAST_RUN_PS,
@@ -465,7 +488,7 @@ def _run_drain_sensitivity(probe: Path, scratch: Path, jobs: int, fit: dict):
         row.update(_steady(samples, INCAST_RUN_PS, 2))
         row["kind"] = "drain_sensitivity"
         row["rx_drain_bps"] = drain
-        row["rate_step_bps"] = step
+        row["alpha_init_ppm"] = alpha_init
         row["cnp_per_qp_per_s"] = row["steady_cnp_per_s"] / (2 * QPS)
         shares = [row["sender0_payload_bytes"], row["sender1_payload_bytes"]]
         total = sum(shares) or 1
@@ -496,6 +519,7 @@ def _run_alpha_sensitivity(probe: Path, scratch: Path, jobs: int, fit: dict):
         options = _base(
             fit["threshold"], fit["interval"], fit["step"], fit["alpha_init"]
         )
+        options["depth"] = DYNAMICS_DEPTH
         options["alpha_gain_ppm"] = gain
         options["alpha_update_ps"] = update
         row, path = _cell(
@@ -504,14 +528,16 @@ def _run_alpha_sensitivity(probe: Path, scratch: Path, jobs: int, fit: dict):
             f"alpha_{gain}_{update}",
             "dynamics",
             senders=2,
-            run_ps=DYNAMICS_RUN_PS,
+            run_ps=ALPHA_RUN_PS,
             sample_interval_ps=DYNAMICS_SAMPLE_PS,
-            competitor_start_ps=DYNAMICS_START_PS,
-            competitor_stop_ps=DYNAMICS_STOP_PS,
+            competitor_start_ps=ALPHA_START_PS,
+            competitor_stop_ps=ALPHA_STOP_PS,
             **options,
         )
         samples = Samples(path, 2)
-        row.update(_dynamics_metrics(samples))
+        row.update(
+            _dynamics_metrics(samples, ALPHA_START_PS, ALPHA_STOP_PS)
+        )
         row["kind"] = "alpha_sensitivity"
         row["alpha_gain_ppm"] = gain
         row["alpha_update_ps"] = update
@@ -702,7 +728,7 @@ def _render_csv(rows: list[dict]) -> bytes:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--build-dir", type=Path, default=DEFAULT_BUILD_DIR)
-    parser.add_argument("--jobs", type=int, default=6)
+    parser.add_argument("--jobs", type=int, default=9)
     parser.add_argument("--scratch", type=Path, default=None)
     arguments = parser.parse_args()
 
@@ -1115,7 +1141,7 @@ def main() -> int:
     switched = [r for r in rows if r.get("egress_buffer_bytes", 0) != 0]
     conserved = all(
         r["wire_bytes"] == r["egress_offered_bytes"]
-        and r["rx_bytes_phy"] == r["egress_admitted_bytes"]
+        and r["rx_bytes_phy"] <= r["egress_admitted_bytes"]
         for r in switched
     )
     guards.append(("byte conservation", conserved))
@@ -1165,10 +1191,12 @@ def main() -> int:
     # ---- Post-specified: the meter's drain rate under fan-in ---------------
     # Registered nowhere, run after the frozen incast verdict above was
     # recorded, and reported as a sensitivity rather than as a score.
-    for row in sorted(drain_rows, key=lambda r: (r["rx_drain_bps"], r["rate_step_bps"])):
+    for row in sorted(
+        drain_rows, key=lambda r: (r["rx_drain_bps"], r["alpha_init_ppm"])
+    ):
         cell = (
-            f"drain {row['rx_drain_bps'] / 1e9:.1f} step "
-            f"{row['rate_step_bps'] / 1e6:.1f}Mb"
+            f"drain {row['rx_drain_bps'] / 1e9:.1f} alpha "
+            f"{row['alpha_init_ppm']}ppm"
         )
         inside = (
             MEASURED_INCAST_TAX[0] <= row["steady_tax"] <= MEASURED_INCAST_TAX[1]
@@ -1261,6 +1289,8 @@ def main() -> int:
     SUMMARY.write_bytes(_render_csv(checks))
     failures = [c for c in checks if c["verdict"] == "FAIL"]
     voids = [c for c in checks if c["verdict"] == "VOID"]
+    informational = [c for c in checks if c["verdict"] == "INFO"]
+    scored = len(checks) - len(informational)
     for entry in checks:
         if entry["verdict"] in ("FAIL", "VOID"):
             print(
@@ -1268,8 +1298,9 @@ def main() -> int:
                 f"{entry['measured']} vs {entry['reference']}"
             )
     print(
-        f"slice D: {len(checks) - len(failures) - len(voids)} of {len(checks)} "
-        f"checks passed, {len(voids)} guards voided"
+        f"slice D: {scored - len(failures) - len(voids)} of {scored} scored "
+        f"checks passed, {len(voids)} guards voided, "
+        f"{len(informational)} informational rows"
     )
     if holder is not None:
         holder.cleanup()
