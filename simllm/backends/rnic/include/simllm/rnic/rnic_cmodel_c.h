@@ -70,9 +70,13 @@ enum {
 };
 
 /* Event kinds the caller may deliver. The packet kinds require an ABI v2
- * configuration; the extent kinds require an ABI v1 one. The control kinds
- * are declared here so the vocabulary is stable, and are refused with
- * RNIC_CM_ERROR_UNSUPPORTED until the rate-control block lands. */
+ * configuration; the extent kinds require an ABI v1 one.
+ * RNIC_CM_EVENT_CNP_RECEIVED requires the congestion-control configuration and
+ * reaches the reaction point. The remaining control kinds are declared here so
+ * the vocabulary is stable, and are refused with RNIC_CM_ERROR_UNSUPPORTED:
+ * RNIC_CM_EVENT_ECN_MARKED because the measured fabric never marks and a model
+ * that accepted a mark would let a study invent one, and the two PFC kinds and
+ * the rate update because no block consumes them yet. */
 enum {
     RNIC_CM_EVENT_EXTENT_DELIVERED = 1,
     RNIC_CM_EVENT_EXTENT_DROPPED = 2,
@@ -163,6 +167,21 @@ typedef struct rnic_cm_profile {
     uint8_t pause_propagates;
     uint8_t firmware_counter_variant; /* 0 fw 16.32, 1 fw 16.31 */
     uint8_t reserved[7];
+
+    /* The congestion-control parameters, appended so every field above keeps
+     * its offset and an ABI v1 caller that only reads those keeps working.
+     * `np_cnp_threshold_bytes` is the ingress occupancy at or above which an
+     * arriving packet is treated as having observed congestion, which on a
+     * fabric that never marks is the only place congestion can be observed at
+     * all. The rest is the reaction point: the alpha recursion in parts per
+     * million, one additive increase step over one interval, and the rate a
+     * cut may never go below. */
+    uint64_t np_cnp_threshold_bytes;
+    uint64_t dcqcn_alpha_init_ppm;
+    uint64_t dcqcn_alpha_gain_ppm;
+    uint64_t dcqcn_rate_increase_step_bps;
+    uint64_t dcqcn_rate_increase_interval_ps;
+    uint64_t dcqcn_rate_floor_bps;
 } rnic_cm_profile;
 
 typedef struct rnic_cm_config {
@@ -188,7 +207,29 @@ typedef struct rnic_cm_config {
      * which reports zero on `local_ack_timeout_err`, and 1 is fw 16.31, which
      * counts. Ignored without `receive`. */
     uint8_t firmware_counter_variant;
-    uint8_t reserved1[4];
+    /* 1 selects the congestion-control block: the notification point on the
+     * receive side and the reaction point in front of the transmit pacer. It
+     * requires `receive`. 0 is the identity default, which is the slice-C
+     * behaviour to the bit: nothing is notified, nothing reacts, and a
+     * congestion-notification event is refused rather than absorbed. It comes
+     * out of the reserved block, so the structure keeps every offset and its
+     * size. */
+    uint8_t congestion_control;
+    /* How many queue pairs share this endpoint's port. 0 and 1 both mean the
+     * endpoint owns the whole port, which is the identity default and the only
+     * value that existed before this byte was spent. A larger value divides
+     * the per-queue-pair transmit ceiling and the reaction point's ceiling by
+     * it, so N endpoint objects standing for the N queue pairs of one sender
+     * together offer one port's worth of traffic instead of N.
+     *
+     * This is a stand-in for per-NIC arbitration across the queue pairs of one
+     * endpoint, which is BACK-56's remaining clause. It gives each queue pair
+     * the equal share a fair arbiter would give it at saturation and nothing
+     * more: it cannot model one queue pair borrowing another's idle capacity.
+     * A study that uses it says so. It comes out of the reserved block, so the
+     * structure keeps every offset and its size. */
+    uint8_t queue_pairs_per_port;
+    uint8_t reserved1[2];
     /* 0 means the send queue itself is the bound. */
     uint64_t max_inflight_wqes;
     /* 0 means no byte bound. */
@@ -253,6 +294,17 @@ typedef struct rnic_cm_rx_result {
     uint32_t reply_psn;
     uint64_t reply_wire_bytes;
     uint64_t ingress_occupancy_bytes;
+    /* The congestion notification the notification point raised for this
+     * packet's queue pair, appended so every field above keeps its offset. It
+     * is independent of the reply: a packet can be acknowledged and notified
+     * at once, and a packet the ingress meter discards can still be notified,
+     * which is what makes an overflowing receiver the loudest one. The caller
+     * carries it back to `cnp_source` as an RNIC_CM_EVENT_CNP_RECEIVED event,
+     * because a notification is a control event and names no attempt. */
+    uint32_t has_cnp;
+    uint32_t cnp_source;
+    uint32_t cnp_qpn;
+    uint32_t reserved0;
 } rnic_cm_rx_result;
 
 typedef struct rnic_cm_event_info {
@@ -370,6 +422,19 @@ typedef struct rnic_cm_nic_counter_set {
     uint64_t tx_recovery_episodes;
     uint64_t tx_timeouts;
     uint64_t tx_stale_terminals;
+
+    /* Congestion-control bookkeeping the NIC does not expose but a study needs
+     * to see the loop working. Appended, so every field above keeps its
+     * offset. `np_cnps_suppressed` is the difference between what the meter saw
+     * and what the wire carried, which is what makes the measured notification
+     * rate a property of the limiter rather than of the arrival rate. */
+    uint64_t np_congestion_observed;
+    uint64_t np_cnps_suppressed;
+    uint64_t rp_current_rate_bps;
+    uint64_t rp_min_rate_bps;
+    uint64_t rp_alpha_ppm;
+    uint64_t rp_rate_cuts;
+    uint64_t rp_rate_increases;
 } rnic_cm_nic_counter_set;
 
 /* Fills `out` with a named preset ("cx5_100g" or "cx7_400g"). */

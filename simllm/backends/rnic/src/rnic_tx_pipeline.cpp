@@ -42,6 +42,9 @@ void validateRnicTxPipelineConfig(const RnicTxPipelineConfig& config) {
         throw std::invalid_argument(
             "RNIC requester transport fields need the transport enabled");
     }
+    if (config.reaction.enabled) {
+        validateRnicCcReactionConfig(config.reaction);
+    }
 }
 
 Picoseconds RnicTxPipeline::RateGate::delayFor(std::uint64_t units) {
@@ -77,6 +80,49 @@ RnicTxPipeline::RnicTxPipeline(
     nic_bits_.rate = config_.wire_bps_per_nic;
     qp_messages_.rate = config_.message_rate_per_qp;
     nic_messages_.rate = config_.message_rate_per_nic;
+    if (config_.reaction.enabled) {
+        reaction_ = std::make_unique<RnicCcReactionPoint>(config_.reaction);
+        cc_bits_.rate = reaction_->rateBps();
+        refreshReactionCounters();
+    }
+}
+
+void RnicTxPipeline::refreshReactionCounters() {
+    if (reaction_ == nullptr) {
+        return;
+    }
+    const RnicCcReactionCounters& source = reaction_->counters();
+    counters_.cnps_handled = source.cnps_handled;
+    counters_.cnps_ignored = source.cnps_ignored;
+    counters_.rate_cuts = source.rate_cuts;
+    counters_.rate_increases = source.rate_increases;
+    counters_.min_rate_bps = source.min_rate_bps;
+    counters_.current_rate_bps = reaction_->rateBps();
+    counters_.alpha_ppm = reaction_->alphaPpm();
+}
+
+void RnicTxPipeline::onCongestionNotification(Picoseconds now_ps) {
+    if (reaction_ == nullptr) {
+        throw std::logic_error(
+            "RNIC transmit pipeline has no congestion reaction point");
+    }
+    if (now_ps < last_now_ps_) {
+        throw std::logic_error("RNIC congestion notification time regressed");
+    }
+    last_now_ps_ = now_ps;
+    reaction_->onNotification(now_ps);
+    // The notification counters live on the NIC-named facade too, because a
+    // detection tool reads them there and not from the pipeline's own set.
+    ++nic_counters_.rp_cnp_handled;
+    refreshReactionCounters();
+}
+
+bool RnicTxPipeline::hasReactionPoint() const noexcept {
+    return reaction_ != nullptr;
+}
+
+std::uint64_t RnicTxPipeline::reactionRateBps() const noexcept {
+    return reaction_ == nullptr ? 0 : reaction_->rateBps();
 }
 
 NetworkPortCapabilities RnicTxPipeline::capabilities() const noexcept {
@@ -153,6 +199,7 @@ Picoseconds RnicTxPipeline::eligibleAt(const QueueEntry& entry) const {
     eligible = std::max(eligible, window_open_ps_);
     eligible = std::max(eligible, qp_bits_.free_at_ps);
     eligible = std::max(eligible, nic_bits_.free_at_ps);
+    eligible = std::max(eligible, cc_bits_.free_at_ps);
     if (packet.packet_index == 0) {
         eligible = std::max(eligible, qp_messages_.free_at_ps);
         eligible = std::max(eligible, nic_messages_.free_at_ps);
@@ -277,6 +324,13 @@ std::vector<NetworkEvent> RnicTxPipeline::releaseDue(Picoseconds now_ps) {
         throw std::logic_error("RNIC transmit pipeline time regressed");
     }
     last_now_ps_ = now_ps;
+    if (reaction_ != nullptr) {
+        // Alpha decay and the additive increase are timers, so they run
+        // whether or not there is anything to send. A caller that steps
+        // without traffic still gets an honest rate out of the next release.
+        reaction_->progress(now_ps);
+        refreshReactionCounters();
+    }
     std::vector<NetworkEvent> events;
     if (config_.transport_enabled && config_.rto_ps != 0) {
         // A packet the responder never saw draws no NAK, so the only way out
@@ -439,6 +493,19 @@ std::vector<NetworkEvent> RnicTxPipeline::releaseDue(Picoseconds now_ps) {
             now_ps, qp_bits_.delayFor(packet.wire_bytes * 8));
         nic_bits_.free_at_ps = checkedAdd(
             now_ps, nic_bits_.delayFor(packet.wire_bytes * 8));
+        if (reaction_ != nullptr) {
+            // The gate charges at the rate the reaction point holds right now.
+            // A rate that has changed abandons the old rate's fractional
+            // remainder rather than carrying it across, because a remainder is
+            // a numerator over a denominator that no longer applies.
+            const std::uint64_t current = reaction_->rateBps();
+            if (current != cc_bits_.rate) {
+                cc_bits_.rate = current;
+                cc_bits_.remainder = 0;
+            }
+            cc_bits_.free_at_ps = checkedAdd(
+                now_ps, cc_bits_.delayFor(packet.wire_bytes * 8));
+        }
         if (packet.packet_index == 0) {
             qp_messages_.free_at_ps =
                 checkedAdd(now_ps, qp_messages_.delayFor(1));
@@ -599,6 +666,17 @@ std::optional<Picoseconds> RnicTxPipeline::nextEventTime() const {
             issue = std::max(eligibleAt(entry), last_now_ps_);
         }
     }
+    // The reaction point's timers are only worth announcing while there is
+    // something for a rate change to act on. An idle endpoint that advertised
+    // an alpha tick every interval would never let a caller's loop terminate,
+    // and its rate is caught up by the next release in any case.
+    if (reaction_ != nullptr && hasPendingWork()) {
+        const std::optional<Picoseconds> tick = reaction_->nextEventTime();
+        if (tick.has_value()) {
+            const Picoseconds due = std::max(*tick, last_now_ps_);
+            issue = issue.has_value() ? std::min(*issue, due) : due;
+        }
+    }
     if (!timeout.has_value()) {
         return issue;
     }
@@ -623,6 +701,9 @@ const RnicNicCounters& RnicTxPipeline::nicCounters() const noexcept {
 }
 
 void RnicTxPipeline::validateInvariants() const {
+    if (reaction_ != nullptr) {
+        reaction_->validateInvariants();
+    }
     std::uint64_t inflight_wqes = 0;
     std::uint64_t inflight_packets = 0;
     std::uint64_t inflight_bytes = 0;

@@ -6,7 +6,10 @@
 #include <optional>
 #include <vector>
 
+#include <memory>
+
 #include "simllm/rnic/network_port.h"
+#include "simllm/rnic/rnic_cc.h"
 #include "simllm/rnic/rnic_nic_counters.h"
 
 namespace simllm::rnic {
@@ -50,6 +53,12 @@ struct RnicRxPipelineConfig {
     // receiver emitting pause frames under overload that no peer ever
     // received, so the frames are counted and never delivered.
     std::uint64_t pause_discard_interval{64};
+
+    // The congestion notification point, which is this endpoint's own ingress
+    // meter and not a switch mark. Disabled is the identity default: the
+    // pipeline behaves exactly as it did before this block existed and raises
+    // nothing, so every accepted slice-C row is unchanged.
+    RnicCcNotificationConfig notification;
 };
 
 // One inbound wire packet as the port presents it.
@@ -93,6 +102,14 @@ struct RnicRxResult {
     std::uint64_t reply_wire_bytes{0};
     // Occupancy after this packet, so a study can see the meter working.
     std::uint64_t ingress_occupancy_bytes{0};
+    // The congestion notification the notification point raised for this
+    // packet's queue pair, addressed to the endpoint that sent it. It is
+    // independent of the reply above: a packet can be acknowledged and
+    // notified at once, and a packet the meter discards can still be notified,
+    // which is what makes an overflowing receiver the loudest one.
+    bool has_cnp{false};
+    std::uint32_t cnp_source{0};
+    std::uint32_t cnp_qpn{0};
 };
 
 struct RnicRxPipelineCounters {
@@ -110,6 +127,10 @@ struct RnicRxPipelineCounters {
     std::uint64_t naks{0};
     std::uint64_t ingress_occupancy_bytes{0};
     std::uint64_t ingress_high_watermark_bytes{0};
+    // Notification point. All stay zero without it.
+    std::uint64_t cnps_sent{0};
+    std::uint64_t cnps_suppressed{0};
+    std::uint64_t congestion_observations{0};
 };
 
 void validateRnicRxPipelineConfig(const RnicRxPipelineConfig& config);
@@ -157,6 +178,13 @@ private:
     void drainTo(Picoseconds now_ps);
     QpState& qpState(const RnicRxPacket& packet);
     void notePause();
+    // Runs the notification point against the occupancy this packet observes
+    // and records the verdict on `result`.
+    void observeCongestion(
+        const RnicRxPacket& packet,
+        std::uint64_t observed_occupancy_bytes,
+        Picoseconds now_ps,
+        RnicRxResult& result);
 
     RnicRxPipelineConfig config_;
     Picoseconds last_now_ps_{0};
@@ -166,6 +194,9 @@ private:
     std::uint64_t drain_remainder_{0};
     std::uint64_t discards_since_pause_{0};
     RateGate nic_rate_;
+    // Null unless the notification point is configured, which is what keeps
+    // the identity-off path free of it.
+    std::unique_ptr<RnicCcNotificationPoint> notification_;
     std::map<std::pair<std::uint32_t, std::uint32_t>, QpState> qps_;
     RnicRxPipelineCounters counters_;
     RnicNicCounters nic_counters_;

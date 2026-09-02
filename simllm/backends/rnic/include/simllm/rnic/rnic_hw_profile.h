@@ -96,6 +96,12 @@ struct RnicHwProfileEvidence {
     EvidenceClass dcqcn_rate_reduce_ps{EvidenceClass::Declared};
     EvidenceClass dcqcn_byte_reset{EvidenceClass::Declared};
     EvidenceClass dcqcn_rate_step_bps{EvidenceClass::Declared};
+    EvidenceClass np_cnp_threshold_bytes{EvidenceClass::Declared};
+    EvidenceClass dcqcn_alpha_init_ppm{EvidenceClass::Declared};
+    EvidenceClass dcqcn_alpha_gain_ppm{EvidenceClass::Declared};
+    EvidenceClass dcqcn_rate_increase_step_bps{EvidenceClass::Declared};
+    EvidenceClass dcqcn_rate_increase_interval_ps{EvidenceClass::Declared};
+    EvidenceClass dcqcn_rate_floor_bps{EvidenceClass::Declared};
 
     EvidenceClass pfc_enabled{EvidenceClass::Declared};
     EvidenceClass global_pause_tx{EvidenceClass::Declared};
@@ -166,6 +172,20 @@ struct RnicHwProfile {
     Picoseconds dcqcn_rate_reduce_ps{0};
     std::uint64_t dcqcn_byte_reset{0};
     std::uint64_t dcqcn_rate_step_bps{0};
+    // The notification point's own parameters. The threshold is the ingress
+    // occupancy at or above which an arriving packet is treated as having
+    // observed congestion; on this fabric nothing else can observe it, because
+    // the switch never marks.
+    std::uint64_t np_cnp_threshold_bytes{0};
+    // The reaction point's alpha recursion, in parts per million.
+    std::uint64_t dcqcn_alpha_init_ppm{0};
+    std::uint64_t dcqcn_alpha_gain_ppm{0};
+    // The additive increase, per queue pair. The campaign measured a recovery
+    // that is linear in time rather than the fast-recovery-then-additive shape
+    // the vendor defaults imply, so this is one step over one interval.
+    std::uint64_t dcqcn_rate_increase_step_bps{0};
+    Picoseconds dcqcn_rate_increase_interval_ps{0};
+    std::uint64_t dcqcn_rate_floor_bps{0};
 
     // Flow control.
     bool pfc_enabled{false};
@@ -283,6 +303,23 @@ constexpr RnicHwProfile connectX5_100G() {
     profile.evidence.dcqcn_rate_reduce_ps = EvidenceClass::Declared;
     profile.evidence.dcqcn_byte_reset = EvidenceClass::Declared;
     profile.evidence.dcqcn_rate_step_bps = EvidenceClass::Declared;
+    // The notification and reaction parameters the slice-D study fits. They
+    // start at the value the vendor default implies and are expected to be
+    // corrected, because the campaign measured a reaction two to twenty times
+    // slower and a recovery about four and a half times slower than those
+    // defaults allow.
+    profile.np_cnp_threshold_bytes = 131008;
+    profile.dcqcn_alpha_init_ppm = 500000;
+    profile.dcqcn_alpha_gain_ppm = 3906;
+    profile.dcqcn_rate_increase_step_bps = 25000000;
+    profile.dcqcn_rate_increase_interval_ps = 1000000000;
+    profile.dcqcn_rate_floor_bps = 1000000000;
+    profile.evidence.np_cnp_threshold_bytes = EvidenceClass::Declared;
+    profile.evidence.dcqcn_alpha_init_ppm = EvidenceClass::Declared;
+    profile.evidence.dcqcn_alpha_gain_ppm = EvidenceClass::Declared;
+    profile.evidence.dcqcn_rate_increase_step_bps = EvidenceClass::Declared;
+    profile.evidence.dcqcn_rate_increase_interval_ps = EvidenceClass::Declared;
+    profile.evidence.dcqcn_rate_floor_bps = EvidenceClass::Declared;
 
     profile.pfc_enabled = false;
     profile.global_pause_tx = true;
@@ -323,6 +360,10 @@ constexpr RnicHwProfile scaleProfile(
     scaled.internal_budget_bps = scale(base.internal_budget_bps);
     scaled.dcqcn_byte_reset = scale(base.dcqcn_byte_reset);
     scaled.dcqcn_rate_step_bps = scale(base.dcqcn_rate_step_bps);
+    scaled.np_cnp_threshold_bytes = scale(base.np_cnp_threshold_bytes);
+    scaled.dcqcn_rate_increase_step_bps =
+        scale(base.dcqcn_rate_increase_step_bps);
+    scaled.dcqcn_rate_floor_bps = scale(base.dcqcn_rate_floor_bps);
 
     if (link_factor != 1) {
         scaled.evidence.link_bps = EvidenceClass::Declared;
@@ -337,6 +378,9 @@ constexpr RnicHwProfile scaleProfile(
         scaled.evidence.internal_budget_bps = EvidenceClass::Declared;
         scaled.evidence.dcqcn_byte_reset = EvidenceClass::Declared;
         scaled.evidence.dcqcn_rate_step_bps = EvidenceClass::Declared;
+        scaled.evidence.np_cnp_threshold_bytes = EvidenceClass::Declared;
+        scaled.evidence.dcqcn_rate_increase_step_bps = EvidenceClass::Declared;
+        scaled.evidence.dcqcn_rate_floor_bps = EvidenceClass::Declared;
     }
     return scaled;
 }

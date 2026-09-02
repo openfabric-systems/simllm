@@ -65,8 +65,10 @@ backend submodules.
   timestamps, counters and a replayable transaction trace; it reproduces the
   C++ device's completion timestamps exactly, and two identical stimulus
   sequences trace identically.
-  Its receive entry point and control-event kinds fail closed until BACK-57
-  and BACK-58 land.
+  Its receive entry point takes wire packets and its
+  congestion-notification event reaches the reaction point; the marking event
+  stays refused, because no measured switch makes one, and the pause and rate
+  kinds stay refused because no block consumes them.
 - `RnicTxPipeline` (BACK-56): the opt-in transmit slice, selected by
   `RnicNetworkConfig::abi_version = 2` with an enabled packetization block.
   The default stays ABI v1 with packetization off, which is the same code path
@@ -94,6 +96,26 @@ backend submodules.
   go-back-N on a NAK or on the retransmission timeout. Its sweep, bands and
   fatal guards are frozen in
   [the slice-C expectations](../../examples/rnic_cmodel_rx_v1/expectations.md).
+- `RnicCcNotificationPoint` + `RnicCcReactionPoint` (BACK-58): the congestion
+  control block, selected by the congestion-control byte on a configuration
+  that already has both halves of the datapath. The default leaves it off,
+  which is the slice-C code path unchanged. Selected, it is two halves that
+  never meet inside one endpoint. The notification point sits inside the
+  receive pipeline's ingress meter: an arriving packet that would leave the
+  meter at or above a threshold has observed congestion, and one notification
+  per queue pair per limiter interval goes back to the endpoint that sent it.
+  It is the endpoint and not a switch because the measured fabric marks
+  nothing at all. The reaction point sits in front of the transmit pacer as one
+  more rate gate, cuts multiplicatively on a notification with alpha state,
+  recovers by a fixed additive step per interval, and holds its rate between
+  the profile's floor and the pacer's ceiling. Its state lives on the pipeline
+  rather than on a work request, which is what makes it persist across them,
+  and it ignores nothing: an endpoint with no reaction point refuses a
+  notification instead. The test fabric gains one switch egress port per
+  receiver, a finite tail-drop buffer draining at the port rate with no
+  marking and no pause, so incast loss emerges from a queue. Its sweeps, bands
+  and fatal guards are frozen in
+  [the slice-D expectations](../../examples/rnic_cmodel_cc_v1/expectations.md).
 - `ComposedRnicObservations` + `ComposedRnicSession`: strict validation and
   transactional projection of the frozen composed native rows into the core
   structural RNIC seam. The external native session owns WQE lifecycle and

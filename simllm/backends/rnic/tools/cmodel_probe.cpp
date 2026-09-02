@@ -24,6 +24,9 @@
 namespace {
 
 constexpr std::uint64_t kPicosecondsPerSecond = 1000000000000ULL;
+// A congestion notification on the wire is one base transport header plus its
+// padding, the same envelope an acknowledgement occupies.
+constexpr std::uint64_t kCnpWireBytes = 64;
 
 struct Options {
     // "tx" is the slice-B transmit cell and is the default, so an invocation
@@ -51,6 +54,33 @@ struct Options {
     std::uint64_t offered_bps{0};
     std::uint64_t fabric_queue_bytes{0};
     std::uint64_t firmware_variant{0};
+    // Slice D. Zero everywhere is the slice-C topology and the slice-C code
+    // path, which is what makes the identity-off check an identity.
+    std::uint64_t congestion_control{0};
+    std::uint64_t receivers{1};
+    // How many queue pairs share one sender's port. Zero keeps the identity
+    // default, where one endpoint object owns a whole port.
+    std::uint64_t queue_pairs_per_port{0};
+    // The switch egress queue toward each receiver. Zero selects the slice-C
+    // arrangement: one shared forward serializer and a declared standing delay
+    // instead of a modelled queue.
+    std::uint64_t egress_buffer_bytes{0};
+    // Run to a wall of modelled time rather than to a message count. Zero
+    // keeps the message-count loop.
+    std::uint64_t run_ps{0};
+    std::uint64_t competitor_start_ps{0};
+    std::uint64_t competitor_stop_ps{0};
+    std::uint64_t sample_interval_ps{0};
+    std::string samples_path;
+    // Fitted congestion-control parameters. Zero keeps the profile's value.
+    std::uint64_t np_threshold_bytes{0};
+    std::uint64_t cnp_min_interval_ps{0};
+    std::uint64_t alpha_init_ppm{0};
+    std::uint64_t alpha_gain_ppm{0};
+    std::uint64_t alpha_update_ps{0};
+    std::uint64_t rate_step_bps{0};
+    std::uint64_t rate_interval_ps{0};
+    std::uint64_t rate_floor_bps{0};
     // Fitted receive parameters. Zero keeps the profile's value.
     std::uint64_t rx_ingress_bytes{0};
     std::uint64_t rx_drain_bps{0};
@@ -118,6 +148,50 @@ Options parseOptions(int argc, char** argv) {
         } else if (option == "--firmware-variant") {
             options.firmware_variant =
                 parseUnsigned(value, "--firmware-variant");
+        } else if (option == "--congestion-control") {
+            options.congestion_control =
+                parseUnsigned(value, "--congestion-control");
+        } else if (option == "--queue-pairs-per-port") {
+            options.queue_pairs_per_port =
+                parseUnsigned(value, "--queue-pairs-per-port");
+        } else if (option == "--receivers") {
+            options.receivers = parseUnsigned(value, "--receivers");
+        } else if (option == "--egress-buffer-bytes") {
+            options.egress_buffer_bytes =
+                parseUnsigned(value, "--egress-buffer-bytes");
+        } else if (option == "--run-ps") {
+            options.run_ps = parseUnsigned(value, "--run-ps");
+        } else if (option == "--competitor-start-ps") {
+            options.competitor_start_ps =
+                parseUnsigned(value, "--competitor-start-ps");
+        } else if (option == "--competitor-stop-ps") {
+            options.competitor_stop_ps =
+                parseUnsigned(value, "--competitor-stop-ps");
+        } else if (option == "--sample-interval-ps") {
+            options.sample_interval_ps =
+                parseUnsigned(value, "--sample-interval-ps");
+        } else if (option == "--samples-path") {
+            options.samples_path = value;
+        } else if (option == "--np-threshold-bytes") {
+            options.np_threshold_bytes =
+                parseUnsigned(value, "--np-threshold-bytes");
+        } else if (option == "--cnp-min-interval-ps") {
+            options.cnp_min_interval_ps =
+                parseUnsigned(value, "--cnp-min-interval-ps");
+        } else if (option == "--alpha-init-ppm") {
+            options.alpha_init_ppm = parseUnsigned(value, "--alpha-init-ppm");
+        } else if (option == "--alpha-gain-ppm") {
+            options.alpha_gain_ppm = parseUnsigned(value, "--alpha-gain-ppm");
+        } else if (option == "--alpha-update-ps") {
+            options.alpha_update_ps =
+                parseUnsigned(value, "--alpha-update-ps");
+        } else if (option == "--rate-step-bps") {
+            options.rate_step_bps = parseUnsigned(value, "--rate-step-bps");
+        } else if (option == "--rate-interval-ps") {
+            options.rate_interval_ps =
+                parseUnsigned(value, "--rate-interval-ps");
+        } else if (option == "--rate-floor-bps") {
+            options.rate_floor_bps = parseUnsigned(value, "--rate-floor-bps");
         } else if (option == "--rx-ingress-bytes") {
             options.rx_ingress_bytes =
                 parseUnsigned(value, "--rx-ingress-bytes");
@@ -147,6 +221,10 @@ Options parseOptions(int argc, char** argv) {
     }
     if (options.depth == 0 || options.messages == 0) {
         throw std::invalid_argument("probe depth and message count must be positive");
+    }
+    if (options.receivers == 0 || options.qps == 0 || options.senders == 0) {
+        throw std::invalid_argument(
+            "probe sender, queue-pair and receiver counts must be positive");
     }
     return options;
 }
@@ -533,6 +611,76 @@ private:
     std::uint64_t remainder_{0};
 };
 
+// One switch egress port: a finite buffer draining at the port rate that drops
+// what does not fit, with no marking, no pause and no notification of any kind.
+// That silence is the measured leaf, not a simplification: the campaign found
+// zero congestion-experienced marks in 670 M packets with this buffer full and
+// dropping, which is exactly why the endpoint has to notice congestion itself.
+class EgressQueue {
+public:
+    EgressQueue(std::uint64_t link_bps, std::uint64_t capacity_bytes)
+        : link_bps_(link_bps), capacity_bytes_(capacity_bytes) {
+        if (link_bps_ == 0) {
+            throw std::invalid_argument("egress queue needs a positive rate");
+        }
+    }
+
+    std::uint64_t occupancyBytes(std::uint64_t now_ps) const {
+        if (free_at_ps_ <= now_ps) {
+            return 0;
+        }
+        return (free_at_ps_ - now_ps) / 8 * link_bps_ / kPicosecondsPerSecond;
+    }
+
+    // Offers one packet and returns the instant its last bit leaves the port,
+    // or nothing when the buffer tail-drops it.
+    std::optional<std::uint64_t> offer(
+        std::uint64_t now_ps,
+        std::uint64_t wire_bytes) {
+        ++offered_;
+        offered_bytes_ += wire_bytes;
+        const std::uint64_t depth = occupancyBytes(now_ps);
+        if (capacity_bytes_ != 0 && depth + wire_bytes > capacity_bytes_) {
+            ++dropped_;
+            dropped_bytes_ += wire_bytes;
+            return std::nullopt;
+        }
+        ++admitted_;
+        admitted_bytes_ += wire_bytes;
+        const std::uint64_t start = std::max(now_ps, free_at_ps_);
+        const std::uint64_t numerator =
+            wire_bytes * 8 * kPicosecondsPerSecond + remainder_;
+        remainder_ = numerator % link_bps_;
+        free_at_ps_ = start + numerator / link_bps_;
+        high_watermark_bytes_ =
+            std::max(high_watermark_bytes_, depth + wire_bytes);
+        return free_at_ps_;
+    }
+
+    std::uint64_t offeredCount() const noexcept { return offered_; }
+    std::uint64_t admittedCount() const noexcept { return admitted_; }
+    std::uint64_t droppedCount() const noexcept { return dropped_; }
+    std::uint64_t offeredBytes() const noexcept { return offered_bytes_; }
+    std::uint64_t admittedBytes() const noexcept { return admitted_bytes_; }
+    std::uint64_t droppedBytes() const noexcept { return dropped_bytes_; }
+    std::uint64_t highWatermarkBytes() const noexcept {
+        return high_watermark_bytes_;
+    }
+
+private:
+    std::uint64_t link_bps_;
+    std::uint64_t capacity_bytes_;
+    std::uint64_t free_at_ps_{0};
+    std::uint64_t remainder_{0};
+    std::uint64_t offered_{0};
+    std::uint64_t admitted_{0};
+    std::uint64_t dropped_{0};
+    std::uint64_t offered_bytes_{0};
+    std::uint64_t admitted_bytes_{0};
+    std::uint64_t dropped_bytes_{0};
+    std::uint64_t high_watermark_bytes_{0};
+};
+
 struct RxRow {
     std::uint64_t messages{0};
     std::uint64_t completions{0};
@@ -567,6 +715,27 @@ struct RxRow {
     std::uint64_t late_releases{0};
     std::uint64_t sender0_payload_bytes{0};
     std::uint64_t sender1_payload_bytes{0};
+    // Slice D. Every one stays zero on the slice-C path.
+    std::uint64_t sender2_payload_bytes{0};
+    std::uint64_t np_cnp_sent{0};
+    std::uint64_t np_cnps_suppressed{0};
+    std::uint64_t np_congestion_observed{0};
+    std::uint64_t rp_cnp_handled{0};
+    std::uint64_t rp_cnp_ignored{0};
+    std::uint64_t rp_rate_cuts{0};
+    std::uint64_t rp_rate_increases{0};
+    std::uint64_t rp_min_rate_bps{0};
+    std::uint64_t rp_rate_persisted{0};
+    std::uint64_t egress_offered{0};
+    std::uint64_t egress_admitted{0};
+    std::uint64_t egress_dropped{0};
+    std::uint64_t egress_offered_bytes{0};
+    std::uint64_t egress_admitted_bytes{0};
+    std::uint64_t egress_dropped_bytes{0};
+    std::uint64_t egress_high_watermark{0};
+    std::uint64_t rx_payload_bytes_receiver1{0};
+    std::uint64_t rx_discards_phy_receiver1{0};
+    std::uint64_t run_end_ps{0};
 
     bool operator==(const RxRow& other) const {
         return std::memcmp(this, &other, sizeof(RxRow)) == 0;
@@ -589,6 +758,30 @@ void applyFittedProfile(const Options& options, rnic_cm_profile* profile) {
     if (options.rx_pps_per_nic != 0) {
         profile->rx_pps_per_nic = options.rx_pps_per_nic;
     }
+    if (options.np_threshold_bytes != 0) {
+        profile->np_cnp_threshold_bytes = options.np_threshold_bytes;
+    }
+    if (options.cnp_min_interval_ps != 0) {
+        profile->cnp_min_interval_ps = options.cnp_min_interval_ps;
+    }
+    if (options.alpha_init_ppm != 0) {
+        profile->dcqcn_alpha_init_ppm = options.alpha_init_ppm;
+    }
+    if (options.alpha_gain_ppm != 0) {
+        profile->dcqcn_alpha_gain_ppm = options.alpha_gain_ppm;
+    }
+    if (options.alpha_update_ps != 0) {
+        profile->dcqcn_alpha_update_ps = options.alpha_update_ps;
+    }
+    if (options.rate_step_bps != 0) {
+        profile->dcqcn_rate_increase_step_bps = options.rate_step_bps;
+    }
+    if (options.rate_interval_ps != 0) {
+        profile->dcqcn_rate_increase_interval_ps = options.rate_interval_ps;
+    }
+    if (options.rate_floor_bps != 0) {
+        profile->dcqcn_rate_floor_bps = options.rate_floor_bps;
+    }
 }
 
 rnic_cm_device* makeEndpoint(
@@ -610,6 +803,13 @@ rnic_cm_device* makeEndpoint(
     config.packetization = 1;
     config.trace_enabled = trace ? 1u : 0u;
     config.receive = receives ? 1u : 0u;
+    config.congestion_control =
+        static_cast<std::uint8_t>(options.congestion_control != 0 ? 1 : 0);
+    // The queue pairs of one sender share that sender's port. It is spelled
+    // out rather than derived from the queue-pair count, so a slice-C cell
+    // keeps the identity default it always had.
+    config.queue_pairs_per_port =
+        static_cast<std::uint8_t>(options.queue_pairs_per_port);
     config.firmware_counter_variant =
         static_cast<std::uint8_t>(options.firmware_variant);
     config.max_inflight_wqes = depth;
@@ -694,16 +894,27 @@ RxRow runUdCell(const Options& options) {
     return row;
 }
 
-// One reliable-connection sender, as the probe's wire sees it.
+// One reliable-connection queue pair, as the probe's wire sees it. A sender of
+// several queue pairs is several of these sharing one host uplink: per-NIC
+// arbitration across the queue pairs of one endpoint is BACK-56's remaining
+// clause and is deliberately not pretended here.
 struct Sender {
     rnic_cm_device* handle{nullptr};
     std::uint32_t qpn{0};
+    // The host this queue pair sends from, and the receiver it sends to.
+    std::size_t host{0};
+    std::size_t receiver{0};
     std::uint64_t posted{0};
     std::uint64_t completions{0};
     std::uint64_t errors{0};
     std::uint64_t payload_bytes{0};
     std::uint64_t next_burst_at_ps{0};
     std::uint64_t in_burst{0};
+    // The reaction point's rate at the last completion, so a study can see
+    // that a work-request boundary does not reset it.
+    std::uint64_t rate_at_completion_bps{0};
+    std::uint64_t rate_moves_at_completion{0};
+    std::uint64_t rate_persistence_breaks{0};
     // Attempt token by sequence number, so the responder's verdict can be
     // turned back into an event for the right attempt.
     std::map<std::uint32_t, std::uint64_t> tokens;
@@ -749,21 +960,37 @@ RxRow runRcCell(const Options& options, const std::string& trace_path) {
                                                      : profile.mtu_bytes;
     const std::uint64_t packets_per_message =
         options.size_bytes == 0 ? 1 : (options.size_bytes + mtu - 1) / mtu;
+    // Zero selects the slice-C arrangement exactly: one shared forward
+    // serializer and a declared standing delay in place of a modelled queue.
+    // Nonzero builds the measured leaf: one uplink per sending host and one
+    // tail-drop egress queue per receiver.
+    const bool switched = options.egress_buffer_bytes != 0;
 
-    std::vector<Sender> senders(options.senders);
-    rnic_cm_device* responder = nullptr;
+    std::vector<Sender> senders(options.senders * options.qps);
+    std::vector<rnic_cm_device*> responders(options.receivers, nullptr);
     RxRow row;
     row.messages = options.messages;
 
     Direction forward(
         profile.link_bps, one_way_ps, options.fabric_queue_bytes);
     Direction reverse(profile.link_bps, one_way_ps, 0);
+    std::vector<Direction> uplinks;
+    std::vector<EgressQueue> egress;
+    if (switched) {
+        for (std::uint64_t host = 0; host < options.senders; ++host) {
+            uplinks.emplace_back(profile.link_bps, one_way_ps, 0);
+        }
+        for (std::uint64_t port = 0; port < options.receivers; ++port) {
+            egress.emplace_back(
+                profile.link_bps, options.egress_buffer_bytes);
+        }
+    }
     LossSource loss(options.loss_period, options.loss_ppm, options.loss_seed);
     // One wire queue, in time order. Three separate queues drained one after
     // another would hand a device an event stamped earlier than one it has
     // already seen, and a facade whose clock has moved past a timestamp
     // refuses it. With two senders that happens constantly.
-    enum class WireKind { Arrival, Reply, Event };
+    enum class WireKind { Arrival, Reply, Event, Notification };
     struct Pending {
         WireKind kind{WireKind::Arrival};
         WireArrival arrival;
@@ -777,12 +1004,21 @@ RxRow runRcCell(const Options& options, const std::string& trace_path) {
     std::uint64_t sequence = 1;
 
     try {
-        responder = makeEndpoint(profile, options, 1, 0, 16, true, false);
-        if (responder == nullptr) {
-            throw std::runtime_error("responder construction failed");
+        for (std::size_t port = 0; port < responders.size(); ++port) {
+            responders[port] = makeEndpoint(
+                profile, options, static_cast<std::uint32_t>(port + 1),
+                static_cast<std::uint32_t>(port), 16, true, false);
+            if (responders[port] == nullptr) {
+                throw std::runtime_error("responder construction failed");
+            }
         }
         for (std::size_t index = 0; index < senders.size(); ++index) {
             senders[index].qpn = static_cast<std::uint32_t>(index + 2);
+            senders[index].host = index / options.qps;
+            // Queue pairs are dealt round robin across the receivers, so a
+            // fan-out cell splits one sender's queue pairs evenly and every
+            // fan-in cell points all of them at the one receiver.
+            senders[index].receiver = index % options.receivers;
             senders[index].handle = makeEndpoint(
                 profile,
                 options,
@@ -809,14 +1045,84 @@ RxRow runRcCell(const Options& options, const std::string& trace_path) {
         std::uint64_t now_ps = 0;
         std::uint64_t guard = 0;
         const std::uint64_t total_messages =
-            options.messages * options.senders;
+            options.messages * senders.size();
         std::uint64_t completions = 0;
         std::uint64_t errors = 0;
         std::uint64_t warm_target = total_messages / 2;
 
-        while (completions + errors < total_messages) {
+        // The dynamics cell runs to a wall of modelled time and samples each
+        // host's own transmit byte count as it goes, which is the instrument
+        // the campaign used. Everything else runs to a message count.
+        const bool timed = options.run_ps != 0;
+        std::ofstream samples;
+        if (!options.samples_path.empty()) {
+            samples.open(options.samples_path);
+            if (!samples) {
+                throw std::runtime_error("cannot open the samples file");
+            }
+            samples << "t_ps";
+            for (std::size_t host = 0; host < options.senders; ++host) {
+                samples << ",host" << host << "_wire_bytes";
+            }
+            samples << ",rx_payload_bytes,rx_wire_bytes,np_cnp_sent,"
+                       "rate0_bps,alpha0_ppm\n";
+        }
+        std::uint64_t next_sample_ps = 0;
+        const auto takeSample = [&](std::uint64_t at_ps) {
+            if (!samples.is_open()) {
+                return;
+            }
+            samples << at_ps;
+            std::vector<std::uint64_t> host_bytes(options.senders, 0);
+            std::uint64_t rate0 = 0;
+            std::uint64_t alpha0 = 0;
+            for (std::size_t index = 0; index < senders.size(); ++index) {
+                rnic_cm_counter_set counters;
+                if (rnic_cm_counters(senders[index].handle, &counters)
+                    != RNIC_CM_OK) {
+                    throw std::runtime_error("sender refused a sample");
+                }
+                host_bytes[senders[index].host] += counters.tx_wire_bytes;
+                if (index == 0) {
+                    rnic_cm_nic_counter_set nic;
+                    if (rnic_cm_nic_counters(senders[index].handle, &nic)
+                        != RNIC_CM_OK) {
+                        throw std::runtime_error("sender refused a sample");
+                    }
+                    rate0 = nic.rp_current_rate_bps;
+                    alpha0 = nic.rp_alpha_ppm;
+                }
+            }
+            for (const std::uint64_t bytes : host_bytes) {
+                samples << ',' << bytes;
+            }
+            // Summed over every receiver, because a fan-out cell has more than
+            // one and its delivered rate is the whole of what the sender put
+            // on the wire.
+            std::uint64_t rx_payload = 0;
+            std::uint64_t rx_wire = 0;
+            std::uint64_t notifications = 0;
+            for (rnic_cm_device* port : responders) {
+                rnic_cm_nic_counter_set received;
+                if (rnic_cm_nic_counters(port, &received) != RNIC_CM_OK) {
+                    throw std::runtime_error("responder refused a sample");
+                }
+                rx_payload += received.rx_payload_bytes_delivered;
+                rx_wire += received.rx_bytes_phy;
+                notifications += received.np_cnp_sent;
+            }
+            samples << ',' << rx_payload << ',' << rx_wire << ','
+                    << notifications << ',' << rate0 << ',' << alpha0 << '\n';
+        };
+
+        while (timed ? now_ps < options.run_ps
+                     : completions + errors < total_messages) {
             if (++guard > 400000000ULL) {
                 throw std::runtime_error("receive probe did not converge");
+            }
+            if (options.sample_interval_ps != 0 && now_ps >= next_sample_ps) {
+                takeSample(now_ps);
+                next_sample_ps = now_ps + options.sample_interval_ps;
             }
 
             while (!wire.empty() && wire.begin()->first.first <= now_ps) {
@@ -832,6 +1138,22 @@ RxRow runRcCell(const Options& options, const std::string& trace_path) {
                             pending.when_ps)
                         != RNIC_CM_OK) {
                         throw std::runtime_error("sender refused a wire event");
+                    }
+                    continue;
+                }
+                if (pending.kind == WireKind::Notification) {
+                    // The notification the receiver raised, arriving at the
+                    // reaction point of the queue pair it names. It carries no
+                    // attempt token, because it retires nothing.
+                    rnic_cm_event_info notice;
+                    std::memset(&notice, 0, sizeof(notice));
+                    notice.kind = RNIC_CM_EVENT_CNP_RECEIVED;
+                    if (rnic_cm_event(
+                            senders[pending.sender].handle, &notice,
+                            pending.when_ps)
+                        != RNIC_CM_OK) {
+                        throw std::runtime_error(
+                            "sender refused a congestion notification");
                     }
                     continue;
                 }
@@ -877,9 +1199,23 @@ RxRow runRcCell(const Options& options, const std::string& trace_path) {
                 packet.last_of_message = arrival.last_of_message;
                 rnic_cm_rx_result verdict;
                 if (rnic_cm_rx_packet(
-                        responder, &packet, arrival.when_ps, &verdict)
+                        responders[sender.receiver], &packet, arrival.when_ps,
+                        &verdict)
                     != RNIC_CM_OK) {
                     throw std::runtime_error("responder refused a packet");
+                }
+                if (verdict.has_cnp != 0) {
+                    // The notification goes back to the queue pair whose
+                    // packet observed the congestion, on the reverse wire, as
+                    // a real one does.
+                    Pending notice;
+                    notice.kind = WireKind::Notification;
+                    const std::uint64_t finish =
+                        reverse.serialize(arrival.when_ps, kCnpWireBytes);
+                    notice.when_ps = finish + one_way_ps;
+                    notice.sender = verdict.cnp_source - 2;
+                    wire.emplace(
+                        std::make_pair(notice.when_ps, sequence++), notice);
                 }
                 // Any packet the responder acknowledges retires its attempt,
                 // and it acknowledges a duplicate as well as a delivery. A
@@ -916,7 +1252,17 @@ RxRow runRcCell(const Options& options, const std::string& trace_path) {
             for (std::size_t index = 0; index < senders.size(); ++index) {
                 Sender& sender = senders[index];
                 bool posted = false;
-                while (sender.posted < options.messages
+                // Host 0 is the incumbent and runs for the whole window. Every
+                // other host is a competitor and runs only inside its declared
+                // window, which is how the dynamics cell makes a second sender
+                // arrive and leave.
+                const bool admitted = sender.host == 0
+                    || (options.competitor_stop_ps == 0
+                        && options.competitor_start_ps == 0)
+                    || (now_ps >= options.competitor_start_ps
+                        && (options.competitor_stop_ps == 0
+                            || now_ps < options.competitor_stop_ps));
+                while (admitted && sender.posted < options.messages
                        && now_ps >= sender.next_burst_at_ps) {
                     if (options.burst_messages != 0 && options.gap_ps != 0
                         && sender.in_burst >= options.burst_messages) {
@@ -937,7 +1283,8 @@ RxRow runRcCell(const Options& options, const std::string& trace_path) {
                     rnic_cm_wqe request;
                     std::memset(&request, 0, sizeof(request));
                     request.wr_id = sender.posted + 1;
-                    request.destination = 1;
+                    request.destination =
+                        static_cast<std::uint32_t>(sender.receiver + 1);
                     request.payload_bytes = options.size_bytes;
                     request.sge_count = 1;
                     request.signaled = 1;
@@ -981,8 +1328,11 @@ RxRow runRcCell(const Options& options, const std::string& trace_path) {
                         if (row.first_packet_ps == 0) {
                             row.first_packet_ps = emitted.issued_at_ps;
                         }
-                        const std::uint64_t finish = forward.serialize(
-                            emitted.issued_at_ps, emitted.wire_bytes);
+                        const std::uint64_t finish = switched
+                            ? uplinks[sender.host].serialize(
+                                  emitted.issued_at_ps, emitted.wire_bytes)
+                            : forward.serialize(
+                                  emitted.issued_at_ps, emitted.wire_bytes);
                         Pending finished;
                         finished.kind = WireKind::Event;
                         finished.when_ps = finish;
@@ -993,7 +1343,25 @@ RxRow runRcCell(const Options& options, const std::string& trace_path) {
                         wire.emplace(
                             std::make_pair(finish, sequence++), finished);
                         WireArrival arrival;
-                        arrival.when_ps = finish + one_way_ps + fabric_delay_ps;
+                        // Unswitched is the slice-C wire: one hop plus a
+                        // declared standing delay. Switched is the measured
+                        // leaf: one pipe into the switch, the tail-drop egress
+                        // queue, one pipe out, and a packet that does not fit
+                        // is lost there with no signal of any kind.
+                        bool tail_dropped = false;
+                        if (switched) {
+                            const std::uint64_t at_switch = finish + one_way_ps;
+                            const std::optional<std::uint64_t> departure =
+                                egress[sender.receiver].offer(
+                                    at_switch, emitted.wire_bytes);
+                            tail_dropped = !departure.has_value();
+                            arrival.when_ps = tail_dropped
+                                ? at_switch
+                                : *departure + one_way_ps;
+                        } else {
+                            arrival.when_ps =
+                                finish + one_way_ps + fabric_delay_ps;
+                        }
                         arrival.sender = index;
                         arrival.psn = emitted.psn;
                         arrival.token = emitted.token;
@@ -1001,10 +1369,14 @@ RxRow runRcCell(const Options& options, const std::string& trace_path) {
                         arrival.wire_bytes = emitted.wire_bytes;
                         arrival.kind = emitted.kind;
                         arrival.last_of_message = emitted.last_of_message;
-                        arrival.lost = loss.losesNext();
-                        if (arrival.lost) {
+                        // The injected stream is drawn for every packet
+                        // whether or not the queue already took it, so a cell
+                        // with the knob at zero replays exactly as it did.
+                        const bool injected = loss.losesNext();
+                        if (injected) {
                             loss.noteLoss();
                         }
+                        arrival.lost = injected || tail_dropped;
                         Pending pending_arrival;
                         pending_arrival.kind = WireKind::Arrival;
                         pending_arrival.arrival = arrival;
@@ -1021,6 +1393,30 @@ RxRow runRcCell(const Options& options, const std::string& trace_path) {
                         &polled)
                     != RNIC_CM_OK) {
                     throw std::runtime_error("sender refused a poll");
+                }
+                // The reaction point's rate is read once per completion batch.
+                // A completion is a work-request boundary, and the whole point
+                // of the reaction point living on the pipeline rather than on
+                // a request is that crossing that boundary does not touch it.
+                // The only two things that may move the rate are a cut and an
+                // increase, so a batch that saw neither and still changed the
+                // rate is a break of the persistence contract.
+                if (options.congestion_control != 0 && polled != 0) {
+                    rnic_cm_nic_counter_set after;
+                    if (rnic_cm_nic_counters(sender.handle, &after)
+                        != RNIC_CM_OK) {
+                        throw std::runtime_error("sender refused a rate read");
+                    }
+                    const std::uint64_t moves =
+                        after.rp_rate_cuts + after.rp_rate_increases;
+                    if (sender.rate_at_completion_bps != 0
+                        && moves == sender.rate_moves_at_completion
+                        && after.rp_current_rate_bps
+                            != sender.rate_at_completion_bps) {
+                        ++sender.rate_persistence_breaks;
+                    }
+                    sender.rate_at_completion_bps = after.rp_current_rate_bps;
+                    sender.rate_moves_at_completion = moves;
                 }
                 for (std::size_t slot = 0; slot < polled; ++slot) {
                     if (cqes[slot].status == RNIC_CM_COMPLETION_SUCCESS) {
@@ -1066,6 +1462,21 @@ RxRow runRcCell(const Options& options, const std::string& trace_path) {
             if (!wire.empty()) {
                 consider(wire.begin()->first.first);
             }
+            if (timed) {
+                // The competitor's window opens and closes on the clock, so
+                // both instants are events even when nothing else is pending.
+                if (options.competitor_start_ps > now_ps) {
+                    consider(options.competitor_start_ps);
+                }
+                if (options.competitor_stop_ps > now_ps) {
+                    consider(options.competitor_stop_ps);
+                }
+                if (options.sample_interval_ps != 0
+                    && next_sample_ps > now_ps) {
+                    consider(next_sample_ps);
+                }
+                consider(options.run_ps);
+            }
             if (!next.has_value()) {
                 bool more = false;
                 for (const Sender& sender : senders) {
@@ -1078,6 +1489,10 @@ RxRow runRcCell(const Options& options, const std::string& trace_path) {
             }
             now_ps = std::max(now_ps, *next);
         }
+        if (options.sample_interval_ps != 0) {
+            takeSample(now_ps);
+        }
+        row.run_end_ps = now_ps;
 
         row.completions = completions;
         row.errors = errors;
@@ -1100,30 +1515,71 @@ RxRow runRcCell(const Options& options, const std::string& trace_path) {
             row.packet_seq_err += nic.packet_seq_err;
             row.roce_adp_retrans += nic.roce_adp_retrans;
             row.local_ack_timeout_err += nic.local_ack_timeout_err;
-            if (index == 0) {
-                row.sender0_payload_bytes = senders[index].payload_bytes;
-            } else if (index == 1) {
-                row.sender1_payload_bytes = senders[index].payload_bytes;
+            row.rp_cnp_handled += nic.rp_cnp_handled;
+            row.rp_cnp_ignored += nic.rp_cnp_ignored;
+            row.rp_rate_cuts += nic.rp_rate_cuts;
+            row.rp_rate_increases += nic.rp_rate_increases;
+            row.rp_rate_persisted += senders[index].rate_persistence_breaks;
+            if (row.rp_min_rate_bps == 0
+                || (nic.rp_min_rate_bps != 0
+                    && nic.rp_min_rate_bps < row.rp_min_rate_bps)) {
+                row.rp_min_rate_bps = nic.rp_min_rate_bps;
+            }
+            // Per sending host, because a host of four queue pairs is one
+            // sender on the wire and one row in the campaign's own table.
+            if (senders[index].host == 0) {
+                row.sender0_payload_bytes += senders[index].payload_bytes;
+            } else if (senders[index].host == 1) {
+                row.sender1_payload_bytes += senders[index].payload_bytes;
+            } else if (senders[index].host == 2) {
+                row.sender2_payload_bytes += senders[index].payload_bytes;
             }
         }
-        rnic_cm_nic_counter_set responder_counters;
-        if (rnic_cm_nic_counters(responder, &responder_counters)
-            != RNIC_CM_OK) {
-            throw std::runtime_error("responder refused a counter read");
+        for (std::size_t port = 0; port < responders.size(); ++port) {
+            rnic_cm_nic_counter_set responder_counters;
+            if (rnic_cm_nic_counters(responders[port], &responder_counters)
+                != RNIC_CM_OK) {
+                throw std::runtime_error("responder refused a counter read");
+            }
+            if (port == 1) {
+                row.rx_payload_bytes_receiver1 =
+                    responder_counters.rx_payload_bytes_delivered;
+                row.rx_discards_phy_receiver1 =
+                    responder_counters.rx_discards_phy;
+            }
+            row.rx_packets_offered += responder_counters.rx_packets_offered;
+            row.rx_packets_delivered +=
+                responder_counters.rx_packets_delivered;
+            row.rx_payload_bytes +=
+                responder_counters.rx_payload_bytes_delivered;
+            row.rx_bytes_phy += responder_counters.rx_bytes_phy;
+            row.rx_discards_phy += responder_counters.rx_discards_phy;
+            row.rx_discards_meter += responder_counters.rx_discards_meter;
+            row.rx_discards_rate += responder_counters.rx_discards_rate;
+            row.rx_discards_sequence +=
+                responder_counters.rx_discards_sequence;
+            row.rx_high_watermark = std::max(
+                row.rx_high_watermark,
+                responder_counters.rx_ingress_high_watermark_bytes);
+            row.out_of_sequence += responder_counters.out_of_sequence;
+            row.np_ecn_marked +=
+                responder_counters.np_ecn_marked_roce_packets;
+            row.tx_pause_ctrl_phy += responder_counters.tx_pause_ctrl_phy;
+            row.np_cnp_sent += responder_counters.np_cnp_sent;
+            row.np_cnps_suppressed += responder_counters.np_cnps_suppressed;
+            row.np_congestion_observed +=
+                responder_counters.np_congestion_observed;
         }
-        row.rx_packets_offered = responder_counters.rx_packets_offered;
-        row.rx_packets_delivered = responder_counters.rx_packets_delivered;
-        row.rx_payload_bytes = responder_counters.rx_payload_bytes_delivered;
-        row.rx_bytes_phy = responder_counters.rx_bytes_phy;
-        row.rx_discards_phy = responder_counters.rx_discards_phy;
-        row.rx_discards_meter = responder_counters.rx_discards_meter;
-        row.rx_discards_rate = responder_counters.rx_discards_rate;
-        row.rx_discards_sequence = responder_counters.rx_discards_sequence;
-        row.rx_high_watermark =
-            responder_counters.rx_ingress_high_watermark_bytes;
-        row.out_of_sequence = responder_counters.out_of_sequence;
-        row.np_ecn_marked = responder_counters.np_ecn_marked_roce_packets;
-        row.tx_pause_ctrl_phy = responder_counters.tx_pause_ctrl_phy;
+        for (const EgressQueue& queue : egress) {
+            row.egress_offered += queue.offeredCount();
+            row.egress_admitted += queue.admittedCount();
+            row.egress_dropped += queue.droppedCount();
+            row.egress_offered_bytes += queue.offeredBytes();
+            row.egress_admitted_bytes += queue.admittedBytes();
+            row.egress_dropped_bytes += queue.droppedBytes();
+            row.egress_high_watermark =
+                std::max(row.egress_high_watermark, queue.highWatermarkBytes());
+        }
         if (!trace_path.empty()) {
             rnic_cm_trace(senders[0].handle, trace_path.c_str());
         }
@@ -1132,19 +1588,25 @@ RxRow runRcCell(const Options& options, const std::string& trace_path) {
         for (Sender& sender : senders) {
             rnic_cm_destroy(sender.handle);
         }
-        rnic_cm_destroy(responder);
+        for (rnic_cm_device* port : responders) {
+            rnic_cm_destroy(port);
+        }
         throw;
     }
     for (Sender& sender : senders) {
         rnic_cm_destroy(sender.handle);
     }
-    rnic_cm_destroy(responder);
+    for (rnic_cm_device* port : responders) {
+        rnic_cm_destroy(port);
+    }
     return row;
 }
 
 int runReceive(const Options& options) {
     if (options.mode != "gap" && options.mode != "ud"
-        && options.mode != "incast" && options.mode != "duplex") {
+        && options.mode != "incast" && options.mode != "duplex"
+        && options.mode != "cc" && options.mode != "dynamics"
+        && options.mode != "fanout" && options.mode != "lone") {
         throw std::invalid_argument("unknown probe mode: " + options.mode);
     }
     const bool datagram = options.mode == "ud";
@@ -1166,6 +1628,12 @@ int runReceive(const Options& options) {
         }
     }
 
+    // The slice-C modes print the slice-C columns and nothing else, so a
+    // slice-C study re-run after this slice landed produces the same bytes it
+    // produced before it. The slice-D columns are printed only by the modes
+    // that can fill them.
+    const bool wide = options.mode == "cc" || options.mode == "dynamics"
+        || options.mode == "fanout" || options.mode == "lone";
     std::cout
         << "mode,profile,size_bytes,depth,gap_ps,burst_messages,senders,qps,"
            "loss_ppm,offered_pps,offered_bps,messages,completions,errors,"
@@ -1177,7 +1645,19 @@ int runReceive(const Options& options) {
            "rx_discards_sequence,rx_high_watermark,out_of_sequence,"
            "packet_seq_err,roce_adp_retrans,local_ack_timeout_err,"
            "np_ecn_marked,tx_pause_ctrl_phy,late_releases,"
-           "sender0_payload_bytes,sender1_payload_bytes,replay_identical\n"
+           "sender0_payload_bytes,sender1_payload_bytes,"
+        << (wide
+                ? "sender2_payload_bytes,congestion_control,receivers,"
+                  "egress_buffer_bytes,run_end_ps,np_cnp_sent,"
+                  "np_cnps_suppressed,np_congestion_observed,rp_cnp_handled,"
+                  "rp_cnp_ignored,rp_rate_cuts,rp_rate_increases,"
+                  "rp_min_rate_bps,rp_rate_persistence_breaks,egress_offered,"
+                  "egress_admitted,egress_dropped,egress_offered_bytes,"
+                  "egress_admitted_bytes,egress_dropped_bytes,"
+                  "egress_high_watermark,rx_payload_bytes_receiver1,"
+                  "rx_discards_phy_receiver1,"
+                : "")
+        << "replay_identical\n"
         << options.mode << ',' << options.profile << ',' << options.size_bytes
         << ',' << options.depth << ',' << options.gap_ps << ','
         << options.burst_messages << ',' << options.senders << ','
@@ -1198,7 +1678,24 @@ int runReceive(const Options& options) {
         << row.roce_adp_retrans << ',' << row.local_ack_timeout_err << ','
         << row.np_ecn_marked << ',' << row.tx_pause_ctrl_phy << ','
         << row.late_releases << ',' << row.sender0_payload_bytes << ','
-        << row.sender1_payload_bytes << ',' << replay_identical << '\n';
+        << row.sender1_payload_bytes << ',';
+    if (wide) {
+        std::cout
+            << row.sender2_payload_bytes << ',' << options.congestion_control
+            << ',' << options.receivers << ',' << options.egress_buffer_bytes
+            << ',' << row.run_end_ps << ',' << row.np_cnp_sent << ','
+            << row.np_cnps_suppressed << ',' << row.np_congestion_observed
+            << ',' << row.rp_cnp_handled << ',' << row.rp_cnp_ignored << ','
+            << row.rp_rate_cuts << ',' << row.rp_rate_increases << ','
+            << row.rp_min_rate_bps << ',' << row.rp_rate_persisted << ','
+            << row.egress_offered << ',' << row.egress_admitted << ','
+            << row.egress_dropped << ',' << row.egress_offered_bytes << ','
+            << row.egress_admitted_bytes << ',' << row.egress_dropped_bytes
+            << ',' << row.egress_high_watermark << ','
+            << row.rx_payload_bytes_receiver1 << ','
+            << row.rx_discards_phy_receiver1 << ',';
+    }
+    std::cout << replay_identical << '\n';
     return 0;
 }
 

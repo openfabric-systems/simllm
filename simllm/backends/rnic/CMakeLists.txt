@@ -23,6 +23,7 @@ add_library(simllm_rnic STATIC
     src/host_memory.cpp
     src/pcie_fabric.cpp
     src/rnic_anomaly_table.cpp
+    src/rnic_cc.cpp
     src/rnic_cmodel_c.cpp
     src/rnic_device.cpp
     src/rnic_hw_profile.cpp
@@ -168,6 +169,26 @@ if(SIMLLM_RNIC_BUILD_TESTS)
     endif()
     add_test(NAME simllm_rnic_device_test
              COMMAND simllm_rnic_device_test)
+
+    add_executable(simllm_rnic_cc_test
+        tests/rnic_cc_test.cpp
+    )
+    target_link_libraries(simllm_rnic_cc_test PRIVATE simllm::rnic)
+    target_include_directories(simllm_rnic_cc_test PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests
+    )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(simllm_rnic_cc_test PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+        )
+        if(SIMLLM_RNIC_WARNINGS_AS_ERRORS)
+            target_compile_options(simllm_rnic_cc_test PRIVATE -Werror)
+        endif()
+    endif()
+    add_test(NAME simllm_rnic_cc_test
+             COMMAND simllm_rnic_cc_test)
 
     add_executable(simllm_rnic_cmodel_test
         tests/rnic_cmodel_test.cpp

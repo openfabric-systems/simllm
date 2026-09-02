@@ -190,6 +190,13 @@ void toCProfile(const RnicHwProfile& profile, rnic_cm_profile* out) {
     out->dcqcn_rate_reduce_ps = profile.dcqcn_rate_reduce_ps;
     out->dcqcn_byte_reset = profile.dcqcn_byte_reset;
     out->dcqcn_rate_step_bps = profile.dcqcn_rate_step_bps;
+    out->np_cnp_threshold_bytes = profile.np_cnp_threshold_bytes;
+    out->dcqcn_alpha_init_ppm = profile.dcqcn_alpha_init_ppm;
+    out->dcqcn_alpha_gain_ppm = profile.dcqcn_alpha_gain_ppm;
+    out->dcqcn_rate_increase_step_bps = profile.dcqcn_rate_increase_step_bps;
+    out->dcqcn_rate_increase_interval_ps =
+        profile.dcqcn_rate_increase_interval_ps;
+    out->dcqcn_rate_floor_bps = profile.dcqcn_rate_floor_bps;
     out->selective_repeat_window = profile.selective_repeat_window;
     out->loopback_priority = profile.loopback_priority ? 1u : 0u;
     out->recovery = profile.recovery == RnicRecoveryMode::GoBackN ? 0u : 1u;
@@ -294,6 +301,13 @@ RnicHwProfile valuesFromCProfile(const rnic_cm_profile& source) {
     profile.dcqcn_rate_reduce_ps = source.dcqcn_rate_reduce_ps;
     profile.dcqcn_byte_reset = source.dcqcn_byte_reset;
     profile.dcqcn_rate_step_bps = source.dcqcn_rate_step_bps;
+    profile.np_cnp_threshold_bytes = source.np_cnp_threshold_bytes;
+    profile.dcqcn_alpha_init_ppm = source.dcqcn_alpha_init_ppm;
+    profile.dcqcn_alpha_gain_ppm = source.dcqcn_alpha_gain_ppm;
+    profile.dcqcn_rate_increase_step_bps = source.dcqcn_rate_increase_step_bps;
+    profile.dcqcn_rate_increase_interval_ps =
+        source.dcqcn_rate_increase_interval_ps;
+    profile.dcqcn_rate_floor_bps = source.dcqcn_rate_floor_bps;
     profile.pfc_enabled = source.pfc_enabled != 0;
     profile.global_pause_tx = source.global_pause_tx != 0;
     profile.pause_propagates = source.pause_propagates != 0;
@@ -360,6 +374,8 @@ struct rnic_cm_device {
     std::string profile_sha256;
     bool packetized{false};
     bool receives{false};
+    bool congestion_control{false};
+    bool fatal{false};
     bool trace_enabled{false};
     std::unique_ptr<CapturePort> port;
     std::unique_ptr<RnicDevice> device;
@@ -379,6 +395,9 @@ namespace {
 int guard(rnic_cm_device* device) noexcept {
     if (device == nullptr || device->device == nullptr) {
         return RNIC_CM_ERROR_ARGUMENT;
+    }
+    if (device->fatal) {
+        return RNIC_CM_ERROR_STATE;
     }
     return RNIC_CM_OK;
 }
@@ -498,7 +517,14 @@ rnic_cm_device* rnic_cm_create(
             // bytes are paid once, here.
             const std::uint64_t wire_bps =
                 simllm::rnic::effectiveWireBps(handle->profile);
-            pipeline.wire_bps_per_qp = wire_bps;
+            // Several endpoint objects standing for the several queue pairs of
+            // one sender split that sender's port between them, so the group
+            // offers one port's worth of traffic rather than one each. One is
+            // the identity default and the only value there used to be.
+            const std::uint64_t share = config->queue_pairs_per_port == 0
+                ? 1
+                : config->queue_pairs_per_port;
+            pipeline.wire_bps_per_qp = wire_bps / share;
             pipeline.wire_bps_per_nic = wire_bps;
             pipeline.message_rate_per_qp = handle->profile.tx_pps_per_qp;
             pipeline.message_rate_per_nic = handle->profile.tx_pps_per_nic;
@@ -507,6 +533,25 @@ rnic_cm_device* rnic_cm_create(
                 pipeline.rto_ps = handle->profile.rto_ps;
                 pipeline.counts_local_ack_timeout =
                     config->firmware_counter_variant != 0;
+            }
+            if (config->congestion_control != 0) {
+                // The reaction point starts at the same ceiling the pacer
+                // holds, so turning it on with no congestion anywhere leaves
+                // the transmit path exactly where it was.
+                pipeline.reaction.enabled = true;
+                pipeline.reaction.ceiling_bps = wire_bps / share;
+                pipeline.reaction.floor_bps =
+                    handle->profile.dcqcn_rate_floor_bps;
+                pipeline.reaction.alpha_init_ppm =
+                    handle->profile.dcqcn_alpha_init_ppm;
+                pipeline.reaction.alpha_gain_ppm =
+                    handle->profile.dcqcn_alpha_gain_ppm;
+                pipeline.reaction.alpha_update_ps =
+                    handle->profile.dcqcn_alpha_update_ps;
+                pipeline.reaction.increase_step_bps =
+                    handle->profile.dcqcn_rate_increase_step_bps;
+                pipeline.reaction.increase_interval_ps =
+                    handle->profile.dcqcn_rate_increase_interval_ps;
             }
             device_config.network.abi_version = kNetworkPortAbiVersionV2;
             device_config.network.packetization = pipeline;
@@ -522,8 +567,25 @@ rnic_cm_device* rnic_cm_create(
             receive.rc_pps_per_qp = handle->profile.rx_pps_per_qp_rc;
             receive.ud_pps_per_qp = handle->profile.rx_pps_per_qp_ud;
             receive.pps_per_nic = handle->profile.rx_pps_per_nic;
+            if (config->congestion_control != 0) {
+                receive.notification.enabled = true;
+                receive.notification.threshold_bytes =
+                    handle->profile.np_cnp_threshold_bytes;
+                receive.notification.cnp_min_interval_ps =
+                    handle->profile.cnp_min_interval_ps;
+            }
             device_config.network.receive = receive;
             handle->receives = true;
+        }
+        if (config->congestion_control != 0) {
+            // The block is one loop with two ends. Half of it, on an endpoint
+            // that has no receive side to notice congestion with or no
+            // transmit pipeline to react through, is a configuration error
+            // rather than a degraded mode.
+            if (config->receive == 0 || !handle->packetized) {
+                return nullptr;
+            }
+            handle->congestion_control = true;
         }
 
         handle->port = std::make_unique<CapturePort>(
@@ -720,6 +782,9 @@ int rnic_cm_rx_packet(
             out_result->reply_wire_bytes = result.reply_wire_bytes;
             out_result->ingress_occupancy_bytes =
                 result.ingress_occupancy_bytes;
+            out_result->has_cnp = result.has_cnp ? 1u : 0u;
+            out_result->cnp_source = result.cnp_source;
+            out_result->cnp_qpn = result.cnp_qpn;
         }
         device->note(
             now_ps,
@@ -730,6 +795,12 @@ int rnic_cm_rx_packet(
                 + keyValue("service", packet->service) + " "
                 + keyValue("outcome", outcome) + " "
                 + keyValue("reply", result.has_reply ? 1 : 0) + " "
+                // The notification field appears only where there is a
+                // notification point, so a trace recorded without the block is
+                // the same bytes it was before the block existed.
+                + (device->congestion_control
+                       ? keyValue("cnp", result.has_cnp ? 1 : 0) + " "
+                       : std::string())
                 + keyValue("occupancy", result.ingress_occupancy_bytes));
         return RNIC_CM_OK;
     } catch (const std::exception&) {
@@ -747,6 +818,31 @@ int rnic_cm_event(
     }
     if (event == nullptr) {
         return RNIC_CM_ERROR_ARGUMENT;
+    }
+    if (event->kind == RNIC_CM_EVENT_CNP_RECEIVED) {
+        // A congestion notification names no attempt, so it never goes through
+        // the port's attempt table. It reaches the reaction point or it is
+        // refused; there is no third outcome, which is what keeps
+        // `rp_cnp_ignored` honestly at zero.
+        if (!device->congestion_control) {
+            device->note(now_ps, "event kind=cnp status=unsupported");
+            return RNIC_CM_ERROR_UNSUPPORTED;
+        }
+        try {
+            NetworkEvent notification;
+            notification.abi_version = kNetworkPortAbiVersionV2;
+            notification.scope = NetworkEventScope::TransportControl;
+            notification.kind = NetworkEventKind::CnpReceived;
+            notification.packet_kind = NetworkPacketKind::Cnp;
+            notification.event_time_ps = now_ps;
+            device->device->onNetworkEvent(notification);
+        } catch (...) {
+            device->fatal = true;
+            return RNIC_CM_ERROR_INTERNAL;
+        }
+        device->last_time_ps = now_ps;
+        device->note(now_ps, "event kind=cnp status=ok");
+        return RNIC_CM_OK;
     }
     if (event->kind >= RNIC_CM_EVENT_ECN_MARKED) {
         device->note(
@@ -1088,6 +1184,8 @@ int rnic_cm_nic_counters(
         out->rx_ingress_occupancy_bytes = rx.ingress_occupancy_bytes;
         out->rx_ingress_high_watermark_bytes =
             rx.ingress_high_watermark_bytes;
+        out->np_congestion_observed = rx.congestion_observations;
+        out->np_cnps_suppressed = rx.cnps_suppressed;
     }
     const simllm::rnic::RnicTxPipeline* transmit = device->device->txPipeline();
     if (transmit != nullptr) {
@@ -1096,6 +1194,11 @@ int rnic_cm_nic_counters(
         out->tx_recovery_episodes = tx.recovery_episodes;
         out->tx_timeouts = tx.timeouts;
         out->tx_stale_terminals = tx.stale_terminals;
+        out->rp_current_rate_bps = tx.current_rate_bps;
+        out->rp_min_rate_bps = tx.min_rate_bps;
+        out->rp_alpha_ppm = tx.alpha_ppm;
+        out->rp_rate_cuts = tx.rate_cuts;
+        out->rp_rate_increases = tx.rate_increases;
     }
     return RNIC_CM_OK;
 }

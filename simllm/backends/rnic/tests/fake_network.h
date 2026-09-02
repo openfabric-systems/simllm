@@ -429,6 +429,92 @@ private:
     std::uint64_t remainder_{0};
 };
 
+struct FakeEgressQueueConfig {
+    // The port the queue drains onto.
+    std::uint64_t link_bps{100000000000ULL};
+    // The tail-drop threshold in bytes. Zero leaves the queue unbounded, which
+    // is the slice-C behaviour of a fabric that never drops on its own.
+    std::uint64_t capacity_bytes{0};
+};
+
+// One switch egress port, as the measured leaf has it: a finite buffer that
+// drains at the port rate and drops what does not fit, with no marking, no
+// pause and no notification of any kind. That absence is the point. The
+// campaign found zero congestion-experienced marks in 670 M packets with this
+// buffer full and dropping, so a fabric that tail-drops in silence is the
+// normal case here and the endpoint is the only thing left that can notice.
+//
+// The queue is a serializer with a bound: the instant it becomes free is the
+// instant the last queued byte leaves, so the bytes it still owes are exactly
+// that interval at the link rate, and an arrival that would push the total
+// past the bound is dropped rather than delayed.
+class FakeEgressQueue {
+public:
+    explicit FakeEgressQueue(FakeEgressQueueConfig config) : config_(config) {
+        if (config_.link_bps == 0) {
+            throw std::invalid_argument("fake egress queue needs a rate");
+        }
+    }
+
+    std::uint64_t occupancyBytes(Picoseconds now_ps) const {
+        if (free_at_ps_ <= now_ps) {
+            return 0;
+        }
+        constexpr std::uint64_t kPicosecondsPerSecond = 1000000000000ULL;
+        return (free_at_ps_ - now_ps) / 8 * config_.link_bps
+            / kPicosecondsPerSecond;
+    }
+
+    // Offers one packet. Returns the instant its last bit leaves the port, or
+    // nothing when the buffer tail-drops it.
+    std::optional<Picoseconds> offer(
+        Picoseconds now_ps,
+        std::uint64_t wire_bytes) {
+        ++offered_;
+        offered_bytes_ += wire_bytes;
+        if (config_.capacity_bytes != 0
+            && occupancyBytes(now_ps) + wire_bytes > config_.capacity_bytes) {
+            ++dropped_;
+            dropped_bytes_ += wire_bytes;
+            return std::nullopt;
+        }
+        ++admitted_;
+        admitted_bytes_ += wire_bytes;
+        constexpr std::uint64_t kPicosecondsPerSecond = 1000000000000ULL;
+        const Picoseconds start = std::max(now_ps, free_at_ps_);
+        const std::uint64_t numerator =
+            wire_bytes * 8 * kPicosecondsPerSecond + remainder_;
+        remainder_ = numerator % config_.link_bps;
+        free_at_ps_ = start + numerator / config_.link_bps;
+        const std::uint64_t depth = occupancyBytes(now_ps);
+        high_watermark_bytes_ = std::max(high_watermark_bytes_, depth);
+        return free_at_ps_;
+    }
+
+    std::uint64_t offeredCount() const noexcept { return offered_; }
+    std::uint64_t admittedCount() const noexcept { return admitted_; }
+    std::uint64_t droppedCount() const noexcept { return dropped_; }
+    std::uint64_t offeredBytes() const noexcept { return offered_bytes_; }
+    std::uint64_t admittedBytes() const noexcept { return admitted_bytes_; }
+    std::uint64_t droppedBytes() const noexcept { return dropped_bytes_; }
+    std::uint64_t highWatermarkBytes() const noexcept {
+        return high_watermark_bytes_;
+    }
+    Picoseconds freeAtPs() const noexcept { return free_at_ps_; }
+
+private:
+    FakeEgressQueueConfig config_;
+    Picoseconds free_at_ps_{0};
+    std::uint64_t remainder_{0};
+    std::uint64_t offered_{0};
+    std::uint64_t admitted_{0};
+    std::uint64_t dropped_{0};
+    std::uint64_t offered_bytes_{0};
+    std::uint64_t admitted_bytes_{0};
+    std::uint64_t dropped_bytes_{0};
+    std::uint64_t high_watermark_bytes_{0};
+};
+
 struct FakeV2FabricConfig {
     FakeDuplexLinkConfig forward;
     FakeDuplexLinkConfig reverse;

@@ -267,6 +267,26 @@ std::string renderRnicHwProfileJson(const RnicHwProfile& profile) {
     appendUnsigned(
         out, "dcqcn_rate_step_bps", profile.dcqcn_rate_step_bps,
         e.dcqcn_rate_step_bps);
+    appendUnsigned(
+        out, "np_cnp_threshold_bytes", profile.np_cnp_threshold_bytes,
+        e.np_cnp_threshold_bytes);
+    appendUnsigned(
+        out, "dcqcn_alpha_init_ppm", profile.dcqcn_alpha_init_ppm,
+        e.dcqcn_alpha_init_ppm);
+    appendUnsigned(
+        out, "dcqcn_alpha_gain_ppm", profile.dcqcn_alpha_gain_ppm,
+        e.dcqcn_alpha_gain_ppm);
+    appendUnsigned(
+        out, "dcqcn_rate_increase_step_bps",
+        profile.dcqcn_rate_increase_step_bps,
+        e.dcqcn_rate_increase_step_bps);
+    appendUnsigned(
+        out, "dcqcn_rate_increase_interval_ps",
+        profile.dcqcn_rate_increase_interval_ps,
+        e.dcqcn_rate_increase_interval_ps);
+    appendUnsigned(
+        out, "dcqcn_rate_floor_bps", profile.dcqcn_rate_floor_bps,
+        e.dcqcn_rate_floor_bps);
 
     appendBool(out, "pfc_enabled", profile.pfc_enabled, e.pfc_enabled);
     appendBool(out, "global_pause_tx", profile.global_pause_tx, e.global_pause_tx);
