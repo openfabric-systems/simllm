@@ -12,6 +12,8 @@ const char* toString(AnomalyKind kind) noexcept {
         return "fabric";
     case AnomalyKind::Counter:
         return "counter";
+    case AnomalyKind::Tool:
+        return "tool";
     }
     return "invalid";
 }
@@ -47,8 +49,10 @@ std::string renderRnicAnomalyTableMarkdown() {
         "Kinds: `emergent` falls out of a modelled mechanism and is validated,\n"
         "`injected` is applied by rule because the mechanism is not public,\n"
         "`fabric` is a property of the switch or link reproduced by the packet\n"
-        "simulator rather than by the endpoint, and `counter` is a facade\n"
-        "behaviour with no datapath effect.\n"
+        "simulator rather than by the endpoint, `counter` is a facade\n"
+        "behaviour with no datapath effect, and `tool` is an artifact of the\n"
+        "instrument that measured it rather than a property of the silicon,\n"
+        "kept for the record and reproduced by nothing.\n"
         "\n"
         "| id | anomaly | trigger | effect and magnitude | kind | evidence |\n"
         "|---|---|---|---|---|---|\n";

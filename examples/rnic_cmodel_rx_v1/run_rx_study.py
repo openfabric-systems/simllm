@@ -38,6 +38,15 @@ MEASURED_DEPTH_RATIO = {8192: 5.9, 65536: 1.57}
 MEASURED_DEPTH1 = {8192: 12.713e9, 65536: 53.069e9}
 MEASURED_UD_CAP_PPS = 3.07e6
 MEASURED_UD_AGGREGATE_PPS = 9.65e6
+# The frozen per-QP unreliable ceiling, pinned at the probe so the registered
+# cells keep evaluating against the value they were frozen with even after the
+# profile default moved.
+FROZEN_UD_CAP_PPS = 3_070_000
+# Post-specified: the P6 fabric campaign measured the ceiling on the wire after
+# these expectations were frozen and re-attributed the 3.07e6 figure to the
+# measurement engine. Cells driven at this value are reported as post-specified
+# regression checks and score separately from the frozen ones.
+P6_UD_CAP_PPS = 5_510_000
 MEASURED_INCAST_TAX = 0.269
 MEASURED_SIMPLEX_BPS = 93_400_000_000
 MEASURED_DUPLEX_BPS = 91_800_000_000
@@ -246,6 +255,7 @@ def _run_grid(probe: Path, drain: int, nic_pps: int, raw_dir: Path | None):
                 offered_pps=offered * qps,
                 qps=qps,
                 rx_drain_bps=drain,
+                rx_pps_per_qp_ud=FROZEN_UD_CAP_PPS,
                 rx_pps_per_nic=nic_pps,
             )
             ud_cells[(qps, offered)] = row
@@ -261,6 +271,7 @@ def _run_grid(probe: Path, drain: int, nic_pps: int, raw_dir: Path | None):
         offered_pps=5_850_000 * 4,
         qps=4,
         rx_drain_bps=drain,
+        rx_pps_per_qp_ud=FROZEN_UD_CAP_PPS,
         rx_pps_per_nic=nic_pps,
     )
     record(
@@ -269,6 +280,47 @@ def _run_grid(probe: Path, drain: int, nic_pps: int, raw_dir: Path | None):
         ud_supplement,
         {
             "delivered_mpps": f"{float(ud_supplement['rx_packets_delivered']) / _seconds(ud_supplement) / 1e6:.4f}",
+            "qps": 4,
+        },
+    )
+
+    # Post-specified: the same sweep at the corrected per-QP ceiling. It is run
+    # beside the frozen cells rather than in place of them, so no registered
+    # verdict moves and the correction is visible as its own set of rows.
+    ud_p6_cells: dict[tuple[int, int], dict[str, int | str]] = {}
+    for offered in (2_000_000, 3_000_000, 4_000_000, 5_850_000):
+        row = _probe(
+            probe,
+            "ud",
+            size_bytes=2048,
+            messages=UD_MESSAGES,
+            offered_pps=offered,
+            qps=1,
+            rx_drain_bps=drain,
+            rx_pps_per_qp_ud=P6_UD_CAP_PPS,
+            rx_pps_per_nic=nic_pps,
+        )
+        ud_p6_cells[(1, offered)] = row
+        delivered = float(row["rx_packets_delivered"]) / _seconds(row)
+        record("ud_p6", 2048, row, {"delivered_mpps": f"{delivered / 1e6:.4f}", "qps": 1})
+    aggregate = _probe(
+        probe,
+        "ud",
+        size_bytes=1024,
+        messages=UD_MESSAGES * 4,
+        offered_pps=5_850_000 * 4,
+        qps=4,
+        rx_drain_bps=drain,
+        rx_pps_per_qp_ud=P6_UD_CAP_PPS,
+        rx_pps_per_nic=nic_pps,
+    )
+    ud_p6_cells[(4, 5_850_000)] = aggregate
+    record(
+        "ud_p6",
+        1024,
+        aggregate,
+        {
+            "delivered_mpps": f"{float(aggregate['rx_packets_delivered']) / _seconds(aggregate) / 1e6:.4f}",
             "qps": 4,
         },
     )
@@ -338,10 +390,11 @@ def _run_grid(probe: Path, drain: int, nic_pps: int, raw_dir: Path | None):
         trace_prefix=str(raw_dir / "replay") if raw_dir is not None else "",
     )
 
-    return gap_cells, depth_cells, ud_cells, incast_cells, incast_stable, duplex_cells, replay, rows
+    return (gap_cells, depth_cells, ud_cells, ud_p6_cells, incast_cells,
+            incast_stable, duplex_cells, replay, rows)
 
 
-def _fatal_guards(gap_cells, depth_cells, ud_cells, duplex_cells, replay) -> list[str]:
+def _fatal_guards(gap_cells, depth_cells, ud_cells, ud_p6_cells, duplex_cells, replay) -> list[str]:
     problems: list[str] = []
     if replay["replay_identical"] != 1:
         problems.append("deterministic replay identity failed on the replay cell")
@@ -367,17 +420,20 @@ def _fatal_guards(gap_cells, depth_cells, ud_cells, duplex_cells, replay) -> lis
     for (size, depth), row in depth_cells.items():
         if row["errors"] != 0:
             problems.append(f"depth/{size}/{depth}: {row['errors']} errored messages")
-    for key, row in ud_cells.items():
-        offered = row["rx_packets_offered"]
-        if row["rx_packets_delivered"] + row["rx_discards_phy"] != offered:
-            problems.append(f"ud/{key}: delivered plus discarded does not equal offered")
+    for label, cells in (("ud", ud_cells), ("ud_p6", ud_p6_cells)):
+        for key, row in cells.items():
+            offered = row["rx_packets_offered"]
+            if row["rx_packets_delivered"] + row["rx_discards_phy"] != offered:
+                problems.append(
+                    f"{label}/{key}: delivered plus discarded does not equal offered")
     for name, row in duplex_cells.items():
         if row["errors"] != 0:
             problems.append(f"{name}: {row['errors']} errored messages")
     return problems
 
 
-def _evaluate(gap_cells, depth_cells, ud_cells, incast_cells, duplex_cells) -> list[dict[str, object]]:
+def _evaluate(gap_cells, depth_cells, ud_cells, ud_p6_cells, incast_cells,
+              duplex_cells) -> list[dict[str, object]]:
     checks: list[dict[str, object]] = []
 
     # 1. gap_discards, categorical.
@@ -560,6 +616,47 @@ def _evaluate(gap_cells, depth_cells, ud_cells, incast_cells, duplex_cells) -> l
     inert = all(row["np_ecn_marked"] == 0 for row in gap_cells.values())
     checks.append(
         _check("inert_marking", "every gap cell", 0.0, 0.0, "exactly zero", inert))
+
+    # Post-specified regression checks. The P6 fabric campaign measured the
+    # unreliable receive ceiling on the wire after these expectations were
+    # frozen and re-attributed the 3.07 Mpps figure to the measurement engine.
+    # These rows re-run the same cells at the corrected parameter. They are not
+    # part of the registered 40 and are named and noted so they cannot be read
+    # as one.
+    postspec = "post-specified P6 correction, not a registered check"
+    row = ud_p6_cells[(1, 5_850_000)]
+    delivered = float(row["rx_packets_delivered"]) / _seconds(row)
+    checks.append(
+        _check("postspec_ud_cap", "1qp/5.85Mpps", delivered / 1e6,
+               P6_UD_CAP_PPS / 1e6, "10 percent",
+               _within(delivered, float(P6_UD_CAP_PPS), 0.10), postspec))
+    for offered in (2_000_000, 3_000_000, 4_000_000):
+        row = ud_p6_cells[(1, offered)]
+        exact = row["rx_packets_delivered"] == row["rx_packets_offered"]
+        checks.append(
+            _check("postspec_ud_passthrough", f"1qp/{offered / 1e6:g}Mpps",
+                   float(row["rx_packets_delivered"]),
+                   float(row["rx_packets_offered"]), "exact", exact, postspec))
+    for offered in (2_000_000, 3_000_000, 4_000_000, 5_850_000):
+        row = ud_p6_cells[(1, offered)]
+        discarded = row["rx_packets_offered"] - row["rx_packets_delivered"]
+        silent = (
+            discarded == row["rx_discards_phy"]
+            and row["out_of_sequence"] == 0
+            and row["packet_seq_err"] == 0
+            and row["roce_adp_retrans"] == 0
+        )
+        checks.append(
+            _check("postspec_ud_silent", f"1qp/{offered / 1e6:g}Mpps", float(discarded),
+                   float(row["rx_discards_phy"]), "exact and no transport signal",
+                   silent, postspec))
+    row = ud_p6_cells[(4, 5_850_000)]
+    delivered = float(row["rx_packets_delivered"]) / _seconds(row)
+    checks.append(
+        _check("postspec_ud_aggregate", "4qp/5.85Mpps each at 1 KiB", delivered / 1e6,
+               MEASURED_UD_AGGREGATE_PPS / 1e6, "10 percent",
+               _within(delivered, MEASURED_UD_AGGREGATE_PPS, 0.10),
+               postspec + "; the per-NIC ceiling is unchanged and still binds"))
     return checks
 
 
@@ -600,17 +697,19 @@ def main() -> None:
     for candidate, residual in scored:
         print(f"  candidate {candidate / 1e9:.1f} residual {residual:.5f}")
 
-    (gap_cells, depth_cells, ud_cells, incast_cells, incast_stable,
+    (gap_cells, depth_cells, ud_cells, ud_p6_cells, incast_cells, incast_stable,
      duplex_cells, replay, rows) = _run_grid(probe, drain, arguments.nic_pps, raw_dir)
 
-    problems = _fatal_guards(gap_cells, depth_cells, ud_cells, duplex_cells, replay)
+    problems = _fatal_guards(
+        gap_cells, depth_cells, ud_cells, ud_p6_cells, duplex_cells, replay)
     if problems:
         print("FATAL GUARD: the run is void, not scored")
         for problem in problems:
             print(f"  {problem}")
         raise SystemExit(2)
 
-    checks = _evaluate(gap_cells, depth_cells, ud_cells, incast_cells, duplex_cells)
+    checks = _evaluate(
+        gap_cells, depth_cells, ud_cells, ud_p6_cells, incast_cells, duplex_cells)
     curves = _render_csv(rows)
     summary = _render_csv(checks)
     if arguments.check:
@@ -623,8 +722,13 @@ def main() -> None:
         SUMMARY.write_bytes(summary)
         print(f"wrote {len(rows)} cells and {len(checks)} checks")
 
+    registered = [c for c in checks if not str(c["check"]).startswith("postspec_")]
+    post = [c for c in checks if str(c["check"]).startswith("postspec_")]
     failed = [check for check in checks if check["verdict"] != "PASS"]
-    print(f"checks: {len(checks) - len(failed)}/{len(checks)} PASS")
+    print(
+        f"registered checks: "
+        f"{sum(1 for c in registered if c['verdict'] == 'PASS')}/{len(registered)} PASS; "
+        f"post-specified: {sum(1 for c in post if c['verdict'] == 'PASS')}/{len(post)} PASS")
     for check in failed:
         print(f"  FAIL {check['check']} {check['cell']}: {check['measured']} vs {check['reference']}")
     for loss, row in sorted(incast_stable.items()):

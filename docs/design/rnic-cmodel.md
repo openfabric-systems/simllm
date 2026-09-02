@@ -99,7 +99,7 @@ the first differing timestamp or counter.
 | link | `link_bps`, `goodput_bps`, `mtu_bytes`, `wire_header_bytes` | 100e9, 97.1e9, 4096, 64 | 400e9, 388.4e9, 4096, 64 |
 | initiation | five work-queue service stages summing to `t_eff_ps` | 4.48 us lumped (`calibrated-opaque`; the split across stages is an assumption until the WQE publication campaign lands) | same |
 | outstanding work | `sq_depth`, `max_inflight_bytes`, `max_inflight_packets` | 1024 default queue, inflight bounded by the queue | same |
-| packet rate | `tx_pps_per_qp`, `tx_pps_per_nic`, `rx_pps_per_qp_rc`, `rx_pps_per_qp_ud`, `rx_pps_per_nic` | per-QP UD receive 3.07e6 (`calibrated-opaque`), host-bound TX 3.87e6 single QP | scaled by 4 |
+| packet rate | `tx_pps_per_qp`, `tx_pps_per_nic`, `rx_pps_per_qp_rc`, `rx_pps_per_qp_ud`, `rx_pps_per_nic` | per-QP UD receive 5.51e6 (`calibrated-opaque`, P6 wire; a post-specified correction of the 3.07e6 the measurement engine produced), per-NIC 9.65e6 retained but unconfirmed, host-bound TX 3.87e6 single QP | scaled by 4 |
 | ingress | `rx_ingress_bytes`, `rx_drain_bps`, `internal_budget_bps`, `loopback_priority` | meter sized so a saturated deep pipeline settles at the measured 78 to 92 Gb/s equilibrium and clears within the measured drain window; internal budget 197e9; wire wins | scaled by 4 |
 | transport | `recovery` (go-back-N), `selective_repeat_window`, `rto_ps`, `ack_coalescing` | go-back-N, 0, 67 ms (`qp_timeout` 14) | same |
 | congestion control | `dcqcn_enabled`, `ecn_stamp` (ECT(0) forced), `cnp_min_interval_ps`, DCQCN alpha, timer, byte counter, rate step | enabled at firmware default, ECT(0), 50 us, vendor 100 G set | thresholds scaled by 4 |
@@ -120,24 +120,76 @@ comparison cannot silently change hardware.
 | packetizer | segments a WQE into MTU-sized packets with header bytes and PSNs; emits one attempt per packet through the port | MTU 1024 tax of 5.6 percent; go-back-N amplification proportional to message bytes over packet bytes |
 | outstanding-work window | bounds WQEs and bytes in flight per QP; ACK-clocked release | throughput versus queue depth (5.9x at 8 KiB between depth 1 and 1024) |
 | transmit pacer | bits per second and packets per second ceilings per QP and per NIC, shared across QPs | small-message regime; multi-QP recovery of the ceiling |
-| ingress meter | finite receive buffer at the port drained at a service rate; overflow discards at the PHY with no transport signal | loss equilibrium under saturation; drain window; bidirectional cleaner than unidirectional |
-| receive processor | per-QP receive packet-rate cap; RC responder PSN check with ACK and NAK; UD delivery with silent drop beyond the cap | single UD QP silent 47.5 percent loss; out_of_sequence at the responder |
+| ingress meter | finite receive buffer at the port drained at a service rate; overflow discards at the PHY with no transport signal | loss equilibrium under saturation; drain window; bidirectional cleaner than unidirectional; the 0.18 percent lone-flow floor above about 94 Gb/s |
+| receive processor | per-QP receive packet-rate cap; RC responder PSN check with ACK and NAK; UD delivery with silent drop beyond the cap | one UD QP absorbing 5.51 Mpps on the wire with silent discard beyond it; out_of_sequence at the responder |
 | requester transport | PSN and ACK tracking; go-back-N on NAK or timeout; retransmit counters | packet_seq_err, roce_adp_retrans, local_ack_timeout_err by firmware variant |
-| rate control | DCQCN notification point (CNP on CE) and reaction point with per-QP state that persists across WQEs; ECT(0) stamping | np_cnp_sent, rp_cnp_handled, rp_cnp_ignored equal to zero; ECN-first congestion |
+| rate control | DCQCN notification point at the endpoint's own ingress meter and reaction point with per-QP state that persists across WQEs; ECT(0) stamping | 283 CNP per second per congested QP with no switch mark anywhere; rate cut in 3 to 39 ms and recovery in 447 ms |
 | internal arbiter | one processing budget shared by loopback ingress and wire ingress, wire priority | in-NIC cap near 197 Gb/s, loopback starves to about half |
 | observable state | counters named as the real NIC exposes them, with the inert marking counter reproduced as inert | counter semantics that detection tools rely on |
 | anomaly table | the explicit list below, with mechanism kind and test id | everything a reviewer needs to know is reproduced on purpose |
+
+### What the P6 fabric campaign changed in two of these blocks
+
+The P6 campaign probed the fabric from the endpoints after slice C's
+expectations were frozen, so everything in this subsection is a
+post-specified correction rather than a registered prediction.
+
+**Rate control: the notification point is the endpoint, not the switch.**
+The earlier design assumed the ordinary RoCEv2 arrangement, a switch RED mark
+that the receiver turns into a CNP. On the measured fabric the switch never
+marks: zero congestion-experienced packets in 670 M, at two DSCP classes,
+with the egress buffer full and dropping 6.36 percent, every packet arriving
+markable. Kmin, Kmax and Pmax are undefined there; the switch tail-drops.
+What does generate notifications is the receiving NIC itself, from its own
+ingress congestion: the receiver's `np_cnp_sent` rises from 38 to 2262 per
+second exactly during reliable fan-in. So the model's notification point sits
+at the endpoint's own ingress meter, and a fabric that never marks is the
+normal case rather than a degenerate one. The measured dynamics are this
+block's acceptance data:
+
+| quantity | measured |
+|---|---|
+| CNP rate per congested QP | 283 per second, that is one per 3.54 ms |
+| rate cut of at least 30 percent | after 3, 16 and 39 ms in three repeats |
+| fair share reached | after 5 ms, 1.8 s and 2.3 s |
+| recovery to at least 95 percent | 447 plus or minus 10 ms |
+| additive increase | about 0.107 falling to 0.093 Gb/s per ms |
+| steady two-flow split | 50.18 and 50.13 Gb/s on a 99.30 Gb/s wire |
+
+The reaction is 2 to 20 times slower than the vendor-default reading in the
+profile suggests and the recovery is about 4.5 times slower, so a study that
+needs the transient must carry these numbers rather than the defaults.
+
+**Ingress meter: the discard ledger does not close.** ANOM-03 is registered
+as emergent from this block, and the slice-C study does reproduce the
+equilibrium with one fitted drain rate. It does not explain it: the campaign's
+own counters show far too few PHY discards at that operating point to account
+for a 20 percent goodput deficit by loss alone, and P6 sharpened rather than
+closed the gap. A lone flow above about 94 Gb/s loses 0.18 percent of its
+packets at the receiver's PHY, and it loses them in bursts of about 73 packets
+lasting about 94 us, path-independent over 32 fresh 5-tuples, with the event
+count falling 12.5 times under at least 10 Gb/s of reverse traffic while the
+burst length does not move. That signature is ANOM-17, it is not a full-buffer
+overflow (`out_of_buffer` never moves in any run), and reproducing it is the
+next mechanism this block needs. Until then the meter's drain rate is a fitted
+stand-in for a stall process, and BACK-57 carries the clause.
 
 ## Anomaly table
 
 Kinds: `emergent` (falls out of a modelled mechanism and is validated),
 `injected` (applied by rule from the table because the mechanism is not
 public), `fabric` (a property of the switch or link, reproduced by htsim, not
-by the endpoint), `counter` (a facade behaviour, not a datapath effect).
+by the endpoint), `counter` (a facade behaviour, not a datapath effect),
+`tool` (an artifact of the instrument that measured it rather than a property
+of the silicon, kept for the record and reproduced by nothing).
+
+ANOM-01 was re-attributed and ANOM-16 through ANOM-19 were added after the
+P6 fabric campaign, which ran after slice C's expectations were frozen. All
+five are post-specified corrections and say so.
 
 | id | anomaly | trigger | effect and magnitude | kind | evidence |
 |---|---|---|---|---|---|
-| ANOM-01 | single UD QP receive cap | one UD QP receiving above 3.07 Mpps | excess dropped at the PHY, no sender-visible signal, 47.5 percent at 5.85 Mpps offered | emergent (receive processor) | P3 seed 1 |
+| ANOM-01 | single UD QP receive cap | one UD QP receiving above 3.07 Mpps through the measurement engine | re-attributed after slice C froze: the 3.07 Mpps knee and the 47.5 percent silent loss were the engine's receive path, not the NIC. On the wire one UD QP absorbs 5.51 Mpps of 2 KiB with only the 0.17 to 0.19 percent ingress floor, and four QPs are slightly worse | tool (the measurement engine's receive path, not the silicon) | P3 seed 1, re-attributed by P6 |
 | ANOM-02 | two-SGE SEND sequence-error storm | RC SEND with two gather entries at 512 B each, 32 QPs | packet_seq_err of 68 k to 400 k per 30 s, 1-SGE control zero, goodput within 3 percent | injected (per-packet drop rule keyed on SGE count and size) | P3 seed 5/6 |
 | ANOM-03 | saturated deep-pipeline loss equilibrium | one RC QP, queue depth 1024, no inter-burst gap, above about 92 Gb/s | responder PHY discards plus go-back-N tail; goodput settles at 78 to 92 Gb/s | emergent (ingress meter) | P2, P3, P4 |
 | ANOM-04 | drain window | inter-burst gap of at least 4 us at 8 KiB, 4 to 100 us at 64 KiB | discards go to zero; goodput follows bytes over (burst plus gap) within 0.1 percent; a 4 us gap raises 8 KiB goodput 13.8 percent | emergent (ingress meter) | P4 |
@@ -152,6 +204,10 @@ by the endpoint), `counter` (a facade behaviour, not a datapath effect).
 | ANOM-13 | MTU tax | MTU 1024 versus 4096 | 5.6 percent goodput | emergent (packetizer) | P2 |
 | ANOM-14 | host-bound message rate | small messages, single process | 3.87 Mpps single QP at 1 KiB, 16.7 Mmsg/s per sender at 512 B | emergent (transmit pacer) | P2, P5a |
 | ANOM-15 | memory-region and gather insensitivity | 12 000 MRs, 1024 MRs of 64 KiB, gathers except ANOM-02 | no throughput effect | emergent by absence (no MR cache modelled; documented) | P3 seeds 7/8 |
+| ANOM-16 | NIC-generated congestion notification | RC fan-in on a fabric whose switch never marks | the receiver signals its own ingress congestion: np_cnp_sent rises from 38 to 2262 per second during the fan-in, which is 283 CNP per second per congested QP, or one per 3.54 ms | emergent (rate control, notification point at the endpoint) | P6 |
+| ANOM-17 | ingress stall bursts | one lone RC flow above about 94 Gb/s | 0.18 percent of packets lost at the receiver's PHY in bursts of about 73 packets (about 94 us), path-independent over 32 fresh 5-tuples; at least 10 Gb/s of reverse traffic cuts the event count 12.5x without changing the burst length, and receiver CPU load does nothing | emergent (ingress meter, mechanism not yet modelled) | P6 |
+| ANOM-18 | slow DCQCN dynamics | a DCQCN reaction point under 2 to 1 RC fan-in | rate cut of at least 30 percent after 3 to 39 ms, fair share after 5 ms to 2.3 s, recovery to at least 95 percent in 447 plus or minus 10 ms, additive increase about 0.1 Gb/s per ms | emergent (rate control, reaction point) | P6 |
+| ANOM-19 | counter semantics under loss | any loss on the path | packet_seq_err counts loss bursts, 73x fewer than packets lost; rx_discards_phy counts NIC-ingress loss exactly; switch loss appears in neither; out_of_buffer never moves; senders handle 2.24x the CNPs the receiver reports sending, which is reproducible and unexplained | counter | P6 |
 
 The table is data: a `constexpr` array in `rnic_anomaly_table.h`, a generated
 Markdown projection checked by a test against this document, and one native
@@ -177,6 +233,7 @@ counter monotonicity) void a run rather than costing a point.
 | 2 to 1 incast at 1 MiB | tax equals loss times the amplification factor; fair share | 25 percent on the identity, 2 points on the split |
 | single UD QP above the cap | delivered rate and discard counter | 10 percent |
 | loopback plus wire | wire share and loopback share | 5 percent |
+| fabric under the endpoint | the merged [`FabricProfile`](../modules/backends.md) carrier and its measured leaf: one non-blocking switch, four 100 G ports, 515 ns pipes, a 5.2 MB tail-drop egress buffer per port, and no marking, no PFC and no propagated pause. A study that needs the endpoint under load configures the drop-only switch and lets the endpoint generate its own notifications | topology and buffer as declared; loss rate within the study's own band |
 | deterministic replay | trace equality across two runs | exact |
 
 ## Status
@@ -186,20 +243,36 @@ validated. The profile, the anomaly table, the C facade and the packetizer,
 outstanding-work window and pacer are landed and validated, and so are the
 ingress meter, the receive processor and the go-back-N requester transport.
 Rate control and the internal arbiter are not. The remaining blocks and the
-two clauses the receive slice did not close are registered as open tasks in
+clauses the receive slice did not close are registered as open tasks in
 `docs/modules/backends.md`; the ConnectX-5 profile study in
 `examples/cx5_msgsize_v1` establishes the measured curves the blocks are
 validated against.
 
-Two rows of the anomaly table need a correction the receive slice earned.
-ANOM-03 attributes the saturated loss equilibrium to the ingress meter alone;
-the campaign's own P4 counters show only a few thousand PHY discards over a
-30 s window at that point, which is far too few to explain a 20 percent
-goodput deficit by loss, so the meter reproduces the equilibrium at a fitted
-drain rate rather than explaining it. ANOM-11 is listed as emergent from the
-packetizer plus go-back-N with fabric loss; the slice-C study shows that
-without the DCQCN reaction point the same mechanism collapses rather than
-settling at the measured tax, so the row depends on rate control as well.
-Neither correction is applied to the table here: the table is data with a
-generated projection and a byte-comparison test, and a row is edited when the
-task that owns it lands, not when a study reads it.
+Two rows of the anomaly table carry a correction the receive slice earned,
+and both remain open. ANOM-03 attributes the saturated loss equilibrium to
+the ingress meter alone; the campaign's own P4 counters show only a few
+thousand PHY discards over a 30 s window at that point, which is far too few
+to explain a 20 percent goodput deficit by loss, so the meter reproduces the
+equilibrium at a fitted drain rate rather than explaining it. P6 narrowed the
+missing part to the stall-burst signature now registered as ANOM-17. ANOM-11
+is listed as emergent from the packetizer plus go-back-N with fabric loss;
+the slice-C study shows that without the reaction point the same mechanism
+collapses rather than settling at the measured tax, so the row depends on
+rate control as well. Neither of those two attributions is rewritten in the
+table: the table is data with a generated projection and a byte-comparison
+test, and an attribution is edited when the task that owns it lands, not when
+a study reads it.
+
+The P6 fabric campaign ran after slice C's expectations were frozen and
+corrected five things in this document, one parameter and four table rows.
+The unreliable per-QP receive ceiling moved from 3.07e6 to the 5.51e6 measured
+on the wire, because the earlier
+number was the measurement engine's receive path (ANOM-01, re-attributed and
+kept). Congestion notification is generated by the receiving NIC and not by a
+switch mark (ANOM-16), the DCQCN transient is far slower than the vendor
+defaults imply (ANOM-18), the lone-flow ingress floor has a burst structure
+no block reproduces yet (ANOM-17), and three counters mean something other
+than their names suggest (ANOM-19). Every one of those is post-specified: it
+is labelled as such here, in the anomaly table, in the registry entries and
+in the slice-C result record, and none of them was allowed to edit a frozen
+expectation or restate a frozen verdict.

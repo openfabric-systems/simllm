@@ -17,6 +17,13 @@ utilization the campaign measured, and the campaign's own counters show that
 run was congestion-controlled. Every fatal guard held, so the run is scored
 rather than voided.**
 
+A later campaign re-measured the unreliable receive ceiling on the wire and
+found the frozen figure to be the measurement engine's, not the NIC's. The
+correction, and the nine post-specified regression checks that carry it, are
+in [their own section](#post-specified-corrections-from-the-p6-fabric-campaign)
+below. The forty registered rows above were re-run at the frozen parameter and
+are byte-identical, so no verdict on this page has moved.
+
 ## Method
 
 The study drives the `extern "C"` facade, not the C++ classes. Behind it the
@@ -44,7 +51,7 @@ under `${SIMLLM_DATA_ROOT}/rnic_cmodel_rx_v1/` and are not tracked.
 |---|---:|---|---|
 | `rx_drain_bps` | 96.6e9 wire bit/s | 96.2e9 to 96.8e9 | least squares over a declared candidate grid from 95.0e9 to 98.0e9 in 0.2e9 steps, against the measured saturated goodput at 8 KiB and 64 KiB |
 | `rx_ingress_bytes` | 262016 | at least 170 KiB | unchanged from the slice-A profile; it only has to hold one burst's backlog at the widest clean gap, and it does |
-| `rx_pps_per_qp_ud` | 3.07e6 | 2.79e6 to 3.38e6 | unchanged; it is the directly measured cap and the model reproduces it exactly |
+| `rx_pps_per_qp_ud` | 3.07e6 | 2.79e6 to 3.38e6 | unchanged for this run; it was the directly measured cap at the time and the model reproduces it exactly. Corrected to 5.51e6 afterwards, see the post-specified section |
 | `rx_pps_per_nic` | 9.65e6 | 8.69e6 to 10.6e6 | set from the measured multi-queue aggregate; four queue pairs each offered above their own ceiling deliver exactly this |
 | `rx_pps_per_qp_rc` | unset | not established | no reliable cell reached it, so the study leaves it at zero rather than inventing one |
 
@@ -208,6 +215,90 @@ All held, so the run is scored:
   its tracked `curves.csv` and `summary.csv` byte for byte, including its own
   registered miss, and all eight native tests pass unchanged.
 
+## Post-specified corrections from the P6 fabric campaign
+
+Everything in this section was measured after the expectations above were
+frozen and after the run above was scored. It is a correction, not a
+prediction, and it is reported separately for that reason. Nothing here edits
+`expectations.md` and nothing here restates a registered verdict.
+
+### The unreliable receive ceiling was the instrument's
+
+The campaign put a paced sender on the wire against a logger that reads the
+real inbound headers, on three repeats per configuration with a fresh sender
+process and a fresh logger each time, so every repeat used fresh queue-pair
+numbers and a fresh 5-tuple. One receive queue pair absorbed 5.51 Mpps of
+2 KiB datagrams and 2.98 Mpps of 4 KiB, in both cases with only the 0.17 to
+0.19 percent ingress floor that a lone reliable flow also pays, and with
+`out_of_buffer` at zero throughout. Four queue pairs were slightly worse, not
+better. The 3.07 Mpps knee the frozen run reproduces was the measurement
+engine's receive path.
+
+Two limits of the new number are worth stating plainly. It is the highest rate
+the silicon was shown to absorb, not a rate at which it was shown to break: at
+2 KiB an offer of 5.51 Mpps is already about 100 Gb/s of wire, and at 4 KiB the
+link binds first at 2.98 Mpps, so a 100 GbE probe cannot push one queue pair
+past it. And the per-NIC ceiling, 9.65e6, comes from the same instrument. No
+wire point contradicts it, because none could reach it at the payload sizes a
+100 GbE port allows, so it is retained unchanged and re-measuring it is
+BACK-56's multi-queue-pair clause.
+
+`rx_pps_per_qp_ud` in the ConnectX-5 profile is therefore 5.51e6, still
+`calibrated-opaque`, with the campaign's unreliable-cap record as its
+provenance. ANOM-01 keeps its id and its row and changes kind: it is now a
+tool artifact rather than an emergent property of the receive processor.
+
+### The nine post-specified regression checks
+
+The same cells were re-run at the corrected parameter, beside the frozen ones
+rather than in place of them. They are the `postspec_` rows in
+[summary.csv](summary.csv) and the `ud_p6` rows in [curves.csv](curves.csv).
+
+| offered, one QP (Mpps) | 2.00 | 3.00 | 4.00 | 5.85 |
+|---|---:|---:|---:|---:|
+| delivered at the frozen 3.07e6 (Mpps) | 2.000 | 3.000 | 3.070 | 3.070 |
+| delivered at the corrected 5.51e6 (Mpps) | 2.000 | 3.000 | 4.000 | 5.510 |
+| discarded at the corrected ceiling | 0 | 0 | 0 | 11625 |
+
+| check | rows | verdict |
+|---|---:|---|
+| `postspec_ud_cap`, within 10 percent of 5.51 Mpps | 1 | PASS at 5.510 Mpps |
+| `postspec_ud_passthrough`, delivered equals offered below the ceiling | 3 | PASS, exactly |
+| `postspec_ud_silent`, discards exact and no transport signal | 4 | PASS |
+| `postspec_ud_aggregate`, within 10 percent of 9.65 Mpps at 1 KiB | 1 | PASS at 9.650 Mpps |
+
+The 4 KiB cell the campaign also measured is not re-run here, because at that
+size the link binds at 2.98 Mpps and the cell would test the port rather than
+the ceiling. That is the same defect the frozen `ud_aggregate` row already
+reports, one size down.
+
+The corrected model reproduces the ceiling exactly, keeps the discard silent
+(every discard lands on `rx_discards_phy`, and `out_of_sequence`,
+`packet_seq_err` and `roce_adp_retrans` stay at zero), and leaves the per-NIC
+aggregate binding where it bound before. One honest mismatch remains: the
+model's ceiling is a hard knee, so at a 5.85 Mpps offer it discards 5.81
+percent, where the silicon at its highest reachable offer discarded 0.17
+percent. The silicon was never driven past the knee, so the shape of the knee
+is not something this or any 100 GbE measurement can settle.
+
+### What else the campaign corrected, and what this study does not touch
+
+Three of the four new anomaly rows land outside this slice. ANOM-16 (the
+receiving NIC generates the congestion notifications, 283 per second per
+congested queue pair, with no switch mark anywhere) and ANOM-18 (the DCQCN
+transient: a rate cut after 3 to 39 ms, recovery in 447 plus or minus 10 ms,
+additive increase near 0.1 Gb/s per ms) both belong to the rate-control block,
+which is BACK-58 and is not landed. They are registered as that block's
+acceptance data, and they explain the incast miss above rather than repair it.
+ANOM-19 is counter semantics and needs no datapath change.
+
+The fourth is this slice's own. ANOM-17, the 0.18 percent lone-flow ingress
+floor arriving in bursts of about 73 packets lasting about 94 us, belongs to
+the ingress meter, and this model does not reproduce it: the fitted drain rate
+stands in for a stall process whose shape is now measured but not modelled.
+That is also where ANOM-03's unexplained goodput deficit has narrowed to.
+BACK-57 carries the clause and its acceptance bar.
+
 ## What this does not show
 
 No congestion response, no ECN marking, no CNP generation or handling, no
@@ -218,4 +309,6 @@ the silicon and the study only shows that one value of each reproduces four
 measured facts at once. The incast's fair share is imposed rather than
 emergent. And the model's saturated goodput has no message-size dependence,
 so the 77.5 against 81.4 spread the campaign measured across sizes is
-reproduced only as a single value between them.
+reproduced only as a single value between them. The corrected unreliable
+ceiling is reproduced as a hard knee and the measured ingress floor is not
+reproduced at all, in either its rate or its burst structure.

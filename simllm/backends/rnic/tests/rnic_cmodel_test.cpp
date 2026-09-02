@@ -445,7 +445,8 @@ void testProfile(TestRunner& test) {
         "cx5 stage split reconstructs the lumped fixed offset");
     test.check(
         kConnectX5_100G.tx_pps_per_qp == 3870000
-            && kConnectX5_100G.rx_pps_per_qp_ud == 3070000
+            && kConnectX5_100G.rx_pps_per_qp_ud == 5510000
+            && kConnectX5_100G.rx_pps_per_nic == 9650000
             && kConnectX5_100G.sq_depth == 1024,
         "cx5 packet-rate and queue constants are the measured ones");
     test.check(
@@ -462,7 +463,7 @@ void testProfile(TestRunner& test) {
         kConnectX7_400G.link_bps == 400000000000ULL
             && kConnectX7_400G.goodput_bps == 388400000000ULL
             && kConnectX7_400G.tx_pps_per_qp == 15480000
-            && kConnectX7_400G.rx_pps_per_qp_ud == 12280000
+            && kConnectX7_400G.rx_pps_per_qp_ud == 22040000
             && kConnectX7_400G.internal_budget_bps == 788000000000ULL,
         "cx7 scales the link, goodput, packet-rate and threshold fields");
     test.check(
@@ -564,7 +565,7 @@ void testAnomalyTable(
     const std::string& design_path) {
     test.check(
         kRnicAnomalyTable.size() == kRnicAnomalyRowCount
-            && kRnicAnomalyRowCount == 15,
+            && kRnicAnomalyRowCount == 19,
         "the anomaly table has the registered row count");
 
     std::vector<std::string> ids;

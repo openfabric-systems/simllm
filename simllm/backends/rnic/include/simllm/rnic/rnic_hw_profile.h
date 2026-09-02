@@ -220,10 +220,23 @@ constexpr RnicHwProfile connectX5_100G() {
     profile.tx_pps_per_qp = 3870000;
     profile.tx_pps_per_nic = 16700000;
     profile.rx_pps_per_qp_rc = 0;
-    profile.rx_pps_per_qp_ud = 3070000;
-    // Sixteen unreliable queue pairs together delivered 9.65 Mpps where four
-    // times the per-QP ceiling would have allowed far more, so the per-NIC
-    // ceiling is the one that binds above a handful of queue pairs.
+    // Post-specified correction from the P6 fabric campaign, measured after
+    // the slice-C expectations were frozen. The earlier 3.07e6 came from the
+    // Collie engine and was that engine's receive path, not the NIC: on the
+    // wire one unreliable receive queue pair absorbed 5.51 Mpps of 2 KiB
+    // datagrams with only the 0.17 to 0.19 percent ingress floor, and four
+    // queue pairs together were slightly worse rather than better. 5.51e6 is
+    // therefore the highest per-QP receive rate the silicon was shown to
+    // absorb, not a rate at which it was shown to break: at 2 KiB that offer
+    // is already 100 Gb/s of wire, and at 4 KiB the link binds first at 2.98
+    // Mpps, so no 100 GbE probe can push one queue pair past it.
+    profile.rx_pps_per_qp_ud = 5510000;
+    // Kept at the measured multi-queue aggregate. No P6 wire point contradicts
+    // it, because none could reach it: 9.65 Mpps needs payloads near 1 KiB to
+    // fit a 100 GbE port at all, and the campaign's aggregate row is exactly
+    // that size. It shares its instrument with the re-attributed per-QP row,
+    // so it is retained as an unconfirmed ceiling and re-measuring it on the
+    // wire is BACK-56's multi-QP clause.
     profile.rx_pps_per_nic = 9650000;
     profile.evidence.tx_pps_per_qp = EvidenceClass::CalibratedOpaque;
     profile.evidence.tx_pps_per_nic = EvidenceClass::CalibratedOpaque;

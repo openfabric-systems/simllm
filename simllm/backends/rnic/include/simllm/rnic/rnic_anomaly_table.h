@@ -8,7 +8,7 @@
 
 namespace simllm::rnic {
 
-inline constexpr std::uint32_t kRnicAnomalyTableVersion = 1;
+inline constexpr std::uint32_t kRnicAnomalyTableVersion = 2;
 
 // How a row reaches the model.
 //
@@ -16,12 +16,15 @@ inline constexpr std::uint32_t kRnicAnomalyTableVersion = 1;
 // band. `Injected` is applied by rule because the mechanism is not public.
 // `Fabric` is a property of the switch or link, reproduced by the packet
 // simulator rather than by the endpoint. `Counter` is a facade behaviour with
-// no datapath effect.
+// no datapath effect. `Tool` is an artifact of the instrument that measured
+// it rather than a property of the silicon: the row stays for the record and
+// nothing in the model reproduces it.
 enum class AnomalyKind : std::uint8_t {
     Emergent,
     Injected,
     Fabric,
     Counter,
+    Tool,
 };
 
 const char* toString(AnomalyKind kind) noexcept;
@@ -43,19 +46,21 @@ struct RnicAnomalyRow {
     const char* evidence;
 };
 
-inline constexpr std::size_t kRnicAnomalyRowCount = 15;
+inline constexpr std::size_t kRnicAnomalyRowCount = 19;
 
 inline constexpr std::array<RnicAnomalyRow, kRnicAnomalyRowCount>
     kRnicAnomalyTable{{
         {"ANOM-01",
          "single UD QP receive cap",
-         "one UD QP receiving above 3.07 Mpps",
-         "excess dropped at the PHY, no sender-visible signal, 47.5 percent "
-         "at 5.85 Mpps offered",
-         "47.5 percent lost at 5.85 Mpps offered",
-         AnomalyKind::Emergent,
-         "emergent (receive processor)",
-         "P3 seed 1"},
+         "one UD QP receiving above 3.07 Mpps through the measurement engine",
+         "re-attributed after slice C froze: the 3.07 Mpps knee and the 47.5 "
+         "percent silent loss were the engine's receive path, not the NIC. On "
+         "the wire one UD QP absorbs 5.51 Mpps of 2 KiB with only the 0.17 to "
+         "0.19 percent ingress floor, and four QPs are slightly worse",
+         "5.51 Mpps absorbed on the wire, no NIC-side per-QP knee",
+         AnomalyKind::Tool,
+         "tool (the measurement engine's receive path, not the silicon)",
+         "P3 seed 1, re-attributed by P6"},
         {"ANOM-02",
          "two-SGE SEND sequence-error storm",
          "RC SEND with two gather entries at 512 B each, 32 QPs",
@@ -175,6 +180,51 @@ inline constexpr std::array<RnicAnomalyRow, kRnicAnomalyRowCount>
          AnomalyKind::Emergent,
          "emergent by absence (no MR cache modelled; documented)",
          "P3 seeds 7/8"},
+        {"ANOM-16",
+         "NIC-generated congestion notification",
+         "RC fan-in on a fabric whose switch never marks",
+         "the receiver signals its own ingress congestion: np_cnp_sent rises "
+         "from 38 to 2262 per second during the fan-in, which is 283 CNP per "
+         "second per congested QP, or one per 3.54 ms",
+         "283 CNP per second per congested queue pair",
+         AnomalyKind::Emergent,
+         "emergent (rate control, notification point at the endpoint)",
+         "P6"},
+        {"ANOM-17",
+         "ingress stall bursts",
+         "one lone RC flow above about 94 Gb/s",
+         "0.18 percent of packets lost at the receiver's PHY in bursts of "
+         "about 73 packets (about 94 us), path-independent over 32 fresh "
+         "5-tuples; at least 10 Gb/s of reverse traffic cuts the event count "
+         "12.5x without changing the burst length, and receiver CPU load does "
+         "nothing",
+         "0.1798 percent in 73-packet bursts, 12.5x fewer events with reverse "
+         "traffic",
+         AnomalyKind::Emergent,
+         "emergent (ingress meter, mechanism not yet modelled)",
+         "P6"},
+        {"ANOM-18",
+         "slow DCQCN dynamics",
+         "a DCQCN reaction point under 2 to 1 RC fan-in",
+         "rate cut of at least 30 percent after 3 to 39 ms, fair share after "
+         "5 ms to 2.3 s, recovery to at least 95 percent in 447 plus or minus "
+         "10 ms, additive increase about 0.1 Gb/s per ms",
+         "cut in 3 to 39 ms, recovery 447 ms, increase 0.1 Gb/s per ms",
+         AnomalyKind::Emergent,
+         "emergent (rate control, reaction point)",
+         "P6"},
+        {"ANOM-19",
+         "counter semantics under loss",
+         "any loss on the path",
+         "packet_seq_err counts loss bursts, 73x fewer than packets lost; "
+         "rx_discards_phy counts NIC-ingress loss exactly; switch loss appears "
+         "in neither; out_of_buffer never moves; senders handle 2.24x the CNPs "
+         "the receiver reports sending, which is reproducible and unexplained",
+         "73x fewer sequence errors than lost packets, 2.24x CNP ledger "
+         "mismatch",
+         AnomalyKind::Counter,
+         "counter",
+         "P6"},
     }};
 
 // Renders the table as the committed Markdown projection, including the

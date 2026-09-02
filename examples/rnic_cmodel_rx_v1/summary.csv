@@ -39,3 +39,12 @@ ledger_identity,65536/4000us,120,120,10 percent,PASS,
 ledger_identity,1048576/0us,2389,2389,10 percent,PASS,
 ledger_identity,1048576/4000us,2329,2329,10 percent,PASS,
 inert_marking,every gap cell,0,0,exactly zero,PASS,
+postspec_ud_cap,1qp/5.85Mpps,5.50997,5.51,10 percent,PASS,"post-specified P6 correction, not a registered check"
+postspec_ud_passthrough,1qp/2Mpps,200000,200000,exact,PASS,"post-specified P6 correction, not a registered check"
+postspec_ud_passthrough,1qp/3Mpps,200000,200000,exact,PASS,"post-specified P6 correction, not a registered check"
+postspec_ud_passthrough,1qp/4Mpps,200000,200000,exact,PASS,"post-specified P6 correction, not a registered check"
+postspec_ud_silent,1qp/2Mpps,0,0,exact and no transport signal,PASS,"post-specified P6 correction, not a registered check"
+postspec_ud_silent,1qp/3Mpps,0,0,exact and no transport signal,PASS,"post-specified P6 correction, not a registered check"
+postspec_ud_silent,1qp/4Mpps,0,0,exact and no transport signal,PASS,"post-specified P6 correction, not a registered check"
+postspec_ud_silent,1qp/5.85Mpps,11625,11625,exact and no transport signal,PASS,"post-specified P6 correction, not a registered check"
+postspec_ud_aggregate,4qp/5.85Mpps each at 1 KiB,9.64999,9.65,10 percent,PASS,"post-specified P6 correction, not a registered check; the per-NIC ceiling is unchanged and still binds"

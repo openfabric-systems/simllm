@@ -56,11 +56,15 @@ backend submodules.
   inputs. The anomaly table is the measured performance-anomaly list carried
   as a `constexpr` array with a generated Markdown projection, so a reviewer
   can see which silicon behavior is reproduced by a named mechanism and which
-  is injected by rule. The C facade is the `extern "C"` entry set over plain
-  fixed-width structs and picosecond timestamps that lets an RTL testbench
-  drive the same stimulus through DPI-C and compare timestamps, counters and a
-  replayable transaction trace; it reproduces the C++ device's completion
-  timestamps exactly, and two identical stimulus sequences trace identically.
+  is injected by rule. It carries nineteen rows in five kinds; the fifth,
+  `tool`, marks a row the instrument produced rather than the silicon, which
+  is how ANOM-01 is now recorded after the P6 fabric campaign re-measured the
+  unreliable receive ceiling on the wire. The C facade is the `extern "C"`
+  entry set over plain fixed-width structs and picosecond timestamps that lets
+  an RTL testbench drive the same stimulus through DPI-C and compare
+  timestamps, counters and a replayable transaction trace; it reproduces the
+  C++ device's completion timestamps exactly, and two identical stimulus
+  sequences trace identically.
   Its receive entry point and control-event kinds fail closed until BACK-57
   and BACK-58 land.
 - `RnicTxPipeline` (BACK-56): the opt-in transmit slice, selected by
@@ -1548,8 +1552,13 @@ created" statement stands and refers to different, never-registered work.
   band: the ratio is 6.23 with the meter enabled, and the slice-B rows are
   byte-identical with it disabled. What remains here is the second half only:
   give the pacer real per-NIC arbitration across several QPs, which one QP
-  cannot exercise. Acceptance: a multi-QP cell shows the per-NIC ceiling
-  binding while each per-QP ceiling does not.
+  cannot exercise. The same cell owes the profile one measurement: the per-NIC
+  receive ceiling of 9.65e6 comes from the instrument whose per-QP figure P6
+  re-attributed, and no wire point can reach it at the payload sizes a 100 GbE
+  port allows, so it is currently retained rather than confirmed. Acceptance:
+  a multi-QP cell shows the per-NIC ceiling binding while each per-QP ceiling
+  does not, and the per-NIC value is either confirmed on the wire or restated
+  as declared.
 - BACK-57 (Completeness; P1; L) (remaining half): place the responder's
   discard threshold. The ingress meter, the receive processor and the go-back-N
   requester transport are landed behind an opt-in whose off path is the
@@ -1558,9 +1567,13 @@ created" statement stands and refers to different, never-registered work.
   of the bar with one fitted drain rate: the saturated single RC QP settles at
   79.25 Gb/s inside the measured 78 to 92 window, the gap sweep reproduces the
   measured clean and dirty pattern at 8 KiB and 64 KiB exactly with paced
-  goodput inside 1 percent, a single UD QP delivers 3.070 Mpps against a
-  measured 3.07 with the excess discarded silently and no transport counter
-  moving, and the two sequence counters agree exactly in every cell. Two
+  goodput inside 1 percent, a single UD QP delivers its configured ceiling
+  exactly with the excess discarded silently and no transport counter moving,
+  and the two sequence counters agree exactly in every cell. The unreliable
+  ceiling itself has since been corrected: the P6 fabric campaign measured
+  5.51 Mpps on the wire for one receive queue pair and re-attributed the
+  earlier 3.07 Mpps to the measurement engine, and the study carries the
+  re-run at the corrected value as post-specified regression checks. Three
   clauses remain. The first is the bidirectional pair: the measured 93.4
   against 91.8 split implies a discard threshold between 93.23 and 94.86 Gb/s
   of wire, which is incompatible with the 95.7 to 97.9 the equilibrium window
@@ -1571,31 +1584,63 @@ created" statement stands and refers to different, never-registered work.
   without a reaction point a go-back-N requester answers loss by raising its
   own offered load, so two senders sharing a saturated bottleneck collapse
   rather than settling, while the measured run was congestion-controlled
-  (78058 CNPs sent, 179746 handled). Acceptance: the unidirectional cell
-  reports a nonzero discard counter at 93.4 Gb/s while the duplex cell at 91.8
-  stays clean, without moving the saturated equilibrium outside its window.
-  HTSIM-35 and HTSIM-36 are the fabric-model counterparts of this native
-  receive pipeline, expressing the same finite outstanding work, responder
-  ingress meter and packets-per-second resource in htsim rather than in the
-  endpoint.
+  (78058 CNPs sent, 179746 handled). The third is post-specified and is the
+  meter's own mechanism: P6 measured a lone reliable flow above about 94 Gb/s
+  losing 0.1798 percent of its packets at the receiver's PHY, in bursts of
+  about 73 packets lasting about 94 us, path-independent over 32 fresh
+  5-tuples, with the event count falling 12.5 times under at least 10 Gb/s of
+  reverse traffic while the burst length does not move and receiver CPU load
+  does nothing (ANOM-17). `out_of_buffer` never moves, so it is not receive
+  queue exhaustion, and the fitted drain rate reproduces the average without
+  reproducing the structure. That stall process is what ANOM-03's unexplained
+  deficit has narrowed to. Acceptance: the unidirectional cell reports a
+  nonzero discard counter at 93.4 Gb/s while the duplex cell at 91.8 stays
+  clean, without moving the saturated equilibrium outside its window; and a
+  lone-flow cell above 94 Gb/s loses within 30 percent of 0.18 percent in
+  bursts within 30 percent of 73 packets, with the reverse-traffic reduction
+  reproduced within a factor of two. HTSIM-35 and HTSIM-36 are the
+  fabric-model counterparts of this native receive pipeline, expressing the
+  same finite outstanding work, responder ingress meter and
+  packets-per-second resource in htsim rather than in the endpoint, and
+  HTSIM-39 is the admission-fairness half of the same question in the ns-tm3
+  egress buffer.
 - BACK-58 (Completeness; P2; L): land rate control and the internal arbiter.
-  Rate control is the DCQCN notification point that emits a CNP on a
-  congestion experienced mark, the reaction point whose per-QP state persists
-  across WQEs, and the ECT(0) stamp the silicon applies to every RoCEv2
-  transmit regardless of the requested ECN bits. The internal arbiter is one
-  processing budget shared by loopback ingress and wire ingress with wire
-  priority. Acceptance: the wire and loopback shares under a combined offered
-  load above the internal budget are within 5 percent of the measured split;
-  the marking counter stays inert while CNPs are generated, as silicon does;
-  and, with fabric loss supplied by the composed port, the incast tax identity
-  holds within 25 percent and the fair-share split within 2 percentage points.
-  HTSIM-5 remains the owner of the policy-side DCQCN state in the backend
-  repo; this task owns only the hardware notification point, reaction gate and
-  stamp. The slice-C study makes the incast half of that acceptance a
-  prerequisite rather than a nicety: with the reaction point absent, two
-  senders into one responder collapse to a 98.8 percent tax instead of the
-  measured 26.9, while the same transport with headroom recovers correctly at
-  62 recovery episodes for 45 losses.
+  Rate control is the DCQCN notification point, the reaction point whose
+  per-QP state persists across WQEs, and the ECT(0) stamp the silicon applies
+  to every RoCEv2 transmit regardless of the requested ECN bits. The internal
+  arbiter is one processing budget shared by loopback ingress and wire ingress
+  with wire priority. The notification point is a named clause and a
+  post-specified correction: the design assumed a switch congestion-experienced
+  mark, and the P6 fabric campaign found the measured fabric marks nothing at
+  all (zero marked packets in 670 M, at two DSCP classes, with the egress
+  buffer full and dropping 6.36 percent, every packet markable), while the
+  receiving NIC's own `np_cnp_sent` rises from 38 to 2262 per second exactly
+  during reliable fan-in. So the notification point is the endpoint's own
+  ingress meter and a fabric that never marks is the normal case here, not a
+  degenerate one (ANOM-16). The measured dynamics are this task's acceptance
+  data (ANOM-18), and they are two to twenty times slower than the vendor
+  defaults the profile carries: 283 CNP per second per congested queue pair;
+  a rate cut of at least 30 percent after 3, 16 and 39 ms across three
+  repeats; fair share after 5 ms, 1.8 s and 2.3 s; recovery to at least 95
+  percent in 447 plus or minus 10 ms; and an additive increase falling from
+  0.107 to 0.093 Gb/s per ms. Acceptance: the wire and loopback shares under a
+  combined offered load above the internal budget are within 5 percent of the
+  measured split; the marking counter stays inert while CNPs are generated, as
+  silicon does; the endpoint emits its own notifications at within 30 percent
+  of 283 per second per congested queue pair on a fabric configured not to
+  mark; the cut, fair-share and recovery times land inside the measured ranges
+  above; and, with fabric loss supplied by the composed port, the incast tax
+  identity holds within 25 percent and the fair-share split within 2
+  percentage points. HTSIM-5 remains the owner of the policy-side DCQCN state
+  in the backend repo, and HTSIM-38 is the same endpoint notification hook on
+  the fabric-model side, together with the explicit drop-only switch mode that
+  a fabric which never marks needs in order to be spelled at all; this task
+  owns only the hardware notification point, reaction gate and stamp. The
+  slice-C study makes the incast half of that acceptance a prerequisite rather
+  than a nicety: with the reaction point absent, two senders into one responder
+  collapse to a 98.8 percent tax instead of the measured 26.9, while the same
+  transport with headroom recovers correctly at 62 recovery episodes for 45
+  losses.
 - BACK-59 (Completeness; P2; M): make the golden model usable as an RTL
   reference from a UVM testbench. The facade trace is the expected-result file
   and the DPI-C import declarations plus a stimulus reader are the missing
@@ -1763,10 +1808,13 @@ model the two flows as separate nodes and say so.
   a per-QP and a per-NIC level. Every rate limit in both backend families is in
   bits per second, and one flow is one QP with no per-NIC message-rate resource
   shared across QPs, so the entire measured small-message regime is
-  inexpressible: a single UD receive QP caps at about 3.07 Mpps and silently
-  discards beyond it, sixteen QPs take 9.65 Mpps clean, and 512 B RC WRITE
-  reaches 16.7 Mmsg/s per sender with a 20.5 Mmsg/s aggregate under 2 to 1
-  fan-in. Source the two levels from `NicProfile.pps_ceiling_per_qp` and
+  inexpressible: a single UD receive QP absorbs 5.51 Mpps on the wire and
+  silently discards beyond whatever its ceiling is, sixteen QPs take 9.65 Mpps
+  clean, and 512 B RC WRITE reaches 16.7 Mmsg/s per sender with a 20.5 Mmsg/s
+  aggregate under 2 to 1 fan-in. The per-QP figure is a post-specified
+  correction: the 3.07 Mpps this entry was registered with was the measurement
+  engine's receive path, which the P6 fabric campaign re-attributed on the
+  wire (ANOM-01). Source the two levels from `NicProfile.pps_ceiling_per_qp` and
   `pps_ceiling_per_nic`. Acceptance: the 512 B and 4 KiB multi-QP rows are
   reproduced within 20 percent, the single-QP knee appears at the configured
   ceiling with the excess discarded and no sender-visible signal, and an unset
