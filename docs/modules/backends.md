@@ -307,7 +307,7 @@ backend submodules.
 | Submodule | Repo | Ref | Provides |
 |---|---|---|---|
 | `third_party/atlahs` | [ATLAHS-rnic-private](https://github.com/yifeng-ethz/ATLAHS-rnic-private) | `main` | GOAL toolchain (txt2bin, LogGOPSim, goal_gen), validated `htsim_rnic` launcher (`atlahs_entry.py`) |
-| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `main` | UEC htsim, the composed SimLLM RNIC wrapper behind `HTSIM_ENABLE_SIMLLM_RNIC`, `htsim_rnic`, WQE bookkeeping, the ABI-v2 event relay with its physical control producers, the persistent flow session, and the Slingshot-class ss-dragonfly fabric wave (dragonfly geometry over ns-rosetta switches, progressive adaptive routing, the `htsim_ss_dragonfly` harness, and the `rnic-ss` endpoint hosted on the controlled Clos) |
+| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `codex/htsim39_fair_egress_drop` (unmerged, see below) | UEC htsim, the composed SimLLM RNIC wrapper behind `HTSIM_ENABLE_SIMLLM_RNIC`, `htsim_rnic`, WQE bookkeeping, the ABI-v2 event relay with its physical control producers, the persistent flow session, and the Slingshot-class ss-dragonfly fabric wave (dragonfly geometry over ns-rosetta switches, progressive adaptive routing, the `htsim_ss_dragonfly` harness, and the `rnic-ss` endpoint hosted on the controlled Clos), and the ns-tm3 same-instant ingress arbiter with its per-ingress drop counters |
 
 As of 2026-08-03 the launcher, the RNIC wiring, the DCQCN comparator
 (mlx5-faithful loss recovery, ECN-only and ECN plus PFC modes, storm
@@ -380,6 +380,68 @@ Binary discovery checks `SIMLLM_HTSIM_RNIC`, `SIMLLM_HTSIM_DCQCN`, or
 and the MSVC `Release`/`RelWithDebInfo`/`Debug`/`MinSizeRel` layouts,
 then `PATH`. The framework adapters and traffic-model layer stay in
 Python and use this platform-neutral discovery path.
+
+As of 2026-09-02 the pin moves off backend main to `617ce20` on the backend
+branch `codex/htsim39_fair_egress_drop`, which is open and unmerged. A pin on
+an unmerged backend branch is a supported intermediate state under the rule
+above while backend work is in review. It carries the HTSIM-39 fix and nothing
+else: the ns-tm3 switch now arbitrates physical ingress ports that deliver in
+the same picosecond, presenting them to its shared pipeline in a rotating port
+order instead of the fixed order the event list happened to produce, and it
+counts admitted and dropped packets per physical ingress so a study can score
+how a congested buffer shared its loss. Roll the pin back to backend main when
+the branch merges.
+
+HTSIM-39 is closed on that fix. The cause was a tie rather than a policy: in
+the 2 sender 5.2 MB fan-in, 8323 instants had an arrival from both ports at
+the identical picosecond and all 7053 drops fell at an instant where the other
+port was admitted at that same picosecond, so the port the event list served
+first took every slot the drain freed and the other port's queue emptied. The
+[hacc_fabric_v1](../../examples/hacc_fabric_v1/RESULTS.md) re-run scores all
+three acceptance clauses. The band applied to the first clause is **10 percent
+maximum deviation from an even split, over the window that ends when the first
+loss notification crosses the switch, across the senders' physical ingress
+ports**. That window is the registration's own premise read literally, because
+"equal-rate sources" stops being true the moment a source reacts: after it,
+go-back-N re-offers everything behind a hole and the rate cuts land at
+different times, so a shared FIFO correctly charges more loss to whoever offers
+more. Scored from the new switch-side counter rather than from retransmissions,
+because go-back-N amplifies a gap by however long the sender took to notice it.
+Measured worst deviation **0.156 percent** across the four buffer cells and
+**0.014 percent** across the four fan-in cells, against 100 and 99.7 percent at
+the previous pin, and tighter than the 0.5 percent spread the measured switch
+shows across eight streams. Second clause: the first NACK lands at 834.705,
+418.552, 626.956 and 314.677 us against 833, 417, 625 and 313 us predicted from
+the buffer size, so the buffer identity reads within **0.86 percent** where it
+read 3.78 to 9.41 times the configured buffer. Third clause: `latency.csv`,
+`msg.csv` and the whole non-incast cx5 study come back as identical files.
+
+What that closure does not cover, and where it is owned. Over a whole run the
+loss split is still uneven, at worst 77.8 percent from even, because the
+endpoints diverge once the first gap is signalled; that is BACK-58 and
+BACK-60. Sharing the loss also made several fan-in numbers worse rather than
+better, since both senders now stall where one used to sail through untouched.
+The `hacc_fabric_v1` M4 fairness check flips from PASS to FAIL on one cell
+whose per-sender share snaps to the 67.108 ms silent retransmission timeout,
+its B1 goodput falls from 7.5613 to 3.9187 Gb/s, its long-flow arm's two
+32-message cells fall from 78.6885 and 65.6501 to 40.7898 and 15.9372 Gb/s
+because those aggregates were carried by a sender that lost 15 packets against
+its neighbour's 265053, and the `cx5_msgsize_v1` 512 KB diagnostic arm falls
+from 7.6693 to 1.579 Gb/s with 90 silent timeouts against 39. None of that is
+a fabric defect. It is the endpoint transport showing through a fabric that no
+longer hides it by starving one flow, and it is the same go-back-N source that
+blocks acceptance bar A1.
+
+Two fan-in results are worth naming because they did not move. The long-flow
+arm's single-stream cells, which are the shape the hardware measurement had,
+read 76.6298 Gb/s on the hacc leaf against 76.8671 before, still inside the 74
+to 78 Gb/s band A1 names, and 88.2342 Gb/s on the cx5 path, identical to the
+digit because that cell loses nothing and so has no contested slot to
+arbitrate. Where a fabric marks, sharing the loss also helps: the cx5
+32-message long cells rise from 51.7976 and 24.0903 to 54.0244 and 27.5147
+Gb/s, because a sender there gets a congestion signal that is not a loss. On a
+fabric that marks nothing, which guard G3 says the hacc leaf is, sharing the
+loss only shares the thrashing.
 
 Changes to the backends go through their own repos on
 `<YYYY_MM_DD>/simllm-addon` branches; SimLLM only bumps pins.
@@ -1639,9 +1701,10 @@ created" statement stands and refers to different, never-registered work.
   reproduced within a factor of two. HTSIM-35 and HTSIM-36 are the
   fabric-model counterparts of this native receive pipeline, expressing the
   same finite outstanding work, responder ingress meter and
-  packets-per-second resource in htsim rather than in the endpoint, and
-  HTSIM-39 is the admission-fairness half of the same question in the ns-tm3
-  egress buffer.
+  packets-per-second resource in htsim rather than in the endpoint. The
+  admission-fairness half of the same question in the ns-tm3 egress buffer was
+  HTSIM-39, now closed; loss reaching a receiver in a fair share is a
+  precondition for measuring what that receiver does with it.
 - BACK-58 (Completeness; P2; L) (remaining half): reconcile the reaction
   point's cut depth with its operating point, and place the loss locus under
   fan-in. Rate control is the DCQCN
@@ -1812,23 +1875,6 @@ model the two flows as separate nodes and say so.
   where the sender decides to emit the next packet. Acceptance: the depth-1 and
   depth-1024 pairs at 8 KiB and 64 KiB reproduce within 20 percent on the
   ratio, and an unset cap preserves every accepted result byte for byte.
-- HTSIM-39 (Precision; P1; M): admission fairness in the ns-tm3 egress buffer.
-  When the buffer is full the switch drops whatever arrives, and with several
-  equal-rate sources whose pacing is deterministic the same source wins the
-  race for every freed slot, so the loss lands entirely on the others. The
-  [hacc_fabric_v1](../../examples/hacc_fabric_v1/RESULTS.md) study measured it:
-  two symmetric 32 MiB senders into one port put **100 percent** of the
-  retransmissions on one sender while the other finished with zero, and three
-  senders produced a strict 0, 7689, 13943 ordering. The measurement this is
-  compared against split the loss evenly, within 0.5 percent across eight
-  concurrent streams on a real tail-drop switch. The consequence is not only
-  unfair: the starved flow receives nothing after its first hole, so its
-  receiver never sees an out-of-order packet, never generates a NACK, and the
-  sender learns of the loss only when the queue drains, which makes any
-  first-drop timing instrument unusable. Acceptance: with several equal-rate
-  sources and a full buffer, the loss splits within 10 percent across sources
-  and the first NACK arrives about one buffer drain after the first drop, while
-  a single-source run preserves every accepted result byte for byte.
 ### Completeness
 
 - HTSIM-1 (Completeness; P2; L): `rnic-ss` (Slingshot-like) profile

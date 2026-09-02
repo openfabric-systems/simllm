@@ -176,9 +176,69 @@ def fan_in_goal(size: int, count: int, sender_count: int) -> GoalTrace:
 def manifest_counters(result: RnicRunResult) -> dict[str, int]:
     counters: dict[str, int] = {}
     for line in result.manifest:
+        if line.startswith("[DCQCN manifest] ns_tm3_ingress_drops "):
+            continue
         for key, value in re.findall(r"(\w+)=(\d+)\b", line):
             counters[key] = int(value)
     return counters
+
+
+INGRESS_DROPS = re.compile(
+    r"ns_tm3_ingress_drops switch=\S+ ingress=(\d+) "
+    r"ns_tm3_ingress_admitted_packets=(\d+) "
+    r"ns_tm3_ingress_dropped_packets=(\d+) "
+    r"ns_tm3_unreacted_ingress_dropped_packets=(\d+)"
+)
+
+
+def ingress_drops(result: RnicRunResult,
+                  ports: tuple[int, ...]) -> tuple[dict[int, int], dict[int, int]]:
+    """Switch-side loss on each sender's physical ingress: over the whole run,
+    and over the window that ends when the first loss notification crossed the
+    switch.
+
+    The second window is the one the sharing question is about. Before it no
+    source has reacted, so every source is still offering at the rate it
+    started with and admission is the only thing that can make the loss
+    unequal. After it the sources are no longer equal-rate, because go-back-N
+    re-offers everything after a hole and the rate cuts land at different
+    times.
+
+    `ports` are the physical ingresses of the senders. The rendered leaf puts
+    host `h` on downlink port `h`, so they are the sender ranks. The receiver's
+    port carries only acknowledgements and is not a competing sender, so it is
+    not part of the split. A sender that offered nothing at all would be
+    missing from the manifest, which is an error rather than a clean source.
+    """
+    dropped: dict[int, int] = {}
+    unreacted: dict[int, int] = {}
+    for line in result.manifest:
+        match = INGRESS_DROPS.search(line)
+        if match is None:
+            continue
+        ingress = int(match.group(1))
+        dropped[ingress] = dropped.get(ingress, 0) + int(match.group(3))
+        unreacted[ingress] = unreacted.get(ingress, 0) + int(match.group(4))
+    if not dropped:
+        return {}, {}
+    missing = sorted(port for port in ports if port not in dropped)
+    if missing:
+        raise ValueError(f"no ns_tm3_ingress_drops line for physical ingress {missing}")
+    return ({port: dropped[port] for port in ports},
+            {port: unreacted[port] for port in ports})
+
+
+def split_deviation_pct(counts: dict[int, int]) -> float | None:
+    """Largest deviation from an even split, as a percentage of the mean."""
+    values = list(counts.values())
+    if len(values) < 2 or sum(values) == 0:
+        return None
+    mean = sum(values) / len(values)
+    return round(100.0 * max(abs(value - mean) for value in values) / mean, 3)
+
+
+def render_counts(counts: dict[int, int]) -> str:
+    return ";".join(f"{ingress}:{counts[ingress]}" for ingress in sorted(counts))
 
 
 def state_trace_rows(path: Path) -> list[dict[str, str]]:
@@ -383,6 +443,10 @@ def _buffer_row(fabric: FabricProfile, sender_count: int, result: RnicRunResult,
         for row in rows if row["event"] == "completion"
     }
     total_rtx = sum(rtx_by_source.values())
+    # Reported diagnostic beside it: the switch's own view of the same
+    # question. Retransmissions are an amplified proxy, because go-back-N
+    # re-sends everything after a hole.
+    drops_by_ingress, unreacted_by_ingress = ingress_drops(result, SENDERS[:sender_count])
     return {
         "senders": sender_count,
         "buffer_bytes": fabric.egress_buffer_bytes,
@@ -408,6 +472,11 @@ def _buffer_row(fabric: FabricProfile, sender_count: int, result: RnicRunResult,
         "worst_source_rtx_share_pct": (
             round(100.0 * max(rtx_by_source.values()) / total_rtx, 3) if total_rtx else 0.0),
         "clean_sources": sum(1 for value in rtx_by_source.values() if value == 0),
+        "drops_by_ingress": render_counts(drops_by_ingress),
+        "unreacted_drops_by_ingress": render_counts(unreacted_by_ingress),
+        "drop_split_deviation_pct": split_deviation_pct(drops_by_ingress),
+        "unreacted_drop_split_deviation_pct": split_deviation_pct(unreacted_by_ingress),
+        "clean_ingresses": sum(1 for value in drops_by_ingress.values() if value == 0),
     }
 
 
@@ -473,6 +542,21 @@ def experiment_buf(out: Path, emit, guards: Guards) -> None:
                                 for r in rows),
          ok="reported")
 
+    # Reported diagnostic beside it: the same question asked of the switch.
+    emit(check="M3a-drop-split",
+         unreacted_drops_by_ingress=";".join(
+             f"n{r['senders']}b{r['buffer_bytes']}:{r['unreacted_drops_by_ingress']}"
+             for r in rows),
+         worst_unreacted_deviation_pct=max(
+             (r["unreacted_drop_split_deviation_pct"] for r in rows
+              if r["unreacted_drop_split_deviation_pct"] is not None), default=None),
+         drops_by_ingress=";".join(
+             f"n{r['senders']}b{r['buffer_bytes']}:{r['drops_by_ingress']}" for r in rows),
+         worst_run_deviation_pct=max(
+             (r["drop_split_deviation_pct"] for r in rows
+              if r["drop_split_deviation_pct"] is not None), default=None),
+         ok="reported")
+
     # M3b: void by construction, with the numbers reported beside it.
     emit(check="M3b", ok="void",
          reason=("the measured identity needs an open-loop paced sender; this path has only "
@@ -503,6 +587,7 @@ def _incast_row(size: int, buffer_bytes: int, result: RnicRunResult,
     payload = sum(payload_by_source.values())
     makespan_s = result.job_completion_time_ps() * 1e-12
     dropped = counters.get("ns_tm3_dropped_packets", 0)
+    drops_by_ingress, unreacted_by_ingress = ingress_drops(result, SENDERS[:INCAST_SENDERS])
     return {
         "size_bytes": size,
         "buffer_bytes": buffer_bytes,
@@ -516,6 +601,9 @@ def _incast_row(size: int, buffer_bytes: int, result: RnicRunResult,
         "gbn_nacks": sum(1 for row in rows if row["event"] == "gbn-nack"),
         "loss_rate_cuts": counters.get("loss_rate_cuts", 0),
         "ecn_marked_packets": counters.get("ecn_marked_packets", 0),
+        "drops_by_ingress": render_counts(drops_by_ingress),
+        "unreacted_drops_by_ingress": render_counts(unreacted_by_ingress),
+        "unreacted_drop_split_deviation_pct": split_deviation_pct(unreacted_by_ingress),
     }
 
 
@@ -585,6 +673,7 @@ def long_incast_row(volume: int, count: int, rendered_gbps: float, result: RnicR
     for flow in result.flows:
         by_source[flow.source] = by_source.get(flow.source, 0) + flow.payload_bytes
     shares = sorted(100.0 * value / payload for value in by_source.values())
+    drops_by_ingress, unreacted_by_ingress = ingress_drops(result, SENDERS[:INCAST_SENDERS])
     return {
         "bytes_per_sender": volume,
         "messages_per_sender": count,
@@ -615,6 +704,9 @@ def long_incast_row(volume: int, count: int, rendered_gbps: float, result: RnicR
             "ns_tm3_shared_pool_dropped_packets", -1),
         "bytes_conserved": (payload == volume * len(by_source)
                             and counters.get("completed_flows", -1) == count * len(by_source)),
+        "drops_by_ingress": render_counts(drops_by_ingress),
+        "unreacted_drops_by_ingress": render_counts(unreacted_by_ingress),
+        "unreacted_drop_split_deviation_pct": split_deviation_pct(unreacted_by_ingress),
     }
 
 
@@ -659,6 +751,12 @@ def experiment_incast_long(out: Path, emit, guards: Guards) -> None:
     # that a post-specified arm cannot move a scored cell count.
     emit(check="L2-long-arm-guards", cells=len(rows),
          bytes_conserved=all(row["bytes_conserved"] for row in rows),
+         unreacted_drops_by_ingress=";".join(
+             f"{r['bytes_per_sender'] >> 30}GiBm{r['messages_per_sender']}:"
+             f"{r['unreacted_drops_by_ingress']}" for r in rows),
+         worst_unreacted_deviation_pct=max(
+             (r["unreacted_drop_split_deviation_pct"] for r in rows
+              if r["unreacted_drop_split_deviation_pct"] is not None), default=None),
          max_ecn_marked_packets=max(row["ecn_marked_packets"] for row in rows),
          max_shared_pool_dropped_packets=max(
              row["shared_pool_dropped_packets"] for row in rows),

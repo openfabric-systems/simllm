@@ -1,5 +1,5 @@
-size_bytes,buffer_bytes,goodput_gbps,makespan_us,share_low_pct,share_high_pct,dropped_packets,egress_domain_dropped,silent_rtos,gbn_nacks,loss_rate_cuts,ecn_marked_packets
-262144,5200000,1.9451,69002.306,49.706,50.294,856,856,45,9,54,0
-262144,2600000,1.9656,68284.397,49.896,50.104,1484,1484,38,13,51,0
-1048576,5200000,7.5613,71002.48,49.368,50.632,7083,7083,32,15,47,0
-1048576,2600000,7.5613,71002.429,49.379,50.621,7715,7715,29,16,45,0
+size_bytes,buffer_bytes,goodput_gbps,makespan_us,share_low_pct,share_high_pct,dropped_packets,egress_domain_dropped,silent_rtos,gbn_nacks,loss_rate_cuts,ecn_marked_packets,drops_by_ingress,unreacted_drops_by_ingress,unreacted_drop_split_deviation_pct
+262144,5200000,1.9451,69002.306,50.0,50.0,856,856,45,9,54,0,1:428;2:428,1:428;2:428,0.0
+262144,2600000,1.9656,68284.582,49.994,50.006,1484,1484,38,13,51,0,1:742;2:742,1:742;2:742,0.0
+1048576,5200000,3.9187,137002.751,34.454,65.546,7870,7870,43,33,76,0,1:4072;2:3798,1:3542;2:3541,0.014
+1048576,2600000,3.9414,136213.603,50.0,50.0,10303,10303,43,24,67,0,1:5796;2:4507,1:3857;2:3858,0.013

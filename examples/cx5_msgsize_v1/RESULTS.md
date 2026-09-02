@@ -33,6 +33,14 @@ path can be configured to the measured latency floor or to the measured
 message offset but not to both, and it converts incast loss into 67 ms latency
 stalls where the hardware converts it into a 26 percent bandwidth tax.**
 
+Superseded in part: the HTSIM-39 defect the `hacc_fabric_v1` study identified
+has since been fixed in the backend, and this study was re-run against the fix.
+The record below is unchanged and is the record of the `1dcbfec` pin. The
+re-run is in
+[the 2026-09-02 section](#2026-09-02-re-run-against-the-htsim-39-fix) at the
+end of this file, every scored check keeps its verdict there, and the committed
+CSVs beside this file are now the re-run's.
+
 Amended verdict on the fan-in, from the post-specified long-flow arm below:
 **T4's 7.35 Gb/s is a timeout reading, not a bandwidth reading.** The same
 configuration moves 88.2342 Gb/s, 1.194 times the measured 73.9, once the
@@ -349,3 +357,76 @@ a registration that scores a throughput should also say what concurrency the
 episode has, because on this path the number of simultaneous flows moved the
 answer from 24 to 88 Gb/s at a fixed volume, which is further than either
 volume or buffer moved it.
+
+## 2026-09-02 re-run against the HTSIM-39 fix
+
+Post-specified regression check, not a new registration. Nothing in
+`expectations.md` changed, and the checks below are scored by the same code
+against the same rules. The pin moved from htsim `1dcbfec` to `617ce20` on the
+backend branch `codex/htsim39_fair_egress_drop`, which arbitrates physical
+ingress ports that deliver in the same picosecond, so that a congested egress
+buffer stops handing every slot it frees to whichever port the event list
+served first. The full study was re-run in both arms with the same runner and
+the same build, and the `1dcbfec` arm reproduces this record exactly: all 24
+committed check rows carry the same value in every column, and `latency.csv`,
+`msg.csv`, `mtu.csv`, `incast.csv` and `incast_long.csv` come back as identical
+files.
+
+**Every scored check keeps its verdict.** M1 through M8 and T1 through T5 read
+the same PASS, FAIL or void, with the same numbers:
+
+- M3's 2.0813 us latency floor, M1's 0.0002 worst deviation, both fitted `C`
+  values, M4's exact 4.00x scaling, M5's MTU tax, T1's 0.5378 ratio, T2 and T3
+  are unchanged to every published digit, and `latency.csv`, `msg.csv` and
+  `mtu.csv` are identical files.
+- M6 and M7 hold their 0.0 point share deviations and their 95.9952 Gb/s
+  fan-out, and the fan-out rows of `incast.csv` are byte-identical.
+- T4 and T5 at the registered 32 MiB buffer move by less than a thousandth of
+  a Gb/s, to 7.3513 from 7.3514 and to 7.5488 from 7.5488, keeping their
+  0.0995 and 7.782 percent ratios and both FAIL verdicts.
+
+**The long-flow arm's headline is untouched.** The two single-stream cells,
+which are the arm's clean cells and the shape the hardware measurement had,
+come back **identical**: 88.1247 Gb/s at 1 GiB per sender and **88.2342 Gb/s**
+at 4 GiB, both at 1.19 times the measured 73.9, with zero drops, zero
+retransmissions and zero silent timeouts. A cell that loses nothing has no
+contested buffer slot to arbitrate, so the arbiter cannot and does not touch
+it. The amended verdict above stands exactly as written.
+
+The two 32-message cells, which do lose, improve:
+
+| per sender | messages | goodput at `1dcbfec` | at `617ce20` | ratio to measured |
+|---:|---:|---:|---:|---:|
+| 1 GiB | 32 | 51.7976 | **54.0244** | 0.701 to **0.731** |
+| 4 GiB | 32 | 24.0903 | **27.5147** | 0.326 to **0.372** |
+
+That is the opposite of what the same two cells did on the `hacc_fabric_v1`
+leaf, where they fell, and the difference between the two fabrics is the
+reason. This one marks: the arm's guard row records 2 325 638 ECN-marked
+packets here, where the hacc leaf's guard G3 records zero in every cell. A
+sender on this path gets a congestion signal that is not a loss, so spreading
+the loss evenly lets both senders back off together instead of one thrashing
+alone. On a fabric that marks nothing, sharing the loss only shares the
+thrashing.
+
+The unregistered 512 KB diagnostic arm collapses further, the same way the
+`hacc_fabric_v1` fan-in did:
+
+| 512 KB incast arm | at `1dcbfec` | at `617ce20` |
+|---|---:|---:|
+| goodput | 7.6693 Gb/s | **1.579 Gb/s** |
+| makespan | 70.0 ms | **340.0 ms** |
+| silent timeouts | 39 | **90** |
+| dropped packets | 17884 | **29477** |
+| loss rate | 0.7157 | **0.8735** |
+| retransmissions per drop | 0.4633 | **0.5781** |
+| goodput tax | 0.3428 | **0.5136** |
+
+The share stays at 50.0/50.0 in every incast row, before and after. This
+deepens the study's own headline rather than changing it: the path still
+converts incast loss into 67 ms latency stalls where the hardware converts it
+into a 26 percent bandwidth tax, and it now does so for both senders instead of
+one. The retransmission amplification moved from 0.479 to **0.588** packets per
+drop against a measured 15.6, so it is still two orders of magnitude short and
+still outside the factor of two the diagnostic asks for. The direction is right
+and the distance is what HTSIM-35 and BACK-60 own.
