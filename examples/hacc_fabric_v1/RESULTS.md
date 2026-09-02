@@ -10,6 +10,13 @@ per-run completion CSVs and the sender state traces, stay outside Git under
 `SIMLLM_DATA_ROOT`; the curated per-experiment CSVs are committed next to this
 file.
 
+Superseded in part: the HTSIM-39 defect this run identified has since been
+fixed in the backend, and the study was re-run against the fix. The record
+below is unchanged and is the record of the `1dcbfec` pin. The re-run and its
+before-and-after numbers are in
+[the 2026-09-02 section](#2026-09-02-re-run-against-the-htsim-39-fix) at the
+end of this file, and the committed CSVs beside this file are now the re-run's.
+
 Disclosure: the study was run twice. The first invocation scored every check
 exactly as reported below; the second added three reported-only columns to
 `buffer.csv` that attribute the loss to individual senders, because the first
@@ -205,3 +212,144 @@ depends on a signal reaching a sender should state what has to be true of the
 loss pattern for that signal to exist at all, and register a switch-side
 counter beside it; the drop counters in this study were the only reason the
 mechanism could be identified after the fact.
+
+## 2026-09-02 re-run against the HTSIM-39 fix
+
+Post-specified regression check, not a new registration. Every frozen
+expectation, band, definition and sweep entry in `expectations.md` is
+untouched, and the checks below are scored by the same code against the same
+rules. What changed is the backend: the pin moved from htsim `1dcbfec` to
+`617ce20` on the backend branch `codex/htsim39_fair_egress_drop`, which
+arbitrates physical ingress ports that deliver in the same picosecond. Two
+reported columns were added to `buffer.csv` and `incast.csv`, read from a
+switch-side per-ingress drop counter that the same backend change adds;
+nothing scored reads them. The committed CSVs beside this file are the re-run's.
+
+Both arms were run with the same runner and the same binary build, the only
+difference being whether the arbiter is in the path. The `1dcbfec` arm
+reproduces the record above exactly, on every scored number in all 13 check
+rows, which is what makes the comparison a comparison.
+
+### The mechanism, measured
+
+Two senders paced at the same rate reach the switch at exactly the same
+picosecond, and the switch pipeline behind the ingress ports took them one at
+a time in a stable order, so the same port went first on every round. A
+congested egress frees exactly one packet of room per packet time, so that
+port took every freed slot. In the 2 sender 5.2 MB cell, **8323** instants
+had an arrival from both ports at the identical picosecond, and **all 7053**
+drops happened at an instant where the other port was admitted at that same
+picosecond. Not most of them: all of them. The losing port's queue drained to
+zero and the winning port held the whole 5.2 MB buffer alone.
+
+So it is neither a per-flow reservation, of which there is none, nor a
+receiver-side out-of-order discard, since the starved receiver saw no packet
+at all. It is a fixed serialization order applied to a tie.
+
+### E-BUF, the buffer identity: M3a now PASSES
+
+| senders | buffer | predicted `t_nack` | at `1dcbfec` | at `617ce20` | estimate over configured |
+|---:|---:|---:|---:|---:|---|
+| 2 | 5.2 MB | 833 us | 3145.208 us | **834.705 us** | 3.7803 to **1.0033** |
+| 2 | 2.6 MB | 417 us | 2937.131 us | **418.552 us** | 7.0604 to **1.0061** |
+| 3 | 5.2 MB | 625 us | 3145.192 us | **626.956 us** | 5.0404 to **1.0047** |
+| 3 | 2.6 MB | 313 us | 2937.115 us | **314.677 us** | 9.4138 to **1.0086** |
+
+The worst deviation is **0.86 percent** against the registered 20 percent
+band, where it was 841 percent. The measured time now depends on both the
+buffer and the sender count, as the identity says it must, and the four times
+predicted before any run are each met to better than one percent. This
+confirms the earlier record's own diagnosis rather than overturning it: the
+buffer was always right, and only the signal that reads it was unreachable.
+
+### E-BUF, the loss split
+
+The HTSIM-39 acceptance clause is about **equal-rate** sources. That is the
+window from the start of a cell to the moment the first loss notification
+crosses the switch. Before it no source has reacted, so the offered loads are
+still identical and admission is the only thing that can make the loss
+unequal. After it the sources are not equal-rate any more, because go-back-N
+re-offers everything after a hole and the rate cuts land at different times.
+
+The band applied here is therefore **10 percent maximum deviation from an even
+split, measured over the equal-rate window, across the senders' physical
+ingress ports**. That is the registered band read literally. It is scored from
+a switch-side counter rather than from retransmissions because go-back-N
+amplifies a gap by however long the sender took to notice it, so a
+retransmission count measures the transport as much as the buffer.
+
+| senders | buffer | equal-rate split at `1dcbfec` | at `617ce20` | deviation |
+|---:|---:|---|---|---:|
+| 2 | 5.2 MB | 0 and 7053 | **638 and 637** | 0.078 % |
+| 2 | 2.6 MB | 0 and 7688 | **320 and 320** | 0.000 % |
+| 3 | 5.2 MB | 7688, 7687 and 0 | **851, 850 and 850** | 0.078 % |
+| 3 | 2.6 MB | 8005, 8005 and 0 | **427, 427 and 426** | 0.156 % |
+
+The worst is **0.156 percent**, inside the 10 percent band and tighter than
+the 0.5 percent spread the measured switch shows across eight concurrent
+streams in `data/p6/buffer.csv`. Every source now loses something:
+`clean_sources` is **0** in all four cells where it was **1** in all four, and
+the retransmission split follows, reading **10591 and 9368** at 2 senders and
+5.2 MB where it read 0 and 7054.
+
+Over the whole run the split is still uneven, at worst 77.8 percent from an
+even split, and that number belongs to the endpoints. Once the first gap is
+signalled the senders diverge, one re-offering under go-back-N while the
+other's rate cut lands elsewhere, and a shared FIFO correctly charges more
+loss to whoever offers more. That residue is BACK-58 and BACK-60, not the
+admission decision.
+
+### E-INCAST: the fan-in was never fair either
+
+M4 passed at `1dcbfec` with a 0.632 point worst deviation, and the earlier
+record warned that fair sharing at that granularity was a weaker statement
+than it looked. The switch-side counter says how much weaker. The equal-rate
+loss split across the two senders' ports, in the four fan-in cells, was
+**834 and 22**, **1465 and 19**, **7068 and 15**, and **7702 and 13**, which
+is 94.9 to **99.7 percent** from an even split. M4 was passing while one
+sender was taking 99.7 percent of the loss. At `617ce20` the same four cells
+read **428 and 428**, **742 and 742**, **3542 and 3541** and **3857 and
+3858**, a worst deviation of **0.014 percent**.
+
+### What got worse, and why that is the honest reading
+
+- **M4 flips from PASS to FAIL**, at **15.546** percentage points against a
+  registered 2 point band. Three of its four cells improved, to 50.0/50.0,
+  49.994/50.006 and 50.0/50.0 from 49.706/50.294, 49.896/50.104 and
+  49.379/50.621. The fourth, 1 MiB into the 5.2 MB buffer, reads
+  34.454/65.546 because one sender's last message waited one more silent
+  retransmission timeout than the other's. That timeout is **67.108 ms**
+  against 5.4 ms of useful work, so this metric snaps to multiples of it and
+  is measuring the timer, not the fabric.
+- **B1 still PASSES and the collapse deepens**, to **3.9187 Gb/s** from
+  7.5613, with a **137.0 ms** makespan against 71.0 ms, **43** silent timeouts
+  against 32 and **33** go-back-N NACKs against 15. With the loss shared, both
+  senders now stall where one used to sail through untouched. The averaging
+  the earlier record identified, one flow's starvation re-drawn 64 times, is
+  what has stopped.
+
+Neither is a new fabric defect. Both are the endpoint transport showing
+through a fabric that no longer hides it by starving one flow, and both are
+already owned: A1 is blocked on this same go-back-N source and BACK-60 owns
+the sender state it needs.
+
+### Unchanged, byte for byte
+
+M1 is **2.0808 us**, M2 is **97.7488 Gb/s**, the M2 message-size curve is
+**11.9773, 67.8441, 95.7382 and 97.7488 Gb/s**, M2-buffer is still 0 ps at
+every size, and G1 through G5 hold exactly as before: no mismatched field on
+the repeated cell, byte conservation in all 18 cells, zero ECN marks, zero
+shared-pool drops and zero pause frames. `latency.csv` and `msg.csv` are
+identical files. That is the registration's third clause, that a single-source
+run preserves every accepted result byte for byte, met literally.
+
+### Verdict of the re-run
+
+**4 of 5 scored checks pass, as before, but not the same 4.** M3a passes and
+M4 fails, where M3a failed and M4 passed. All four fatal guards hold. The
+buffer identity is landed to better than one percent at four points. The loss
+is shared to within 0.156 percent among equal-rate sources, against a 10
+percent band and a 0.5 percent measurement. What the fix exposes, and what the
+fan-in numbers now say plainly, is that the collapse on this path was always
+an endpoint problem, and that part of its cost used to be paid by one starved
+sender.

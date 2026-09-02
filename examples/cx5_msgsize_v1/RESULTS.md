@@ -201,3 +201,50 @@ trigger: 32 messages per sender is 5.6 ms of work against a 67 ms retransmit
 timeout, so the registered goodput metric measured one stall rather than a
 congestion response, and the completion distribution reported beside it is
 what shows that.
+
+## 2026-09-02 re-run against the HTSIM-39 fix
+
+Post-specified regression check, not a new registration. Nothing in
+`expectations.md` changed, and the checks below are scored by the same code
+against the same rules. The pin moved from htsim `1dcbfec` to `617ce20` on the
+backend branch `codex/htsim39_fair_egress_drop`, which arbitrates physical
+ingress ports that deliver in the same picosecond. The full study was re-run
+and `summary.csv` and `incast.csv` beside this file are the re-run's;
+`latency.csv`, `msg.csv` and `mtu.csv` came back as identical files.
+
+**Every scored check keeps its verdict.** M1 through M8 and T1 through T5 read
+the same PASS, FAIL or void as before, with the same numbers to four digits
+where they were not exactly equal:
+
+- M3 latency floor 2.0813 us, M1 worst deviation 0.0002, both fitted `C`
+  values, M4's 4.00x scaling, M5's MTU tax and T1's 0.5378 ratio are
+  unchanged.
+- M6 and M7 hold their 0.0 point share deviations, and the fan-out rows of
+  `incast.csv` are byte-identical.
+- T4 and T5 at the registered 32 MiB buffer move by less than a thousandth of
+  a Gb/s, to 7.3513 from 7.3514 and to 7.5488 from 7.5488, keeping their
+  0.0995 and 7.782 percent ratios.
+
+The one place the numbers move is the unregistered 512 KB diagnostic arm, and
+it moves the same way the `hacc_fabric_v1` fan-in did: with the loss shared,
+both senders stall where one used to sail through untouched.
+
+| 512 KB incast arm | at `1dcbfec` | at `617ce20` |
+|---|---:|---:|
+| goodput | 7.6693 Gb/s | **1.579 Gb/s** |
+| makespan | 70.0 ms | **340.0 ms** |
+| silent timeouts | 39 | **90** |
+| dropped packets | 17884 | **29477** |
+| loss rate | 0.7157 | **0.8735** |
+| retransmissions per drop | 0.4633 | **0.5781** |
+| goodput tax | 0.3428 | **0.5136** |
+
+The share stays at 50.0/50.0 in every incast row, before and after.
+
+This deepens the study's own headline rather than changing it. The path still
+converts incast loss into 67 ms latency stalls where the hardware converts it
+into a 26 percent bandwidth tax, and it now does so for both senders instead
+of one. The retransmission amplification moved from 0.479 to **0.588** packets
+per drop against a measured 15.6, so it is still two orders of magnitude short
+and still not within the factor of two the diagnostic asks for; the direction
+is right and the distance is what HTSIM-35 and BACK-60 own.
