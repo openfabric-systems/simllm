@@ -419,15 +419,29 @@ read 3.78 to 9.41 times the configured buffer. Third clause: `latency.csv`,
 What that closure does not cover, and where it is owned. Over a whole run the
 loss split is still uneven, at worst 77.8 percent from even, because the
 endpoints diverge once the first gap is signalled; that is BACK-58 and
-BACK-60. Sharing the loss also made the fan-in worse rather than better, since
-both senders now stall where one used to sail through untouched: the
-`hacc_fabric_v1` M4 fairness check flips from PASS to FAIL on one cell whose
-per-sender share snaps to the 67.108 ms silent retransmission timeout, its B1
-goodput falls from 7.5613 to 3.9187 Gb/s, and the `cx5_msgsize_v1` 512 KB
-diagnostic arm falls from 7.6693 to 1.579 Gb/s with 90 silent timeouts against
-39. None of that is a fabric defect. It is the endpoint transport showing
-through a fabric that no longer hides it by starving one flow, and it is the
-same go-back-N source that blocks acceptance bar A1.
+BACK-60. Sharing the loss also made several fan-in numbers worse rather than
+better, since both senders now stall where one used to sail through untouched.
+The `hacc_fabric_v1` M4 fairness check flips from PASS to FAIL on one cell
+whose per-sender share snaps to the 67.108 ms silent retransmission timeout,
+its B1 goodput falls from 7.5613 to 3.9187 Gb/s, its long-flow arm's two
+32-message cells fall from 78.6885 and 65.6501 to 40.7898 and 15.9372 Gb/s
+because those aggregates were carried by a sender that lost 15 packets against
+its neighbour's 265053, and the `cx5_msgsize_v1` 512 KB diagnostic arm falls
+from 7.6693 to 1.579 Gb/s with 90 silent timeouts against 39. None of that is
+a fabric defect. It is the endpoint transport showing through a fabric that no
+longer hides it by starving one flow, and it is the same go-back-N source that
+blocks acceptance bar A1.
+
+Two fan-in results are worth naming because they did not move. The long-flow
+arm's single-stream cells, which are the shape the hardware measurement had,
+read 76.6298 Gb/s on the hacc leaf against 76.8671 before, still inside the 74
+to 78 Gb/s band A1 names, and 88.2342 Gb/s on the cx5 path, identical to the
+digit because that cell loses nothing and so has no contested slot to
+arbitrate. Where a fabric marks, sharing the loss also helps: the cx5
+32-message long cells rise from 51.7976 and 24.0903 to 54.0244 and 27.5147
+Gb/s, because a sender there gets a congestion signal that is not a loss. On a
+fabric that marks nothing, which guard G3 says the hacc leaf is, sharing the
+loss only shares the thrashing.
 
 Changes to the backends go through their own repos on
 `<YYYY_MM_DD>/simllm-addon` branches; SimLLM only bumps pins.

@@ -70,8 +70,10 @@ def _synthetic_rows() -> list[dict[str, object]]:
 
 
 def test_run2_runner_pins_the_final_expectations_commit_and_digest() -> None:
+    # Re-pinned 2026-09-02 after the 2026-09-01 history rewrite renamed the
+    # freeze. Same tree, same subject, same author date, same digest below.
     assert run_campaign.EXPECTATIONS_COMMIT == (
-        "b21ba822707d2d7c80b83ee2d3fb87f4fa93178d"
+        "ff76eb5ed57f30f43cf1e7f097435e54b46212a9"
     )
     assert run_campaign.EXPECTATIONS_SHA256 == (
         "5465271e9909cebc214c153209316a6f266ec142d7e578b3279935b1c6a10a53"

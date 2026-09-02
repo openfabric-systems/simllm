@@ -24,7 +24,15 @@ ROOT = HERE.parents[1]
 TRAF70_ROOT = HERE.parent / "a100_nvlink_packet_v2"
 PRODUCER_EXTENSION_PATH = HERE / "producer_traf73.patch"
 EXPECTATIONS_PATH = HERE / "aligned_expectations.json"
-EXPECTATIONS_COMMIT = "f3f2624e7a96efe3ad67eac5940fee8746e40b98"
+# Re-pin amendment, 2026-09-02. The default branch was rewritten and force
+# pushed on 2026-09-01 to purge co-author trailers, which gave every commit
+# from the rewrite point onward a new identifier. The freeze itself did not
+# move. The original pin f3f2624e7a96efe3ad67eac5940fee8746e40b98 and the pin
+# below carry the same tree 54ef266d5f81437c583c2522701c0bd744dd7b44, the same
+# subject "Freeze aligned NVLink identification" and the same author date
+# 2026-09-01T15:53:41+02:00. The frozen digest below is unchanged, and the
+# published TRAF-73 record keeps the pre-rewrite identifier it ran under.
+EXPECTATIONS_COMMIT = "7cab9cd84dfcfce50c7b45553bcd4a54ec4a8ea0"
 EXPECTATIONS_SHA256 = "a17b9e298d11a4a6ba92b382121c15a5a48f8100b6f343893260419b1d3382f6"
 DERIVED_PRODUCER_SHA256 = "3e4b24382314f5f0dd84f4b54d126c5777e6c92a71c3644f8835b2f5cd3a4694"
 CELL_SCHEMA = "simllm-nvlink-credit-identification-cell-v1"
