@@ -277,9 +277,11 @@ which emerges from per-packet header overhead and needs no special rule.
 therefore \emph{injected}: the block overwrites the two ECN bits
 unconditionally on every RoCEv2 transmit while passing the
 differentiated-services field through, exactly as the on-wire probe found. The
-ratio of message bytes to packet bytes that this block fixes is the
-amplification factor in \anom{11}, so the incast tax is a downstream
-consequence of segmentation and go-back-N and not a separate rule. Finally
+number of packets a message becomes here bounds the go-back-N replay of
+\anom{11} from above (256 at 1\,MiB), while the measured amplification of
+about 16 says the unit actually replayed is the requester's outstanding
+window of about 64\,KiB; the incast tax is therefore a downstream consequence
+of segmentation, the window and go-back-N, and not a separate rule. Finally
 \anom{02}, the sequence-error storm under two-entry gathers, is injected here
 as a per-packet drop rule keyed on gather-entry count and size, because the
 mechanism is not public and no differential experiment we could run localized
@@ -510,7 +512,9 @@ B7; window release to B6; completions to B16.
 \textbf{Must reproduce.} The amplification that turns a small loss rate into a
 large goodput deficit. \anom{11}: 1.65\,\% packet loss becomes a 26.9\,\%
 goodput tax at 1\,MiB messages, a factor of about 16, because each loss forces
-the retransmission of the rest of the message. The counter semantics of
+the replay of the requester's outstanding window (about 16 packets on average,
+bounded by the 256 packets of the message) rather than of the lost packet
+alone. The counter semantics of
 \anom{19}: \ctr{packet\_seq\_err} increments once per contiguous loss burst and
 not once per lost packet, giving the measured ratio of about 73 between packets
 the receiver discarded and sequence errors the sender recorded. And \anom{09},
