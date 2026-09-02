@@ -33,8 +33,9 @@ with a before-and-after column on every number that moved, is in
 [the 2026-09-02 section](#2026-09-02-re-run-against-the-htsim-39-fix) at the
 end of this file, and the committed CSVs beside this file are now the re-run's.
 Third disclosure, and the reason `summary.csv` now holds 19 rows: the re-run
-adds one reported row and five reported columns from a switch-side per-ingress
-drop counter the fix also adds, and nothing scored reads them.
+adds one reported row, and per-ingress loss columns to the three CSVs whose
+cells lose packets, from a switch-side counter the fix also adds. Nothing
+scored reads them.
 
 Verdict: **4 of 5 scored checks pass and all four fatal guards hold. The
 fabric profile lands by configuration: the 2.08 us latency floor, the rendered
@@ -358,9 +359,9 @@ untouched, and the checks below are scored by the same code against the same
 rules. What changed is the backend: the pin moved from htsim `1dcbfec` to
 `617ce20` on the backend branch `codex/htsim39_fair_egress_drop`, which
 arbitrates physical ingress ports that deliver in the same picosecond. One
-reported check row and five reported columns were added, read from a
-switch-side per-ingress drop counter the same backend change adds; nothing
-scored reads them.
+reported check row was added, and per-ingress loss columns in `buffer.csv`,
+`incast.csv` and `incast_long.csv`, all read from a switch-side per-ingress
+drop counter the same backend change adds; nothing scored reads them.
 
 Both arms were run with the same runner and the same build, the only
 difference being whether the arbiter is in the path. The `1dcbfec` arm
