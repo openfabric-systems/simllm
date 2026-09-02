@@ -1352,6 +1352,20 @@ created" statement stands and refers to different, never-registered work.
   test that pins its trigger condition, and the wire-byte gap the Ollanox
   packetizer harness records against REF-5 and REF-10 closes to zero under
   the exact profile.
+- BACK-66 (Precision; P2; M): expose the reaction point's internal state and
+  refine its recovery. The Ollanox reaction-point plan compares its DCQCN
+  state against the model, but the facade reports only the current rate,
+  minimum rate and alpha; the target rate, the stored stage, the alpha-update
+  count and the `roce_slow_restart` and `roce_slow_restart_trans` counters
+  are not visible, and the model's recovery is a single stage where the
+  measured device shows target capture on a notification, five recovery
+  rounds that halve the distance to the target, additive increase and hyper
+  increase, each round gated by both a timer and a byte counter. Acceptance:
+  the counters and fields above are read by name through `rnic_cm_counter`,
+  the staged recovery with the dual gate is behind the congestion-control
+  configuration so the slice-C rows do not move, and one test pins the first
+  cut (3 to 39 ms after congestion) and the recovery to 95 percent (447 plus
+  or minus 10 ms after the last cut) against the campaign values.
 
 ### Completeness
 
@@ -1842,6 +1856,15 @@ created" statement stands and refers to different, never-registered work.
   external events with their token rules (extent events on the flow-extent
   port, packet events on the packetized port, exactly one answer per reported
   token), which the RTL bridge relies on and had to rediscover.
+- BACK-67 (Completeness; P2; S): read the host-memory access ledger through
+  the facade. The model records every host-memory access with its logical
+  translation stages (`Mkey`, `Mpt`, `Mtt`), the allocation key, page index,
+  client id and client token in `HostMemoryAccessRecord`, but the declared
+  DPI calls do not expose them, so the Ollanox translation block can compare
+  its lookups only against a checker of its own. Acceptance: a read-only
+  iterator over the ledger and the class-4 metadata transaction accounting
+  are exported through the C facade and the DPI shim, with a test that walks
+  one registered region's accesses and reproduces the stage sequence.
 
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
