@@ -1,0 +1,103 @@
+\section{Related work}
+\label{sec:related}
+
+\subsection{Finding out what an RNIC does}
+
+Collie~\cite{collie2022} is the closest relative of the measurement half of this
+paper. It searches a high-dimensional configuration space (operation, payload,
+maximum transmission unit, queue-pair count, queue depth, batch, gather and
+memory-region layout, direction, concurrency, host memory placement) for
+configurations in which an RDMA subsystem underperforms, and reports the
+resulting anomalies to vendors. We reuse its search dimensions and several of
+its published reproducer seeds, and we use its traffic engine, patched. We
+differ in three ways. Its anomaly definition assumes a lossless fabric with
+priority flow control, so on a fabric without it two of its three detection
+channels become invalid near saturation, which our validity review documents
+and works around with matched differential controls. Its published cases are
+ConnectX-6 and its thresholds are not transferable to a different generation as
+constants. And its goal is to find anomalies, whereas ours is to build a model,
+so a null result that would end a Collie search (four of the seeds we replayed
+produced clean nulls) is for us a positive statement about a block.
+
+Kong et al.~\cite{rnic-micro2023} probe RNIC microarchitectural resources and
+their isolation properties, and are the reason our architecture separates
+context, translation and work-queue caches rather than treating context
+locality as one number. Kalia, Kaminsky and Andersen's design
+guidelines~\cite{kalia2016} are the standard reference for the software side of
+the interface we model: doorbell batching, inline and BlueFlame publication,
+unsignalled completions and the cost of each; FaSST~\cite{fasst2016} and
+eRPC~\cite{erpc2019} show how far the datagram path can be pushed and are the
+reason our transmit pacer models packets per second separately from bits per
+second. Neugebauer et al.~\cite{pcie2018} characterise host PCIe behaviour for
+networking and provide the transaction-class accounting our host interface
+uses; our own result that PCIe never binds at 100\,GbE is a much weaker claim
+than theirs, and holds only at the rates we measured.
+
+SRNIC~\cite{srnic2023} argues for a scalable RNIC architecture with a small
+on-chip state footprint, and is the closest published \emph{architecture} to
+ours in structure. It differs in intent: SRNIC designs a better NIC, whereas we
+reconstruct an existing one, so where SRNIC would remove a limitation we are
+obliged to reproduce it.
+
+\subsection{Congestion control}
+
+The device implements DCQCN~\cite{dcqcn2015}, and our reaction point is a
+straight implementation of its rate machine. Our contribution to that literature
+is negative and specific: on the measured deployment the reaction is 2 to 20
+times slower and the recovery about $4.5\times$ slower than the published
+defaults suggest, and the notification point's input is not a switch mark at
+all. TIMELY~\cite{timely2015} and Swift~\cite{swift2020} replace the marking
+signal with delay, and HPCC~\cite{hpcc2019} replaces it with in-network
+telemetry; all three are relevant here because the deployment we measured
+provides no marking signal, which is precisely the situation those designs
+address. IRN~\cite{irn2018} argues that RoCE does not need a lossless network if
+the NIC implements better loss recovery, and quantifies the cost of go-back-N
+against selective repeat. Our \anom{11} is that cost measured on shipping
+silicon: 1.65\,\% packet loss becomes a 26.9\,\% goodput tax at 1\,MiB
+messages. Our architecture carries a selective-repeat window as a parameter,
+disabled in the ConnectX-5 profile, so that the counterfactual IRN argues for
+can be run against a calibrated baseline.
+
+1RMA~\cite{onerma2020} rebuilds the remote-memory interface around
+fixed-size, solicited operations with rate control in the host, and is the
+clearest statement of the alternative to the connection-oriented model we
+reproduce.
+
+\subsection{NIC implementations, open and closed}
+
+Corundum~\cite{corundum2020} is an open-source 100\,Gb/s FPGA NIC and the
+reference point for what an open Ethernet datapath on this class of device
+costs; it is not an RDMA NIC, so it solves the media and host-interface half of
+our problem and none of the transport half. StRoM~\cite{strom2020} is an
+open RoCEv2 stack on FPGA with programmable kernels in the data path, and is the
+closest existing artifact to the design in \S\ref{sec:arch};
+Coyote~\cite{coyote2020} provides the surrounding operating-system abstractions
+(memory, networking, scheduling) that a deployment of such a design needs.
+NICA~\cite{nica2019} and FlexNIC~\cite{flexnic2016} argue for programmable
+inline processing at the network interface, which is orthogonal to our goal but
+shares the observation that the interface between host and NIC is the thing
+worth designing. Tonic~\cite{tonic2020} is a hardware template for transport
+logic at 100\,Gb/s and is the natural implementation vehicle for our B12 and
+B13; its segmentation of transport into a small number of reusable modules is
+close to our block boundary. The AMD embedded RDMA-enabled NIC~\cite{ernic} is
+a commercial RoCEv2 endpoint for the same device family we target, and is the
+practical alternative to building this: it is closed, it publishes no timing
+contract, and it cannot be calibrated against measured silicon, which is
+exactly the gap this work fills.
+
+UCCL~\cite{uccl2025} moves transport into software above the NIC and reports
+message-size and outstanding-work anchors on a more recent adapter generation;
+we use it as a cross-generation sanity check rather than as a source of
+constants. \TODO{confirm the UCCL title, author list and venue or preprint
+status before submission.}
+
+\subsection{Where this paper sits}
+
+Everything above either measures an RNIC or builds one. This paper does both
+and, more to the point, makes the join explicit: every block in the architecture
+names the measurement that constrains it and the evidence class of that
+constraint, and every measurement that constrains nothing is either recorded as
+a fabric property or retired as a tool artifact. We are not aware of a published
+RNIC design that carries its calibration provenance at block granularity, nor of
+a published RNIC measurement study whose output is an implementable block
+diagram.

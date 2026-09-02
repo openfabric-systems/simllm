@@ -1,0 +1,106 @@
+\section{Status and roadmap}
+\label{sec:status}
+
+\subsection{What exists}
+
+The measurement campaign is complete and its records are public: six phases,
+more than 700 points, an expectations file frozen before each phase, a validity
+review, a consolidated findings ledger and the nineteen-row anomaly table.
+
+The golden C model exists and is partly validated. The queue core, the
+transaction-level PCIe fabric, the host-memory model and the submission model
+are landed and validated. The hardware profile, the anomaly table, the C
+facade, the packetizer, the outstanding-work window, the transmit pacer, the
+ingress meter, the receive processor and the go-back-N requester transport are
+landed and validated. Rate control is landed behind an opt-in whose disabled
+path is byte-identical to the previous slice: the notification point at the
+receiver's own ingress meter, the per-queue-pair reaction point in front of the
+transmit pacer, and the tail-drop egress queue that the test fabric needs
+before either can be exercised. The internal arbiter of B17 is designed and not
+landed.
+
+The architecture of \S\ref{sec:arch} is a design, not a build. No
+register-transfer-level code exists yet. \TODO{this is the honest status for
+v0.1; if the first block lands before submission, replace this paragraph with
+resource and timing numbers from the actual build rather than estimates.}
+
+\subsection{Open clauses}
+
+Three are load bearing and none of them is closed.
+
+\textbf{The ingress ledger (B10).} The discards the campaign counted are far
+too few to explain the goodput deficit they are supposed to cause. The meter
+reproduces the equilibrium with a fitted drain rate; it does not explain it.
+\anom{17} narrows the missing mechanism to a stall process with a
+characteristic burst length that reverse traffic suppresses without shortening.
+The first hardware build should instrument this before it does anything else,
+because the answer is an occupancy trace that no vendor device will give us.
+
+\textbf{Two anchors, one latent.} The drain rate fitted from the lone-flow
+anchors makes the congestion-control loop settle below the switch egress rate,
+which makes the incast tax come out near zero instead of at the measured
+26.9\,\%. The two anchors want different values of the same parameter. This is
+the same shape as the duplex-versus-simplex incompatibility already registered
+against the same block, and we expect one mechanism to resolve both.
+
+\textbf{The notification ledger.} Senders handle $2.24\times$ the notifications
+the receiver reports sending, reproducibly, across firmware revisions and load
+levels. We have no explanation, the architecture publishes both counters
+without reconciling them, and we would welcome one.
+
+\subsection{Roadmap}
+
+\begin{enumerate}
+  \item Land the internal arbiter (B17) in the golden model and close
+    \anom{05}, which is the last unmodelled emergent row that has a known
+    mechanism.
+  \item Build B1, B2, B3, B16 and B19 first, that is, the host interface, the
+    submission path and the observation path. This subset is testable against
+    the golden model with no wire at all and establishes the register map and
+    the monitoring ring before any transport logic depends on them.
+  \item Build B9, B10 and B11 and instrument the ingress meter. Run the
+    lone-flow and drain-window experiments against the implementation and
+    against the real adapter side by side.
+  \item Build the transport blocks (B7, B8, B12, B13) and close the anomaly
+    rows that depend on them.
+  \item Build the congestion-control blocks (B14, B15) last, because their
+    acceptance data is the slowest to collect and depends on every block below
+    them being right.
+  \item Run a work-queue publication campaign to split $T_{\text{eff}}$ into
+    its five stages, which converts the largest single \evcal{} parameter in
+    the model into five measured ones.
+  \item Repeat the campaign against a ConnectX-7 adapter at 400\,GbE to test
+    the \evdecl{} scaling assumptions, every one of which is currently a
+    multiplication by four.
+\end{enumerate}
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+A commodity RDMA NIC can be reconstructed, from public information and
+black-box measurement alone, into an architecture detailed enough to build and
+honest enough to trust. The reconstruction is not a guess at the vendor's
+design; it is a set of blocks, each of which names the measurement that
+constrains it and the class of evidence behind that constraint, connected by a
+data path that moves bytes and a monitoring network that moves nothing but
+observations.
+
+The measurements that made it possible were mostly not the ones we expected to
+take. The result we are most confident of, the fixed-offset initiation law with
+$T_{\text{eff}} = 4.48$\uS{} and $C = 97.1$\Gbps{}, came from an arm that was
+added only after we discovered that the tool flag we thought set queue depth
+did not. The result that changed the architecture most, that the congestion
+notification point is the receiving adapter rather than the switch, contradicted
+two of our own earlier inferences and one site belief. The result that will
+matter most to a serving simulator, that inserting a gap can raise goodput by
+13.8\,\%, is the opposite of what pacing is supposed to do. Freezing each
+phase's expectations before running it is what let us treat all three as
+findings rather than as mistakes, and it is the part of the method we would
+recommend to anyone doing this again.
+
+What remains open is stated as openly as what is closed. One block carries a
+fitted stand-in for a mechanism nobody has identified, two independent
+measurements want different values for the same parameter, and one counter
+ledger does not balance. An implementation with its observation path designed in
+from the beginning is the instrument that can settle all three, which is the
+main reason to build it.

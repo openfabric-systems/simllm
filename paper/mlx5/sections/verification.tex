@@ -1,0 +1,126 @@
+\section{Verification plan}
+\label{sec:verify}
+
+The architecture of \S\ref{sec:arch} is verified against the golden C model,
+and the golden C model is verified against the measurements. This section
+states both halves and what each one can and cannot establish.
+
+\subsection{The golden model as an oracle}
+
+The golden model is a deterministic, transaction-level C++17 model of one
+endpoint, with the caller owning the clock. It exposes a C-linkage facade over
+plain fixed-width structures with picosecond timestamps and no exceptions
+crossing the boundary: construct an endpoint from a profile, post work
+requests, ring a doorbell, deliver a received packet, deliver a fabric event,
+advance to a timestamp, ask for the next internally scheduled time, poll
+completions, drain emitted packets, read the counter facade, write a
+transaction trace, destroy.
+
+Two properties make it usable as an oracle rather than as a second opinion.
+First, determinism is a contract: the same stimulus sequence and the same
+profile produce byte-identical traces, so a trace recorded from the simulator
+is an expected-result file, and a divergence localizes to the first differing
+timestamp or counter rather than to a curve that looks different. Second, the
+next-event query lets a testbench step the model exactly, so the comparison is
+not confounded by the testbench's own time quantisation.
+
+\subsection{DPI-C in a UVM environment}
+
+The design under test and the golden model run side by side under one
+stimulus. The C facade is imported through the direct programming interface,
+and the environment is arranged as follows.
+
+\textbf{Stimulus} has two sources, both randomized under constraints derived
+from the campaign's own sweep dimensions: work requests (opcode, message size,
+gather-entry count, signalling, destination, posting batch, queue depth,
+inter-burst gap) driven into the host interface as doorbells and host-memory
+contents, and packets (data, acknowledgement, negative acknowledgement,
+notification, pause) driven into the media-access interface. The gap parameter
+matters more than it looks: it is the axis along which \anom{04} lives, and a
+constrained-random generator that only ever saturates will never enter the
+lossless regime that serving traffic actually occupies.
+
+\textbf{The scoreboard} compares three things: the sequence of emitted packets,
+field by field with the mutable fields masked exactly as the invariant check
+masks them; the sequence of completion-queue entries with their work-request
+identity, status and byte count; and, at every snapshot point, the full counter
+set. Timestamps are compared within a per-stage band rather than exactly,
+because the model's stage services are fitted rather than cycle accurate, and
+the band is part of each block's specification. Counters are compared exactly.
+
+\textbf{Coverage and assertions come from the anomaly table.} Every row of
+Table~\ref{tab:anomaly} becomes both a coverage bin and a check.
+A row whose kind is \textit{emergent} is a check on the mechanism: the
+condition in its trigger column must be reached (coverage) and the effect must
+land inside its registered band (assertion), with the band taken from the
+model's own validation contract, for example a 15\,\% band on the depth-1
+goodput curve, a 20\,\% band on the depth ratio, a 78 to 92\Gbps{} window on
+the saturated single-queue-pair equilibrium, three percentage points on the
+multi-queue-pair ceiling, two percentage points around the 5.6\,\% maximum
+transmission unit tax, 25\,\% on the incast tax identity with two points on the
+fair-share split, 30\,\% around 283 notifications per second per congested
+queue pair, and exactly zero notifications for a lone paced flow below
+saturation. A row whose kind is \textit{injected} is a check that the rule
+fired, not that a mechanism produced it, and the report says so. A row whose
+kind is \textit{fabric} is not a check on the endpoint at all and is
+implemented in the fabric model. A row whose kind is \textit{counter} is a
+check on the facade with an explicit assertion that the datapath did
+\emph{not} change. A row whose kind is \textit{tool} is reproduced by nothing
+and exists so that nobody re-derives a number from an instrument artifact.
+
+\textbf{Trace replay} closes the loop with the real device. The campaign's
+curated result rows are golden vectors: the depth-1 and depth-1024 message-size
+curves, the gap sweep at 8 and 64\,KiB, the multi-queue-pair ceiling, the
+maximum-transmission-unit pair, the bidirectional pair, the incast rows and the
+fan-out control. Each is registered in an expectations file before the run and
+reports as one row with a band. Three fatal guards void a run rather than
+costing it a point: deterministic replay must be identical across two runs,
+the one-authority conservation check must hold, and counters must be monotone.
+
+\subsection{The full chain}
+
+Above the endpoint sits a packet-level fabric model, which owns links, switch
+queues, marking, drops and pause, while the endpoint owns work-queue elements,
+contexts, transport state and rate. The seam between them carries packet
+attempts and fabric events and nothing else: no queue, context or completion
+object crosses it. For this deployment the fabric is configured as the
+measurements found it, that is, one non-blocking switch, four 100\Gbps{} ports,
+515\nS{} pipes, a 5.2\,MB tail-drop egress buffer per port, no marking, no
+priority flow control and no propagated pause. Configuring the switch to be
+silent is what forces the endpoint to notice congestion by itself, which is the
+whole point of \anom{16}, and it is why the fabric model's random-early-detection
+policy is disabled for this cluster rather than tuned.
+
+The chain matters because two of the open clauses are only visible in it. The
+congestion-control loop settles wherever the ingress meter's drain rate is; at
+the drain rate fitted from the lone-flow anchors the loop settles below the
+switch's egress rate, the switch buffer never fills, there is no loss to
+amplify, and the incast tax comes out near zero instead of at the measured
+26.9\,\%. The incast measurement is a second anchor for the same latent and it
+wants a higher value. One drain rate cannot satisfy both, which is the same
+shape as the duplex-versus-simplex incompatibility already registered against
+that block, and it points at the same missing stall mechanism.
+
+\subsection{What the FPGA can show that the silicon cannot}
+\label{sec:verify:fpga}
+
+The measured device publishes about a hundred counters, non-atomically, cached
+for 10\mS{} by the driver, several of them meaning something other than their
+names. The implementation publishes, through the monitoring ring and at one
+coherent snapshot instant, the occupancy and high-water mark of every internal
+queue, the credit state of every arbiter, the per-stage service counts that the
+fixed-offset cost $T_{\text{eff}}$ currently lumps into one number, and the
+reaction point's rate and $\alpha$ per queue pair.
+
+Three campaign questions become answerable there and only there. The split of
+$T_{\text{eff}}$ across publication, observation, fetch, context readiness and
+admission, which is \evcal{} today, becomes five measured numbers. The
+\anom{03} discard ledger, where the counted discards are far too few to explain
+the goodput deficit, becomes an occupancy trace of the ingress meter at the
+operating point, which either shows the buffer filling or does not. And
+\anom{17}, the stall burst whose mechanism is unknown, becomes a time series of
+ingress occupancy against arrival rate during a burst, with the reverse-traffic
+dependence as a controlled input. None of these requires the vendor's device to
+cooperate; they require an implementation whose observation path was designed
+in from the start, which is why the monitoring network on chip is in the
+architecture rather than in a debug appendix.

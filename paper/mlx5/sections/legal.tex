@@ -1,0 +1,103 @@
+\section{Sources and legal basis}
+\label{sec:legal}
+
+\subsection{What was used}
+
+Every statement in this paper derives from one of five kinds of source, and the
+architecture in \S\ref{sec:arch} labels each parameter with the class of the
+source it came from.
+
+\begin{enumerate}
+  \item \textbf{Open standards.} The InfiniBand Architecture Specification and
+    its RoCEv2 annex~\cite{ibta-vol1,ibta-a17} define the transport, the base
+    transport header and its extensions, the packet sequence number space, the
+    acknowledgement and negative-acknowledgement semantics, the go-back-N
+    recovery rule, and the encapsulation of an InfiniBand transport packet in
+    UDP over IP over Ethernet. Everything the architecture does on the wire is
+    \evdoc{} against these.
+  \item \textbf{The public programmer's reference manual.} The vendor's
+    published reference manual for this device family~\cite{mlx-prm} documents
+    the software-visible objects: queue-pair context fields, work-queue-element
+    layouts, completion-queue-entry formats, doorbell records, the user-access
+    region, and the memory-translation and memory-protection tables. It
+    documents an interface, not a microarchitecture, and we use it only as an
+    interface document.
+  \item \textbf{Open-source software.} The Linux \texttt{mlx5} RDMA and
+    Ethernet drivers~\cite{linux-mlx5} and the \texttt{rdma-core}
+    \texttt{mlx5} provider~\cite{rdma-core} are the authority for how work is
+    actually submitted and completions actually read: linked work-request
+    lists, work-queue-element construction, the publication barrier, the
+    doorbell record update, the user-access-region write, inline and BlueFlame
+    paths, completion-queue polling and completion decoding, and the names,
+    widths and reset behaviour of the hardware counters. Behaviour that follows
+    from reading this source but has no public silicon contract is \evdrv{}.
+  \item \textbf{Published literature.} Peer-reviewed measurements and designs,
+    cited where used, including the anomaly-search method we adapted, the
+    congestion-control algorithm the device implements, and prior
+    microarchitectural studies of RDMA NICs.
+  \item \textbf{Black-box measurement.} More than 700 measured points on four
+    cluster nodes that the authors are entitled to use, taken through the
+    documented verbs interface and the documented counter interface, with no
+    privileged access to the device: no firmware image was read, disassembled
+    or modified, no non-public register was written, and no protection measure
+    of any kind was circumvented. Behaviour whose aggregate effect is
+    identifiable from these measurements but whose internal mechanism is not
+    public is \evcal{}, and carries a named latent parameter with bounds rather
+    than a fabricated register.
+\end{enumerate}
+
+No firmware was obtained, decompiled or inspected. No material under a
+non-disclosure agreement was used, and none of the authors' NDA-covered
+knowledge, where any exists, entered this document; the campaign records and
+this paper were written from the five source classes above and nothing else.
+The counters we read are the ones the open-source driver exposes through
+\texttt{ethtool} and \texttt{sysfs} to any unprivileged user of the machine.
+Several vendor configuration surfaces (the DCQCN parameter block, the firmware
+non-volatile configuration, PCI capability space, kernel debug filesystem) were
+found to be unreadable on the campaign hosts and are reported as unreadable
+rather than guessed.
+
+\subsection{Basis in United States law}
+
+We record the authors' basis for the work, not legal advice, and we encourage
+anyone reproducing it to take their own.
+
+Clean-room reverse engineering of an interface and of externally observable
+behaviour, from lawfully obtained public information and from a device the
+investigator is entitled to use, for the purpose of interoperability and
+research, is lawful in the United States. Two decisions of the Ninth Circuit
+are directly on point. In \emph{Sega Enterprises Ltd.\ v.\ Accolade,
+Inc.}~\cite{sega1992} the court held that disassembly of a lawfully acquired
+program is fair use when it is the only means of gaining access to unprotected
+functional elements and there is a legitimate reason for seeking that access.
+In \emph{Sony Computer Entertainment, Inc.\ v.\ Connectix Corp.}~\cite{sony2000}
+the court extended the reasoning to intermediate copying performed while
+developing an independent, non-infringing implementation of a documented
+interface. Congress codified a narrower but explicit permission in
+17~U.S.C.~\S~1201(f)~\cite{usc1201f}, which allows circumvention and the
+development of the means to circumvent for the sole purpose of achieving
+interoperability of an independently created computer program, to the extent
+that the acts do not constitute infringement.
+
+Our position is more conservative than any of these authorities requires. We
+did not disassemble anything, we made no intermediate copy of a protected work,
+and we circumvented no technological protection measure, so \S~1201(f) is
+cited as the boundary of what would have been permissible rather than as the
+permission we relied on. What we did is read public documents, read
+open-source code under its own licence, run standard user-space benchmarks and
+a modified open-source traffic generator against hardware the authors are
+entitled to use, and read counters that the operating system exposes. The
+functional facts recovered by that process (that a device stamps ECT(0), that a
+counter is inert, that an ingress meter drains at a given rate) are facts, and
+facts are not copyrightable. The architecture in \S\ref{sec:arch} is an
+independent design that reproduces measured behaviour; it is not a copy of any
+vendor design, and where the mechanism is unknown it says so rather than
+inventing a plausible one.
+
+\subsection{What we publish}
+
+The campaign records, the curated measurement extracts plotted here, the golden
+C model, the anomaly table and the architecture are all public. The raw bulk
+captures (per-packet logs on the order of $10^8$ packets) stay outside the
+repository for size reasons and are available on request. Node names and
+addresses are removed from every published extract.

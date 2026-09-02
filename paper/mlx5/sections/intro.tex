@@ -1,0 +1,122 @@
+\section{Introduction}
+\label{sec:intro}
+
+A large-language-model serving deployment is, from the network's point of view,
+a small number of very regular traffic patterns repeated millions of times:
+tensor-parallel all-reduces between a handful of ranks, expert dispatch and
+combine in a mixture-of-experts layer, key-value cache movement between a
+prefill instance and a decode instance. Each of them is a short burst on one or
+a few queue pairs, separated by a compute gap of a few microseconds to a few
+hundred microseconds. Whether such a burst runs at line rate, at half of it, or
+at a rate set by a retransmission equilibrium is decided inside the RDMA NIC and
+by its interaction with the fabric. A simulator that predicts time to first
+token and time per output token therefore inherits the NIC's behaviour whether
+it models it or not.
+
+The obstacle is that no public contract for that behaviour exists. The
+InfiniBand Architecture Specification and its RoCEv2 annex define wire formats
+and transport semantics but say nothing about how many work queue entries a
+device keeps in flight, how deep its ingress buffer is, or when it decides to
+drop. The vendor's programmer's reference manual documents a software
+interface, not a microarchitecture. The open-source \texttt{mlx5} driver and
+the \texttt{rdma-core} provider show exactly how work is submitted and
+completions are read, which is a great deal, and nothing at all about what the
+device does in between. Published RNIC designs are either research prototypes
+with different design points or commercial IP with an NDA attached. The result
+is that everyone who needs an endpoint model either fits one number (a fixed
+per-message latency) and hopes, or reuses somebody else's constant from a
+different generation of silicon.
+
+We take the other route. We treat the device as a black box with a
+well-documented interface, we probe it under conditions chosen so that a
+mechanism becomes identifiable rather than merely visible, and we turn the
+result into an architecture that can be built. The target of the build is an
+AMD Alveo U55C accelerator card, which carries the two 100\,GbE ports, the PCIe
+attachment and the high-bandwidth memory that an endpoint of this class needs;
+the architecture is parameterised so that the same register-transfer-level
+sources move to an ASIC by exchanging the memory and hard-macro choices rather
+than the datapath.
+
+\subsection{Why a measurement-calibrated, open, implementable model}
+
+Three consumers want the same artifact for three different reasons.
+
+\textbf{Simulator fidelity.} SimLLM, the serving simulator this work feeds,
+predicts the behaviour of continuous-batching serving
+schedulers~\cite{vllm2023}, and therefore needs an endpoint whose timing is
+right at the granularity of a single collective. A model that reproduces line
+rate for a large message and nothing else will predict a tensor-parallel decode step wrongly by a factor that
+changes with queue depth, message size and whether the previous burst left the
+receiver's ingress buffer drained. Our measurements show all three effects and
+quantify them.
+
+\textbf{A golden reference for RTL.} An open RDMA endpoint implementation needs
+something to be verified against. A specification is not enough, because the
+specification does not fix the timing or the counter semantics; a second
+implementation is circular. A deterministic C model, calibrated against
+measured silicon and carrying an explicit table of the behaviours it is
+required to reproduce, is a usable oracle: the same stimulus goes through the
+model and through the design under test, and the comparison is over timestamps
+and counters rather than over a bandwidth curve that looks about right.
+
+\textbf{A public account of what the silicon does.} Several of the behaviours
+below are not in any datasheet and would surprise a reader who has only read
+the specification. The NIC overwrites the two explicit-congestion-notification
+bits of every RoCEv2 packet it sends. The standard ``is ECN happening'' counter
+reads zero while congestion control is actively running. The counter that
+appears to count lost packets counts loss bursts instead, at a ratio of about
+73 to 1. A per-queue-pair receive cap that had been attributed to the NIC for
+most of the campaign turned out to belong to the measurement tool. Recording
+these publicly, with the evidence and with the corrections that the campaign
+made to its own earlier conclusions, is a contribution in its own right.
+
+\subsection{Contributions}
+
+\begin{itemize}
+  \item \textbf{A campaign method for edge-case probing on a lossy fabric}
+    (\S\ref{sec:measurement}). Six phases, each with a frozen expectations
+    file written before the run, more than 700 measured points, and an explicit
+    validity review that marks which tests the fabric can and cannot support.
+    Every parameter carries one of five evidence classes: \evdoc{}, \evdrv{},
+    \evcal{}, \evdecl{} or \evinf{}.
+  \item \textbf{The reverse-engineered mechanisms and their constants}
+    (\S\ref{sec:measurement}). The fixed-offset initiation law and its two
+    parameters, the queue-depth dominance, the loss equilibrium and the drain
+    window, the internal processing budget and its arbitration order, the
+    unconditional ECT(0) stamp, endpoint-generated congestion notification on a
+    fabric that never marks, the tail-drop port buffer, and the counter
+    semantics that any detection tool built on this hardware has to know.
+  \item \textbf{A nineteen-block architecture with an AXI4 monitoring network
+    on chip} (\S\ref{sec:arch}), targeting the Alveo U55C and expandable to an
+    ASIC. Two interconnects: an AXI4 data path for host-memory and
+    high-bandwidth-memory traffic, and a separate AXI4-Lite monitoring ring
+    that gives every block a slot in one versioned register map mirroring the
+    real NIC's observable state. Each block names the measured behaviour it
+    must reproduce and the evidence class of every parameter it carries.
+  \item \textbf{The golden C model and the anomaly table as a verification
+    contract} (\S\ref{sec:verify}). Nineteen registered anomalies, each with a
+    kind (\textit{emergent}, \textit{injected}, \textit{fabric},
+    \textit{counter} or \textit{tool}), a trigger, a magnitude and a band. A
+    block is validated when the anomalies registered against it are reproduced
+    inside their bands, and not before.
+\end{itemize}
+
+\subsection{Scope and honesty about it}
+
+Everything here concerns one device on one fabric: ConnectX-5 Ex at 100\,GbE,
+RoCEv2, port maximum transmission unit 4096, on a cluster with priority flow
+control disabled, global pause enabled but absorbed one hop away, and DCQCN
+running at the firmware default. Some findings are properties of the silicon
+(the initiation law, the internal budget, the ECT(0) stamp); some are
+properties of the deployment (the tail-drop buffer, the absence of switch
+marking); and the paper marks which is which, because a model that confuses
+them will mispredict on any other cluster. Where a later phase corrected an
+earlier conclusion we state the correction and keep the earlier claim visible,
+because the correction history is the method working, not a defect in it.
+
+We also make no claim to have recovered the vendor's design. What we recover is
+an architecture that is consistent with everything we could observe from
+outside, that reproduces the measurements within stated bands, and that can be
+built. Several blocks contain a fitted stand-in where the real mechanism is not
+identifiable from the outside, and each of those is labelled \evcal{} rather than
+dressed up as a register.

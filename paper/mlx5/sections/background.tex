@@ -1,0 +1,114 @@
+\section{Background}
+\label{sec:bg}
+
+This section fixes the vocabulary used by the rest of the paper. A reader
+fluent in RoCEv2 and \texttt{mlx5} can skip to \S\ref{sec:measurement}.
+
+\subsection{RoCEv2 transport}
+
+RDMA over Converged Ethernet version~2 carries an InfiniBand transport packet
+inside a UDP datagram, over IP, over Ethernet~\cite{ibta-a17}. The UDP
+destination port is fixed at 4791 and the source port is used as an
+entropy field for equal-cost multipath hashing, so a queue pair is identified
+on the wire by a stable five-tuple.
+
+The unit of communication is the \emph{queue pair} (QP): a send queue and a
+receive queue whose contexts on the two endpoints are bound to each other. A
+reliable connected (RC) queue pair guarantees ordered, lossless delivery to the
+consumer; an unreliable datagram (UD) queue pair does not. Each RC packet
+carries a \emph{packet sequence number} (PSN) in its base transport header
+(BTH). The responder checks the PSN of every arriving packet against the one it
+expects: a match advances the expected PSN and, for a write or a send, places
+the payload; a gap causes the responder to emit a negative acknowledgement
+(NAK) naming the first missing PSN and to discard everything until the
+requester restarts from there. Recovery is therefore \emph{go-back-N}: one lost
+packet costs the retransmission of every packet after it in the current
+message, which is why the goodput cost of loss scales with message size rather
+than with the number of lost packets. The requester also runs a local
+acknowledgement timeout; if no acknowledgement arrives within it, the requester
+retransmits from the last acknowledged PSN. Extended headers carry the
+operation-specific fields: RETH for the remote address and length of an RDMA
+write or read request, AETH for the acknowledgement syndrome and credit count,
+DETH for the source queue pair of a datagram. An invariant cyclic redundancy
+check (ICRC) covers the packet with the mutable fields masked out.
+
+Two facts from this structure matter throughout. First, an RC requester is
+allowed to have many packets outstanding, and the number it actually keeps
+outstanding is a device property that the specification does not fix. Second,
+the only signal a sender gets about receiver-side loss is the absence of an
+acknowledgement or the arrival of a NAK, so a receiver that discards below the
+transport layer, at its physical-layer ingress, is invisible to the sender
+except through the retransmission it causes.
+
+\subsection{The \texttt{mlx5} software interface}
+
+The device is programmed through rings in host memory and a small number of
+memory-mapped doorbell pages~\cite{mlx-prm,rdma-core}.
+
+A \emph{send queue} (SQ) and \emph{receive queue} (RQ) are contiguous rings of
+work-queue-element (WQE) slots in host memory, sized in units of a basic block.
+The consumer posts a WQE describing an operation (opcode, scatter-gather list,
+remote address, flags, whether it is signalled) and advances a producer index.
+A \emph{completion queue} (CQ) is a third ring, written by the device; each
+completion-queue entry (CQE) carries an ownership bit that flips on every wrap,
+so the consumer polls for ownership rather than for an interrupt. Unsignalled
+work requests produce no CQE at all, and their slots are reclaimed by a later
+signalled completion.
+
+Publication has two steps. The provider first writes the new producer index
+into a \emph{doorbell record}, an eight-byte field in host memory that the
+device reads by direct memory access. It then writes a doorbell into a
+\emph{user access region} (UAR), a page of device memory mapped into the
+process, using a write-combining store. Small work requests may be copied
+entirely into the UAR page instead, so the device never has to fetch them; the
+provider calls this the BlueFlame path. Because a single doorbell can publish
+an arbitrary prefix of newly posted work requests, the number of memory-mapped
+writes per work request falls as the posting batch grows, and the device sees
+work in batches rather than one at a time.
+
+The device holds per-queue-pair state in a \emph{queue-pair context} (QPC):
+transport type, state, path attributes including the destination global
+identifier and the path maximum transmission unit, the send and receive PSNs,
+retry and timeout settings, and the congestion-control state. Memory
+registration is described by a \emph{memory protection table} (MPT) entry
+naming a region, its keys and its access rights, and a \emph{memory
+translation table} (MTT) giving the virtual-to-physical mapping. Both are
+structures in host memory that the device caches on chip.
+
+The queue-pair state machine runs RESET to INIT to RTR (ready to receive) to
+RTS (ready to send), driven either by a manual exchange of queue-pair number,
+PSN, global identifier and path attributes over a side channel, or by the
+connection manager. Errors move the queue pair to the error state, after which
+it must be reset.
+
+\subsection{DCQCN}
+
+Data Center Quantized Congestion Notification~\cite{dcqcn2015} is the
+rate-based congestion-control algorithm this device family implements in
+firmware. It has three parts.
+
+A \emph{congestion point} marks packets. In the textbook deployment this is a
+switch running random early detection on its egress queue: a packet that is
+ECN-capable, that is, one whose IP header carries ECT(0) or ECT(1), is
+rewritten to congestion-experienced (CE) with a probability that rises from
+zero at a low threshold $K_{\min}$ to $P_{\max}$ at a high threshold
+$K_{\max}$.
+
+A \emph{notification point} (NP) at the receiver turns CE-marked data packets
+into congestion notification packets (CNPs) sent back to the source queue pair,
+rate-limited to at most one per configured minimum interval per queue pair.
+
+A \emph{reaction point} (RP) at the sender keeps per-queue-pair state: a
+current rate $R_C$, a target rate $R_T$ and a congestion parameter $\alpha$. On
+a CNP the reaction point updates $\alpha$ toward one, cuts $R_C$ by a factor
+involving $\alpha$, and remembers the pre-cut rate as the target. In the
+absence of CNPs it recovers, first quickly toward the target (fast recovery),
+then by additive increase, then by hyper-increase, driven by two clocks: a
+timer and a byte counter, both of which must fire before a stage advances.
+
+Two properties matter for what follows. The reaction point's state is
+\emph{persistent per queue pair} and survives across work requests, so the rate
+a message gets depends on what the previous messages on that queue pair did.
+And the whole loop is invisible in the data path: the only endpoint-visible
+evidence that it is running is the counter pair \ctr{np\_cnp\_sent} at the
+receiver and \ctr{rp\_cnp\_handled} at the sender.

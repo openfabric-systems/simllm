@@ -1,0 +1,752 @@
+Each block below states, in order: what it does, the state it owns, its
+interfaces, the measured behaviour it is required to reproduce with the finding
+and anomaly row that pin it, the corresponding block of the golden C model, and
+the registers it publishes on the monitoring ring. Register names written as
+\ctr{this} are mirrors of names the real device uses; names written as
+\csr{THIS} belong to this design.
+
+\subsubsection{B1: Host interface and BAR map}
+
+\textbf{Function.} Terminate the PCIe link and split its traffic in two. Base
+address register 0 is the control region: it decodes into the AXI4-Lite
+monitoring ring and is the only initiator on it. Base address registers 2 and 4
+expose user access region pages, one page per doorbell context, mapped
+write-combining into user processes; a store to such a page is a doorbell, and
+a store of a full work-queue element to such a page is the inline publication
+path that lets the device skip the fetch entirely. The block also owns the
+MSI-X table and the pending-bit array, and converts posted writes, non-posted
+reads and completions into AXI4 transactions tagged with the class they belong
+to.
+
+\textbf{State.} Base-address decode; the user-access-region page ownership map;
+write-combining coalescing buffers; the MSI-X table and pending bits;
+outstanding read tags and the completion reservation for them.
+
+\textbf{Interfaces.} PCIe Gen3 $\times 16$ or Gen4 $\times 8$ toward the host;
+AXI4 master and slave toward the data path; AXI4-Lite master onto the
+monitoring ring; a doorbell stream to B2.
+
+\textbf{Must reproduce.} That PCIe is not the bottleneck at 100\,GbE. The
+campaign's stall counters were exactly zero at every one of more than 700
+points, including 195\Gbps{} of host-loopback traffic at 4\,MiB messages across
+64 queue pairs, and including the 197\Gbps{} internal-budget point. The block
+must therefore expose \ctr{outbound\_pci\_stalled\_rd} and
+\ctr{outbound\_pci\_stalled\_wr} and they must be capable of moving, so that a
+later study at a higher rate can show when the link does bind; a model in which
+they are hard-wired to zero would be unfalsifiable.
+
+\textbf{Evidence.} The base-address layout, the user-access-region semantics and
+the doorbell record are \evdoc{}. Write-combining behaviour and the inline
+publication path are \evdrv{} from the provider source. Maximum payload size,
+maximum read request size, read-completion-boundary policy and credit pools are
+\evdoc{}. The service latencies of each transaction class are \evcal{}.
+
+\textbf{Golden model.} The transaction-level PCIe fabric with its per-class
+inventory (user access region, BlueFlame, doorbell record, work-queue element,
+context, translation, payload read, payload write, completion-queue entry,
+command, interrupt) and the work-queue PCIe binding.
+
+{\raggedright
+\textbf{Registers.} \csr{PCI\_LINK\_GEN}, \csr{PCI\_LINK\_WIDTH}, \csr{MPS},
+\csr{MRRS}, \ctr{outbound\_pci\_stalled\_rd},
+\ctr{outbound\_pci\_stalled\_wr}, \csr{UAR\_WRITES},
+\csr{INLINE\_PUBLICATIONS}, \csr{DB\_RECORD\_READS}, and, in the extension
+half, \csr{READ\_TAG\_OCCUPANCY} and \csr{WC\_BUFFER\_FLUSHES}.\par}
+
+\subsubsection{B2: Submission engine}
+
+\textbf{Function.} Own the send and receive queue rings. On a doorbell, read the
+doorbell record, compute the accepted prefix of newly posted work-queue
+elements, and hand their indices to B3 as one batch. Handle inline data, which
+arrives with the doorbell rather than through a fetch. Retire slots when B16
+says a completion has made them reclaimable.
+
+\textbf{State.} Per queue pair: ring base address and logarithmic size, the
+producer index last read from the doorbell record, the device's own consumer
+index, the accepted-prefix pointer, and an inline staging buffer.
+
+\textbf{Interfaces.} Doorbell stream from B1; AXI4 read for doorbell records;
+work-queue-element index batches to B3; reclaim notifications from B16.
+
+\textbf{Must reproduce.} Accepted-prefix semantics: a single doorbell publishes
+an arbitrary prefix of posted work, so the number of memory-mapped writes per
+work request falls with the posting batch. The measured consequence is that
+posting batch is nearly free: batches of 1 and 64 differ by only $1.16\times$,
+because both arms pipeline at the same queue depth. The default send-queue
+depth of 1024 must be a parameter and not an assumption, because the campaign's
+single most expensive analysis error was reading a tool flag that sets work
+requests per posting call as if it set queue depth.
+
+\textbf{Evidence.} Ring geometry, doorbell records and inline semantics are
+\evdoc{} and \evdrv{}. The depth default is \evdrv{}. The $1.16\times$ batching
+figure is a measured property of the pipeline, and belongs to B6.
+
+\textbf{Golden model.} The submission model and the work-queue core's
+accepted-prefix posting with explicit doorbell batches.
+
+{\raggedright
+\textbf{Registers.} \csr{SQ\_DEPTH}, \csr{RQ\_DEPTH}, \csr{DOORBELLS\_SEEN},
+\csr{WQES\_ACCEPTED}, \csr{INLINE\_BYTES}; extension half
+\csr{ACCEPTED\_PREFIX\_HIST}, \csr{SQ\_OCCUPANCY},
+\csr{SQ\_OCCUPANCY\_HIGH\_WATER}.\par}
+
+\subsubsection{B3: Work-queue-element fetch}
+
+\textbf{Function.} Read work-queue-element bytes from host memory by direct
+memory access, prefetching across a doorbell batch so that the fetch of one
+element overlaps the processing of the previous one. Bypassed entirely when the
+element arrived inline.
+
+\textbf{State.} Outstanding fetch tags; the prefetch window; a per-queue-pair
+fetch cursor; a small reorder buffer, because read completions may return out
+of order.
+
+\textbf{Interfaces.} AXI4 read to host memory; decoded work-queue-element
+records to B4 and B6.
+
+\textbf{Must reproduce.} One component of the fixed-offset initiation cost
+$T_{\text{eff}} = 4.48$\uS{}. The campaign can identify the sum of the
+initiation stages and not their split, so the architecture assigns a
+parameterised service to each of the five stages (publication, observation,
+fetch, context readiness, admission) whose sum is constrained and whose split
+is \evcal{}. The block must also not become the depth limiter: with 1024
+elements outstanding the machine runs $5.9\times$ faster at 8\,KiB than with
+one, so prefetch depth is sized from the outstanding-work window and not the
+other way round.
+
+\textbf{Evidence.} The element layout is \evdoc{}; the fetch batching is
+\evdrv{}; the stage split of $T_{\text{eff}}$ is \evcal{} and explicitly an
+assumption until a work-queue publication campaign lands.
+
+\textbf{Golden model.} The serialized fetch stage of the queue core, backed by
+read and completion transactions on the PCIe fabric.
+
+{\raggedright
+\textbf{Registers.} \csr{WQE\_FETCH\_BYTES}, \csr{WQE\_FETCH\_COUNT},
+\csr{PREFETCH\_DEPTH}; extension half \csr{WQE\_FETCH\_OUTSTANDING},
+\csr{WQE\_FETCH\_LATENCY\_HIST}.\par}
+
+\subsubsection{B4: Queue-pair context}
+
+\textbf{Function.} Hold the per-queue-pair state that both the transmit and
+receive paths read, in an on-chip cache backed by high-bandwidth memory, and
+serve the lookup stage of both paths.
+
+\textbf{State.} Per queue pair: transport type; state in the RESET, INIT, RTR,
+RTS, SQD, SQE, ERR machine; send packet sequence number and expected receive
+packet sequence number; last acknowledged sequence number; path maximum
+transmission unit; destination queue-pair number, global identifier, MAC and
+VLAN; traffic class and differentiated-services value; local acknowledgement
+timeout and retry counts; the receiver-not-ready timer; the outstanding-work
+window; and the congestion-control state, namely the reaction point's $\alpha$,
+current rate, target rate, stage, timer and byte counter, and the notification
+point's last-CNP timestamp.
+
+\textbf{Interfaces.} AXI4 to high-bandwidth memory for the backing store;
+lookup ports to B6 on the transmit side and B11 on the receive side; update
+ports from B12, B13 and B15; configuration writes from B18.
+
+\textbf{Must reproduce.} That congestion-control state is persistent per queue
+pair and survives across work requests. This is what makes \anom{18} possible:
+a rate cut that takes 3 to 39\mS{} to arrive and $447 \pm 10$\mS{} to recover
+cannot be modelled by state that resets per message. Path maximum transmission
+unit lives here and drives \anom{13}, the 5.6\,\% goodput difference between
+1024 and 4096. The state machine's transitions and their legality are
+\evdoc{}.
+
+\textbf{Evidence.} Every field is \evdoc{} from the reference manual or the
+specification. The cache geometry is \evcal{} with a measured lower bound: 480
+active queue pairs against 12\,000 memory regions produced no throughput effect
+at all (\anom{15}), so the real device's working set at that scale fits, and
+the associativity and replacement policy are not identifiable from outside.
+
+\textbf{Golden model.} The context lookup stage, plus the transport and
+congestion-control field groups of the hardware profile.
+
+{\raggedright
+\textbf{Registers.} \csr{QP\_COUNT\_ACTIVE}, \csr{QPC\_HITS},
+\csr{QPC\_MISSES}, \csr{QP\_SELECT} with a per-queue-pair window exposing
+\csr{QP\_STATE}, \csr{QP\_PSN\_SEND}, \csr{QP\_PSN\_EXPECTED} and
+\csr{QP\_MTU}; extension half \csr{QPC\_MISS\_SERVICE\_NS},
+\csr{QP\_STATE\_HIST}, \csr{QP\_RATE}, \csr{QP\_ALPHA}.\par}
+
+\subsubsection{B5: Memory registration and translation}
+
+\textbf{Function.} Hold the memory protection table (region base, length, keys,
+protection domain, access rights) and the memory translation table
+(virtual-to-physical mapping), cache both on chip, validate keys and access
+rights on every reference, and walk host memory on a miss.
+
+\textbf{State.} Cached protection and translation entries; the page-walk queue;
+key and access-right check results.
+
+\textbf{Interfaces.} Lookup ports from B8 (transmit gather) and B12 (receive
+placement); AXI4 read for walks; configuration writes from B18.
+
+\textbf{Must reproduce.} \anom{15}, and it is the one row of the table that is
+reproduced \emph{by absence}. Twelve thousand memory regions cost $+1.2\,\%$
+against a two-region control, and 1024 regions of 64\,KiB were identical to the
+control to four significant figures. The architecture therefore sizes the cache
+above the measured working set and the block adds no cost in that regime; what
+it must \emph{not} do is silently hide a smaller cache, which is why the miss
+counters and the service time a miss cost are published separately. The real
+device's behaviour beyond the measured working set is unknown and is declared
+so.
+
+\textbf{Evidence.} Table layouts, keys and access rights are \evdoc{}; the
+cache size is \evcal{} with a lower bound; behaviour past the bound is
+\evdecl{}.
+
+\textbf{Golden model.} Not modelled in the current slice, and documented as an
+absence rather than assumed to be free; the profile's three-tier context
+hierarchy (on-die static RAM, optional device memory, host pinned memory) is
+where it lands.
+
+{\raggedright
+\textbf{Registers.} \csr{MR\_COUNT}, \csr{MPT\_HITS}, \csr{MPT\_MISSES},
+\csr{MTT\_HITS}, \csr{MTT\_MISSES}, \csr{PAGE\_WALKS},
+\csr{KEY\_VIOLATIONS}; extension half \csr{XLAT\_CACHE\_OCCUPANCY},
+\csr{XLAT\_MISS\_SERVICE\_NS}.\par}
+
+\subsubsection{B6: Scheduler and transmit arbiter}
+
+\textbf{Function.} Choose which queue pair transmits next. Round robin over
+queue pairs that are ready, subject to three gates: the per-queue-pair
+outstanding-work window, which is released by acknowledgements; the
+per-queue-pair and per-device packet-rate and bit-rate limiters; and the
+per-queue-pair rate token supplied by the reaction point B15.
+
+\textbf{State.} The ready list and its round-robin pointer; per queue pair the
+outstanding bytes and packets and the token bucket; the device-wide token
+bucket.
+
+\textbf{Interfaces.} Work-queue-element records from B3; context lookup to B4;
+rate from B15; window release from B13; packet-issue grants to B7.
+
+\textbf{Must reproduce.} Four measurements pin this block.
+(i)~Queue-depth dominance: 13.2\Gbps{} at depth one against 77.2\Gbps{} at
+depth 1024, both at 8\,KiB, a factor of 5.9, which requires a genuine
+outstanding-work window rather than one element at a time.
+(ii)~\anom{14}, the host-bound message rate: 3.87 million packets per second on
+one queue pair at 1\,KiB, and 16.7 million messages per second per sender at
+512\,B, which the packet-rate limiters carry.
+(iii)~Multi-queue-pair recovery of the ceiling: two or more queue pairs reach
+97.7\Gbps{} where one saturating queue pair settles into the loss equilibrium.
+(iv)~Skew costs completion time and not bandwidth: with seven queue pairs
+carrying different message sizes, the per-queue-pair \emph{message} rate was
+identical to three decimal places and the per-queue-pair \emph{byte} rate was
+exactly proportional to message size (a spread of 2.000 for a 2:1 size ratio),
+with an aggregate of 96.5\Gbps{}. That is precisely the signature of round
+robin over message completions, and it is the strongest single piece of
+evidence for the arbitration policy in this block.
+
+\textbf{Evidence.} The arbitration policy is \evcal{}, inferred from (iv). The
+rate-limiter values are \evcal{}. The existence of a per-queue-pair rate gate
+fed by congestion control is \evdoc{} from the algorithm.
+
+\textbf{Golden model.} The scheduler admission stage, the outstanding-work
+window and the transmit pacer.
+
+{\raggedright
+\textbf{Registers.} \csr{TX\_PPS\_LIMIT}, \csr{TX\_BPS\_LIMIT},
+\csr{SCHED\_GRANTS}, \csr{QP\_READY\_COUNT}; extension half
+\csr{RR\_POINTER}, \csr{QP\_OUTSTANDING\_BYTES}, \csr{QP\_OUTSTANDING\_PKTS},
+\csr{TX\_RATE\_TOKENS}.\par}
+
+\subsubsection{B7: Packetizer and header builder}
+
+\textbf{Function.} Turn a granted message into packets. Segment at the path
+maximum transmission unit; allocate packet sequence numbers; build the base
+transport header and whichever extended header the operation needs (RETH for
+remote address and length, AETH for acknowledgement syndrome and credits, DETH
+for the source queue pair of a datagram); wrap the result in the RoCEv2
+encapsulation, choosing the UDP source port so that it is stable per queue pair
+and spread across queue pairs; write the differentiated-services field through
+unchanged and force the two ECN bits to ECT(0); and compute the invariant
+cyclic redundancy check.
+
+\textbf{State.} Per queue pair a message cursor and a sequence-number
+allocator; header templates cached from the context; the check accumulator.
+
+\textbf{Interfaces.} Grants from B6; context read from B4; payload beats from
+B8; packets to B9 for the wire or B17 for loopback.
+
+\textbf{Must reproduce.} \anom{13}, the 5.6\,\% maximum-transmission-unit tax,
+which emerges from per-packet header overhead and needs no special rule.
+\anom{06}, the ECT(0) stamp, which does not emerge from anything and is
+therefore \emph{injected}: the block overwrites the two ECN bits
+unconditionally on every RoCEv2 transmit while passing the
+differentiated-services field through, exactly as the on-wire probe found. The
+ratio of message bytes to packet bytes that this block fixes is the
+amplification factor in \anom{11}, so the incast tax is a downstream
+consequence of segmentation and go-back-N and not a separate rule. Finally
+\anom{02}, the sequence-error storm under two-entry gathers, is injected here
+as a per-packet drop rule keyed on gather-entry count and size, because the
+mechanism is not public and no differential experiment we could run localized
+it further than ``the transmit path with two-entry gathers is causal''.
+
+\textbf{Evidence.} Header layouts, the check and the encapsulation are
+\evdoc{}. The ECN overwrite is measured, and \evcal{} as to why. The
+two-entry-gather rule is \evdecl{} and labelled injected in the table.
+
+\textbf{Golden model.} The packetizer.
+
+{\raggedright
+\textbf{Registers.} \ctr{tx\_packets\_phy}, \csr{TX\_PAYLOAD\_BYTES},
+\csr{TX\_HEADER\_BYTES}, \csr{PSN\_ALLOCATED}, \csr{ECT0\_STAMPED},
+\csr{ICRC\_GENERATED}, \csr{MTU\_IN\_USE}; extension half
+\csr{PACKETS\_PER\_MESSAGE\_HIST}.\par}
+
+\subsubsection{B8: Transmit direct memory access}
+
+\textbf{Function.} Fetch payload. Walk the scatter-gather list, translate each
+entry through B5, segment reads at the maximum read request size, manage read
+credits and tags, and reorder returning completions into the packet order B7
+needs. Bypassed for inline data.
+
+\textbf{State.} Per-packet gather cursor; outstanding read tags; the completion
+reorder buffer; credit counters.
+
+\textbf{Interfaces.} AXI4 read to host memory and to high-bandwidth memory for
+device-resident buffers; translation lookups to B5; payload beats to B7.
+
+\textbf{Must reproduce.} That gather entries are free. Two-entry gathers cost
+nothing in throughput (the storm of \anom{02} is a loss effect, with goodput
+within 3\,\%), and no gather configuration the campaign tried moved a
+throughput number. That the reorder buffer never becomes the limit at
+100\,GbE, consistent with the stall counters staying at zero.
+
+\textbf{Evidence.} Maximum payload size, maximum read request size, the
+read-completion-boundary policy and the credit pools are \evdoc{}. Reorder
+buffer depth is \evcal{}.
+
+\textbf{Golden model.} The payload-read transaction class of the PCIe fabric.
+
+{\raggedright
+\textbf{Registers.} \csr{TX\_DMA\_READ\_BYTES}, \csr{TX\_DMA\_READS},
+\ctr{outbound\_pci\_stalled\_rd} (mirrored from B1); extension half
+\csr{TX\_DMA\_OUTSTANDING}, \csr{REORDER\_OCCUPANCY}, \csr{SGE\_COUNT\_HIST}.\par}
+
+\subsubsection{B9: Media access control and physical layer}
+
+\textbf{Function.} Drive the two 100\,GbE ports through the device's integrated
+Ethernet cores, and emit 802.3x global pause frames when B10 asks for them.
+Priority flow control is implemented but disabled by default, to match the
+deployment that was measured.
+
+\textbf{State.} Link state per port; the pause state machine; the physical-layer
+counter set.
+
+\textbf{Interfaces.} Streaming interfaces to B7 and from B10; the optical cages;
+a pause request line from B10.
+
+\textbf{Must reproduce.} The endpoint half of \anom{08}. An overloaded receiver
+\emph{does} emit global pause, on the order of 760 frames per twenty-second
+run, and no endpoint in the entire campaign ever received a pause frame of any
+kind: \ctr{rx\_pause\_ctrl\_phy} was exactly zero at every node in every phase.
+The design must therefore never assume that backpressure propagates, and must
+publish both directions of the pause counters so that a deployment where it
+does propagate is distinguishable from one where it does not.
+
+\textbf{Evidence.} \evdoc{} throughout (IEEE 802.3 and its pause annex).
+
+\textbf{Golden model.} The flow-control field group of the hardware profile:
+priority flow control disabled, global pause transmission enabled, pause
+propagation false.
+
+{\raggedright
+\textbf{Registers.} \ctr{rx\_packets\_phy}, \ctr{tx\_packets\_phy},
+\ctr{rx\_discards\_phy}, \ctr{tx\_discards\_phy}, \ctr{tx\_pause\_ctrl\_phy},
+\ctr{rx\_pause\_ctrl\_phy}, \ctr{tx\_global\_pause},
+\ctr{tx\_global\_pause\_duration}, \ctr{tx\_pause\_storm\_warning\_events},
+\ctr{rx\_prio0\_bytes}, \ctr{tx\_prio0\_bytes}, \csr{LINK\_SPEED},
+\csr{LINK\_UP}.\par}
+
+\subsubsection{B10: Receive ingress meter}
+
+\textbf{Function.} A finite buffer at the receive port, drained at a service
+rate, into which every arriving packet is written before it is parsed. Overflow
+discards at the physical layer, with no transport signal of any kind: the
+sender learns about it only through the retransmission it eventually causes.
+The block also raises the pause request that B9 turns into a frame, and the
+congestion signal that B14 turns into a notification packet.
+
+\textbf{State.} Occupancy and its high-water mark; the drain-rate token bucket;
+the state of the stall process described below.
+
+\textbf{Interfaces.} From B9 (wire) and B17 (loopback); to B11; pause request to
+B9; congestion indication to B14.
+
+\textbf{Must reproduce.} More of the campaign than any other block.
+\anom{03}: a saturated deep pipeline settles at 78 to 92\Gbps{} of goodput with
+the counter signature \ctr{rx\_discards\_phy} and \ctr{out\_of\_sequence} at
+the receiver and \ctr{packet\_seq\_err} and \ctr{roce\_adp\_retrans} at the
+sender.
+\anom{04}: above a size-dependent inter-burst gap (at least 4\uS{} at 8\,KiB,
+between 4 and 100\uS{} at 64\,KiB) the discards go to zero and the duty-cycle
+model becomes exact to $\pm 0.1\,\%$; a 4\uS{} gap at 8\,KiB raises wall
+goodput by 13.8\,\%.
+\anom{10}: full duplex at 91.8\Gbps{} per direction is counter-clean while one
+direction at 93.4\Gbps{} is not, so the threshold sits between them.
+\anom{17}: a lone flow above about 94\Gbps{} loses $0.1798\,\% \pm 0.0012$ of
+its packets here, in bursts of about 73 packets lasting about 94\uS{}, path
+independent over 32 fresh five-tuples, with the event count falling
+$12.5\times$ under at least 10\Gbps{} of reverse traffic while the burst length
+does not move, and with \ctr{out\_of\_buffer} at zero throughout, so it is not
+receive-queue exhaustion.
+
+\textbf{Open clause.} The discard ledger does not close, and the paper says so
+rather than hiding it. At the \anom{03} operating point the campaign counted
+only a few thousand physical-layer discards over a thirty-second window, far
+too few to explain a twenty-percent goodput deficit by loss alone. The meter
+reproduces the equilibrium at a fitted drain rate; it does not explain it.
+\anom{17} is the narrowed form of the missing mechanism, and a second anchor
+makes the gap explicit: under fan-in the same receiver absorbed 99.39\Gbps{}
+while discarding almost nothing, and one drain rate cannot satisfy both
+anchors. This is the block with the most \evcal{} content in the architecture,
+and the one whose first hardware build is most worth instrumenting, because the
+monitoring ring can publish the occupancy trace that the real device cannot.
+
+\textbf{Evidence.} The existence of a port ingress buffer is \evdoc{}; its
+depth, its drain rate and the stall process are \evcal{}, and the stall process
+is currently unmodelled.
+
+\textbf{Golden model.} The ingress meter.
+
+{\raggedright
+\textbf{Registers.} \ctr{rx\_discards\_phy} (mirror), \ctr{out\_of\_buffer}
+(mirror, inert), \csr{INGRESS\_DRAIN\_BPS}, \csr{INGRESS\_DEPTH\_BYTES},
+\csr{STALL\_EVENTS}; extension half \csr{INGRESS\_OCCUPANCY},
+\csr{INGRESS\_HIGH\_WATER}, \csr{STALL\_BURST\_LEN\_HIST},
+\csr{PAUSE\_REQUESTS}.\par}
+
+\subsubsection{B11: Receive parser and classifier}
+
+\textbf{Function.} Decode Ethernet, IP, UDP and the base transport header;
+verify the invariant cyclic redundancy check; look the destination queue pair
+up in B4; and route the packet to the block that handles its class. Congestion
+notification packets are a class of their own: they are a base transport header
+with a distinguished opcode and no payload, and they go to B15, not to the
+responder.
+
+\textbf{State.} Pipeline registers; the classification table.
+
+\textbf{Interfaces.} From B10; context lookup to B4; classified packets to B12
+(requests and data), B13 (acknowledgements and negative acknowledgements), B15
+(notifications) and B18 (management).
+
+\textbf{Must reproduce.} Correct separation of the notification class,
+without which the reaction point cannot be driven at all; the
+congestion-experienced bit surfaced to B14 as a distinct input from B10's own
+congestion signal, because the measured deployment exercises the second and
+never the first; and exact counting of check failures and of packets whose
+queue-pair number matches nothing.
+
+\textbf{Evidence.} \evdoc{} throughout.
+
+\textbf{Golden model.} The front half of the receive processor.
+
+{\raggedright
+\textbf{Registers.} \csr{RX\_PACKETS}, \csr{RX\_BYTES}, \csr{ICRC\_ERRORS},
+\csr{UNMATCHED\_QPN}, \csr{CNP\_RECEIVED}, \csr{BAD\_HEADER}; extension half
+\csr{CLASS\_HIST}, \csr{CE\_MARKED\_RECEIVED}.\par}
+
+\subsubsection{B12: Responder}
+
+\textbf{Function.} The receive side of the transport, and the block that
+decides whether an arriving packet is placed or thrown away. Check the packet
+sequence number against the expected one; on a match, place the payload by direct memory access
+for a write, consume a receive-queue entry for a send, or queue a read
+response; on a gap, emit a negative acknowledgement naming the first missing
+number and discard until the requester restarts. Generate acknowledgements,
+with coalescing. Handle receiver-not-ready when no receive buffer is posted.
+
+\textbf{State.} Expected sequence number per queue pair; acknowledgement
+coalescing state; the read-response queue; the receiver-not-ready timer; the
+receive-queue consumer index.
+
+\textbf{Interfaces.} Classified packets from B11; context read and update to
+B4; AXI4 write to host memory for placement; translation lookup to B5;
+acknowledgement, negative-acknowledgement and read-response packets to B7;
+completion notifications to B16.
+
+\textbf{Must reproduce.} \ctr{out\_of\_sequence} moving under exactly the
+conditions measured (about 93\,000 per thirty seconds under two-to-one incast,
+zero for paced traffic). \ctr{rx\_write\_requests} incrementing exactly once
+per completed RDMA write message, which the campaign verified against sender
+completion accounting to 0.01\,\% and used as its ground-truth goodput counter,
+and wrapping at 32 bits when the compatibility bit is set. And the negative
+result: receiver-not-ready never fired and \ctr{out\_of\_buffer} never moved in
+the entire campaign, because receive queues were posted deep and RDMA writes
+consume none, so overflow appears one layer down as an ingress discard rather
+than as a transport event.
+
+\textbf{Evidence.} \evdoc{} (the specification fixes the sequence-number check,
+the syndromes and the recovery rule). Acknowledgement coalescing is \evcal{}.
+
+\textbf{Golden model.} The responder half of the receive processor.
+
+{\raggedright
+\textbf{Registers.} \ctr{rx\_write\_requests}, \csr{RX\_READ\_REQUESTS},
+\ctr{out\_of\_sequence}, \ctr{implied\_nak\_seq\_err},
+\ctr{rnr\_nak\_retry\_err}, \ctr{out\_of\_buffer}, \csr{ACKS\_SENT},
+\csr{NAKS\_SENT}, \csr{READ\_RESPONSES\_SENT}.\par}
+
+\subsubsection{B13: Requester completion and retransmission}
+
+\textbf{Function.} The send-side transport. Process acknowledgements and
+negative acknowledgements, advance the unacknowledged window and release it to
+B6, replay from the first unacknowledged sequence number on a negative
+acknowledgement or a local acknowledgement timeout, and count retries.
+Go-back-N is the default; a limited selective-repeat window is a parameter and
+is off in the ConnectX-5 profile.
+
+\textbf{State.} Per queue pair the unacknowledged window and its replay cursor;
+retry counters; the retransmission timer.
+
+\textbf{Interfaces.} From B11; context update to B4; replay requests to B6 and
+B7; window release to B6; completions to B16.
+
+\textbf{Must reproduce.} The amplification that turns a small loss rate into a
+large goodput deficit. \anom{11}: 1.65\,\% packet loss becomes a 26.9\,\%
+goodput tax at 1\,MiB messages, a factor of about 16, because each loss forces
+the retransmission of the rest of the message. The counter semantics of
+\anom{19}: \ctr{packet\_seq\_err} increments once per contiguous loss burst and
+not once per lost packet, giving the measured ratio of about 73 between packets
+the receiver discarded and sequence errors the sender recorded. And \anom{09},
+the firmware-dependent \ctr{local\_ack\_timeout\_err}, selected by
+\csr{FW\_VARIANT}. The local acknowledgement timeout must be finite and
+configurable: the campaign's most costly instrument defect was a default
+encoding that means infinite, under which the first dropped packet stalls a
+requester permanently, silently, at zero rate and with no error.
+
+\textbf{Evidence.} Go-back-N and the timeout are \evdoc{}; adaptive
+retransmission is \evdrv{}; the selective-repeat window is \evdecl{} and
+disabled.
+
+\textbf{Golden model.} The requester transport.
+
+{\raggedright
+\textbf{Registers.} \ctr{packet\_seq\_err}, \ctr{roce\_adp\_retrans},
+\ctr{local\_ack\_timeout\_err}, \csr{RETRY\_EXCEEDED}, \csr{RTO\_NS};
+extension half \csr{UNACKED\_WINDOW\_BYTES}, \csr{REPLAY\_BYTES},
+\csr{LOSS\_BURST\_LEN\_HIST}.\par}
+
+\subsubsection{B14: Notification point}
+
+\textbf{Function.} Decide that the endpoint is congested and say so. Two
+inputs: a congestion-experienced bit on an arriving packet, which is the
+textbook input, and B10's own ingress congestion signal, which is the input
+that the measured deployment actually exercises. Generate a congestion
+notification packet back to the source queue pair, rate limited to at most one
+per configured minimum interval per queue pair.
+
+\textbf{State.} Per queue pair the timestamp of the last notification sent; the
+congestion flag; the notification transmit queue.
+
+\textbf{Interfaces.} Congestion indication from B10; the CE flag from B11;
+notification packets to B7; counters to B19.
+
+\textbf{Must reproduce.} \anom{16}, the finding that reframes this block. On the
+measured fabric the switch never marks: zero congestion-experienced packets in
+$6.7 \times 10^{8}$, at two differentiated-services classes, with the switch
+buffer full and dropping 6.36\,\%, and with every packet markable. So the
+primary input is the endpoint's own ingress congestion, and a fabric that never
+marks is the normal case rather than a degenerate one. The rates are the
+acceptance data: \ctr{np\_cnp\_sent} at 38 per second at idle rising to 2262
+per second exactly during reliable fan-in, which is 283 notifications per
+second per congested queue pair, or one per 3.54\mS{}, a factor of 70 under the
+one-per-50\uS{} pacing bound the algorithm allows. Below saturation a lone
+paced flow must emit exactly zero. And \anom{07}: the marking counter is
+present, named as the real device names it, and inert.
+
+\textbf{Evidence.} The congestion-experienced path is \evdoc{}. The
+ingress-congestion path is \evcal{}. The notification threshold and the minimum
+interval are \evcal{} and fitted over declared candidate grids, because the
+vendor register block that would hold them is unreadable on any campaign host.
+
+\textbf{Golden model.} Rate control, notification point.
+
+{\raggedright
+\textbf{Registers.} \ctr{np\_cnp\_sent},
+\ctr{np\_ecn\_marked\_roce\_packets} (inert mirror),
+\csr{CNP\_MIN\_INTERVAL\_NS}; extension half \csr{NP\_CONGESTION\_EVENTS},
+\csr{NP\_THRESHOLD\_BYTES}, \csr{NP\_SOURCE} (which input fired).\par}
+
+\subsubsection{B15: Reaction point}
+
+\textbf{Function.} Per-queue-pair rate control. On a notification, update
+$\alpha$ toward one, cut the current rate, and remember the pre-cut rate as the
+target. In the absence of notifications, recover through fast recovery,
+additive increase and hyper increase, gated by both a timer and a byte counter.
+Publish the resulting rate to B6.
+
+\textbf{State.} Per queue pair $\alpha$, current rate, target rate, stage, the
+timer and the byte counter, and the arrival history the stage machine needs. The
+state lives in B4's context store and is cached here.
+
+\textbf{Interfaces.} Notifications from B11; rate to B6; context read and write
+to B4.
+
+\textbf{Must reproduce.} \anom{18} in full. A rate cut of at least 30\,\%
+arriving after 3, 16 and 39\mS{} across three repeats; fair share reached after
+5\mS{}, 1.8\,s and 2.3\,s; recovery to at least 95\,\% of the solo rate in $447
+\pm 10$\mS{}; additive increase at about 0.107 falling to 0.093\Gbps{} per
+millisecond; and a steady two-flow split of 50.18 and 50.13\Gbps{} on a
+99.30\Gbps{} wire. The reaction is 2 to 20 times slower and the recovery about
+$4.5\times$ slower than the algorithm's published defaults, so the block
+carries fitted parameters rather than the defaults, and says so. Two counter
+facts belong here too: \ctr{rp\_cnp\_ignored} is exactly zero, which is what
+proves the reaction point is enabled rather than merely present; and senders
+handle $2.24\times$ the notifications the receiver reports sending, reproducibly
+and without explanation (\anom{19}). The architecture publishes both counters
+and does not manufacture the ratio.
+
+\textbf{Evidence.} The algorithm is \evdoc{}. Every parameter value is
+\evcal{}, fitted, and marked as such.
+
+\textbf{Golden model.} Rate control, reaction point, in front of the transmit
+pacer.
+
+{\raggedright
+\textbf{Registers.} \ctr{rp\_cnp\_handled}, \ctr{rp\_cnp\_ignored},
+\ctr{roce\_slow\_restart}, \ctr{roce\_slow\_restart\_cnps},
+\ctr{roce\_slow\_restart\_trans}, \csr{DCQCN\_AI\_STEP},
+\csr{DCQCN\_TIMER\_US}, \csr{DCQCN\_BYTE\_COUNTER}, \csr{DCQCN\_RATE\_FLOOR};
+extension half \csr{RP\_ALPHA}, \csr{RP\_CURRENT\_RATE},
+\csr{RP\_TARGET\_RATE}, \csr{RP\_STAGE}.\par}
+
+\subsubsection{B16: Completion engine}
+
+\textbf{Function.} Tell the host that work has finished. Write entries into
+the completion queue with the correct ownership phase, moderate event-queue
+entries and interrupts, and reclaim send-queue slots for unsignalled work when
+a later signalled completion retires them.
+
+\textbf{State.} Per completion queue the producer index and owner phase;
+moderation counters and timers; event-queue state.
+
+\textbf{Interfaces.} Retirements from B12 and B13; AXI4 write to host memory;
+interrupt requests to B1; reclaim notifications to B2.
+
+\textbf{Must reproduce.} That unsignalled work produces no completion entry at
+all and that its slots are reclaimed by a later signalled completion, which is
+the mechanism behind the difference between transport retirement and
+provider-visible slot reclamation. That the ownership bit flips on every wrap so
+that a poller sees a coherent entry. And the campaign's negative result: no
+completion-queue error was ever observed, and completion service was never on
+the critical path at these rates.
+
+\textbf{Evidence.} Entry formats, ownership, the 64 and 128 byte profiles and
+moderation are \evdoc{}; the reclaim rule is \evdrv{}.
+
+\textbf{Golden model.} The completion-queue write stage, ordered retirement,
+signalled and unsignalled reclaim, and owner wrap.
+
+{\raggedright
+\textbf{Registers.} \csr{CQES\_WRITTEN}, \csr{CQE\_ERRORS},
+\csr{EQ\_EVENTS}, \csr{MSIX\_INTERRUPTS}, \csr{CQ\_MODERATION\_COUNT},
+\csr{CQ\_MODERATION\_US}; extension half \csr{CQ\_OCCUPANCY},
+\csr{UNSIGNALLED\_RECLAIMED}.\par}
+
+\subsubsection{B17: Loopback and internal switch}
+
+\textbf{Function.} Carry a packet whose destination is this endpoint back into
+the receive path without going out to the wire, and arbitrate between that
+traffic and wire traffic for the shared processing budget.
+
+\textbf{State.} The budget token bucket; per-source arbitration state.
+
+\textbf{Interfaces.} Loopback-destined packets from B7; packets to B10; a
+service-budget interlock with B10.
+
+\textbf{Must reproduce.} \anom{05}, which is one of the cleanest results in the
+campaign. With loopback and wire traffic driven into one adapter together,
+total ingress caps near 197\Gbps{}; the wire flow keeps 99 to 99.8\,\% of its
+solo rate; the loopback flow absorbs the entire shortfall and falls to about
+51\,\%; and no PCIe stall counter and no receive-buffer counter moves. Strict
+priority for wire traffic, over a shared budget, is the arbitration rule that
+produces exactly that split, and the registered hypothesis that it was PCIe
+pressure is refuted by the stall counters. The practical consequence, which the
+serving simulator needs, is that colocated ranks exchanging over adapter
+loopback starve under wire load.
+
+\textbf{Evidence.} \evcal{} throughout: both the budget and the priority order
+are inferred from the split.
+
+\textbf{Golden model.} The internal arbiter, registered against an open task and
+not yet landed.
+
+{\raggedright
+\textbf{Registers.} \csr{INTERNAL\_BUDGET\_BPS}, \csr{LOOPBACK\_PACKETS},
+\csr{LOOPBACK\_BYTES}; extension half \csr{LOOPBACK\_GRANTS},
+\csr{WIRE\_GRANTS}, \csr{BUDGET\_OCCUPANCY}.\par}
+
+\subsubsection{B18: Management}
+
+\textbf{Function.} The control plane. Hold the global identifier table,
+configure port and maximum-transmission-unit attributes, execute queue-pair
+transitions, and run the command interface through which all of that arrives.
+
+\textbf{State.} The global identifier table; port attributes; the command
+queue.
+
+\textbf{Interfaces.} AXI4-Lite commands from B1; context writes to B4; table
+writes to B5; port configuration to B9.
+
+\textbf{Must reproduce.} The configuration surface as measured. Distinct table
+slots for RoCE v1 and RoCE v2 entries, with the v2 entry the one used. A port
+maximum transmission unit (4096) that differs from the network-device maximum
+transmission unit (9000), because both exist and they are not the same thing.
+A priority mapping under which all traffic lands on priority zero, and a
+non-identity priority-to-traffic-class map, both of which the campaign found on
+every node and neither of which had any effect once priority flow control was
+off.
+
+\textbf{Evidence.} \evdoc{}.
+
+\textbf{Golden model.} Not modelled; the C model's caller configures the
+endpoint directly. This block is \evdecl{}.
+
+{\raggedright
+\textbf{Registers.} \csr{GID\_TABLE\_SIZE}, \csr{ACTIVE\_MTU},
+\csr{PORT\_STATE}, \csr{PRIO\_TC\_MAP}, \csr{TRUST\_MODE},
+\csr{COMMANDS\_EXECUTED}, \csr{COMMAND\_ERRORS}.\par}
+
+\subsubsection{B19: Control registers, counters and timestamping}
+
+\textbf{Function.} Own the monitoring ring, the versioned map, the free-running
+timestamp, the snapshot mechanism and the compatibility behaviour described in
+\S\ref{sec:arch:csr}. Every other block's registers are endpoints on this
+block's ring.
+
+\textbf{State.} The shadow counter banks; the snapshot timestamp; the map
+version and per-block versions.
+
+\textbf{Interfaces.} AXI4-Lite ring to all blocks; the broadcast timestamp and
+snapshot strobe; the AXI4-Lite slave that B1 drives.
+
+\textbf{Must reproduce.} Counter \emph{semantics} and not merely counter
+names. There are three of them. \anom{07}: the marking counter
+\ctr{np\_ecn\_marked\_roce\_packets} is present and permanently zero while
+congestion control runs. \anom{09}, the firmware-selected behaviour of
+\ctr{local\_ack\_timeout\_err}. \anom{19}, the whole set: sequence errors
+counting bursts, ingress discards counting packets exactly, switch loss
+appearing in neither, the receive-buffer counter never moving, and the
+notification ledger that does not balance. These are facade behaviours with no
+datapath effect, and a tool written against the real device must behave
+identically against this one, which is the entire point of the mirror half of
+the map.
+
+\textbf{Evidence.} Counter names, widths and reset behaviour are \evdoc{} from
+the kernel's counter documentation; the semantics that contradict the names are
+measured.
+
+\textbf{Golden model.} The observable-state facade and the firmware counter
+variant field.
+
+{\raggedright
+\textbf{Registers.} \csr{MAP\_VERSION}, \csr{SNAPSHOT},
+\csr{TIMESTAMP\_LO}, \csr{TIMESTAMP\_HI}, \csr{WRAP32\_COMPAT},
+\csr{FW\_VARIANT}, \csr{RING\_STOPS}, \csr{RING\_ERRORS}.
+\par}

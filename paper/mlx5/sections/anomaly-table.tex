@@ -1,0 +1,135 @@
+\begin{table*}[t]
+  \centering
+  \footnotesize
+  \setlength{\tabcolsep}{3.5pt}
+  \renewcommand{\arraystretch}{1.12}
+  \caption{The nineteen-row anomaly table: the verification contract between
+    the measurements and the architecture. \textit{Kind} states how the model
+    is required to reproduce the row. The block column names the block of
+    \S\ref{sec:arch} that owns it. Rows \anom{01} and \anom{16} through
+    \anom{19} are post-specified corrections made after the phase that owns
+    them was frozen, and are labelled as such in the campaign records.}
+  \label{tab:anomaly}
+  \newcolumntype{R}[1]{>{\raggedright\arraybackslash}p{#1\textwidth}}
+  \begin{tabular}{@{}l R{0.115} R{0.185} R{0.30} R{0.065} l l@{}}
+    \toprule
+    Id & Anomaly & Trigger & Effect and magnitude & Kind & Block & Evidence \\
+    \midrule
+
+    \anom{01} & UD receive cap &
+    one UD queue pair receiving above 3.07\,Mpps through the measurement engine &
+    re-attributed: the knee and the 47.5\,\% silent loss were the engine's
+    receive path. On the wire one UD queue pair absorbs 5.51\,Mpps of 2\,KiB
+    with only the 0.17 to 0.19\,\% ingress floor &
+    tool & none & P3, P6 \\
+
+    \anom{02} & two-SGE send sequence-error storm &
+    RC send with two gather entries of 512\,B each, 32 queue pairs &
+    \ctr{packet\_seq\_err} of 68\,k to 400\,k per 30\,s; the one-entry control
+    at identical bytes is exactly zero; goodput within 3\,\% &
+    injected & B7, B8 & P3 \\
+
+    \anom{03} & saturated loss equilibrium &
+    one RC queue pair, queue depth 1024, no inter-burst gap, above about
+    92\Gbps{} &
+    responder ingress discards plus a go-back-N tail; goodput settles at 78 to
+    92\Gbps{} &
+    emergent & B10 & P2, P3, P4 \\
+
+    \anom{04} & drain window &
+    inter-burst gap of at least 4\uS{} at 8\,KiB, 4 to 100\uS{} at 64\,KiB &
+    discards go to zero; goodput follows the duty model within 0.1\,\%; a
+    4\uS{} gap raises 8\,KiB goodput by 13.8\,\% &
+    emergent & B10 & P4 \\
+
+    \anom{05} & loopback starvation &
+    loopback and wire ingress together above 197\Gbps{} &
+    wire keeps 99\,\%, loopback drops to 51\,\%, no PCIe stall &
+    emergent & B17 & P3 \\
+
+    \anom{06} & ECT(0) stamping &
+    any RoCEv2 transmit &
+    ECN bits forced to ECT(0) regardless of requested type of service; DSCP
+    honoured &
+    injected & B7 & P5b \\
+
+    \anom{07} & inert marking counter &
+    any traffic &
+    \ctr{np\_ecn\_marked\_roce\_packets} stays zero while CNPs are generated &
+    counter & B19 & P3, P5a, P5b \\
+
+    \anom{08} & one-hop pause &
+    receiver overload &
+    receiver emits global pause; no peer ever receives one &
+    fabric & B9 $+$ fabric & P3, audit \\
+
+    \anom{09} & firmware counter variant &
+    retransmission &
+    firmware 16.31 counts \ctr{local\_ack\_timeout\_err}; firmware 16.32
+    counts zero &
+    counter & B19 & P5a \\
+
+    \anom{10} & duplex cleaner than simplex &
+    full duplex at 91.8\Gbps{} per direction against one direction at
+    93.4\Gbps{} &
+    duplex counter-clean, simplex dirty; the discard threshold sits between &
+    emergent & B10 & P4 \\
+
+    \anom{11} & incast amplification &
+    $N$ senders into one receiver, 1\,MiB messages &
+    wire full; goodput tax equals loss rate times a go-back-N amplification
+    factor ($16\times$ at 1.65\,\% loss, a 26.9\,\% tax) &
+    emergent & B7, B13 & P5a \\
+
+    \anom{12} & UD one-over-$N$ delivery &
+    $N$ UD senders into one receiver &
+    delivery exactly $1/N$; no endpoint counter moves &
+    fabric & fabric & P5a \\
+
+    \anom{13} & MTU tax &
+    path MTU 1024 against 4096 &
+    5.6\,\% of goodput &
+    emergent & B7 & P2 \\
+
+    \anom{14} & host-bound message rate &
+    small messages, single process &
+    3.87\,Mpps on one queue pair at 1\,KiB; 16.7\,Mmsg/s per sender at 512\,B &
+    emergent & B6 & P2, P5a \\
+
+    \anom{15} & memory-region insensitivity &
+    12\,000 memory regions; 1024 regions of 64\,KiB; gathers except \anom{02} &
+    no throughput effect &
+    emergent by absence & B5 & P3 \\
+
+    \anom{16} & endpoint-generated notification &
+    RC fan-in on a fabric whose switch never marks &
+    the receiver signals its own ingress congestion: \ctr{np\_cnp\_sent} rises
+    from 38 to 2262 per second, which is 283 CNP/s per congested queue pair &
+    emergent & B14 & P6 \\
+
+    \anom{17} & ingress stall bursts &
+    one lone RC flow above about 94\Gbps{} &
+    0.18\,\% of packets lost at the receiver's ingress in bursts of about 73
+    packets (94\uS{}), path independent over 32 five-tuples; 10\Gbps{} of
+    reverse traffic cuts the event count $12.5\times$ without changing the
+    burst length &
+    emergent & B10 & P6 \\
+
+    \anom{18} & slow DCQCN dynamics &
+    a reaction point under two-to-one RC fan-in &
+    cut of at least 30\,\% after 3 to 39\mS{}; fair share after 5\mS{} to
+    2.3\,s; recovery to 95\,\% in $447 \pm 10$\mS{}; additive increase about
+    0.1\Gbps{} per millisecond &
+    emergent & B15 & P6 \\
+
+    \anom{19} & counter semantics under loss &
+    any loss on the path &
+    \ctr{packet\_seq\_err} counts loss bursts, $73\times$ fewer than packets
+    lost; \ctr{rx\_discards\_phy} is exact; switch loss appears in neither;
+    \ctr{out\_of\_buffer} never moves; senders handle $2.24\times$ the CNPs the
+    receiver reports sending &
+    counter & B19 & P6 \\
+
+    \bottomrule
+  \end{tabular}
+\end{table*}

@@ -1,0 +1,215 @@
+\section{Block architecture}
+\label{sec:arch}
+
+This section is the paper's main artifact. It defines an RDMA endpoint in
+nineteen blocks, targeting an AMD Alveo U55C accelerator card first and
+expandable to an application-specific implementation, such that every block
+names the measured behaviour it is required to reproduce, the evidence class of
+every parameter it carries, the block of the golden C model it corresponds to,
+and the control and status registers it publishes.
+
+\subsection{Target}
+\label{sec:arch:target}
+
+The first target is one Alveo U55C card~\cite{alveo-u55c}.
+Table~\ref{tab:u55c} lists the resources the architecture depends on. The choice is deliberate rather than
+convenient: the card carries two 100\,GbE-capable cages and the integrated
+Ethernet hard blocks to drive them, which is exactly the port count the
+measured device has; it carries high-bandwidth memory large enough that
+queue-pair context and memory translation need not be host resident at the
+scale we care about; and its PCIe attachment is the same generation as the
+measured host, so a comparison against measured host-side behaviour is not
+confounded by the link.
+
+\begin{table}[t]
+  \centering
+  \small
+  \caption{Alveo U55C resources the architecture depends on.
+    \TODO{confirm every row against the current data sheet before submission;
+    the numbers below are the ones the design was sized against.}}
+  \label{tab:u55c}
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    Resource & Figure used for sizing \\
+    \midrule
+    Logic & about 1.30\,M lookup tables, 2.6\,M registers \\
+    On-chip memory & about 70\,Mb block RAM, 270\,Mb ultra RAM \\
+    Device memory & 16\,GB HBM2, about 460\,GB/s aggregate \\
+    Network & 2 QSFP28 cages, 2 integrated 100\,GbE MAC cores \\
+    Host & PCIe Gen3 $\times 16$, or Gen4 $\times 8$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Every dimension that a different target would change is a parameter, listed in
+\S\ref{sec:arch:expand}: link rate, path maximum transmission unit, queue-pair
+count, memory-region count, buffer sizes and port count. The application-specific
+path replaces high-bandwidth memory with on-die static RAM and replaces the
+soft interconnect adapters with hard macros, and keeps the same
+register-transfer-level sources and the same register map.
+
+\subsection{Two interconnects}
+\label{sec:arch:interconnect}
+
+The architecture separates moving data from observing the machine, and gives
+each its own interconnect.
+
+\textbf{The AXI4 data path} carries everything with a byte count: host-memory
+reads for work-queue elements, context, translations and payload; host-memory
+writes for placed payload and completion-queue entries; and high-bandwidth
+memory traffic for context, translation and buffer backing. It is a
+512-bit AXI4 fabric, which at the Ethernet core clock of 322.266\,MHz supplies
+about 165\Gbps{} per direction, comfortably above the 100\Gbps{} line rate and
+above the 197\Gbps{} internal budget the measurements found when loopback and
+wire traffic share the machine. Read and write channels are independent, and
+every initiator carries a transaction identifier that maps to one of the
+transaction classes the model already accounts separately: user access region,
+doorbell record, work-queue element, context, translation, payload read,
+payload write, completion-queue entry, command and interrupt.
+
+\textbf{The AXI4-Lite monitoring network on chip} carries nothing with a byte
+count. It is a unidirectional ring of register slices, one stop per block, with
+a single initiator at the host interface, 32-bit data and a 4\,KiB aperture per
+stop. A ring rather than a crossbar because a crossbar with nineteen slaves and
+one master is all cost and no benefit here: monitoring traffic is rare, entirely
+tolerant of latency, and the ring's one register stage per stop is free timing
+closure and a fixed, small resource cost that does not grow quadratically as
+blocks are added. The ring is physically and logically separate from the data
+path, so reading a counter cannot perturb the datapath timing that the counter
+describes, which is the property that makes the resulting traces usable as
+verification evidence.
+
+\subsection{The register map}
+\label{sec:arch:csr}
+
+Every block occupies one 4\,KiB page of a single versioned map, addressed from
+the control base address register. The first sixteen bytes of every page are
+identical:
+
+\begin{center}\small
+\begin{tabular}{@{}lll@{}}
+  \toprule
+  Offset & Field & Meaning \\
+  \midrule
+  \texttt{0x000} & \csr{MAP\_VERSION}   & major and minor of the whole map \\
+  \texttt{0x004} & \csr{BLOCK\_ID}      & B1 to B19 \\
+  \texttt{0x008} & \csr{BLOCK\_VERSION} & this block's own version \\
+  \texttt{0x00C} & \csr{CAPABILITIES}   & optional features present \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Software that knows \csr{MAP\_VERSION} knows the layout of every page, and a
+block that gains a field bumps \csr{BLOCK\_VERSION} without invalidating
+readers of the others. Three map-wide mechanisms follow.
+
+\textbf{One clock.} A free-running 64-bit counter, clocked from the reference
+the Ethernet subsystem already needs, ticks every 6.4\nS{} at 156.25\,MHz. It is
+broadcast to every block, and every timestamped event in the design is stamped
+from it. The measured device offers a hardware timestamp on received packets
+and nothing else; here every block's events share one time base.
+
+\textbf{Coherent snapshots.} Writing \csr{SNAPSHOT} at the map level asserts a
+broadcast strobe that latches every block's counters and occupancies into a
+shadow bank together with the current timestamp. The campaign spent real effort
+working around the fact that counters on the measured device are read
+non-atomically and are cached by the driver for 10\mS{}, which is why rates
+below that window are meaningless there. Here a read set is coherent by
+construction.
+
+\textbf{Counter width and a compatibility mode.} All counters are 64 bits, which
+removes the wrap that makes \ctr{rx\_write\_requests} unusable at high message
+rates on the real device. Because fidelity to the real device is sometimes the
+point, a \csr{WRAP32\_COMPAT} bit makes the mirrored counters wrap at 32 bits
+exactly as the original does, so a tool written against the real adapter can be
+tested against this one.
+
+The map has two halves. The \emph{mirror} half carries counters named exactly as
+the real device names them, with the real semantics preserved including the ones
+that are wrong: \ctr{np\_ecn\_marked\_roce\_packets} is present and stays zero
+(\anom{07}), \ctr{packet\_seq\_err} counts loss bursts and not lost packets
+(\anom{19}), \ctr{out\_of\_buffer} exists and never moves under the conditions
+the campaign covered, and a \csr{FW\_VARIANT} field selects whether
+\ctr{local\_ack\_timeout\_err} counts or stays zero (\anom{09}). The
+\emph{extension} half carries what the real device does not expose and the FPGA
+can: the instantaneous and high-water occupancy of every internal queue, the
+credit state of every arbiter, per-stage service counts, and the reaction
+point's rate and $\alpha$ per queue pair. \S\ref{sec:verify:fpga} returns to
+what that buys.
+
+\begin{figure*}[t]
+  \centering
+  \input{figures/arch}
+  \caption{Top-level block architecture. Solid arrows are the AXI4 data path
+    and the packet path; the dashed ring is the AXI4-Lite monitoring network on
+    chip, which reaches every block and is the only path by which state leaves
+    the design for observation. Blocks are numbered as in
+    \S\ref{sec:arch:blocks} and in the block column of
+    Table~\ref{tab:anomaly}.}
+  \Description{Top-level block diagram of the RDMA endpoint: a transmit lane, a context and translation lane, an AXI4 data path bus, a congestion-control lane and a receive lane, between a host interface on the left and a media access block on the right, all enclosed by a dashed AXI4-Lite monitoring ring.}
+  \label{fig:arch}
+\end{figure*}
+
+\subsection{The blocks}
+\label{sec:arch:blocks}
+
+\input{sections/blocks}
+
+\subsection{Expandability}
+\label{sec:arch:expand}
+
+Table~\ref{tab:params} lists the parameters that a different target changes.
+None of them is buried in a datapath width; each is a top-level generic that
+propagates into buffer depths, counter widths and the register map's
+\csr{CAPABILITIES} words.
+
+\begin{table}[t]
+  \centering
+  \small
+  \caption{Parameters. The U55C column is the first build; the range is what
+    the architecture is designed to accept without restructuring.}
+  \label{tab:params}
+  \footnotesize
+  \setlength{\tabcolsep}{3.5pt}
+  \begin{tabular}{@{}ll>{\raggedright\arraybackslash}p{0.42\columnwidth}@{}}
+    \toprule
+    Parameter & U55C build & Range \\
+    \midrule
+    Link rate per port  & 100\Gbps{}    & 100 to 400\Gbps{} \\
+    Ports               & 2             & 1 to 4 \\
+    Datapath width      & 512\,b        & 512 to 2048\,b \\
+    Path MTU            & 4096\,B       & 256 to 4096\,B \\
+    Queue pairs         & 16\,k on chip & 1\,k to 1\,M with backing \\
+    Memory regions      & 64\,k         & 1\,k to 1\,M with backing \\
+    Ingress depth       & \evcal{} fit   & any \\
+    Internal budget     & 197\Gbps{}    & scales with the datapath \\
+    Context backing     & HBM2          & HBM, DDR or on-die SRAM \\
+    Retransmission      & go-back-N     & plus optional selective repeat \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\textbf{Rate.} Moving from 100 to 400\Gbps{} widens the datapath rather than
+raising the clock: 2048 bits at 322.266\,MHz carries 660\Gbps{}. The blocks
+that must change are the packetizer, which segments per beat rather than per
+byte, and the ingress meter, whose service rate is a parameter. The
+congestion-control constants do \emph{not} scale linearly, and the model marks
+every ConnectX-7 field derived by scaling as \evdecl{} rather than pretending it
+was measured.
+
+\textbf{Scale.} Queue-pair and memory-region counts above the on-chip cache
+capacity are served from high-bandwidth memory, and above that from host memory
+over the same translation path the real device uses. The architecture's
+position here is that a cache miss must be attributable: a lookup that misses
+publishes the miss in its own counter and the service time it cost, so a scale
+study can tell a context miss from a translation miss, which the measured
+device cannot.
+
+\textbf{Application-specific path.} Three substitutions and nothing else:
+high-bandwidth memory becomes on-die static RAM with the same AXI4 interface;
+the Ethernet and PCIe soft wrappers become hard macros; and the monitoring ring
+keeps its width but loses the FPGA-only extension half if area demands it, with
+\csr{CAPABILITIES} advertising the loss. The register-transfer-level sources
+and the register map are unchanged, which is the whole point of putting the
+observation path on its own interconnect.
