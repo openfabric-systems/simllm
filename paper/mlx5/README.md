@@ -175,7 +175,7 @@ LaTeX or hyperref warnings. Two classes of message remain:
 - `Package balance Warning: You have called \balance in second column`. This
   comes from `acmart` balancing the columns of the last page and is benign; it
   moves or disappears whenever the content length changes.
-- About twenty `Underfull \vbox ... while \output is active`. These are the
+- About fifteen `Underfull \vbox ... while \output is active`. These are the
   usual consequence of `\flushbottom` (which `acmart` `sigconf` requires) on
   a draft with many top-placed floats. They will settle as the content is
   trimmed to length.
