@@ -102,7 +102,7 @@ the first differing timestamp or counter.
 | packet rate | `tx_pps_per_qp`, `tx_pps_per_nic`, `rx_pps_per_qp_rc`, `rx_pps_per_qp_ud`, `rx_pps_per_nic` | per-QP UD receive 5.51e6 (`calibrated-opaque`, P6 wire; a post-specified correction of the 3.07e6 the measurement engine produced), per-NIC 9.65e6 retained but unconfirmed, host-bound TX 3.87e6 single QP | scaled by 4 |
 | ingress | `rx_ingress_bytes`, `rx_drain_bps`, `internal_budget_bps`, `loopback_priority` | meter sized so a saturated deep pipeline settles at the measured 78 to 92 Gb/s equilibrium and clears within the measured drain window; internal budget 197e9; wire wins | scaled by 4 |
 | transport | `recovery` (go-back-N), `selective_repeat_window`, `rto_ps`, `ack_coalescing` | go-back-N, 0, 67 ms (`qp_timeout` 14) | same |
-| congestion control | `dcqcn_enabled`, `ecn_stamp` (ECT(0) forced), `cnp_min_interval_ps`, DCQCN alpha, timer, byte counter, rate step | enabled at firmware default, ECT(0), 50 us, vendor 100 G set | thresholds scaled by 4 |
+| congestion control | `dcqcn_enabled`, `ecn_stamp` (ECT(0) forced), `cnp_min_interval_ps`, DCQCN alpha, timer, byte counter, rate step, `np_cnp_threshold_bytes`, alpha start and gain, additive step and interval, rate floor | enabled at firmware default, ECT(0); the notification threshold, the limiter interval and the alpha and increase parameters are fitted by the slice-D study over declared candidate grids, because the vendor register block is not readable on the campaign hosts and the measured reaction is two to twenty times slower than its defaults | thresholds scaled by 4 |
 | flow control | `pfc_enabled`, `global_pause_tx`, `pause_propagates` | false, true, false | same |
 | counters | `firmware_counter_variant` | `fw_16_32` or `fw_16_31` (semantics differ for `local_ack_timeout_err`) | `fw_16_32` |
 
@@ -124,6 +124,7 @@ comparison cannot silently change hardware.
 | receive processor | per-QP receive packet-rate cap; RC responder PSN check with ACK and NAK; UD delivery with silent drop beyond the cap | one UD QP absorbing 5.51 Mpps on the wire with silent discard beyond it; out_of_sequence at the responder |
 | requester transport | PSN and ACK tracking; go-back-N on NAK or timeout; retransmit counters | packet_seq_err, roce_adp_retrans, local_ack_timeout_err by firmware variant |
 | rate control | DCQCN notification point at the endpoint's own ingress meter and reaction point with per-QP state that persists across WQEs; ECT(0) stamping | 283 CNP per second per congested QP with no switch mark anywhere; rate cut in 3 to 39 ms and recovery in 447 ms |
+| fabric egress queue (test fabric) | one switch egress port per receiver: a finite tail-drop buffer draining at the port rate, with no marking, no pause and no notification | the measured leaf's 5.2 MB per-port buffer, and the silence around it that forces the endpoint to notice congestion itself |
 | internal arbiter | one processing budget shared by loopback ingress and wire ingress, wire priority | in-NIC cap near 197 Gb/s, loopback starves to about half |
 | observable state | counters named as the real NIC exposes them, with the inert marking counter reproduced as inert | counter semantics that detection tools rely on |
 | anomaly table | the explicit list below, with mechanism kind and test id | everything a reviewer needs to know is reproduced on purpose |
@@ -231,6 +232,10 @@ counter monotonicity) void a run rather than costing a point.
 | multi-QP at 4 KiB | aggregate reaches the goodput ceiling | 3 percent |
 | MTU 1024 versus 4096 | goodput ratio | 2 percentage points around 5.6 |
 | 2 to 1 incast at 1 MiB | tax equals loss times the amplification factor; fair share | 25 percent on the identity, 2 points on the split |
+| notification rate under fan-in | `np_cnp_sent` per second per congested QP on a fabric that never marks | 30 percent around 283 |
+| notification rate below saturation | `np_cnp_sent` for a lone paced flow | exactly zero |
+| DCQCN transient | cut, fair-share and recovery times, and the additive slope | the measured ranges; 25 percent on the slope |
+| 1 to 2 fan-out | delivered fraction, split, drops | 3 points, 0.5 points, exactly zero |
 | single UD QP above the cap | delivered rate and discard counter | 10 percent |
 | loopback plus wire | wire share and loopback share | 5 percent |
 | fabric under the endpoint | the merged [`FabricProfile`](../modules/backends.md) carrier and its measured leaf: one non-blocking switch, four 100 G ports, 515 ns pipes, a 5.2 MB tail-drop egress buffer per port, and no marking, no PFC and no propagated pause. A study that needs the endpoint under load configures the drop-only switch and lets the endpoint generate its own notifications | topology and buffer as declared; loss rate within the study's own band |
@@ -242,11 +247,29 @@ The queue core, PCIe fabric, host memory and submission models exist and are
 validated. The profile, the anomaly table, the C facade and the packetizer,
 outstanding-work window and pacer are landed and validated, and so are the
 ingress meter, the receive processor and the go-back-N requester transport.
-Rate control and the internal arbiter are not. The remaining blocks and the
-clauses the receive slice did not close are registered as open tasks in
-`docs/modules/backends.md`; the ConnectX-5 profile study in
+Rate control is landed behind an opt-in whose off path is the unchanged
+slice-C code: the notification point at the receiver's own ingress meter, the
+per-queue-pair reaction point in front of the transmit pacer, and the tail-drop
+egress queue the test fabric needs before either can be exercised. The internal
+arbiter is not landed and has moved to BACK-57, beside the ingress meter whose
+service budget it shares. The remaining blocks and the
+clauses the receive and congestion-control slices did not close are registered
+as open tasks in `docs/modules/backends.md`; the ConnectX-5 profile study in
 `examples/cx5_msgsize_v1` establishes the measured curves the blocks are
 validated against.
+
+Rate control closes the incast collapse the receive slice left open, and it
+opens one clause of its own. Because the notification point is the receiver's
+own ingress meter, the control loop settles wherever that meter's drain rate
+is. Slice C fitted that drain from the lone-flow anchors, and at the fitted
+value the loop settles below the switch's egress rate, so the switch buffer
+never fills, there is no loss to amplify and the incast tax comes out near zero
+instead of at the measured 26.9 percent. The incast measurement is a second
+anchor for the same latent and it wants a higher value: the campaign's receiver
+absorbed 99.39 Gb/s under fan-in while discarding almost nothing at its PHY. One
+drain rate cannot satisfy both anchors, which is the same shape as the
+bidirectional incompatibility already registered against this meter, and it
+points at the same missing stall mechanism (ANOM-17).
 
 Two rows of the anomaly table carry a correction the receive slice earned,
 and both remain open. ANOM-03 attributes the saturated loss equilibrium to

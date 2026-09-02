@@ -10,6 +10,9 @@ namespace {
 
 constexpr std::uint64_t kPicosecondsPerSecond = 1000000000000ULL;
 constexpr std::uint64_t kAckWireBytes = 64;
+// A RoCEv2 congestion notification packet is one BTH plus its padding on the
+// wire, which is the same envelope an acknowledgement occupies.
+constexpr std::uint64_t kCnpWireBytes = 64;
 
 }  // namespace
 
@@ -60,6 +63,15 @@ void validateRnicRxPipelineConfig(const RnicRxPipelineConfig& config) {
         throw std::invalid_argument(
             "RNIC ingress pause interval must be positive");
     }
+    if (config.notification.enabled) {
+        validateRnicCcNotificationConfig(config.notification);
+        if (config.ingress_bytes != 0
+            && config.notification.threshold_bytes > config.ingress_bytes) {
+            throw std::invalid_argument(
+                "an RNIC notification threshold above the ingress buffer can "
+                "never be reached");
+        }
+    }
 }
 
 bool RnicRxPipeline::RateGate::admits(Picoseconds now_ps) const noexcept {
@@ -100,6 +112,10 @@ RnicRxPipeline::RnicRxPipeline(RnicRxPipelineConfig config)
     : config_(std::move(config)) {
     validateRnicRxPipelineConfig(config_);
     nic_rate_.rate = config_.pps_per_nic;
+    if (config_.notification.enabled) {
+        notification_ = std::make_unique<RnicCcNotificationPoint>(
+            config_.notification);
+    }
 }
 
 void RnicRxPipeline::drainTo(Picoseconds now_ps) {
@@ -168,6 +184,35 @@ void RnicRxPipeline::notePause() {
     ++nic_counters_.tx_global_pause;
 }
 
+void RnicRxPipeline::observeCongestion(
+    const RnicRxPacket& packet,
+    std::uint64_t observed_occupancy_bytes,
+    Picoseconds now_ps,
+    RnicRxResult& result) {
+    if (notification_ == nullptr) {
+        return;
+    }
+    const bool raised = notification_->observe(
+        packet.source, packet.qpn, observed_occupancy_bytes, now_ps);
+    const RnicCcNotificationCounters& counters = notification_->counters();
+    counters_.cnps_sent = counters.sent;
+    counters_.cnps_suppressed = counters.suppressed;
+    counters_.congestion_observations = counters.observed;
+    if (!raised) {
+        return;
+    }
+    // The notification leaves as a wire packet, so it costs the receiver a
+    // transmit exactly as an acknowledgement does. It is deliberately not
+    // recorded on the marking counter: that one stays inert on silicon while
+    // notifications are generated, and reproducing the pair is the point.
+    ++nic_counters_.np_cnp_sent;
+    ++nic_counters_.tx_packets_phy;
+    nic_counters_.tx_bytes_phy += kCnpWireBytes;
+    result.has_cnp = true;
+    result.cnp_source = packet.source;
+    result.cnp_qpn = packet.qpn;
+}
+
 RnicRxResult RnicRxPipeline::onPacket(
     const RnicRxPacket& packet,
     Picoseconds now_ps) {
@@ -183,6 +228,13 @@ RnicRxResult RnicRxPipeline::onPacket(
 
     RnicRxResult result;
     result.ingress_occupancy_bytes = occupancy_bytes_;
+
+    // The notification point runs before the meter's verdict and on the
+    // occupancy the packet would leave behind, so an arrival into a buffer
+    // that is already too full to keep it is the loudest congestion signal
+    // rather than a silent one. Nothing here changes what the meter then does.
+    observeCongestion(
+        packet, occupancy_bytes_ + packet.wire_bytes, now_ps, result);
 
     // Block one: the ingress meter. An overflow is a PHY discard with no
     // transport signal at all, which is what makes the loss silent.

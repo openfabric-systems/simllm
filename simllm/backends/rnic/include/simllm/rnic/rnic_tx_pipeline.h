@@ -4,10 +4,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <optional>
 #include <vector>
 
 #include "simllm/rnic/network_port.h"
+#include "simllm/rnic/rnic_cc.h"
 #include "simllm/rnic/rnic_nic_counters.h"
 
 namespace simllm::rnic {
@@ -77,6 +79,14 @@ struct RnicTxPipelineConfig {
     // `local_ack_timeout_err`; firmware 16.32 counts zero for the same
     // stimulus. False selects 16.32, which is the campaign's default node.
     bool counts_local_ack_timeout{false};
+
+    // The congestion-control reaction point. Disabled is the identity default:
+    // the pacer keeps its fixed ceilings, a congestion notification is refused
+    // rather than silently absorbed, and every accepted slice-B and slice-C
+    // row is unchanged. Enabled, the reaction point owns one more rate gate in
+    // front of the pacer, and its state lives here rather than on a work
+    // request, which is what makes it persist across them.
+    RnicCcReactionConfig reaction;
 };
 
 struct RnicTxPipelineCounters {
@@ -108,6 +118,15 @@ struct RnicTxPipelineCounters {
     // replayed. They close the work queue's lifecycle and change nothing
     // else, so they are the honest measure of go-back-N waste on the wire.
     std::uint64_t stale_terminals{0};
+    // Reaction point. All stay zero without it, except the rate, which reads
+    // zero because there is no rate gate rather than because it is stopped.
+    std::uint64_t cnps_handled{0};
+    std::uint64_t cnps_ignored{0};
+    std::uint64_t rate_cuts{0};
+    std::uint64_t rate_increases{0};
+    std::uint64_t current_rate_bps{0};
+    std::uint64_t min_rate_bps{0};
+    std::uint64_t alpha_ppm{0};
 };
 
 void validateRnicTxPipelineConfig(const RnicTxPipelineConfig& config);
@@ -146,6 +165,17 @@ public:
     std::vector<NetworkEvent> onTransportPacket(
         const RnicTransportPacket& packet,
         Picoseconds now_ps);
+
+    // One congestion notification for this endpoint's queue pair. It cuts the
+    // reaction point's rate multiplicatively and is never ignored: an endpoint
+    // with no reaction point refuses the notification instead, so a caller
+    // cannot read silence as a modelled reaction.
+    void onCongestionNotification(Picoseconds now_ps);
+    bool hasReactionPoint() const noexcept;
+    // The rate the reaction point currently holds, or zero without one. A
+    // study reads this across a work-request boundary to see that the state
+    // persists.
+    std::uint64_t reactionRateBps() const noexcept;
 
     std::optional<Picoseconds> nextEventTime() const;
     bool hasPendingWork() const noexcept;
@@ -215,6 +245,7 @@ private:
 
     Picoseconds eligibleAt(const QueueEntry& entry) const;
     bool windowAllows(const QueueEntry& entry) const;
+    void refreshReactionCounters();
     void retirePacket(Extent& extent, Packet& packet);
     // Closes every live attempt whose sequence number is at or above `psn`
     // and requeues them in sequence order ahead of anything newer. Returns
@@ -233,6 +264,12 @@ private:
     RateGate nic_bits_;
     RateGate qp_messages_;
     RateGate nic_messages_;
+    // The reaction point's own gate. Its rate is refreshed from the reaction
+    // point at each issue, so a cut takes effect on the next packet rather
+    // than retroactively on one already on the wire.
+    RateGate cc_bits_;
+    // Null unless the reaction point is configured.
+    std::unique_ptr<RnicCcReactionPoint> reaction_;
     std::map<NetworkToken, Extent> extents_;
     struct DownstreamBinding {
         NetworkToken extent_token{0};

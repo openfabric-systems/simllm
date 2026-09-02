@@ -711,6 +711,18 @@ void RnicDevice::onNetworkEvent(const NetworkEvent& event) {
             "external RNIC network event supplied to the inert port");
     }
     validateCallerTime(event.event_time_ps);
+    if (event.kind == NetworkEventKind::CnpReceived) {
+        // A congestion notification is a transport control event, not a
+        // packet-attempt one: it names no attempt and retires nothing. It goes
+        // to the reaction point and never reaches the work queue.
+        if (!tx_pipeline_ || !tx_pipeline_->hasReactionPoint()) {
+            throw std::logic_error(
+                "RNIC device has no congestion reaction point");
+        }
+        tx_pipeline_->onCongestionNotification(event.event_time_ps);
+        advanceCallerTime(event.event_time_ps);
+        return;
+    }
     if (tx_pipeline_) {
         // The pipeline owns the packet vocabulary. It hands back the
         // packet-attempt events the timeline is built from and, when the last
@@ -923,6 +935,8 @@ RnicNicCounters RnicDevice::nicCounters() const noexcept {
         counters.roce_adp_retrans = requester.roce_adp_retrans;
         counters.roce_slow_restart_cnps = requester.roce_slow_restart_cnps;
         counters.local_ack_timeout_err = requester.local_ack_timeout_err;
+        counters.rp_cnp_handled = requester.rp_cnp_handled;
+        counters.rp_cnp_ignored = requester.rp_cnp_ignored;
         const RnicTxPipelineCounters& tx = tx_pipeline_->counters();
         counters.tx_packets_phy = tx.packets_issued;
         counters.tx_bytes_phy = tx.wire_bytes;
@@ -936,6 +950,7 @@ RnicNicCounters RnicDevice::nicCounters() const noexcept {
         counters.tx_pause_ctrl_phy = responder.tx_pause_ctrl_phy;
         counters.tx_global_pause = responder.tx_global_pause;
         counters.rx_write_requests = responder.rx_write_requests;
+        counters.np_cnp_sent = responder.np_cnp_sent;
         counters.rx_packets_phy = responder.rx_packets_phy;
         counters.rx_bytes_phy = responder.rx_bytes_phy;
         counters.tx_packets_phy += responder.tx_packets_phy;

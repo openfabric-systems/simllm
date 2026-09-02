@@ -1,0 +1,101 @@
+check,cell,measured,reference,band,verdict,note
+np_rate,131008B/3.53ms,272.0,283,30 percent,PASS,
+np_grid_direction,threshold 65504B,263;264;168,non-increasing in the limiter interval,categorical,FAIL,
+np_grid_direction,threshold 131008B,267;272;168,non-increasing in the limiter interval,categorical,FAIL,
+np_grid_direction,threshold 196512B,266;270;168,non-increasing in the limiter interval,categorical,FAIL,
+lone_quiet,80Gb/s x1,0,0,exact,PASS,
+lone_rate_intact,80Gb/s x1,80.00,80.00,2 percent,PASS,
+lone_quiet,80Gb/s x4,0,0,exact,PASS,
+lone_rate_intact,80Gb/s x4,80.00,80.00,2 percent,PASS,
+lone_quiet,90Gb/s x1,0,0,exact,PASS,
+lone_rate_intact,90Gb/s x1,90.00,90.00,2 percent,PASS,
+lone_quiet,90Gb/s x4,0,0,exact,PASS,
+lone_rate_intact,90Gb/s x4,90.00,90.00,2 percent,PASS,
+rp_cut,alpha 500000ppm step 27.5Mb,293.0,3 to 39 ms,measured range,FAIL,
+rp_fair_time,alpha 500000ppm step 27.5Mb,5.0,5 to 2300 ms,measured range,PASS,
+rp_recovery,alpha 500000ppm step 27.5Mb,526.0,337 to 557 ms,measured range,PASS,
+rp_slope,alpha 500000ppm step 27.5Mb,0.0721,0.10,25 percent,FAIL,
+rp_steady,alpha 500000ppm step 27.5Mb split,51.45,50,2 points,PASS,
+rp_steady,alpha 500000ppm step 27.5Mb wire,101.40,97,at least,PASS,
+rp_persistent,alpha 500000ppm step 27.5Mb,0,0,exact,PASS,
+incast_wire,5.2MB/1MiB/2,98.50,97,at least,PASS,
+incast_goodput,5.2MB/1MiB/2 goodput,94.06,73.89,15 percent,FAIL,
+incast_goodput,5.2MB/1MiB/2 tax,3.17,21 to 27,window,FAIL,
+incast_fair,5.2MB/1MiB/2,50.69,50,2 points,PASS,
+incast_seq_err_bursts,5.2MB/64KiB/2,0.15,at least 2,ratio,FAIL,packets lost over packet_seq_err
+incast_seq_err_bursts,5.2MB/64KiB/3,0.59,at least 2,ratio,FAIL,packets lost over packet_seq_err
+incast_seq_err_bursts,5.2MB/1024KiB/2,0.77,at least 2,ratio,FAIL,packets lost over packet_seq_err
+incast_seq_err_bursts,5.2MB/1024KiB/3,0.59,at least 2,ratio,FAIL,packets lost over packet_seq_err
+incast_seq_err_bursts,2.6MB/64KiB/2,0.22,at least 2,ratio,FAIL,packets lost over packet_seq_err
+incast_seq_err_bursts,2.6MB/64KiB/3,0.66,at least 2,ratio,FAIL,packets lost over packet_seq_err
+incast_seq_err_bursts,2.6MB/1024KiB/2,0.86,at least 2,ratio,FAIL,packets lost over packet_seq_err
+incast_seq_err_bursts,2.6MB/1024KiB/3,0.69,at least 2,ratio,FAIL,packets lost over packet_seq_err
+incast_direction_size,5.2MB/2,57.03 then 3.17,strictly increasing,categorical,FAIL,
+incast_direction_size,5.2MB/3,88.03 then 88.03,strictly increasing,categorical,FAIL,
+incast_direction_senders,5.2MB/64KiB,57.03 then 88.03,strictly increasing,categorical,PASS,
+incast_direction_senders,5.2MB/1024KiB,3.17 then 88.03,strictly increasing,categorical,PASS,
+incast_direction_size,2.6MB/2,45.40 then 2.59,strictly increasing,categorical,FAIL,
+incast_direction_size,2.6MB/3,81.48 then 80.75,strictly increasing,categorical,FAIL,
+incast_direction_senders,2.6MB/64KiB,45.40 then 81.48,strictly increasing,categorical,PASS,
+incast_direction_senders,2.6MB/1024KiB,2.59 then 80.75,strictly increasing,categorical,PASS,
+incast_buffer_direction,64KiB/2,57.03 then 45.40,not smaller at 2.6 MB,categorical,FAIL,
+incast_buffer_direction,64KiB/3,88.03 then 81.48,not smaller at 2.6 MB,categorical,FAIL,
+incast_buffer_direction,1024KiB/2,3.17 then 2.59,not smaller at 2.6 MB,categorical,FAIL,
+incast_buffer_direction,1024KiB/3,88.03 then 80.75,not smaller at 2.6 MB,categorical,FAIL,
+fanout_rate,64KiB x2,98.62,97.8,3 points,PASS,
+fanout_split,64KiB x2,50.000,50,0.5 points,PASS,
+fanout_clean,64KiB x2,0/0/0,0/0/0,exact,PASS,"egress drops, PHY discards, notifications"
+fanout_rate,64KiB x4,98.62,97.8,3 points,PASS,
+fanout_split,64KiB x4,50.000,50,0.5 points,PASS,
+fanout_clean,64KiB x4,0/0/0,0/0/0,exact,PASS,"egress drops, PHY discards, notifications"
+fanout_rate,1024KiB x2,98.62,97.8,3 points,PASS,
+fanout_split,1024KiB x2,50.000,50,0.5 points,PASS,
+fanout_clean,1024KiB x2,0/0/0,0/0/0,exact,PASS,"egress drops, PHY discards, notifications"
+fanout_rate,1024KiB x4,98.62,97.8,3 points,PASS,
+fanout_split,1024KiB x4,50.000,50,0.5 points,PASS,
+fanout_clean,1024KiB x4,0/0/0,0/0/0,exact,PASS,"egress drops, PHY discards, notifications"
+identity_off,64KiB/1,0,0,exact,PASS,
+identity_counters,64KiB/1,0/0/0,0/0/0,exact,PASS,
+identity_off,64KiB/2,0,0,exact,PASS,
+identity_counters,64KiB/2,0/0/0,0/0/0,exact,PASS,
+identity_off,64KiB/3,0,0,exact,PASS,
+identity_counters,64KiB/3,0/0/0,0/0/0,exact,PASS,
+identity_off,1024KiB/1,0,0,exact,PASS,
+identity_counters,1024KiB/1,0/0/0,0/0/0,exact,PASS,
+identity_off,1024KiB/2,0,0,exact,PASS,
+identity_counters,1024KiB/2,0/0/0,0/0/0,exact,PASS,
+identity_off,1024KiB/3,0,0,exact,PASS,
+identity_counters,1024KiB/3,0/0/0,0/0/0,exact,PASS,
+identity_off,collapse without a reaction point,92.92,far above the measured 26.9,categorical,PASS,the tax the same transport pays with no rate control
+cnp_ignored_zero,53 cells,0,0,exact,PASS,
+inert_marking,60 cells,0,0,exact,PASS,57225 notifications generated with the marking counter inert
+cnp_ledger,53 cells,0,0,exact,PASS,cells whose sender and receiver notification counts disagree
+fatal_guard,deterministic replay,held,held,guard,PASS,
+fatal_guard,byte conservation,held,held,guard,PASS,
+fatal_guard,no completion before delivery,held,held,guard,PASS,
+fatal_guard,pacing integrity,held,held,guard,PASS,
+fatal_guard,rate bounds,held,held,guard,PASS,
+fatal_guard,egress-queue conservation,held,held,guard,PASS,
+fatal_guard,identity off,held,held,guard,PASS,
+post_incast_drain,drain 96.6 alpha 250000ppm,tax 90.37 goodput 9.63 share 50.18 cnp/qp 285,"tax 21 to 27, goodput 73.89 within 15 percent, share 50 plus or minus 2",post-specified,INFO,at least one bar missed
+post_incast_drain,drain 96.6 alpha 350000ppm,tax 1.66 goodput 95.03 share 50.43 cnp/qp 285,"tax 21 to 27, goodput 73.89 within 15 percent, share 50 plus or minus 2",post-specified,INFO,at least one bar missed
+post_incast_drain,drain 96.6 alpha 500000ppm,tax 3.17 goodput 94.06 share 50.69 cnp/qp 285,"tax 21 to 27, goodput 73.89 within 15 percent, share 50 plus or minus 2",post-specified,INFO,at least one bar missed
+post_incast_drain,drain 98.6 alpha 250000ppm,tax 88.18 goodput 11.82 share 53.33 cnp/qp 283,"tax 21 to 27, goodput 73.89 within 15 percent, share 50 plus or minus 2",post-specified,INFO,at least one bar missed
+post_incast_drain,drain 98.6 alpha 350000ppm,tax 1.57 goodput 97.06 share 50.25 cnp/qp 275,"tax 21 to 27, goodput 73.89 within 15 percent, share 50 plus or minus 2",post-specified,INFO,at least one bar missed
+post_incast_drain,drain 98.6 alpha 500000ppm,tax 1.65 goodput 97.01 share 50.91 cnp/qp 280,"tax 21 to 27, goodput 73.89 within 15 percent, share 50 plus or minus 2",post-specified,INFO,at least one bar missed
+post_incast_drain,drain 99.4 alpha 250000ppm,tax 85.00 goodput 15.00 share 51.43 cnp/qp 280,"tax 21 to 27, goodput 73.89 within 15 percent, share 50 plus or minus 2",post-specified,INFO,at least one bar missed
+post_incast_drain,drain 99.4 alpha 350000ppm,tax 24.39 goodput 75.40 share 52.12 cnp/qp 275,"tax 21 to 27, goodput 73.89 within 15 percent, share 50 plus or minus 2",post-specified,INFO,at least one bar missed
+post_incast_drain,drain 99.4 alpha 500000ppm,tax 11.04 goodput 88.57 share 50.31 cnp/qp 280,"tax 21 to 27, goodput 73.89 within 15 percent, share 50 plus or minus 2",post-specified,INFO,at least one bar missed
+post_rp_alpha,gain 3906ppm update 50us,cut 293.0 fair 5.0 recovery -1.0 split 49.9,"cut 3 to 39, fair 5 to 2300, recovery 337 to 557 ms",post-specified,INFO,
+post_rp_alpha,gain 3906ppm update 100us,cut 178.0 fair 4.0 recovery -1.0 split 49.9,"cut 3 to 39, fair 5 to 2300, recovery 337 to 557 ms",post-specified,INFO,
+post_rp_alpha,gain 3906ppm update 200us,cut 103.0 fair 4.0 recovery -1.0 split 49.8,"cut 3 to 39, fair 5 to 2300, recovery 337 to 557 ms",post-specified,INFO,
+post_rp_alpha,gain 15625ppm update 50us,cut 210.0 fair 5.0 recovery -1.0 split 51.0,"cut 3 to 39, fair 5 to 2300, recovery 337 to 557 ms",post-specified,INFO,
+post_rp_alpha,gain 15625ppm update 100us,cut 113.0 fair 5.0 recovery -1.0 split 49.2,"cut 3 to 39, fair 5 to 2300, recovery 337 to 557 ms",post-specified,INFO,
+post_rp_alpha,gain 15625ppm update 200us,cut 68.0 fair 5.0 recovery -1.0 split 49.8,"cut 3 to 39, fair 5 to 2300, recovery 337 to 557 ms",post-specified,INFO,
+post_rp_alpha,gain 62500ppm update 50us,cut 49.0 fair 5.0 recovery -1.0 split 50.4,"cut 3 to 39, fair 5 to 2300, recovery 337 to 557 ms",post-specified,INFO,
+post_rp_alpha,gain 62500ppm update 100us,cut 44.0 fair 4.0 recovery -1.0 split 47.4,"cut 3 to 39, fair 5 to 2300, recovery 337 to 557 ms",post-specified,INFO,
+post_rp_alpha,gain 62500ppm update 200us,cut 37.0 fair 4.0 recovery -1.0 split 49.7,"cut 3 to 39, fair 5 to 2300, recovery 337 to 557 ms",post-specified,INFO,
+fit,notification threshold,131008,candidate grid,fitted,INFO,"(65504, 131008, 196512)"
+fit,notification interval,3530000000,candidate grid,fitted,INFO,"(2000000000, 3530000000, 6000000000)"
+fit,alpha start,500000,candidate grid,fitted,INFO,"(250000, 350000, 500000)"
+fit,additive step per queue pair,27500000,candidate grid,fitted,INFO,"(22500000, 25000000, 27500000)"
