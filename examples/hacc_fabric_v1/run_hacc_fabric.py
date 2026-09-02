@@ -5,8 +5,12 @@ rendered onto it by ``simllm.backends.fabric_profile``: the 2 B latency
 anchor, a single-flow message-size sweep against the rendered link rate, the
 per-port buffer identity read from the first go-back-N NACK over a sender
 count by buffer size sweep, and a 2 to 1 fan-in that carries both the fairness
-check and the comparator baseline. Emits summary.csv (one row per registered
-check and guard), latency.csv, msg.csv, buffer.csv and incast.csv.
+check and the comparator baseline. A fifth experiment, the post-specified
+long-flow arm, repeats the fan-in at two much larger per-sender volumes and two
+message counts so its goodput is a bandwidth measurement rather than a timeout
+measurement. Emits summary.csv (one row per registered check and guard),
+latency.csv, msg.csv, buffer.csv and incast.csv, and incast_long.csv for the
+long-flow arm.
 
 Usage:
     SIMLLM_HTSIM_DCQCN=... SIMLLM_TXT2BIN=... SIMLLM_DATA_ROOT=... \\
@@ -78,6 +82,21 @@ BUF_SENDER_COUNTS = [2, 3]
 INCAST_SIZES = [262144, 1048576]
 INCAST_ANCHOR = 1048576
 INCAST_MESSAGES = 32
+# The incast episode volume is chosen twice because the two arms measure
+# different things. The registered short arm just above, 64 MiB in 1 MiB
+# messages, measures the go-back-N tail timeout and not bandwidth: every GOAL
+# message is its own rate-paced flow with no send window, so it holds only a few
+# packets in flight, a lost packet is usually the last one outstanding,
+# nothing follows it to arrive out of order at the receiver, no NACK is ever
+# generated, and the sender waits the full 67.109 ms local ACK timeout. That
+# one stall is longer than the whole episode, so the registered goodput is a
+# timeout measurement. The post-specified long arm below measures bandwidth
+# instead: it makes the episode long against that timeout, and sweeps the
+# message count as well as the volume because offering the volume as one
+# message per sender is both the low-concurrency limit and the shape the
+# hardware measurement actually had.
+LONG_INCAST_BYTES_PER_SENDER = [1 << 30, 1 << 32]
+LONG_INCAST_MESSAGES = [INCAST_MESSAGES, 1]
 INCAST_SENDERS = 2
 SEED = 1
 
@@ -87,6 +106,11 @@ MEASURED_LATENCY_FLOOR_US = 2.08
 COMPARATOR_BASELINE_GBPS = 7.351
 #: B1 registers the fan-in as collapsed rather than taxed.
 COLLAPSE_CEILING_GBPS = 20.0
+#: The measured 2 to 1 incast pair, the same anchor the cx5 study reports
+#: against so the long-flow rows of the two studies are directly comparable.
+#: The A1 acceptance bar states the same measurement as a 74 to 78 Gb/s band.
+MEASURED_INCAST_GOODPUT_GBPS = 73.9
+MEASURED_INCAST_WIRE_FRACTION = 0.994
 
 
 # Configuration --------------------------------------------------------------
@@ -169,8 +193,52 @@ def first_event_ps(rows: list[dict[str, str]], event: str) -> int | None:
     return min(times) if times else None
 
 
+def scan_state_trace(path: Path, makespan_ps: int, rto_ps: int) -> tuple[int, int, int | None]:
+    """One streaming pass over a trace too large to hold in memory.
+
+    Returns the offered new and retransmitted packet totals, and the payload
+    packets acknowledged inside the steady window, that is the episode with one
+    local ACK timeout cut off each end. The last is None when the episode is
+    shorter than two timeouts, because then it has no interval that is not
+    timeout-dominated.
+    """
+    low, high = rto_ps, makespan_ps - rto_ps
+    sent: dict[str, tuple[int, int]] = {}
+    acked: dict[str, int] = {}
+    total = at_low = at_high = 0
+    with open(path, newline="") as handle:
+        for row in csv.DictReader(handle):
+            new = row["new_packets_sent"]
+            if new:
+                sent[row["flow_id"]] = (int(new), int(row["rtx_packets_sent"] or 0))
+            value = row["acked_packets"]
+            if value:
+                flow = row["flow_id"]
+                count = int(value)
+                previous = acked.get(flow, 0)
+                if count > previous:
+                    total += count - previous
+                    acked[flow] = count
+            when = int(row["time_ps"])
+            if when <= low:
+                at_low = total
+            if when <= high:
+                at_high = total
+    return (sum(new for new, _ in sent.values()), sum(rtx for _, rtx in sent.values()),
+            at_high - at_low if high > low else None)
+
+
+def wire_packets_and_bytes(size: int, mss: int, mtu: int) -> tuple[int, int]:
+    """Packets and wire bytes one message of `size` costs, with no loss."""
+    full, tail = divmod(size, mss)
+    packets = full + (1 if tail else 0)
+    wire = full * mtu + (tail + (mtu - mss) if tail else 0)
+    return packets, wire
+
+
 def run(fabric: FabricProfile, goal_bin: Path, out: Path, stem: str, *,
-        state_trace: bool = False) -> tuple[RnicRunResult, dict[str, int], list[dict[str, str]]]:
+        state_trace: bool = False, parse_trace: bool = True
+        ) -> tuple[RnicRunResult, dict[str, int], list[dict[str, str]]]:
     trace_path = out / f"{stem}.state.csv"
     flags = study_flags(fabric, state_trace=trace_path if state_trace else None)
     result = run_htsim_dcqcn(
@@ -183,7 +251,8 @@ def run(fabric: FabricProfile, goal_bin: Path, out: Path, stem: str, *,
         ),
         timeout_s=RUN_TIMEOUT_S,
     )
-    return result, manifest_counters(result), state_trace_rows(trace_path) if state_trace else []
+    rows = state_trace_rows(trace_path) if state_trace and parse_trace else []
+    return result, manifest_counters(result), rows
 
 
 # Guards ---------------------------------------------------------------------
@@ -487,13 +556,125 @@ def experiment_incast(out: Path, emit, guards: Guards) -> None:
          ok=anchor["goodput_gbps"] <= COLLAPSE_CEILING_GBPS)
 
 
+def long_incast_row(volume: int, count: int, rendered_gbps: float, result: RnicRunResult,
+                    counters: dict[str, int], trace_path: Path) -> dict:
+    """One long-flow cell, with the wire rate bracketed rather than estimated.
+
+    The offered-minus-dropped estimator the registered arm uses is unsound at
+    these loss rates: the sender-side counters claim more packets than either
+    link could carry in the episode, so they cannot pin what the receiver port
+    actually took. What holds without assumption is that every payload packet
+    arrived exactly once, which the row's own bytes_conserved field checks, and
+    that no port carries more than its link rate. Those are the two bounds
+    reported here.
+    """
+    makespan_s = result.job_completion_time_ps() * 1e-12
+    payload = sum(flow.payload_bytes for flow in result.flows)
+    payload_wire = sum(
+        wire_packets_and_bytes(flow.payload_bytes, NIC.mss_bytes, NIC.mtu_bytes)[1]
+        for flow in result.flows)
+    new_packets, rtx_packets, window_acked = scan_state_trace(
+        trace_path, result.job_completion_time_ps(), NIC.rto_ps)
+    offered = new_packets + rtx_packets
+    dropped = counters.get("ns_tm3_dropped_packets", 0)
+    payload_wire_gbps = 8.0 * payload_wire / makespan_s / G
+    offered_wire_gbps = 8.0 * offered * NIC.mtu_bytes / makespan_s / G
+    silent_rtos = counters.get("silent_rtos", 0)
+    window_s = max(0.0, makespan_s - 2.0 * NIC.rto_ps * 1e-12)
+    by_source: dict[int, int] = {}
+    for flow in result.flows:
+        by_source[flow.source] = by_source.get(flow.source, 0) + flow.payload_bytes
+    shares = sorted(100.0 * value / payload for value in by_source.values())
+    return {
+        "bytes_per_sender": volume,
+        "messages_per_sender": count,
+        "message_bytes": volume // count,
+        "goodput_gbps": round(8.0 * payload / makespan_s / G, 4),
+        "steady_goodput_gbps": (
+            round(8.0 * window_acked * NIC.mss_bytes / window_s / G, 4)
+            if window_acked is not None else None),
+        "steady_window_us": round(window_s * 1e6, 3),
+        "payload_wire_gbps": round(payload_wire_gbps, 4),
+        "offered_wire_gbps": round(offered_wire_gbps, 4),
+        "wire_fraction_low_pct": round(100.0 * payload_wire_gbps / rendered_gbps, 3),
+        "wire_fraction_high_pct": round(
+            min(100.0, 100.0 * offered_wire_gbps / rendered_gbps), 3),
+        "makespan_us": round(makespan_s * 1e6, 3),
+        "offered_packets": offered,
+        "rtx_packets": rtx_packets,
+        "dropped_packets": dropped,
+        "loss_rate": round(dropped / offered, 6) if offered else 0.0,
+        "share_low_pct": round(shares[0], 3),
+        "share_high_pct": round(shares[-1], 3),
+        "silent_rtos": silent_rtos,
+        "rto_stall_share_pct": round(
+            100.0 * silent_rtos * NIC.rto_ps * 1e-12
+            / (count * len(by_source) * makespan_s), 3),
+        "ecn_marked_packets": counters.get("ecn_marked_packets", 0),
+        "shared_pool_dropped_packets": counters.get(
+            "ns_tm3_shared_pool_dropped_packets", -1),
+        "bytes_conserved": (payload == volume * len(by_source)
+                            and counters.get("completed_flows", -1) == count * len(by_source)),
+    }
+
+
+def experiment_incast_long(out: Path, emit, guards: Guards) -> None:
+    """Post-specified long-flow arm, reported and scored nowhere."""
+    fabric = FABRICS_BY_BUFFER[FULL_BUFFER]
+    rendered_gbps = link_bps() / G
+    rows: list[dict] = []
+    for volume in LONG_INCAST_BYTES_PER_SENDER:
+        for count in LONG_INCAST_MESSAGES:
+            stem = f"incast-long-{volume}-m{count}"
+            goal = fan_in_goal(volume // count, count, INCAST_SENDERS)
+            goal_bin = to_binary(goal.write(out / f"{stem}.goal"))
+            result, counters, _ = run(
+                fabric, goal_bin, out, stem, state_trace=True, parse_trace=False)
+            # Deliberately not registered with `guards`: this arm is
+            # post-specified, so it must not move the cell counts the scored
+            # G-rows report. Its guard quantities are carried per cell instead.
+            rows.append(long_incast_row(volume, count, rendered_gbps, result, counters,
+                                        out / f"{stem}.state.csv"))
+            print(rows[-1])
+    with open(out / "incast_long.csv", "w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+
+    for row in rows:
+        emit(check=f"L1-{row['bytes_per_sender'] >> 30}GiB-m{row['messages_per_sender']}",
+             goodput_gbps=row["goodput_gbps"],
+             steady_goodput_gbps=row["steady_goodput_gbps"],
+             steady_window_us=row["steady_window_us"],
+             measured_gbps=MEASURED_INCAST_GOODPUT_GBPS,
+             ratio=round(row["goodput_gbps"] / MEASURED_INCAST_GOODPUT_GBPS, 4),
+             wire_fraction_low_pct=row["wire_fraction_low_pct"],
+             wire_fraction_high_pct=row["wire_fraction_high_pct"],
+             measured_pct=round(100 * MEASURED_INCAST_WIRE_FRACTION, 3),
+             makespan_us=row["makespan_us"], silent_rtos=row["silent_rtos"],
+             dropped_packets=row["dropped_packets"],
+             rto_stall_share_pct=row["rto_stall_share_pct"], ok="reported")
+
+    # The arm's own guard observations, kept out of the registered G-rows so
+    # that a post-specified arm cannot move a scored cell count.
+    emit(check="L2-long-arm-guards", cells=len(rows),
+         bytes_conserved=all(row["bytes_conserved"] for row in rows),
+         max_ecn_marked_packets=max(row["ecn_marked_packets"] for row in rows),
+         max_shared_pool_dropped_packets=max(
+             row["shared_pool_dropped_packets"] for row in rows),
+         worst_share_deviation_pp=round(
+             max(abs(row["share_high_pct"] - 50.0) for row in rows), 3),
+         ok="reported")
+
+
 EXPERIMENTS = {
     "latency": experiment_latency,
     "msg": experiment_msg,
     "buf": experiment_buf,
     "incast": experiment_incast,
+    "incast_long": experiment_incast_long,
 }
-ORDER = ("latency", "msg", "buf", "incast")
+ORDER = ("latency", "msg", "buf", "incast", "incast_long")
 
 
 def main() -> None:
