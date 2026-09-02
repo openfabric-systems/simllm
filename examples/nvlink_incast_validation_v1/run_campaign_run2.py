@@ -27,7 +27,15 @@ def _load_module(name: str, path: Path) -> Any:
 _runner = _load_module("_traf74_first_campaign_reused_for_run2", FIRST_RUNNER_PATH)
 
 EXPECTATIONS_PATH = HERE / "expectations_run2.json"
-EXPECTATIONS_COMMIT = "b21ba822707d2d7c80b83ee2d3fb87f4fa93178d"
+# Re-pin amendment, 2026-09-02. The default branch was rewritten and force
+# pushed on 2026-09-01 to purge co-author trailers, which gave every commit
+# from the rewrite point onward a new identifier. The freeze itself did not
+# move. The original pin b21ba822707d2d7c80b83ee2d3fb87f4fa93178d and the pin
+# below carry the same tree d212e995bf5e16fd5a03f35258d134909b7936cd, the same
+# subject "Freeze the TRAF-74 second capture" and the same author date
+# 2026-09-01T13:43:24+02:00. The frozen digest below is unchanged, and the
+# published TRAF-74 record keeps the pre-rewrite identifier it ran under.
+EXPECTATIONS_COMMIT = "ff76eb5ed57f30f43cf1e7f097435e54b46212a9"
 EXPECTATIONS_SHA256 = "5465271e9909cebc214c153209316a6f266ec142d7e578b3279935b1c6a10a53"
 REGISTRY_TASK_ID = "TRAF-74"
 CELL_ID = "nv4-long-flow-incast-run2"
