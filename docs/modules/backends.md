@@ -1338,6 +1338,20 @@ created" statement stands and refers to different, never-registered work.
   over a sweep of offered rates yields a queue-depth estimate that agrees with
   the 5.2 MB fill estimate within 25 percent, and the disagreement between the
   three estimators is reported rather than averaged away.
+- BACK-65 (Precision; P2; S): exact per-packet header bytes as a profile
+  option. The flat `wire_header_bytes` charge of 64 stands in for a RoCEv2
+  header set whose size depends on opcode and packet position (Ethernet,
+  IPv4, UDP, BTH, then RETH for the first WRITE packet or DETH for UD,
+  immediate data when present, ICRC and FCS), and the packetizer contract fixes
+  those sizes so the RTL charges them exactly; a byte-level comparison
+  therefore diverges by up to a few tens of bytes per packet. Acceptance: a
+  profile switch selects exact accounting per opcode and position, the default
+  stays the flat charge so no calibrated row moves, the packetizer stage
+  applies the ANOM-02 segmentation rule of the Ollanox packetizer contract
+  (an observed behaviour recorded in the ConnectX-5 anomaly ledger) with a
+  test that pins its trigger condition, and the wire-byte gap the Ollanox
+  packetizer harness records against REF-5 and REF-10 closes to zero under
+  the exact profile.
 
 ### Completeness
 
@@ -1803,6 +1817,31 @@ created" statement stands and refers to different, never-registered work.
   SystemVerilog simulator in the native gate by driving the same reader from
   C. The trace format stays append-only per stimulus and per observed
   transition so a longer run is a prefix-compatible extension.
+- BACK-63 (Completeness; P2; S): expose in-flight packet occupancy and the
+  in-flight scenario limits through the facade. The Ollanox scheduler plan
+  compares its per-QP window against the model, and the facade reports
+  `tx_inflight_wqes` and `tx_inflight_bytes` but not packet slots, so the RTL
+  harness reconstructs packet occupancy from its own issue and release
+  ledgers, which is a comparison of the harness against itself. Acceptance:
+  `rnic_cm_counter_set` carries `tx_inflight_packets`, the limits
+  `max_inflight_wqes`, `max_inflight_bytes` and `max_inflight_packets` are
+  settable per scenario through the C facade and its DPI-C shim, the new
+  counter is read by name through `rnic_cm_counter` and counted by
+  `rnic_cm_counter_count`, and the slice-C rows do not move.
+- BACK-64 (Completeness; P2; M): receive-side refinements the RTL contracts
+  ask for. Four items, each behind the receive configuration so the calibrated
+  rows are untouched: `rx_write_requests` counts WRITE opcodes only rather
+  than every request; an acknowledgement event carries the message sequence
+  number the way AETH does on the wire; acknowledgements coalesce under the
+  responder's rule (one per bounded run of in-order packets, merged in place
+  when a later one arrives before the earlier one leaves); and SEND consumes a
+  receive queue whose exhaustion returns an RNR NAK, which the campaign saw
+  regularly whenever fan-in overflowed a receiver. Acceptance: one test per
+  item pins the counter or event against a hand-computed expectation, the
+  existing tests pass unchanged, and `docs/design/rnic-cmodel.md` lists the
+  external events with their token rules (extent events on the flow-extent
+  port, packet events on the packetized port, exactly one answer per reported
+  token), which the RTL bridge relies on and had to rediscover.
 
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
