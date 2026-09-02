@@ -103,7 +103,9 @@ def mock_binary(tmp_path_factory):
 
 
 def test_campaign_pins_final_aligned_freeze(runner, frozen):
-    assert runner.EXPECTATIONS_COMMIT == "f3f2624e7a96efe3ad67eac5940fee8746e40b98"
+    # Re-pinned 2026-09-02 after the 2026-09-01 history rewrite renamed the
+    # freeze. Same tree, same subject, same author date, same digest below.
+    assert runner.EXPECTATIONS_COMMIT == "7cab9cd84dfcfce50c7b45553bcd4a54ec4a8ea0"
     assert runner.EXPECTATIONS_SHA256 == (
         "a17b9e298d11a4a6ba92b382121c15a5a48f8100b6f343893260419b1d3382f6"
     )
