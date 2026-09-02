@@ -1,7 +1,8 @@
 # HACC fabric model: results against pre-registered expectations
 
-Run of 2026-09-02, one `run_hacc_fabric.py` invocation (13 check rows in
-`summary.csv`, plus `latency.csv`, `msg.csv`, `buffer.csv` and `incast.csv`).
+Run of 2026-09-02, one `run_hacc_fabric.py` invocation (13 registered check
+rows in `summary.csv`, plus `latency.csv`, `msg.csv`, `buffer.csv` and
+`incast.csv`).
 Registrations are in [expectations.md](expectations.md), frozen in commit
 `2a49e8c` before any run of this study; the fabric profile the flags and the
 topology are rendered from landed in `d1892ff`. Binary: `htsim_dcqcn_atlahs`
@@ -18,6 +19,13 @@ check, definition or sweep entry changed, and every scored number is identical
 across the two invocations, which is a second determinism observation beyond
 guard G1.
 
+Second disclosure, and the reason `summary.csv` now holds 18 rows: a
+post-specified long-flow arm was added later on 2026-09-02 and appended five
+reported rows plus `incast_long.csv`. It is described in its own section below,
+it is scored nowhere, and it changed nothing above. `latency.csv`, `msg.csv`,
+`buffer.csv` and `incast.csv` re-ran byte for byte, and all 13 registered check
+rows carry exactly the value they carried before in every column they had.
+
 Verdict: **4 of 5 scored checks pass and all four fatal guards hold. The
 fabric profile lands by configuration: the 2.08 us latency floor, the rendered
 100 G link, fair sharing under fan-in and a drop-only switch that marked zero
@@ -32,6 +40,14 @@ its receiver, no NACK is ever generated, and the sender learns of the loss
 2.3 ms later when the queue finally drains. That is a new mechanism gap, it is
 registered as HTSIM-39, and it is the reason a first-drop timing instrument
 cannot work on this path today.**
+
+Amended verdict on the fan-in, from the post-specified long-flow arm below:
+**B1's 7.5613 Gb/s is a timeout reading, not a bandwidth reading.** The same
+configuration moves 76.8671 Gb/s once the episode is long against the 67.109 ms
+local ACK timeout, inside the 74 to 78 Gb/s band acceptance bar A1 names and
+10.2 times the registered number. What the arm does not deliver is the wire
+half of A1 or the measured loss regime, so the bar stays blocked and BACK-60
+keeps it.
 
 ## E-LAT: the latency anchor
 
@@ -150,6 +166,107 @@ cannot work on this path today.**
   measured hardware moves 74 to 78 Gb/s through the same pattern; the distance
   between 7.56 and that number is what acceptance bar A1 is for.
 
+## Post-specified long-flow arm, run of 2026-09-02
+
+Added after the freeze, reported and scored nowhere, and appended to
+`summary.csv` as `L1-*` and `L2-long-arm-guards` with the per-cell numbers in
+`incast_long.csv`. Every registered check above re-ran byte for byte alongside
+it: `latency.csv`, `msg.csv`, `buffer.csv` and `incast.csv` are identical files,
+and each of the 13 committed check rows carries the same value in every column
+it already had. The arm is deliberately kept out of the `G` guard set so that a
+post-specified cell cannot move a scored cell count; its own guard numbers are
+carried per cell instead and summarised in `L2`.
+
+**Why the arm exists.** B1's 7.5613 Gb/s is not a bandwidth measurement. The
+episode is 64 MiB at 1 MiB per message and the makespan is 71.0 ms, which is
+one 67.109 ms local ACK timeout plus the 5.4 ms of work. Every GOAL message is
+its own rate-paced flow with no send window, so it holds only a few packets in
+flight; a lost packet is usually the last one outstanding, nothing follows it
+to arrive out of order, no NACK is generated, and the sender waits the whole
+timer. The registered cell therefore measures that timer. This arm makes the
+episode long against it.
+
+The arm crosses two per-sender volumes with two message counts, the registered
+32 per sender and one long message per sender. The second is the low
+concurrency limit and is also the shape the measurement had: two hosts, one
+stream each, not 64 concurrent messages. The switch buffer is the measured
+5.2 MB and the seed is the study seed. Neither volume had to be dropped for
+simulation cost: every cell here finishes in under 30 seconds of wall clock, so
+the sweep is the one that was wanted rather than the one that was affordable.
+
+| per sender | messages | goodput Gb/s | steady-window goodput Gb/s | wire percent | silent RTOs | stall share |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 GiB | 32 | **78.6885** | **96.1353** | 79.9 to 100 | 48 | 23.1 percent |
+| 1 GiB | 1 | 47.6906 | 38.4079 | 48.4 to 100 | 7 | 65.2 percent |
+| 4 GiB | 32 | 65.6501 | 67.3905 | 66.7 to 100 | 193 | 19.3 percent |
+| 4 GiB | 1 | **76.8671** | **73.0570** | 78.1 to 100 | 10 | 37.5 percent |
+
+Registered short arm for comparison: 7.5613 Gb/s, no steady window at all, and
+a stall share of 47.3 percent.
+
+**How the three reported quantities are defined.** *Stall share* is the summed
+silent-timeout stall time over the episode's total flow time, that is
+`silent_rtos x 67.109 ms / (flows x makespan)`; the stalls overlap in wall clock
+so a sum over flows only means something against per-flow time. *Steady-window
+goodput* is the payload rate over the episode with one full local ACK timeout
+cut off each end, so the timeout-dominated ramp and the timeout-dominated tail
+are both outside it; delivered payload at the two edges is read from the
+cumulative acknowledgement column of the sender state trace. The registered
+71.0 ms cell has no steady window at all, because it is shorter than the
+2 x 67.109 = 134.2 ms that removing one timeout from each end would need, and
+that is the cleanest single statement of why its goodput is not a bandwidth
+number. *Wire percent* is a bracket rather than an estimate, and the disclosure
+below says why.
+
+**Disclosed: the wire estimator had to change for this arm.** The registered
+studies estimate delivered wire bytes as offered minus dropped. At these loss
+rates that is unsound in a way that is easy to check: in the 4 GiB, 32 message
+cell the sender counters claim 8 304 371 packets over 1046.8 ms, which is
+260 Gb/s across two 100 Gb/s sender links, so the counters cannot be describing
+packets that reached a wire. What holds without assumption is that every
+payload packet arrived exactly once, because every flow completed and the `L2`
+row records byte conservation in all four cells, and that no port carries more
+than its link rate. The table therefore reports the interval between those two
+bounds. The lower bound is the useful half: it says at least 78.1 percent of
+the receiver port carried payload in the best cell.
+
+**Verdict: the comparator's fan-in is not bandwidth-limited, and B1's 7.56 Gb/s
+was a timeout reading.** Stretch the episode and the same configuration moves
+**76.8671 Gb/s** at 4 GiB per sender in one stream, and **78.6885 Gb/s** at
+1 GiB per sender in 32 messages. Both sit inside the 74 to 78 Gb/s band that
+acceptance bar A1 names, against 7.5613 Gb/s registered, a factor of **10.2**.
+The ratio to the 73.9 Gb/s anchor the cx5 study reports is **1.04** and **1.06**
+respectively, so the comparator does not merely approach the measurement, it
+crosses it.
+
+**What the arm does not buy.** Three things, and they are the reason this is a
+reported arm and not a claim that A1 is met.
+
+- The wire fraction cannot be pinned. The measurement is 99.4 percent of wire
+  with a 26 percent retransmission tax underneath it; this arm can only say the
+  wire is between 78.1 and 100 percent, and cannot say how much of it is
+  useful. A1 asks for both halves and only one is legible here.
+- The stall share never reaches the 5 percent target, at any volume or message
+  count tried. It falls from 47.3 percent registered to 19.3 percent at best,
+  and *rises* to 65.2 percent in the single-stream 1 GiB cell. On this leaf that
+  is expected rather than surprising: the `L2` row records zero ECN marks in all
+  four cells here, as guard G3 does across the registered 18, so a sender on
+  this leaf gets no congestion signal at all and learns of trouble only by
+  losing packets. The loss fractions of 12.8 to 35.2 percent in this
+  arm are the same open-loop behaviour E-BUF found, at a larger scale.
+- The two message counts rank in the opposite order to the cx5 study's, and the
+  reason is the same missing ECN. On the cx5 path a single stream per sender is
+  the clean cell; here a single stream is the *worst* cell at 1 GiB, because two
+  unmarked open-loop flows thrash go-back-N against each other, and cutting the
+  volume into 32 messages spreads the loss and helps. Concurrency is not a
+  nuisance parameter on this path, it is interacting with HTSIM-39.
+
+For BACK-60 the arm moves the four acceptance bars in one specific way: A1's
+goodput half is no longer blocked on the collapse, only on the wire accounting,
+while A2, A3 and A4 are untouched because they need mechanisms this path still
+does not have. HTSIM-39 is unaffected and HTSIM-5 keeps its content, since the
+32 message cells still open 64 unrelated flows.
+
 ## Fatal guards
 
 - **G1 PASS**: the repeated 2 sender, 5.2 MB cell matches on every scored
@@ -173,7 +290,7 @@ with the work each waits on, unchanged from the registration.
 
 | Bar | Target | Blocked on |
 |---|---|---|
-| **A1** incast goodput | 74 to 78 Gb/s within 15 percent at 99.3 Gb/s of wire | the golden-model transport work (per-queue-pair sender state across messages), and now also HTSIM-39, since a starved flow cannot reach a fair share whatever the endpoint does. Today's number is B1's 7.5613 Gb/s |
+| **A1** incast goodput | 74 to 78 Gb/s within 15 percent at 99.3 Gb/s of wire | its wire clause. The goodput clause is no longer the obstacle: the post-specified long-flow arm reaches 76.8671 Gb/s, inside the band. What cannot be shown is the 99.3 Gb/s of wire, because the sender counters over-count at these loss rates and the receiver port can only be bracketed between 78.1 and 100 percent. HTSIM-39 and the golden-model transport work still stand behind the registered B1 cell's 7.5613 Gb/s |
 | **A2** lone-flow ingress loss | 0.18 percent within 30 percent, in bursts of 50 to 100 packets | the golden-model receive-path work (a responder ingress meter); the path drops only at switch queues, and every drop in this study is a switch drop |
 | **A3** DCQCN recovery | 95 percent of the pre-congestion rate in 447 ms within 25 percent | the golden-model rate-control work. Unmeasurable here for a second reason as well: the rate cut fires once, at the end of the episode, so there is no recovery to time |
 | **A4** CNP rate | 283 per second per congested queue pair within 30 percent | HTSIM-38, the endpoint-side congestion-notification hook. With G3 at zero marks the current path can originate no notification at all |
@@ -194,8 +311,16 @@ sender, because the switch starves one flow completely instead of sharing the
 drop (0 against 7054 retransmissions, HTSIM-39); the congestion response never
 engages during congestion, because the only notification a starved flow can
 receive arrives after it has stopped sending (one rate cut per episode); and
-the fan-in still collapses to a tenth of the measured goodput, unchanged from
+the fan-in's registered goodput is a tenth of the measurement, unchanged from
 the cx5 study and for the same reason.
+
+Corrected by the long-flow arm: that last item is a statement about the
+registered 64 MiB episode and not about the path. Lengthen the episode and the
+fan-in reaches 76.8671 Gb/s, so the model is not short of bandwidth here. The
+part that survives is the loss regime, which the arm makes worse rather than
+better: 12.8 to 35.2 percent of offered packets are dropped and no cell reaches
+the 5 percent stall target, because the switch marks nothing and the senders
+learn about congestion only by losing.
 
 One process note for the next registration in this series. The freeze chose
 its instrument carefully, derived its lag from the route construction, and
@@ -205,3 +330,12 @@ depends on a signal reaching a sender should state what has to be true of the
 loss pattern for that signal to exist at all, and register a switch-side
 counter beside it; the drop counters in this study were the only reason the
 mechanism could be identified after the fact.
+
+A second process note, from the long-flow arm. A registered episode has to be
+long against the timers it can trigger, or its throughput metric measures a
+timer. B1's 64 MiB is 5.4 ms of work against a 67.109 ms retransmit timeout,
+which is not a ratio any bandwidth number survives, and the registration did
+not state one. A freeze that scores a rate should say how long the episode is
+in units of the longest timer the path can arm, and should register the
+completion distribution beside the makespan so the two can be told apart
+without a second study.
