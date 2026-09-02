@@ -1,0 +1,50 @@
+check,cell,measured,reference,band,verdict,note
+gap_discards,8192/0us,1,1,categorical,PASS,
+gap_discards,8192/4000us,0,0,categorical,PASS,
+gap_discards,8192/100000us,0,0,categorical,PASS,
+gap_discards,8192/368000us,0,0,categorical,PASS,
+gap_discards,65536/0us,1,1,categorical,PASS,
+gap_discards,65536/4000us,1,1,categorical,PASS,
+gap_discards,65536/100000us,0,0,categorical,PASS,
+gap_discards,65536/368000us,0,0,categorical,PASS,
+gap_discards,1 MiB monotone,368,100,smallest clean gap not below the 64 KiB one,PASS,
+paced_goodput,8192/4000us,92.3177,92.2,15 percent,PASS,
+paced_goodput,65536/100000us,96.4753,97.31,15 percent,PASS,
+saturated_goodput,8192/0us,79.2511,77.52,78 to 92 Gb/s window,PASS,
+saturated_goodput,65536/0us,79.2511,81.44,78 to 92 Gb/s window,PASS,
+depth_ratio_measured,8192,6.22809,5.9,20 percent,PASS,
+depth_ratio_measured,65536,1.49267,1.57,20 percent,PASS,
+depth1_unchanged,8192,12.7248,12.713,1 percent,PASS,
+depth1_unchanged,65536,53.0935,53.069,1 percent,PASS,
+ud_cap,1qp/4Mpps,3.07,3.07,10 percent,PASS,
+ud_cap,1qp/5.85Mpps,3.07,3.07,10 percent,PASS,
+ud_passthrough,1qp/2Mpps,200000,200000,exact,PASS,
+ud_passthrough,1qp/3Mpps,200000,200000,exact,PASS,
+ud_silent,1qp/2Mpps,0,0,exact and no transport signal,PASS,
+ud_silent,1qp/3Mpps,0,0,exact and no transport signal,PASS,
+ud_silent,1qp/4Mpps,46500,46500,exact and no transport signal,PASS,
+ud_silent,1qp/5.85Mpps,95043,95043,exact and no transport signal,PASS,
+ud_aggregate,4qp/5.85Mpps each,5.72093,9.65,10 percent,FAIL,the frozen 2 KiB offer is four times the port's byte capacity
+incast_wire,1.65 percent/1 MiB,55.7783,97,at least 97 percent of the link,FAIL,
+incast_tax,1.65 percent/1 MiB,98.8345,26.9,25 percent,FAIL,go-back-N with no reaction point
+incast_fair,1.65 percent/1 MiB,50,50,2 percentage points,PASS,the share is imposed by the probe's per-sender pacing
+incast_direction,tax against loss,0,1,strictly increasing,FAIL,
+incast_direction,tax against message size,1,1,strictly increasing,PASS,
+duplex_clean,91.8 Gb/s per direction,0,0,every counter zero,PASS,
+simplex_dirty,93.4 Gb/s,0,1,rx_discards_phy nonzero,FAIL,registered in advance as an expected miss
+ledger_identity,8192/0us,335,335,10 percent,PASS,
+ledger_identity,8192/4000us,0,0,10 percent,PASS,
+ledger_identity,65536/0us,335,335,10 percent,PASS,
+ledger_identity,65536/4000us,120,120,10 percent,PASS,
+ledger_identity,1048576/0us,2389,2389,10 percent,PASS,
+ledger_identity,1048576/4000us,2329,2329,10 percent,PASS,
+inert_marking,every gap cell,0,0,exactly zero,PASS,
+postspec_ud_cap,1qp/5.85Mpps,5.50997,5.51,10 percent,PASS,"post-specified P6 correction, not a registered check"
+postspec_ud_passthrough,1qp/2Mpps,200000,200000,exact,PASS,"post-specified P6 correction, not a registered check"
+postspec_ud_passthrough,1qp/3Mpps,200000,200000,exact,PASS,"post-specified P6 correction, not a registered check"
+postspec_ud_passthrough,1qp/4Mpps,200000,200000,exact,PASS,"post-specified P6 correction, not a registered check"
+postspec_ud_silent,1qp/2Mpps,0,0,exact and no transport signal,PASS,"post-specified P6 correction, not a registered check"
+postspec_ud_silent,1qp/3Mpps,0,0,exact and no transport signal,PASS,"post-specified P6 correction, not a registered check"
+postspec_ud_silent,1qp/4Mpps,0,0,exact and no transport signal,PASS,"post-specified P6 correction, not a registered check"
+postspec_ud_silent,1qp/5.85Mpps,11625,11625,exact and no transport signal,PASS,"post-specified P6 correction, not a registered check"
+postspec_ud_aggregate,4qp/5.85Mpps each at 1 KiB,9.64999,9.65,10 percent,PASS,"post-specified P6 correction, not a registered check; the per-NIC ceiling is unchanged and still binds"

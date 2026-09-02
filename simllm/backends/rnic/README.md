@@ -201,6 +201,148 @@ parameters, then
 compares completion CSV, canonical completions, `StepResult` tuples and replay
 TTFT or TPOT summaries byte for byte.
 
+## Transmit pipeline
+
+`rnic_tx_pipeline.h` is the opt-in transmit slice of the golden model. It is
+selected by `RnicNetworkConfig::abi_version = 2` together with an enabled
+`packetization` block; the two must agree, and a contradiction is refused at
+construction. The default configuration is ABI v1 with packetization off,
+which is not merely equivalent to the old path but literally the same code:
+the work queue binds straight to the injected port, so every accepted v1
+timestamp, counter and completion order is unchanged.
+
+With the pipeline selected, it becomes the port the work queue binds to and
+the injected port becomes its downstream packet face. The queue keeps
+submitting one flow extent per WQE and never learns about packets. The
+pipeline has three parts:
+
+- the **packetizer** segments an extent at the MTU, charges the wire header
+  bytes per packet, assigns a per-QP PSN, and submits one
+  `NetworkTxDescriptor` per packet with `extent_index` and `extent_count`
+  carrying the packet index and count. The PSN stays inside the endpoint and
+  the facade, because it is transport state the fabric does not need;
+- the **outstanding-work window** bounds in-flight WQEs, bytes and packets per
+  QP. A WQE is in flight from the issue of its first packet to the terminal of
+  its last, so the window is what is on the wire, not what the send queue
+  holds. It gates packet issue rather than admission, which is why the
+  pipeline never returns Busy: it has no way to promise a retry time for an
+  acknowledgement it has not seen, and admission is a real, separate instant
+  from first packet issue;
+- the **pacer** applies per-QP and per-NIC bits-per-second and message-rate
+  ceilings, shared across the QPs of one device. Rate arithmetic is exact
+  rational: a remainder carries the fractional picoseconds forward, so a
+  million-packet run has bounded error rather than one truncation per packet.
+  The bit rate is charged on wire bytes at the effective wire rate, which is
+  the rate at which a full calibration-MTU packet delivers the profile's
+  goodput. The measured small-message ceiling is charged once per work
+  request, not once per wire packet, because what the campaign measured is a
+  host-bound message rate; at or below the MTU the two readings coincide,
+  which is where it was measured.
+
+The downstream packet-port contract is narrow: the port returns one token per
+accepted attempt and later reports TX finish, RX arrival and one terminal for
+it. The pipeline stamps the TX start itself at the paced issue instant,
+because the packetizer is the transmit authority, and it is that event that
+fills `first_packet_at_ps` and `last_packet_at_ps`. `tests/fake_network.h`
+carries `FakeV2NetworkPort`, which serializes at a link rate, adds a fixed
+one-way latency and acknowledges per packet.
+
+The caller must step to the times `nextEventTime()` reports. A release forced
+later than an announced paced instant is counted as a late release, and a
+study treats a nonzero count as a voided run rather than a measurement.
+Evidence is in
+[`examples/rnic_cmodel_v1`](../../../examples/rnic_cmodel_v1/RESULTS.md).
+
+## Receive pipeline and requester transport
+
+`rnic_rx_pipeline.h` is the receive half, selected by an enabled receive block
+on the same ABI v2 network configuration and off by default. It is two blocks
+in series. The ingress meter admits wire bytes into a finite buffer drained at
+a service rate and discards the overflow at the PHY with no transport signal
+at all, which is what makes the measured loss silent. The receive processor
+then applies the per-QP receive packet-rate ceilings and the per-NIC one, and,
+for a reliable connection, checks the responder's sequence number and emits an
+ACK or a NAK. The sequence check runs at line rate on arrival rather than at
+the drain instant, because on real silicon the transport parser sits in the
+receive path while the buffer stages payload toward the host; delaying the NAK
+by the standing queue depth would collapse go-back-N at any loss rate.
+
+A packet the responder throws away keeps its bytes charged against the meter.
+It was still received, parsed and sequence-checked, so it consumed the ingress
+service its bytes were metered for. Refunding it would make go-back-N free at
+the receiver and pin the equilibrium goodput to the drain rate.
+
+The requester transport lives in the transmit pipeline behind
+`transport_enabled`, whose off path is the unchanged slice-B code. It keeps
+per-QP sequence and acknowledgement state and recovers by go-back-N: a NAK
+opens one recovery episode at its sequence number, every attempt at or above
+it that is still on the wire is closed as dropped and requeued, and the issue
+queue is ordered by sequence number so a replay goes back where it belongs
+rather than ahead of a lower number still waiting. A packet the responder
+never saw draws no NAK, so the retransmission timer is the only way out of a
+tail loss; firmware 16.31 counts that on `local_ack_timeout_err` and firmware
+16.32 counts zero for it.
+
+`rnic_nic_counters.h` is the observable-state facade, spelled the way the real
+NIC spells it. Three groups are inert because silicon reports them inert:
+`np_ecn_marked_roce_packets`, the two receive-pause counters, and
+`rx_out_of_buffer` with the two `outbound_pci_stalled_*` counters.
+`tests/fake_network.h` gains `FakeV2Fabric`, a two-endpoint wire with
+per-direction links, configurable propagation and a reproducible loss
+injector, and the facade gains `rnic_cm_rx_packet` with
+`rnic_cm_nic_counters`. Evidence is in
+[`examples/rnic_cmodel_rx_v1`](../../../examples/rnic_cmodel_rx_v1/RESULTS.md).
+
+## Hardware profile, anomaly table and C facade
+
+`rnic_hw_profile.h` carries the hardware parameter set with one evidence class
+per field: `documented`, `driver-inferred`, `calibrated-opaque` or `declared`.
+`kConnectX5_100G` is the measured mlx5-campaign set. `kConnectX7_400G` is
+`scaleProfile(kConnectX5_100G, 4)`, which scales the link, goodput,
+packet-rate and threshold fields, keeps the initiation, MTU, header,
+outstanding-work, transport and flow-control fields, and marks every scaled
+field `declared`. Rates are integers of bits or packets per second, so scaling
+is exact and a rendered profile has no floating-point spelling.
+
+The lumped fixed offset is the profile invariant worth knowing: the five
+work-queue service stages plus `wire_round_trip_floor_ps` sum to `t_eff_ps`.
+The campaign fitted one offset that already contains the wire round trip, so a
+model that charges the round trip explicitly subtracts it from the lump rather
+than adding to it. The split across the five stages is declared, and it is
+constrained by the requirement that no serialized stage binds before the
+transmit pacer does.
+
+The profile is its own versioned record: `simllm-rnic-hw-profile-v1` with
+`renderRnicHwProfileJson` and `rnicHwProfileSha256`. It is deliberately not
+part of the effective-hardware schemas or their hash inputs, which identify a
+composed device so a policy comparison cannot silently change hardware.
+
+`rnic_anomaly_table.h` carries the measured performance anomalies as a
+`constexpr` array: identity, trigger, the rendered effect cell, a short
+machine-readable magnitude handle, the mechanism kind and the campaign
+evidence. `renderRnicAnomalyTableMarkdown` projects it to
+[`docs/design/rnic-anomaly-table.md`](../../../docs/design/rnic-anomaly-table.md),
+and the native test compares the render to that file byte for byte and checks
+that the design document still carries every row.
+
+`rnic_cmodel_c.h` is the `extern "C"` facade an RTL testbench drives through
+DPI-C: create, post, doorbell, receive, event, progress, next-event, poll,
+transmit drain, counters, trace and destroy over plain fixed-width structs
+with picosecond timestamps. No exception crosses the boundary; every entry
+point returns a status code. Two struct typedefs are spelled
+`rnic_cm_event_info` and `rnic_cm_counter_set` because C gives a typedef and a
+function the same name space and the entry points `rnic_cm_event` and
+`rnic_cm_counters` are the contract.
+
+Determinism is the contract that makes the facade a golden reference: the same
+stimulus sequence against the same profile and configuration produces a
+byte-identical trace, one line per stimulus and per observed transition. The
+native test proves the facade reproduces the C++ device's completion
+timestamps exactly and that two identical stimulus sequences trace
+identically. The receive entry point and the control-event kinds fail closed
+with `RNIC_CM_ERROR_UNSUPPORTED` rather than pretending to model a path that
+is not landed.
+
 ## Standalone build
 
 ```bash
