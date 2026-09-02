@@ -1560,7 +1560,8 @@ created" statement stands and refers to different, never-registered work.
   does not, and the per-NIC value is either confirmed on the wire or restated
   as declared.
 - BACK-57 (Completeness; P1; L) (remaining half): place the responder's
-  discard threshold. The ingress meter, the receive processor and the go-back-N
+  discard threshold and land the internal arbiter. The ingress meter, the
+  receive processor and the go-back-N
   requester transport are landed behind an opt-in whose off path is the
   unchanged slice-B code, and
   [the slice-C study](../../examples/rnic_cmodel_rx_v1/RESULTS.md) meets most
@@ -1574,18 +1575,24 @@ created" statement stands and refers to different, never-registered work.
   5.51 Mpps on the wire for one receive queue pair and re-attributed the
   earlier 3.07 Mpps to the measurement engine, and the study carries the
   re-run at the corrected value as post-specified regression checks. Three
-  clauses remain. The first is the bidirectional pair: the measured 93.4
+  clauses remain, and the incast clause that used to be a fourth is closed: the
+  slice-D study lands the reaction point BACK-58 owns and the two senders
+  settle at the measured tax instead of collapsing. The first remaining clause
+  is the bidirectional pair: the measured 93.4
   against 91.8 split implies a discard threshold between 93.23 and 94.86 Gb/s
   of wire, which is incompatible with the 95.7 to 97.9 the equilibrium window
   requires, so the model reports 93.4 Gb/s clean where the silicon reported
   43040 discards. That needs a second limiter in the receive path, and the
-  candidate is the per-QP receive packet-rate ceiling the internal arbiter of
-  BACK-58 also feeds. The second is the incast, which BACK-58 owns outright:
-  without a reaction point a go-back-N requester answers loss by raising its
-  own offered load, so two senders sharing a saturated bottleneck collapse
-  rather than settling, while the measured run was congestion-controlled
-  (78058 CNPs sent, 179746 handled). The third is post-specified and is the
-  meter's own mechanism: P6 measured a lone reliable flow above about 94 Gb/s
+  candidate is the per-QP receive packet-rate ceiling the internal arbiter
+  feeds. The second is the internal arbiter itself, which moved here from
+  BACK-58 when slice D scoped that task down to rate control: one processing
+  budget shared by loopback ingress and wire ingress with wire priority. It is
+  an ingress-side budget and belongs beside the meter it shares a service with,
+  and it is the same cell the bidirectional clause needs. Its acceptance is
+  that the wire and loopback shares under a combined offered load above the
+  internal budget are within 5 percent of the measured 99 and 51 percent split,
+  with no PCIe stall (ANOM-05). The third is post-specified and is the meter's
+  own mechanism: P6 measured a lone reliable flow above about 94 Gb/s
   losing 0.1798 percent of its packets at the receiver's PHY, in bursts of
   about 73 packets lasting about 94 us, path-independent over 32 fresh
   5-tuples, with the event count falling 12.5 times under at least 10 Gb/s of
@@ -1604,13 +1611,13 @@ created" statement stands and refers to different, never-registered work.
   packets-per-second resource in htsim rather than in the endpoint, and
   HTSIM-39 is the admission-fairness half of the same question in the ns-tm3
   egress buffer.
-- BACK-58 (Completeness; P2; L): land rate control and the internal arbiter.
-  Rate control is the DCQCN notification point, the reaction point whose
-  per-QP state persists across WQEs, and the ECT(0) stamp the silicon applies
-  to every RoCEv2 transmit regardless of the requested ECN bits. The internal
-  arbiter is one processing budget shared by loopback ingress and wire ingress
-  with wire priority. The notification point is a named clause and a
-  post-specified correction: the design assumed a switch congestion-experienced
+- BACK-58 (Completeness; P2; L): land rate control. Rate control is the DCQCN
+  notification point, the reaction point whose per-QP state persists across
+  WQEs, and the ECT(0) stamp the silicon applies to every RoCEv2 transmit
+  regardless of the requested ECN bits. The internal arbiter used to be part of
+  this task and moved to BACK-57, beside the ingress meter whose service budget
+  it shares. The notification point is a named clause and a post-specified
+  correction: the design assumed a switch congestion-experienced
   mark, and the P6 fabric campaign found the measured fabric marks nothing at
   all (zero marked packets in 670 M, at two DSCP classes, with the egress
   buffer full and dropping 6.36 percent, every packet markable), while the
@@ -1623,15 +1630,26 @@ created" statement stands and refers to different, never-registered work.
   a rate cut of at least 30 percent after 3, 16 and 39 ms across three
   repeats; fair share after 5 ms, 1.8 s and 2.3 s; recovery to at least 95
   percent in 447 plus or minus 10 ms; and an additive increase falling from
-  0.107 to 0.093 Gb/s per ms. Acceptance: the wire and loopback shares under a
-  combined offered load above the internal budget are within 5 percent of the
-  measured split; the marking counter stays inert while CNPs are generated, as
+  0.107 to 0.093 Gb/s per ms. The task also owns the fabric object those
+  dynamics need before they can be exercised at all: a tail-drop egress queue
+  of the measured 5.2 MB draining at the port rate, with no marking and no
+  pause, so incast loss emerges from a queue instead of from an injected
+  stream. Acceptance, frozen in
+  [the slice-D expectations](../../examples/rnic_cmodel_cc_v1/expectations.md):
+  the marking counter stays inert while CNPs are generated, as
   silicon does; the endpoint emits its own notifications at within 30 percent
   of 283 per second per congested queue pair on a fabric configured not to
-  mark; the cut, fair-share and recovery times land inside the measured ranges
-  above; and, with fabric loss supplied by the composed port, the incast tax
-  identity holds within 25 percent and the fair-share split within 2
-  percentage points. HTSIM-5 remains the owner of the policy-side DCQCN state
+  mark, and at exactly zero for a lone flow paced below saturation; the cut,
+  fair-share and recovery times land inside the measured ranges above with the
+  additive slope within 25 percent of 0.1 Gb/s per ms at the sender level; the
+  reaction point's rate crosses a work-request boundary unchanged; and under
+  2 to 1 reliable fan-in of 1 MiB WRITEs at four queue pairs per sender the
+  wire is at least 97 percent utilised, the application goodput is within 15
+  percent of the measured 73.89 Gb/s with the tax inside 21 to 27 percent, the
+  split is 50 plus or minus 2 percentage points, and `packet_seq_err` counts
+  loss bursts rather than packets. With congestion control disabled every
+  slice-C row must come back byte for byte, collapse included. HTSIM-5 remains
+  the owner of the policy-side DCQCN state
   in the backend repo, and HTSIM-38 is the same endpoint notification hook on
   the fabric-model side, together with the explicit drop-only switch mode that
   a fabric which never marks needs in order to be spelled at all; this task
