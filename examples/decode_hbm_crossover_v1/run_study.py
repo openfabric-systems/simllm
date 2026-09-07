@@ -384,15 +384,40 @@ def run_study(extra_findings: list[str] | None = None) -> tuple:
 
 
 def plot(rows: list[dict], out: Path) -> None:
+    """Four views: three geometry frontiers at nominal HBM and one bandwidth sensitivity.
+
+    The left column keeps one operating curve per device and context for each
+    frozen geometry: aggregate output tokens per second per GPU against time per
+    output token, both logarithmic, with the analytical crossover B* as a hollow
+    diamond and the weight-only TPOT floor of every device annotated on the
+    x axis. The right column shows the frozen bandwidth axis for the 7B-class
+    geometry on H200 at both contexts: TPOT against batch at half, nominal and
+    double HBM bandwidth, so the reader sees the factor-two shift below B* and
+    the convergence to the arithmetic line above it.
+    """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
+    from matplotlib.ticker import FuncFormatter, LogLocator
 
     frozen = json.loads((STUDY / "expectations.json").read_text())
-    fig, axes = plt.subplots(3, 1, figsize=(7, 8.6), layout="constrained")
+    fig = plt.figure(figsize=(12.5, 9.2), layout="constrained")
+    grid = fig.add_gridspec(3, 2, width_ratios=(1.15, 1.0))
+    axes = [fig.add_subplot(grid[i, 0]) for i in range(3)]
     colors = dict(zip(frozen["devices"], plt.rcParams["axes.prop_cycle"].by_key()["color"]))
+
+    def readable_log(ax):
+        for axis in (ax.xaxis, ax.yaxis):
+            axis.set_major_locator(LogLocator(base=10, numticks=12))
+            axis.set_minor_locator(LogLocator(base=10, subs=(2, 3, 5), numticks=12))
+            axis.set_minor_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
+            axis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
+        ax.tick_params(axis="both", which="minor", labelsize=6, colors="0.35")
+        ax.tick_params(axis="both", which="major", labelsize=8)
+
     for ax, model in zip(axes, frozen["models"]):
+        floors = {}
         for dev in frozen["devices"]:
             for context in model["contexts"]:
                 selected = [r for r in rows if r["scope"] == "sweep"
@@ -401,6 +426,7 @@ def plot(rows: list[dict], out: Path) -> None:
                 selected.sort(key=lambda r: r["batch"])
                 if not selected:
                     continue
+                floors[dev] = int(selected[0]["weight_floor_ps"]) / 1e9
                 curve = [(r["batch"], r["tpot_ms"], r["throughput_decimal"])
                          for r in selected]
                 first = selected[0]
@@ -417,18 +443,48 @@ def plot(rows: list[dict], out: Path) -> None:
                 ax.plot([r["tpot_ms"] for r in selected],
                         [r["throughput_decimal"] for r in selected],
                         "o", color=colors[dev], markersize=3)
-        ax.set_title(model["label"], fontsize=10)
+        for dev, floor in floors.items():
+            ax.axvline(floor, color=colors[dev], linewidth=0.5, alpha=0.5)
+        ax.set_title(f"{model['label']}: weight-only TPOT floors (ms) "
+                     + ", ".join(f"{d.upper()} {floors[d]:.2f}" for d in frozen["devices"] if d in floors),
+                     fontsize=8)
         ax.set_xlabel("Time per output token (ms)")
         ax.set_ylabel("Output tokens/s/GPU")
         ax.grid(True, which="major", alpha=0.25)
         ax.margins(x=0.12, y=0.18)
+        readable_log(ax)
+
+    right = [fig.add_subplot(grid[i, 1]) for i in range(3)]
+    for ax, model in zip(right, frozen["models"]):
+        dev = "h200"
+        for context, style in zip(model["contexts"], ("-", "--")):
+            for scale, marker in (("0.5", "v"), ("1", "o"), ("2", "^")):
+                selected = [r for r in rows if r["scope"] == "sweep" and r["model"] == model["id"]
+                            and r["device"] == dev and r["context"] == context
+                            and r["hbm_scale"] == scale]
+                selected.sort(key=lambda r: r["batch"])
+                if not selected:
+                    continue
+                ax.loglog([r["batch"] for r in selected], [r["tpot_ms"] for r in selected],
+                          style, marker=marker, markersize=3, linewidth=1,
+                          color={"0.5": "#d62728", "1": "#1f77b4", "2": "#2ca02c"}[scale],
+                          label=f"HBM x{scale}, C={context}")
+        ax.set_title(f"{model['label']} on H200: HBM at x0.5, x1, x2", fontsize=8)
+        ax.set_xlabel("Decode batch (requests)")
+        ax.set_ylabel("Time per output token (ms)")
+        ax.grid(True, which="major", alpha=0.25)
+        ax.legend(fontsize=6.5, loc="upper left", ncols=2)
+        readable_log(ax)
+
     handles = [Line2D([], [], color=colors[d], label=d.upper()) for d in reversed(frozen["devices"])]
     handles += [Line2D([], [], color="black", linestyle="-", label="C=1 (EP72: C=2000)"),
                 Line2D([], [], color="black", linestyle="--", label="C=2048"),
                 Line2D([], [], color="black", marker="D", markerfacecolor="white",
-                       linestyle="none", label="Analytical B*")]
-    fig.suptitle("Decode roofline at nominal HBM bandwidth", fontsize=11)
-    fig.legend(handles=handles, loc="outside lower center", ncols=4, fontsize=8)
+                       linestyle="none", label="Analytical B*"),
+                Line2D([], [], color="gray", linewidth=0.5, label="weight-only floor")]
+    fig.suptitle("Decode roofline: throughput against TPOT at nominal HBM bandwidth (left) "
+                 "and the HBM bandwidth axis on H200 (right)", fontsize=11)
+    fig.legend(handles=handles, loc="outside lower center", ncols=5, fontsize=8)
     out.mkdir(parents=True, exist_ok=True)
     for suffix in ("png", "pdf"):
         fig.savefig(out / f"decode-hbm-crossover.{suffix}", dpi=180,

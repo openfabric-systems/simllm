@@ -187,7 +187,13 @@ Neither rounding observation adds to a behavioral score.
 
 ![Decode throughput against TPOT with analytical crossovers](figures/decode-hbm-crossover.png)
 
-[Vector PDF](figures/decode-hbm-crossover.pdf). Circles mark the nine swept
+[Vector PDF](figures/decode-hbm-crossover.pdf). The left column is the
+frontier per geometry at nominal bandwidth, with every device's weight-only
+TPOT floor drawn as a thin vertical line and listed in the panel title; the
+right column is the frozen bandwidth axis on H200, TPOT against batch at
+half, nominal and double HBM bandwidth, where the factor-two shift below
+the crossover and the convergence onto the arithmetic line above it are
+visible directly. Circles mark the nine swept
 batches; diamonds mark exact analytical crossovers, including short-context
 knees slightly beyond batch 256. Lines include those analytical knees so a
 coarse batch interval does not hide the bend. Large-context crossovers beyond
