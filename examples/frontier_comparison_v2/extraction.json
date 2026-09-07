@@ -1,0 +1,26 @@
+{
+  "config_sha256": "e546dacd2c772660270233f5579e9ab923cc2a7ec5ed3c58c27c2bc62cbf5169",
+  "frameworks": {
+    "sglang": {
+      "inventory_sha256": [
+        "d25471742a987e31d872dc6fbf8c60ee8746ba17eb25e95a245689064ed3a8d7",
+        "d25471742a987e31d872dc6fbf8c60ee8746ba17eb25e95a245689064ed3a8d7"
+      ],
+      "step_records_sha256": [
+        "7aa340751933a27135792099de97b1fde1a8f58cee64783b8ee7b82b12f174fd",
+        "7aa340751933a27135792099de97b1fde1a8f58cee64783b8ee7b82b12f174fd"
+      ]
+    },
+    "vllm": {
+      "inventory_sha256": [
+        "b3ec33edcab6a81868c00efdc2147df4d41b633bd932cb6c4831ea282a1d79fe",
+        "b3ec33edcab6a81868c00efdc2147df4d41b633bd932cb6c4831ea282a1d79fe"
+      ],
+      "step_records_sha256": [
+        "7aa340751933a27135792099de97b1fde1a8f58cee64783b8ee7b82b12f174fd",
+        "7aa340751933a27135792099de97b1fde1a8f58cee64783b8ee7b82b12f174fd"
+      ]
+    }
+  },
+  "mode": "offline-local-config-with-retained-framework-bindings"
+}
