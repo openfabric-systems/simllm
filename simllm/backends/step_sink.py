@@ -81,6 +81,14 @@ in ``selected_precision_levels``, and an explicit ``precision`` surface that
 disagrees with any of them is refused during configuration validation, before
 the workdir, any GOAL artifact or any backend process exists.
 
+``emit_packet_breakdown=True`` retains executed artifact visits in
+``packet_breakdowns``. Each entry projects the runtime's five conserved
+segments, CompletionEvent rows and an artifact-level RuntimeReport. Pass it
+as ``packet_breakdown=`` to the request reducer, and serialize it beside the
+unchanged StepResult with ``packet_step_to_json``. Disabled selection adds
+no artifact or serialized result key. Preparation retains this evidence until
+the corresponding record is consumed.
+
 Providers may opt into an exact per-layer duration breakdown. The sink checks
 that it sums to the fused estimate and emits the unequal layer costs. Existing
 providers inherit the optional hook's ``None`` result and retain the historical
@@ -99,6 +107,7 @@ from concurrent.futures import Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass, field
 from pathlib import Path
 from threading import Lock
+from typing import TYPE_CHECKING
 
 from simllm.backends.dependency_cross_check import (
     DependencyCrossCheckPlan,
@@ -165,6 +174,9 @@ from simllm.traffic import (
     validate_execution_graph_locality_projection,
 )
 
+if TYPE_CHECKING:
+    from simllm.backends.packet_breakdown import PacketStepBreakdown
+
 _STATEFUL_MULTI_ARTIFACT_PROFILES = frozenset({"rnic-cn"})
 DEPENDENCY_CROSS_CHECK_MODES = ("atlahs-goal",)
 
@@ -212,6 +224,8 @@ class HtsimStepSinkConfig:
     provider: ComputeProvider = field(default_factory=lambda: RooflineProvider(efficiency=0.7))
     gpu: GpuSpec = GPU_ENVELOPES["b100"]
     host_model: HostInitiationModel = field(default_factory=HostInitiationModel.ideal)
+    #: read-only runtime visits and conserved breakdown; absent by default
+    emit_packet_breakdown: bool = field(default=False, kw_only=True)
     #: first GOAL tag; each allreduce takes a disjoint 2(W-1)-tag block
     base_tag: int = 1000
     #: explicit GOAL rank count for topology padding; None keeps inferred sizing
@@ -285,6 +299,8 @@ class HtsimStepSinkConfig:
     )
 
     def __post_init__(self) -> None:
+        if type(self.emit_packet_breakdown) is not bool:
+            raise TypeError("emit_packet_breakdown must be a boolean")
         if self.profile not in RNIC_PROFILES:
             raise ValueError(f"profile must be one of {RNIC_PROFILES}")
         if not isinstance(self.host_model, HostInitiationModel):
@@ -1091,6 +1107,7 @@ class _PlannedStep:
     collective_floor_transfer_acknowledged: bool
     collective_registration: CollectiveRegistrationModel | None
     registration_events: tuple[CollectiveRegistrationEvent, ...]
+    emit_packet_breakdown: bool
 
 
 @dataclass(frozen=True)
@@ -1104,6 +1121,7 @@ class _SimulatedStep:
     collective_floor_timing_outcome: StepCollectiveFloorTimingOutcome | None
     dependency_cross_check_report: DependencyCrossCheckReport | None
     collective_registration_outcome: StepCollectiveRegistrationOutcome | None = None
+    packet_breakdown: PacketStepBreakdown | None = None
 
 
 @dataclass(frozen=True)
@@ -1140,6 +1158,8 @@ class HtsimStepSink:
         self.outcomes: list[StepNetworkOutcome] = []
         #: locality projection for the same simulated steps, in call order
         self.locality_outcomes: list[StepLocalityOutcome] = []
+        #: selected visits, events and runtime reports; published only on consumption
+        self.packet_breakdowns: list[PacketStepBreakdown] = []
         #: calibrated decompositions; deliberately empty on the legacy/off path
         self.collective_timing_outcomes: list[StepCollectiveTimingOutcome] = []
         #: aggregate floor projections; deliberately empty on the exact off path
@@ -1682,6 +1702,7 @@ class HtsimStepSink:
             ),
             collective_registration=cfg.resolved_collective_registration,
             registration_events=registration_events,
+            emit_packet_breakdown=cfg.emit_packet_breakdown,
         )
 
     def _run_goal(
@@ -1722,6 +1743,8 @@ class HtsimStepSink:
                 "state-preserving artifact execution"
             )
 
+        fabric_starts = []
+        fabric_finishes = []
         fabric_services = []
         composed_services = []
         num_flows = 0
@@ -1733,6 +1756,7 @@ class HtsimStepSink:
         authority_artifact_bytes: list[int] = []
         artifact_offset_ps = 0
         for artifact in plan.artifacts:
+            first_start_ps = last_finish_ps = 0
             if artifact.goal_path is None:
                 if artifact.completion_csv is not None:
                     raise AssertionError("analytic artifact has a completion path")
@@ -1753,6 +1777,18 @@ class HtsimStepSink:
                     artifact.completion_csv,
                 )
                 fabric_service_ps = run.job_completion_time_ps()
+                if plan.emit_packet_breakdown:
+                    if not run.quiescent or not run.flows:
+                        raise ValueError("packet breakdown requires quiescent completion rows")
+                    if any(
+                        flow.start_time_ps < 0
+                        or flow.completion_time_ps < flow.start_time_ps
+                        or flow.fct_ps != flow.completion_time_ps - flow.start_time_ps
+                        for flow in run.flows
+                    ):
+                        raise ValueError("packet breakdown received invalid completion timestamps")
+                    first_start_ps = min(flow.start_time_ps for flow in run.flows)
+                    last_finish_ps = max(flow.completion_time_ps for flow in run.flows)
                 if plan.dependency_cross_check is not None:
                     authority_timing_rows.extend(
                         (
@@ -1765,6 +1801,8 @@ class HtsimStepSink:
                 num_flows += len(run.flows)
                 quiescent = quiescent and run.quiescent
                 backend_runs += 1
+            fabric_starts.append(first_start_ps)
+            fabric_finishes.append(last_finish_ps)
             fabric_services.append(fabric_service_ps)
             composed_services.append(
                 artifact.registration_cost_ps
@@ -1997,6 +2035,14 @@ class HtsimStepSink:
             step_latency_ps=makespan_ps,
             completed_at_ps=plan.virtual_time_ps + makespan_ps,
         )
+        packet_breakdown = None
+        if plan.emit_packet_breakdown:
+            from simllm.backends.packet_breakdown import build_packet_breakdown
+
+            packet_breakdown = build_packet_breakdown(
+                plan, fabric_services, fabric_starts, fabric_finishes,
+            )
+            packet_breakdown.validate_result(result)
         return _SimulatedStep(
             result=result,
             outcome=outcome,
@@ -2005,6 +2051,7 @@ class HtsimStepSink:
             collective_floor_timing_outcome=collective_floor_timing_outcome,
             dependency_cross_check_report=cross_check_report,
             collective_registration_outcome=registration_outcome,
+            packet_breakdown=packet_breakdown,
         )
 
     def _simulate_step(self, record: StepRecord) -> _SimulatedStep:
@@ -2021,6 +2068,8 @@ class HtsimStepSink:
         return self._execute_plan(plan)
 
     def _publish(self, simulation: _SimulatedStep) -> StepResult | None:
+        if simulation.packet_breakdown is not None:
+            self.packet_breakdowns.append(simulation.packet_breakdown)
         if simulation.outcome is not None:
             self.outcomes.append(simulation.outcome)
         if simulation.locality_outcome is not None:

@@ -45,6 +45,11 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from fractions import Fraction
 
+from simllm.backends.packet_breakdown import (
+    PacketStepBreakdown,
+    dependency_breakdown,
+    sum_breakdowns,
+)
 from simllm.backends.step_sink import (
     GPU_COMPUTE_MEDIUM,
     LOCAL_SERVICE_MEDIA,
@@ -53,6 +58,7 @@ from simllm.backends.step_sink import (
 )
 from simllm.core import (
     AdditiveVisitTotals,
+    CriticalPathBreakdown,
     LatencyAttribution,
     RequestMetric,
     StepRecord,
@@ -60,9 +66,9 @@ from simllm.core import (
     sampled_request_ids,
 )
 
-#: The packet-level sink records no ``QueueVisit``, so the additive work sum
-#: stays empty rather than being fabricated from wall-clock services. A caller
-#: that needs the work sum must use a runtime authority that publishes visits.
+#: Historical RequestMetric work fields remain empty. Opted-in artifact work
+#: totals live in PacketStepBreakdown.runtime_report, separate from request
+#: elapsed-time projections and from unobserved per-request resource work.
 _NO_VISIT_TOTALS = AdditiveVisitTotals()
 
 
@@ -361,6 +367,8 @@ def _legacy_medium_projection(
 def attribute_step_detail(
     result: StepResult,
     locality: StepLocalityOutcome | None,
+    *,
+    packet_breakdown: PacketStepBreakdown | None = None,
 ) -> StepAttribution:
     """Partition one packet-level step's makespan over its executed artifacts.
 
@@ -377,6 +385,12 @@ def attribute_step_detail(
 
     if not isinstance(result, StepResult):
         raise TypeError("result must be a StepResult")
+    if packet_breakdown is not None:
+        packet_breakdown.validate_result(result)
+        projected = packet_breakdown.detail
+        if projected != attribute_step_detail(result, locality):
+            raise ValueError("packet segments disagree with the locality projection")
+        return projected
     if locality is None:
         return StepAttribution(
             attribution=LatencyAttribution(control_ps=result.step_latency_ps),
@@ -544,6 +558,9 @@ class _RequestState:
     ttft_media: MediumAttribution = field(default_factory=MediumAttribution)
     decode_media: MediumAttribution = field(default_factory=MediumAttribution)
     latest_metric: RequestMetric | None = None
+    pending_breakdown: CriticalPathBreakdown = field(default_factory=sum_breakdowns)
+    ttft_breakdown: CriticalPathBreakdown = field(default_factory=sum_breakdowns)
+    decode_breakdown: CriticalPathBreakdown = field(default_factory=sum_breakdowns)
 
 
 @dataclass(frozen=True)
@@ -622,6 +639,7 @@ class HtsimRequestMetricReducer:
         self._arrivals = parsed
         self._requests: dict[str, _RequestState] = {}
         self._consumed_step_indices: set[int] = set()
+        self._breakdown_enabled: bool | None = None
 
     @property
     def latest_request_metrics(self) -> tuple[RequestMetric, ...]:
@@ -661,11 +679,23 @@ class HtsimRequestMetricReducer:
             )
         return tuple(rows)
 
+    def critical_path_breakdowns(self) -> dict[str, tuple[CriticalPathBreakdown, CriticalPathBreakdown]]:
+        """Completed TTFT and decode partitions, available only when opted in."""
+        if not self._breakdown_enabled:
+            return {}
+        return {
+            request_id: (state.ttft_breakdown, state.decode_breakdown)
+            for request_id, state in self._requests.items()
+            if state.first_token_at_ps is not None
+        }
+
     def consume(
         self,
         record: StepRecord,
         result: StepResult,
         locality: StepLocalityOutcome | None,
+        *,
+        packet_breakdown: PacketStepBreakdown | None = None,
     ) -> tuple[RequestMetric, ...]:
         """Reduce one executed step and commit its request-metric history."""
 
@@ -680,7 +710,10 @@ class HtsimRequestMetricReducer:
         released_at_ps = record.virtual_time_ps
         if result.completed_at_ps != released_at_ps + result.step_latency_ps:
             raise ValueError("StepResult completion disagrees with its own makespan")
-        step = attribute_step_detail(result, locality)
+        enabled = packet_breakdown is not None
+        if self._breakdown_enabled is not None and enabled != self._breakdown_enabled:
+            raise ValueError("request history cannot mix enabled and absent packet breakdowns")
+        step = attribute_step_detail(result, locality, packet_breakdown=packet_breakdown)
         step_attribution = step.attribution
         step_media = step.media
 
@@ -718,11 +751,20 @@ class HtsimRequestMetricReducer:
             interval_media = (
                 state.pending_media + MediumAttribution(queue_ps=queue_ps) + step_media
             )
+            interval_breakdown = sum_breakdowns()
+            if packet_breakdown is not None:
+                interval_breakdown = sum_breakdowns(
+                    state.pending_breakdown, dependency_breakdown(queue_ps),
+                    packet_breakdown.breakdown,
+                )
+                if interval_breakdown.operation_latency_ps != interval.total_ps:
+                    raise ValueError("request breakdown does not conserve its interval")
             state.accounted_through_ps = result.completed_at_ps
 
             if request_id not in sampled:
                 state.pending = interval
                 state.pending_media = interval_media
+                state.pending_breakdown = interval_breakdown
                 continue
 
             if state.first_token_at_ps is None:
@@ -730,6 +772,7 @@ class HtsimRequestMetricReducer:
                 state.first_token_at_ps = result.completed_at_ps
                 state.ttft_attribution = interval
                 state.ttft_media = interval_media
+                state.ttft_breakdown = interval_breakdown
                 ttft_ps = latency_ps
             else:
                 assert state.last_token_at_ps is not None
@@ -739,6 +782,7 @@ class HtsimRequestMetricReducer:
                 state.inter_token_count += 1
                 state.decode_attribution = state.decode_attribution + interval
                 state.decode_media = state.decode_media + interval_media
+                state.decode_breakdown = sum_breakdowns(state.decode_breakdown, interval_breakdown)
             if interval.total_ps != latency_ps:
                 raise ValueError(
                     f"request {request_id!r} interval attribution does not conserve "
@@ -769,8 +813,10 @@ class HtsimRequestMetricReducer:
             state.latest_metric = metric
             state.pending = LatencyAttribution()
             state.pending_media = MediumAttribution()
+            state.pending_breakdown = sum_breakdowns()
             metrics.append(metric)
 
+        self._breakdown_enabled = enabled
         self._requests = states
         self._consumed_step_indices.add(record.step_index)
         return tuple(metrics)
