@@ -131,17 +131,27 @@ projections remain in the small result table.
 
 ![PP FCT and serial-chain share](figures/pp_rail.png)
 
-The [PDF figure](figures/pp_rail.pdf) has the same content. Panel A is the
-physical PP hop p99 against pipeline depth on both fabrics with the pre-run
-data-arrival floors (3.31 us through one leaf, 5.31 us through the spine) and
-the topology-free null-network value as reference lines: the 21.8 percent
-node-local penalty is the extra two links, and both fabrics sit about 7 us
-above their data floors because sender-visible completion includes in-band
-control. Panel B is the same p99 against concurrent EP participants at every
-depth, the load axis whose frozen growth hypothesis this run refuted: every
-line is flat to 0 ps. Panel C is physical step completion against depth with
-the declared compute plus data-floor chain. Panel D is the background EP
-all-to-all phase itself on both fabrics and both profiles.
+The [PDF figure](figures/pp_rail.pdf) has the same content at a 7.2-inch print
+width. Red denotes the node-local fabric and blue the rail fabric under the
+physical `rnic-cn` profile; gray dashed lines denote the topology-free
+`rnic-nn` reference. Panel A shows unloaded pipeline-parallel (PP) hop
+99th-percentile flow completion time (FCT): at P=8, node-local is 21.8 percent
+higher (12.5852 versus 10.3356 us), on a path with two extra links. Dotted
+data-arrival floors are 3.31 us for rail and 5.31 us for node-local; the null
+reference is 3.41 us. Sender-visible completion includes control and lies
+above the data floors; the gap is not a measured control-component breakdown.
+Each p99 is the maximum of only P-1 hops, not a population tail estimate.
+Panel B varies background expert-parallel (EP) participants: circles,
+open squares and triangles denote P=2, 4 and 8. Every physical curve changes
+by exactly 0 ps, refuting the frozen load-growth hypothesis for this workload;
+node-local P=4 and P=8 coincide, with triangles inside the open squares.
+Panel C compares unloaded physical step completion with the dotted chain
+floor, P times 1 us declared compute plus P-1 data-arrival floors. This
+synthetic compute input is not calibrated model service time. Panel D uses a
+linear time axis for the background EP all-to-all phase at P=8 and 1 MiB per
+remote pair. The two null-profile curves coincide, shown in gray with crosses.
+The EP phase is separate from PP step completion and is not added to its
+critical path.
 
 ## Frozen relations and evidence classes
 

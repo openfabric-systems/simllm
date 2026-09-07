@@ -350,66 +350,112 @@ def draw(summary: dict, directory: Path) -> None:
                        and all(r[k] == v for k, v in fixed.items())),
                       key=lambda r: (r["pp_width"], r["ep_width"]))
 
-    figure, axes = plt.subplots(2, 2, figsize=(12.5, 7.6), layout="constrained")
+    from matplotlib.lines import Line2D
+
+    figure, axes = plt.subplots(2, 2, figsize=(7.2, 6.5))
+    figure.subplots_adjust(left=0.085, right=0.985, bottom=0.145, top=0.88,
+                           wspace=0.30, hspace=0.42)
     ax = axes[0, 0]
-    for variant in ("rail", "node-local"):
+    for variant in ("node-local", "rail"):
         cells = pick("rnic-cn", variant, ep_width=0)
         ax.plot([r["pp_width"] for r in cells], [r["pp_fct_p99_ps"] / 1e6 for r in cells],
-                marker="o", color=colors[variant], label=f"rnic-cn, {variant}, no EP load")
+                marker="o", markersize=4, color=colors[variant], linewidth=1.4)
         floor = cells[0]["bounds"]["data_arrival_floor_ps"] / 1e6
-        ax.axhline(floor, color=colors[variant], linewidth=0.8, linestyle=":",
-                   label=f"{variant} data-arrival floor {floor:.2f} us")
+        ax.axhline(floor, color=colors[variant], linewidth=1.2, linestyle=":")
+        ax.annotate(f"{variant} floor: {floor:.2f} µs", xy=(2.4, floor),
+                    xytext=(2.1, 6.4 if variant == "node-local" else 0.7),
+                    color=colors[variant], fontsize=8,
+                    arrowprops={"arrowstyle": "-", "color": colors[variant], "lw": 0.7})
     null = pick("rnic-nn", "rail", ep_width=0)
-    ax.axhline(null[0]["pp_fct_p99_ps"] / 1e6, color="gray", linewidth=0.8, linestyle="--",
-               label=f"rnic-nn topology-free {null[0]['pp_fct_p99_ps'] / 1e6:.2f} us")
-    ax.set(title="A: PP hop p99 FCT against pipeline depth, physical, 400G",
-           xlabel="Pipeline stages P", ylabel="PP hop p99 FCT (us)", xticks=WIDTHS, ylim=(0, 14))
-    ax.legend(fontsize=7, loc="lower right")
+    null_us = null[0]["pp_fct_p99_ps"] / 1e6
+    ax.axhline(null_us, color="0.4", linewidth=1, linestyle="--")
+    ax.annotate(f"Null: {null_us:.2f} µs", xy=(7.5, null_us), xytext=(5.2, 4.15),
+                fontsize=8, color="0.3", arrowprops={"arrowstyle": "-", "color": "0.4", "lw": 0.7})
+    rail_us = pick("rnic-cn", "rail", pp_width=8, ep_width=0)[0]["pp_fct_p99_ps"] / 1e6
+    local_us = pick("rnic-cn", "node-local", pp_width=8, ep_width=0)[0]["pp_fct_p99_ps"] / 1e6
+    ax.annotate("", xy=(7.6, local_us), xytext=(7.6, rail_us),
+                arrowprops={"arrowstyle": "<->", "color": "0.2", "lw": 0.8})
+    ax.text(3.8, 11.2, f"+{100 * (local_us / rail_us - 1):.1f}% at P=8", fontsize=8)
+    ax.set(title="A  Hop latency vs. depth", xlabel="Pipeline stages P",
+           ylabel="PP hop p99 FCT (µs)", xticks=WIDTHS, ylim=(0, 14), xlim=(1.7, 8.5))
+    ax.text(0.03, 0.98, "No EP load; rail 2 links, node-local 4",
+            transform=ax.transAxes, va="top", fontsize=7.5)
 
     ax = axes[0, 1]
-    for variant in ("rail", "node-local"):
-        for width, marker in zip(WIDTHS, ("o", "s", "^")):
+    for variant in ("node-local", "rail"):
+        for width, marker, size in zip(WIDTHS, ("o", "s", "^"), (4, 6, 3.5)):
             cells = pick("rnic-cn", variant, pp_width=width)
             ax.plot([r["ep_width"] for r in cells], [r["pp_fct_p99_ps"] / 1e6 for r in cells],
-                    marker=marker, color=colors[variant], linewidth=1,
-                    label=f"{variant}, P={width}")
-    ax.set(title="B: PP hop p99 against concurrent EP load (physical), 0 ps change",
-           xlabel="EP participants in the background all-to-all", ylabel="PP hop p99 FCT (us)",
-           xticks=EP_WIDTHS, ylim=(9.5, 13.5))
-    ax.legend(fontsize=7, loc="center right", ncols=2)
+                    marker=marker, markersize=size, color=colors[variant], linewidth=1,
+                    markerfacecolor="white" if width == 4 else colors[variant])
+    changes = [max(r["pp_fct_p99_ps"] for r in pick("rnic-cn", variant, pp_width=width))
+               - min(r["pp_fct_p99_ps"] for r in pick("rnic-cn", variant, pp_width=width))
+               for variant in VARIANTS for width in WIDTHS]
+    ax.text(0.5, 0.49, f"Load response: {max(changes):,} ps\nGrowth hypothesis refuted",
+            transform=ax.transAxes, ha="center", va="center", fontsize=8)
+    ax.text(0.5, 0.91, "Node-local P=4 and P=8 coincide", transform=ax.transAxes,
+            ha="center", fontsize=7.5)
+    stage_handles = [Line2D([], [], color="0.25", marker=marker, linestyle="none",
+                            markersize=size, markerfacecolor="white" if width == 4 else "0.25",
+                            label=f"P={width}")
+                     for width, marker, size in zip(WIDTHS, ("o", "s", "^"), (4, 6, 3.5))]
+    ax.legend(handles=stage_handles, loc="center", bbox_to_anchor=(0.5, 0.32),
+              ncols=3, fontsize=7.5, frameon=False, handletextpad=0.3, columnspacing=0.9)
+    ax.set(title="B  Hop latency vs. EP load", xlabel="Background EP participants",
+           ylabel="PP hop p99 FCT (µs)", xticks=EP_WIDTHS, ylim=(9.5, 13.5), xlim=(-2, 34))
 
     ax = axes[1, 0]
-    for variant in ("rail", "node-local"):
+    for variant in ("node-local", "rail"):
         cells = pick("rnic-cn", variant, ep_width=0)
         ax.plot([r["pp_width"] for r in cells], [r["pp_final_stage_projection_ps"] / 1e6 for r in cells],
-                marker="o", color=colors[variant], label=f"rnic-cn, {variant}, step completion")
+                marker="o", markersize=4, linewidth=1.4, color=colors[variant])
         ax.plot([r["pp_width"] for r in cells],
-                [(r["pp_width"] * 1_000_000 + (r["pp_width"] - 1) * r["bounds"]["data_arrival_floor_ps"]) / 1e6
-                 for r in cells], linestyle=":", color=colors[variant],
-                label=f"{variant}: P x 1 us compute + (P-1) data floors")
-    ax.set(title="C: step completion against depth, 1 us declared stage compute",
-           xlabel="Pipeline stages P", ylabel="Step completion (us)", xticks=WIDTHS)
-    ax.legend(fontsize=7, loc="upper left")
+                [(r["pp_width"] * COMPUTE_PS + (r["pp_width"] - 1) * r["bounds"]["data_arrival_floor_ps"]) / 1e6
+                 for r in cells], linestyle=":", linewidth=1.4, color=colors[variant])
+    ax.text(0.04, 0.96, "1 µs declared compute per stage\nDotted: compute + data-floor chain",
+            transform=ax.transAxes, va="top", fontsize=7.5)
+    ax.set(title="C  Serial step completion", xlabel="Pipeline stages P",
+           ylabel="Step completion (µs)", xticks=WIDTHS, ylim=(0, 120), xlim=(1.7, 8.5),
+           yticks=(0, 20, 40, 60, 80, 100))
 
     ax = axes[1, 1]
-    for variant in ("rail", "node-local"):
+    for variant in ("node-local", "rail"):
         cells = [r for r in pick("rnic-cn", variant, pp_width=8) if r["ep_width"] > 0]
         ax.plot([r["ep_width"] for r in cells], [r["ep_phase_makespan_ps"] / 1e6 for r in cells],
-                marker="o", color=colors[variant], label=f"rnic-cn, {variant}, P=8")
+                marker="o", markersize=4, linewidth=1.4, color=colors[variant])
+    for variant in ("node-local", "rail"):
         cells = [r for r in pick("rnic-nn", variant, pp_width=8) if r["ep_width"] > 0]
         ax.plot([r["ep_width"] for r in cells], [r["ep_phase_makespan_ps"] / 1e6 for r in cells],
-                marker="x", linestyle="--", color=colors[variant], label=f"rnic-nn, {variant}, P=8")
-    ax.set(title="D: background EP all-to-all phase makespan, 1 MiB per remote pair",
-           xlabel="EP participants", ylabel="EP phase makespan (us)", xticks=(8, 32), yscale="log")
-    ax.legend(fontsize=7, loc="upper left")
+                marker="x", markersize=4, linestyle="--", linewidth=1.2, color="0.4")
+    ax.text(0.04, 0.96, "P=8; 1 MiB per remote pair", transform=ax.transAxes,
+            va="top", fontsize=8)
+    ax.text(0.5, 0.10, "Null curves coincide", transform=ax.transAxes, ha="center", fontsize=8,
+            color="0.3")
+    ax.set(title="D  Background EP phase", xlabel="Background EP participants",
+           ylabel="EP phase makespan (µs)", xticks=(8, 32), ylim=(0, 1100), xlim=(6, 34),
+           yticks=(0, 200, 400, 600, 800, 1000))
     for ax in axes.flat:
-        ax.tick_params(labelsize=8)
-        ax.grid(True, which="major", alpha=0.25)
+        ax.tick_params(labelsize=8, length=3)
+        ax.xaxis.label.set_fontsize(8.5)
+        ax.yaxis.label.set_fontsize(8.5)
+        ax.grid(True, axis="y", which="major", alpha=0.18)
+        ax.set_axisbelow(True)
         ax.title.set_fontsize(9)
-    figure.suptitle("Pipeline activations on the rail-optimized and node-local Clos variants "
-                    "(64 endpoints, 400G, 64 KiB per hop)", fontsize=10)
+        ax.title.set_fontweight("bold")
+        ax.spines[["top", "right"]].set_visible(False)
+    handles = [Line2D([], [], color=colors[variant], lw=1.4,
+                      label=f"Physical: {variant}") for variant in ("node-local", "rail")]
+    handles.append(Line2D([], [], color="0.4", lw=1.2, linestyle="--",
+                          label="Null: both fabrics"))
+    figure.legend(handles=handles, loc="lower center", bbox_to_anchor=(0.52, 0.045),
+                  ncols=3, fontsize=8, frameon=False, handlelength=2, columnspacing=1.6)
+    figure.text(0.52, 0.023, "Physical = rnic-cn; null = rnic-nn (topology-free)",
+                ha="center", fontsize=8)
+    figure.suptitle("Pipeline activations: rail and node-local Clos", fontsize=11, y=0.976)
+    figure.text(0.5, 0.932, "64 endpoints · 400 Gbit/s · 64 KiB per pipeline hop",
+                ha="center", fontsize=9)
     directory.mkdir(parents=True, exist_ok=True)
-    figure.savefig(directory / "pp_rail.png", dpi=160)
+    figure.savefig(directory / "pp_rail.png", dpi=300)
     figure.savefig(directory / "pp_rail.pdf", metadata={"CreationDate": None})
     plt.close(figure)
 
