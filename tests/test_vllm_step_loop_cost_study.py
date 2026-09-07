@@ -267,3 +267,36 @@ def test_publication_retains_void_record_without_rescoring_or_overwriting(tmp_pa
     assert output.read_bytes().endswith(b"\n") and b"\r" not in output.read_bytes()
     with pytest.raises(FileExistsError):
         study.publish(attempt, output, [prior])
+
+
+def test_controlled_publication_conserves_prior_workload_and_reports_fatal_drift():
+    current = json.loads((study.STUDY / "controlled_results.json").read_bytes())
+    prior_path = study.STUDY / "results.json"
+    prior = json.loads(prior_path.read_bytes())
+    assert current["expectation_commit"] == study.CONTROLLED_FREEZE
+    host = current["host_control"]
+    assert host["no_concurrent_local_suite"]
+    assert host["passed"] == study.host_guard(host["before"], host["after"])
+    assert current["provenance"]["workload_sha256"] == prior["provenance"]["workload_sha256"]
+    assert len(current["cells"]) == len(prior["cells"]) == 10
+    violations = []
+    for cell, old in zip(current["cells"], prior["cells"]):
+        for field in ("cell_id", "cap", "budget", "resolved", "step_count",
+                      "records_sha256", "outputs_sha256"):
+            assert cell[field] == old[field]
+        for arm in ("plain", "timed"):
+            assert cell["stability"][arm] == study.stability(cell[f"{arm}_ns"])
+        assert cell["fatal_guards"]["stability"] == all(
+            row["passed"] for row in cell["stability"].values())
+        violations.extend(f"{cell['cell_id']}:{name}" for name, passed
+                          in cell["fatal_guards"].items() if not passed)
+        for group in cell["kv_groups"]:
+            expected = group["median_ns"] / group["blocks"] if group["blocks"] else None
+            assert group["median_ns_per_block"] == expected
+    if not host["passed"]:
+        violations.append("controlled_host")
+    assert current["fatal_violations"] == violations
+    assert current["status"] == ("void" if violations else "nonvoid")
+    assert (current["behavioral_score"] is None) == bool(violations)
+    retained = current["publication"]["retained_attempts"][0]
+    assert retained["text_sha256"]["lf"] == study.text_hashes(prior_path.read_bytes())["lf"]
