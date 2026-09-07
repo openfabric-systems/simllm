@@ -181,6 +181,12 @@ OK: 11 module doc(s) match docs/modules/FORMAT.md
 .venv/bin/python scripts/check_docs_format.py
 ```
 
-The final plain matplotlib figure was inspected visually for legible units,
-rank labels and unclipped legends. It is retained as
-[PNG](figures/packet_breakdown.png) and [PDF](figures/packet_breakdown.pdf).
+The [PNG](figures/packet_breakdown.png) and [PDF](figures/packet_breakdown.pdf)
+show the five critical-path components for the eight ideal rnic-nn width
+cells. Green service is fabric time; purple external dependency is the fixed
+100,000,000 ps (0.100 ms) compute of every step. Launch queue, device queue
+and completion delivery are each 0 ps in every registered ideal cell and
+have no visible height, as the legend states. All panels use the same
+millisecond scale. Segment labels and step totals above the bars are rounded
+to 0.001 ms; leader lines identify the two smallest service segments. These
+are modeled step intervals, not measured hardware request tails.

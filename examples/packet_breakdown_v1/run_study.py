@@ -397,27 +397,35 @@ def plot(rows, directory):
             if all(v == 0 for r in rows if r["kind"] == "width" and r["status"] == "complete"
                    for v in [r["steps"][0][field]]):
                 name += " (0 ps in every cell)"
-            axis.bar(labels, values, bottom=bottom, label=name)
+            axis.bar(labels, values, bottom=bottom, width=0.62, label=name)
             for x, (base, value) in enumerate(zip(bottom, values, strict=True)):
                 if value >= 0.06:
                     axis.text(x, base + value / 2, f"{value:.3f}", ha="center", va="center",
-                              fontsize=7, color="white")
+                              fontsize=8, color="white")
                 elif value > 0:
-                    axis.text(x + 0.43, base + value / 2, f"{value:.3f}", ha="left",
-                              va="center", fontsize=7, color="C2")
+                    axis.annotate(f"{value:.3f}", xy=(x + 0.31, base + value / 2),
+                                  xytext=(x + 0.38, base + 0.06), ha="left", va="center",
+                                  fontsize=8, color="#1b6e1b",
+                                  arrowprops={"arrowstyle": "-", "color": "#1b6e1b",
+                                              "linewidth": 0.8})
             bottom = [a + b for a, b in zip(bottom, values, strict=True)]
         for x, total in enumerate(bottom):
-            axis.text(x, total + 0.012, f"{total:.3f} ms", ha="center", va="bottom", fontsize=7)
-        axis.set_title(f"{pattern}, {rate} Gbit/s")
-        axis.set_xlabel("Participating ranks")
-        axis.tick_params(axis="x", labelbottom=True)
-        axis.set_ylabel("Step latency (ms)")
+            axis.text(x, total + 0.012, f"{total:.3f} ms", ha="center", va="bottom", fontsize=8)
+        axis.set_title(f"{pattern}, {rate} Gbit/s", fontsize=11)
+        axis.set_xlabel("Participating ranks", fontsize=9)
+        axis.tick_params(axis="both", labelsize=9, labelbottom=True, labelleft=True)
+        axis.set_ylabel("Step latency (ms)", fontsize=9)
         axis.set_ylim(0, 0.95)
-    fig.legend(*axes.flat[0].get_legend_handles_labels(), loc="upper center", ncol=3,
-               bbox_to_anchor=(.5, .995), fontsize=7.5)
-    fig.text(0.5, 0.905, "Ideal profile (rnic-nn): the external dependency is the 100 ms fixed compute of every step;"
-             " service is the fabric time; labels are ms", ha="center", fontsize=7.5)
-    fig.tight_layout(rect=(0, 0, 1, .89))
+        axis.spines[["top", "right"]].set_visible(False)
+    handles, names = axes.flat[0].get_legend_handles_labels()
+    order = (4, 2, 3, 1, 0)
+    fig.legend([handles[i] for i in order], [names[i] for i in order],
+               loc="upper center", ncol=3, bbox_to_anchor=(.5, .995),
+               fontsize=7.5, frameon=False, columnspacing=1.2)
+    fig.text(0.5, 0.885, "Ideal profile (rnic-nn): five critical-path components; labels in ms.\n"
+             "External dependency = 0.100 ms fixed compute per step; service = fabric time.",
+             ha="center", va="center", fontsize=8, linespacing=1.4)
+    fig.tight_layout(rect=(0, 0, 1, .85))
     fig.savefig(directory / "packet_breakdown.png", dpi=160)
     fig.savefig(directory / "packet_breakdown.pdf", metadata={"CreationDate": None})
     plt.close(fig)
