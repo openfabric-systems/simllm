@@ -226,9 +226,10 @@ def portable_function(filename, line, name):
         return f"builtin:{name}"
     path = Path(filename)
     parts = path.parts
-    for marker in ("vllm", "simllm", "examples"):
-        if marker in parts:
-            return f"{'/'.join(parts[parts.index(marker):])}:{line}:{name}"
+    positions = [parts.index(marker) for marker in ("vllm", "simllm", "examples")
+                 if marker in parts]
+    if positions:
+        return f"{'/'.join(parts[min(positions):])}:{line}:{name}"
     return f"{path.name}:{line}:{name}"
 
 
@@ -468,6 +469,23 @@ def plot(result, output):
     plt.close(fig)
 
 
+def publish(attempt, output):
+    raw = attempt / "results.json"
+    result = json.loads(raw.read_text())
+    functions = profile_rows(str(attempt / "profile" / "functions.prof"))
+    result["profile_top_self"] = functions[:25]
+    result["profile_top_cumulative"] = sorted(
+        functions, key=lambda row: row["cumulative_ns"], reverse=True)[:25]
+    result["publication"] = {
+        "raw_results_sha256": hashlib.sha256(raw.read_bytes()).hexdigest(),
+        "profile_sha256": hashlib.sha256(
+            (attempt / "profile" / "functions.prof").read_bytes()).hexdigest(),
+        "correction": "Preserve simllm/adapters/vllm as a project-qualified profile path; "
+                      "reproject the retained profile without a new run or any timing change.",
+    }
+    write_once(output, result)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -478,9 +496,15 @@ def main():
     render = commands.add_parser("plot")
     render.add_argument("--results", type=Path, required=True)
     render.add_argument("--output", type=Path, default=STUDY / "figures")
+    publication = commands.add_parser("publish")
+    publication.add_argument("--attempt-dir", type=Path, required=True)
+    publication.add_argument("--output", type=Path, default=STUDY / "results.json")
     args = parser.parse_args()
     if args.command == "plot":
         plot(json.loads(args.results.read_text()), args.output)
+        return 0
+    if args.command == "publish":
+        publish(args.attempt_dir, args.output)
         return 0
     if args.run_root is None or args.model is None:
         parser.error("configure SIMLLM_DATA_ROOT and SIMLLM_VLLM_MODEL or pass --run-root/--model")

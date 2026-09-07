@@ -178,3 +178,8 @@ def test_device_guard_accepts_explicit_none_and_rejects_device_work():
     assert not study.device_is_absent("cuda:0", False)
     assert not study.device_is_absent("cpu", False)
     assert not study.device_is_absent(None, True)
+
+
+def test_profile_names_distinguish_adapter_from_upstream_framework():
+    assert study.portable_function("simllm/adapters/vllm/worker.py", 487, "execute_model") == (
+        "simllm/adapters/vllm/worker.py:487:execute_model")
