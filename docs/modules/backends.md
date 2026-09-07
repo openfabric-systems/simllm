@@ -2093,16 +2093,19 @@ model the two flows as separate nodes and say so.
   checkout of this layout provides. None of this affects SimLLM runs, which
   invoke the simulators directly rather than through the launcher.
 
-- HTSIM-40 (Completeness; P1; M): survive control-message loss under wide
-  incast. The physical width-64 all-to-all of the collective width tail study
-  exits with `fabric dropped control lifecycle` at both 400 and 200 Gbit/s
-  with the default 1,048,576-byte buffer, because the manifest declares fatal
-  control loss without recovery. Add a control-message retry or recovery
-  policy behind an explicit selection, with the fatal no-recovery behavior
-  retained as the identity off path, and a declared buffer sizing rule that
-  names the fan-in it admits. Acceptance: the width-64 all-to-all completes on
-  `rnic-cn` at both rates with a recorded control-retry count and
-  byte-identical results for every cell that completed before.
-  Second consumer (2026-09-07): the [pipeline rail contention
-  study](../../examples/pp_rail_contention_v1/RESULTS.md) loses its six 4:1
-  cells at expert-parallel width 32 to the same exit.
+- HTSIM-40 (Completeness; P1; L): integrate control headroom and finish the
+  wide-incast recovery acceptance. The explicit `headroom` selection reserves
+  control storage without changing data admission thresholds; `none` retains
+  fatal control loss. Backend implementation `6093025`, the typed simllm option
+  and [control_recovery_v1](../../examples/control_recovery_v1/RESULTS.md) preserve
+  every previously completed physical CSV with recovery off and on. The study
+  is void: all six 4:1 expert-width-32 pipeline cells pass the former control-loss
+  point but exhaust the unchanged eight-attempt data retry limit. Width-64
+  all-to-all completes at both rates, with approximately 50 ms phase makespans
+  and physical/ideal ratios of 653 and 331, exposing the data watchdog tail.
+  Remaining scope: resolve or explicitly route the data retry exhaustion and
+  watchdog latency findings before claiming the wide-incast consumer acceptance.
+  The orchestrator owns backend review, the pin bump and both consumer reruns
+  (`collective_width_tail_v1` and `pp_rail_contention_v1`); the pinned default and
+  request-level metric claims remain unchanged. No acceptance closure follows
+  from the control reserve alone.
