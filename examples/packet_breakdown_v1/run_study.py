@@ -390,18 +390,34 @@ def plot(rows, directory):
                            and r["status"] == "complete" and r["pattern"] == pattern
                            and r["rate"] == rate), key=lambda r: r["width"])
         bottom = [0.] * len(selected)
+        labels = [str(r["width"]) for r in selected]
         for field in segments:
             values = [r["steps"][0][field] / 1e9 for r in selected]
-            axis.bar([str(r["width"]) for r in selected], values, bottom=bottom,
-                     label=field.removesuffix("_ps").replace("_", " "))
+            name = field.removesuffix("_ps").replace("_", " ")
+            if all(v == 0 for r in rows if r["kind"] == "width" and r["status"] == "complete"
+                   for v in [r["steps"][0][field]]):
+                name += " (0 ps in every cell)"
+            axis.bar(labels, values, bottom=bottom, label=name)
+            for x, (base, value) in enumerate(zip(bottom, values, strict=True)):
+                if value >= 0.06:
+                    axis.text(x, base + value / 2, f"{value:.3f}", ha="center", va="center",
+                              fontsize=7, color="white")
+                elif value > 0:
+                    axis.text(x + 0.43, base + value / 2, f"{value:.3f}", ha="left",
+                              va="center", fontsize=7, color="C2")
             bottom = [a + b for a, b in zip(bottom, values, strict=True)]
+        for x, total in enumerate(bottom):
+            axis.text(x, total + 0.012, f"{total:.3f} ms", ha="center", va="bottom", fontsize=7)
         axis.set_title(f"{pattern}, {rate} Gbit/s")
         axis.set_xlabel("Participating ranks")
         axis.tick_params(axis="x", labelbottom=True)
         axis.set_ylabel("Step latency (ms)")
+        axis.set_ylim(0, 0.95)
     fig.legend(*axes.flat[0].get_legend_handles_labels(), loc="upper center", ncol=3,
-               bbox_to_anchor=(.5, .995))
-    fig.tight_layout(rect=(0, 0, 1, .90))
+               bbox_to_anchor=(.5, .995), fontsize=7.5)
+    fig.text(0.5, 0.905, "Ideal profile (rnic-nn): the external dependency is the 100 ms fixed compute of every step;"
+             " service is the fabric time; labels are ms", ha="center", fontsize=7.5)
+    fig.tight_layout(rect=(0, 0, 1, .89))
     fig.savefig(directory / "packet_breakdown.png", dpi=160)
     fig.savefig(directory / "packet_breakdown.pdf", metadata={"CreationDate": None})
     plt.close(fig)
