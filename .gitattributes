@@ -528,6 +528,20 @@ examples/decode_hbm_crossover_v1/*.json text eol=lf
 examples/kernel_efficiency_ledger_v1/*.csv text eol=lf
 examples/kernel_efficiency_ledger_v1/*.json text eol=lf
 examples/kernel_efficiency_ledger_v1/*.md text eol=lf
+examples/aligned_baseline_v1/*.py text eol=lf
+examples/aligned_baseline_v1/*.md text eol=lf
+examples/aligned_baseline_v1/*.json text eol=lf
+examples/aligned_baseline_v1/figures/*.png -text -diff
+examples/aligned_baseline_v1/figures/*.pdf -text -diff
+examples/collective_width_tail_v1/*.py text eol=lf
+examples/collective_width_tail_v1/*.md text eol=lf
+examples/collective_width_tail_v1/*.json text eol=lf
+examples/collective_width_tail_v1/figures/*.png -text -diff
+examples/collective_width_tail_v1/figures/*.pdf -text -diff
+simllm/backends/fct.py text eol=lf
+tests/test_phase_fct.py text eol=lf
+tests/test_aligned_baseline_study.py text eol=lf
+tests/test_collective_width_tail_study.py text eol=lf
 
 # COMP-81 attention pair successor artifacts.
 examples/frontier_comparison_v2/*.md text eol=lf
