@@ -123,9 +123,22 @@ backend submodules.
   advance a WQE or simulator resource.
 - `simllm.backends.fct.normalized_fct`: per-flow FCT normalized to the
   `rnic-nn` baseline of the identical GOAL, matched by
-  (source, destination, tag). Valid for aligned-start flows; for phases
-  with model-dependent start stagger use the phase makespan ratio
-  (M1 finding F1).
+  (source, destination, tag). An aligned-start ratio is a lower bound only
+  when a flow does not share its bottleneck link with another aligned flow,
+  including unshared chained handoffs. Under receiver sharing it is diagnostic:
+  the fair ideal and physical packet scheduler can finish flows in different
+  orders. `normalized_phase_makespan` compares the identical complete GOAL
+  phase's first start to last completion, physical over ideal, validating
+  identities, multiplicities and payloads. The reviewable shared-phase evidence
+  is this ratio with two fatal floors: physical phase >= ideal phase, and
+  `earliest_completion_byte_floors` for every receiver's k earliest completions
+  (their cumulative bytes over link rate plus one common propagation delay).
+  Callers verify identical GOAL semantics, link/path assumptions and quiescence.
+  Model-dependent starts also require phase comparison (M1 finding F1).
+  BACK-68's [controlled experiment](../../examples/aligned_baseline_v1/RESULTS.md)
+  discriminates scheduling from the registered byte-service defect prediction;
+  the [fresh width-tail rerun](../../examples/collective_width_tail_v1/RESULTS.md)
+  applies the amended guards without changing the original ideal results.
 - `HtsimDcqcnConfig` + `run_htsim_dcqcn`: GOAL-driven RoCEv2 DCQCN runs
   over a topology-file ns-tm3 Clos (`htsim_dcqcn_atlahs`, landed via the
   backend DCQCN PR); same completion-CSV schema and quiescence contract.
@@ -1367,23 +1380,6 @@ created" statement stands and refers to different, never-registered work.
   cut (3 to 39 ms after congestion) and the recovery to 95 percent (447 plus
   or minus 10 ms after the last cut) against the campaign values.
 
-- BACK-68 (Precision; P0; M): resolve the aligned-baseline refutation the
-  [collective width tail
-  study](../../examples/collective_width_tail_v1/RESULTS.md) recorded: at
-  expert-parallel fan-in 32, 47 physical `rnic-cn` flows at 400 Gbit/s and 75
-  at 200 Gbit/s complete below the `rnic-nn` ideal per-flow bound, minimum
-  ratio 0.575342, which the metrics convention calls a modeling bug by
-  definition for aligned-start flows. Either the ideal profile's instant
-  central max-min allocation is not a per-flow lower bound under the physical
-  packet scheduler (a fair allocation can finish some flows later while the
-  phase finishes earlier), in which case the convention is restated as
-  phase-makespan normalization above the fan-in where the two schedulers
-  diverge and the per-flow ratio is reported as diagnostic only, or the
-  physical path credits a flow twice. Acceptance: a controlled two-flow and
-  one many-to-one experiment that proves which, a corrected convention or
-  backend fix, and the study rerun with the fatal guard restated before the
-  run.
-
 ### Completeness
 
 - BACK-9 (Completeness; P1; L): replace the timing-neutral WQE ledger with
@@ -2083,13 +2079,19 @@ model the two flows as separate nodes and say so.
   checkout of this layout provides. None of this affects SimLLM runs, which
   invoke the simulators directly rather than through the launcher.
 
-- HTSIM-40 (Completeness; P1; M): survive control-message loss under wide
-  incast. The physical width-64 all-to-all of the collective width tail study
-  exits with `fabric dropped control lifecycle` at both 400 and 200 Gbit/s
-  with the default 1,048,576-byte buffer, because the manifest declares fatal
-  control loss without recovery. Add a control-message retry or recovery
-  policy behind an explicit selection, with the fatal no-recovery behavior
-  retained as the identity off path, and a declared buffer sizing rule that
-  names the fan-in it admits. Acceptance: the width-64 all-to-all completes on
-  `rnic-cn` at both rates with a recorded control-retry count and
-  byte-identical results for every cell that completed before.
+- HTSIM-40 (Completeness; P1; L): integrate control headroom and finish the
+  wide-incast recovery acceptance. The explicit `headroom` selection reserves
+  control storage without changing data admission thresholds; `none` retains
+  fatal control loss. Backend implementation `6093025`, the typed simllm option
+  and [control_recovery_v1](../../examples/control_recovery_v1/RESULTS.md) preserve
+  every previously completed physical CSV with recovery off and on. The study
+  is void: all six 4:1 expert-width-32 pipeline cells pass the former control-loss
+  point but exhaust the unchanged eight-attempt data retry limit. Width-64
+  all-to-all completes at both rates, with approximately 50 ms phase makespans
+  and physical/ideal ratios of 653 and 331, exposing the data watchdog tail.
+  Remaining scope: resolve or explicitly route the data retry exhaustion and
+  watchdog latency findings before claiming the wide-incast consumer acceptance.
+  The orchestrator owns backend review, the pin bump and both consumer reruns
+  (`collective_width_tail_v1` and `pp_rail_contention_v1`); the pinned default and
+  request-level metric claims remain unchanged. No acceptance closure follows
+  from the control reserve alone.

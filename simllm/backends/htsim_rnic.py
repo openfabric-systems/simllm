@@ -17,6 +17,7 @@ import csv
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Literal
 
 from simllm._native import cmake_binary_candidates, find_native_binary
 from simllm.backends._child_process import (
@@ -63,6 +64,8 @@ class HtsimRnicConfig:
     unsafe_disable_child_lifetime_binding: bool = False
     #: optional explicit fidelity surface checked against the profile spelling
     precision: PrecisionConfig | None = None
+    #: control admission protection on rnic-cn; none preserves the pinned command
+    control_recovery: Literal["none", "headroom"] = "none"
     #: the seams this configuration selects; set by validation, never by a caller
     selected_precision_levels: dict[str, object] = field(
         init=False,
@@ -76,6 +79,12 @@ class HtsimRnicConfig:
             raise ValueError(f"profile must be one of {RNIC_PROFILES}")
         if type(self.unsafe_disable_child_lifetime_binding) is not bool:
             raise TypeError("unsafe_disable_child_lifetime_binding must be a boolean")
+        if self.control_recovery not in ("none", "headroom"):
+            raise ValueError("control_recovery must be none or headroom")
+        if self.control_recovery != "none" and self.profile != "rnic-cn":
+            raise ValueError("control_recovery requires rnic-cn")
+        if "-rnic_cn_control_recovery" in self.extra_flags:
+            raise ValueError("use typed control_recovery instead of extra_flags")
         self.selected_precision_levels = check_precision_selection(
             self.precision,
             network=network_level_for_profile(self.profile),
@@ -94,6 +103,8 @@ def build_htsim_rnic_command(binary: Path, cfg: HtsimRnicConfig) -> list[str]:
         argv += ["-completion_csv", str(cfg.completion_csv)]
     if cfg.topology is not None:
         argv += ["-topo", str(cfg.topology)]
+    if cfg.control_recovery != "none":
+        argv += ["-rnic_cn_control_recovery", cfg.control_recovery]
     for flag, value in cfg.extra_flags.items():
         argv += [flag, value]
     return argv
@@ -134,6 +145,7 @@ class RnicRunResult:
     manifest: list[str]
     quiescent: bool
     goal_completion_time_ps: int | None = None
+    control_recovery: dict[str, str | int] = field(default_factory=dict)
 
     def job_completion_time_ps(self) -> int:
         """Completion of all represented schedule work released at time zero."""
@@ -143,6 +155,25 @@ class RnicRunResult:
         if candidates:
             return max(candidates)
         raise ValueError("run produced neither flows nor a GOAL completion time")
+
+
+def parse_control_recovery_manifest(manifest: list[str]) -> dict[str, str | int]:
+    """Read the native control protection record, retaining absent legacy fields."""
+
+    prefix = "rnic_cn_control_"
+    record: dict[str, str | int] = {}
+    for line in manifest:
+        for token in line.split():
+            key, separator, value = token.partition("=")
+            if separator and key.startswith(prefix):
+                name = key.removeprefix(prefix)
+                parsed = value if name in {"recovery", "sizing"} else int(value)
+                if isinstance(parsed, int) and parsed < 0:
+                    raise ValueError("negative control recovery counter or sizing value")
+                if name in record and record[name] != parsed:
+                    raise ValueError(f"conflicting control recovery manifest field: {name}")
+                record[name] = parsed
+    return record
 
 
 def _parse_goal_completion_time_ps(stdout: str) -> int | None:
@@ -219,6 +250,7 @@ def run_htsim_rnic(cfg: HtsimRnicConfig, binary: Path | None = None,
         manifest=manifest,
         quiescent=quiescent,
         goal_completion_time_ps=_parse_goal_completion_time_ps(result.stdout),
+        control_recovery=parse_control_recovery_manifest(manifest),
     )
 
 

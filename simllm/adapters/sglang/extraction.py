@@ -371,6 +371,7 @@ def extract(
     suite_raw: bytes,
     checkpoint_root: Path,
     step_records_path: Path,
+    attention_shape_version: int = 1,
 ) -> ModelKernelInventory:
     """Extract through SGLang's explicit CPU device and model config path."""
 
@@ -382,6 +383,7 @@ def extract(
         framework_dims=dims,
         step_records_path=step_records_path,
         framework_projection=projection,
+        attention_shape_version=attention_shape_version,
     )
 
 

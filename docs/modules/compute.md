@@ -1876,19 +1876,16 @@ residual cannot be identified until the additive host term exists, so the
 campaign and its bar live with the operator) and COMP-78 into COMP-72 (one
 Hopper campaign, one remainder record).
 
+COMP-81 is complete. The [attention pair successor comparison](../../examples/frontier_comparison_v2/RESULTS.md)
+publishes two new content-addressed Qwen3-32B-FP8 inventories with the
+`attention_pairs` invocation axis. Both frameworks carry 2,097,152 FLOPs per
+pair in every phase and conserve fused family work exactly. Historical
+inventories and the v1 comparison remain immutable. Prefill e-star moves from
+0.142552 to 0.148748 and remains outside the frozen band; the external TTFT
+semantic comparison remains DEPLOY-12's scope.
+
 ### Precision
 
-- COMP-81 (Precision; P0; M): reconcile the Qwen3-32B-FP8 `attn_score`
-  projection convention before any successor inventory enters deployment
-  pricing. The frozen decode case carries 4,292,870,144 aggregate FLOPs over
-  2,047 realized query-key pairs, or 2,097,152 FLOPs per pair; the frozen
-  prefill projection divided by its current 16,384 token-square convention is
-  262,144 FLOPs per pair, exactly 8x lower. Freeze one phase-independent pair
-  contract from `step_shape`, then publish new content-addressed vLLM and
-  SGLang inventories without changing either frozen object. Acceptance
-  requires both frameworks to agree, the same mathematical pair to carry the
-  same FLOP coefficient in decode and prefill, exact family conservation, and
-  a successor frontier comparison that names the new inventory hashes.
 - COMP-88 (Precision; P1; M): move the external serving-composition constants
   into a content-addressed artifact joined to the imported operation slice.
   The matched-seam study declares the 1.1 prefill correction, 1.08 decode

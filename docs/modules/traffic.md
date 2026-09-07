@@ -2458,24 +2458,23 @@ shipped collectives.
   slice above landed with the pipeline rail topology study and the width-one
   identity path is tested.
 
-- TRAF-88 (Completeness; P1; L): compare a rail-optimized fabric with a
-  node-local leaf fabric under pipeline-parallel activation traffic. The first
-  probe, the pipeline rail topology study, measured the path-length effect: on
-  the physical `rnic-cn` Clos the node-local attachment raises the eight-stage
-  PP hop p99 from 10.3356 to 12.5852 us, 21.8 percent, because every hop
-  crosses the spine instead of one leaf; it also refuted the shared-uplink
-  hypothesis registered here on 2026-09-07, since 32-way concurrent
-  expert-parallel traffic moved the PP hop p99 by exactly 0 ps on both
-  fabrics. The reference Clos has equal endpoint and uplink capacity per leaf
-  and the backend routes per packet round-robin, so no uplink is
-  oversubscribed by that workload. The remaining task is the contention
-  experiment under a fresh freeze: an explicitly oversubscribed variant (fewer
-  spines or slower uplinks, expressed in the same manifest schema) or a
-  routing hypothesis with flow-hash collisions instead of per-packet spraying,
-  swept against pipeline width and expert-parallel fan-in, reporting the PP
-  hop tail, the phase makespans and the step critical-path share on both
-  attachments. Acceptance: with no concurrent traffic both fabrics still agree
-  to 0 ps on the ideal profile, the oversubscribed or hashed arm shows a
-  load-dependent node-local penalty with its floor stated from the shared-link
-  bytes before the run, and the declared full-bisection Clos stays
-  byte-identical.
+- TRAF-88 (Completeness; P1; L): establish a non-void, load-dependent
+  node-local PP contention penalty after resolving the pinned packet backend's
+  fatal control-lifecycle drops in all six 4:1, EP-width-32 physical cells of
+  the [contention study](../../examples/pp_rail_contention_v1/RESULTS.md).
+  The 72-cell freeze delivered 66 clear cells, exact unloaded null-profile
+  equality across all four fabrics, and byte-identical default manifests,
+  topology text and endpoint permutations. The opt-in manifest builder and
+  renderer now support two, four or eight spines and a separate uniform
+  uplink rate. All surviving physical PP tails and critical shares change by
+  0 from EP width zero to eight. Reducing the spine count instead adds
+  3,993,600 ps to PP p99 even on an unloaded rail; the reported ring window
+  grows by the same amount. Resolve that topology-dependent control effect
+  before attributing the difference to shared-uplink contention. The next
+  freeze must preserve the fatal loss guard, obtain valid EP-width-32 phase
+  and step evidence on both attachments, and independently establish bytes
+  queued ahead of the PP hop. Whole-phase leaf-cut bytes already provide
+  capacity and drain floors but do not justify a positive tagged-hop queue
+  floor. Retain exact ideal-profile equality and full-bisection identity as
+  regressions. The current build exposes no Clos flow-hash routing option;
+  TRAF-8 still owns captured stages, microbatches and general serving metrics.

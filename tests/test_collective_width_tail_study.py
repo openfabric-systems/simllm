@@ -196,3 +196,42 @@ def test_partial_matrix_is_incomplete_even_without_an_explicit_backend_error():
     assert result["status"] == "incomplete"
     assert result["missing_configurations"] == 64
     assert not result["behavioral_relations"]["interpretable_for_closure"]
+
+
+def test_only_declared_survivable_fatal_preserves_completed_component_score():
+    rows = [{"name": "known-loss", "status": "error",
+             "guards": [check("quiescence", False, survivable=True)]}]
+    outcome = verdict(rows, [check("oracle", False)], [check("band", False)])
+    assert outcome["status"] == "component-evidence-with-survivable-voids"
+    assert outcome["survivable_void_cells"] == ["known-loss"]
+    assert outcome["behavioral_relations"]["failed"] == 1
+    assert outcome["behavioral_relations"]["completed_component_interpretable"]
+    assert not outcome["behavioral_relations"]["interpretable_for_closure"]
+    rows.append({"name": "bad-bytes", "status": "complete",
+                 "guards": [check("receiver_prefix_floor", False)]})
+    assert verdict(rows, [], [check("band", True)])["behavioral_relations"]["failed"] is None
+
+
+def test_prefix_guard_partitions_receivers_and_retains_early_overcredit():
+    rows = [flow(0, 8, fct=5_500_000), flow(1, 8, fct=5_500_000),
+            flow(2, 16, fct=5_500_000)]
+    prefixes = STUDY.receiver_byte_floors(rows, 400, 4_000_000)
+    assert [(p["destination"], p["k"], p["ok"]) for p in prefixes] == [
+        (8, 1, True), (8, 2, False), (16, 1, True)]
+
+
+def test_morning_preservation_detects_nested_numeric_and_oracle_drift():
+    from copy import deepcopy
+
+    original = {"configurations": [{"name": "ideal", "profile": "rnic-nn", "status": "complete",
+                                    "media": {"fabric_ps": 7}, "goal_sha256": "digest"}],
+                "exact_oracles": [check("point", False, residual_ps=13000)]}
+    current = deepcopy(original)
+    assert STUDY.morning_reproduction(current, original)["ok"]
+    current["configurations"][0]["media"]["fabric_ps"] += 1
+    outcome = STUDY.morning_reproduction(current, original)
+    assert not outcome["ok"]
+    assert outcome["mismatches"][0]["path"] == ["media", "fabric_ps"]
+    current = deepcopy(original)
+    current["exact_oracles"][0]["ok"] = True
+    assert not STUDY.morning_reproduction(current, original)["all_exact_oracle_rows_identical"]

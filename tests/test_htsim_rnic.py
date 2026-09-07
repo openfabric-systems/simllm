@@ -1,4 +1,5 @@
 from pathlib import Path
+from subprocess import CompletedProcess
 
 import pytest
 
@@ -11,7 +12,10 @@ from simllm.backends import (
     parse_completion_csv,
     run_htsim_rnic,
 )
-from simllm.backends.htsim_rnic import _parse_goal_completion_time_ps
+from simllm.backends.htsim_rnic import (
+    _parse_goal_completion_time_ps,
+    parse_control_recovery_manifest,
+)
 from simllm.goal import GoalTrace, find_txt2bin, to_binary
 from simllm.traffic import gather, scatter
 
@@ -115,3 +119,66 @@ def test_end_to_end_scatter_gather(tmp_path):
     by_tag = {tag: max(f.completion_time_ps for f in result.flows if f.tag == tag)
               for tag in (1, 2)}
     assert by_tag[2] > by_tag[1]
+
+
+@pytest.mark.parametrize("mode", ["none", "headroom"])
+def test_control_recovery_is_typed_and_preserves_legacy_default(mode):
+    cfg = HtsimRnicConfig(Path("t.bin"), "rnic-cn", 400_000_000_000,
+                          control_recovery=mode)
+    argv = build_htsim_rnic_command(Path("htsim_rnic"), cfg)
+    if mode == "none":
+        assert argv == ["htsim_rnic", "-goal", "t.bin", "-linkspeed_bps",
+                        "400000000000", "-rnic_profile", "rnic-cn"]
+    else:
+        assert argv[-2:] == ["-rnic_cn_control_recovery", "headroom"]
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"control_recovery": "retry"},
+    {"control_recovery": True},
+    {"control_recovery": "headroom", "profile": "rnic-nn"},
+    {"extra_flags": {"-rnic_cn_control_recovery": "headroom"}},
+])
+def test_control_recovery_rejects_ambiguous_or_invalid_selection(kwargs):
+    args = {"goal_bin": Path("t.bin"), "profile": "rnic-cn", "linkspeed_bps": 1}
+    args.update(kwargs)
+    with pytest.raises(ValueError):
+        HtsimRnicConfig(**args)
+
+
+def test_control_manifest_reaches_run_record(monkeypatch):
+    stdout = (
+        "[RNIC manifest] rnic_cn_control_recovery=headroom "
+        "rnic_cn_control_headroom_bytes=131072 rnic_cn_control_messages_per_flow=32 "
+        "rnic_cn_control_admitted_fan_in=64 rnic_cn_control_sizing=per-egress-H-over-M-C\n"
+        "[RNIC manifest] rnic_cn_control_headroom_declare=2 "
+        "rnic_cn_control_headroom_accept=0 rnic_cn_control_headroom_grant_update=3 "
+        "rnic_cn_control_headroom_gap_nack=0 rnic_cn_control_headroom_gap_resolved=0 "
+        "rnic_cn_control_headroom_retire=1 rnic_cn_control_headroom_nflow_update=4 "
+        "rnic_cn_control_headroom_admissions=10\n"
+        "[RNIC manifest] physical_quiescence=verified\n"
+    )
+    monkeypatch.setattr("simllm.backends.htsim_rnic.run_owned_process",
+                        lambda *args, **kwargs: CompletedProcess([], 0, stdout, ""))
+    result = run_htsim_rnic(HtsimRnicConfig(Path("t.bin"), "rnic-cn", 1,
+                                           control_recovery="headroom"), Path("htsim_rnic"))
+    assert result.quiescent
+    assert result.control_recovery["recovery"] == "headroom"
+    assert result.control_recovery["admitted_fan_in"] == 64
+    assert result.control_recovery["headroom_admissions"] == 10
+    assert result.control_recovery["headroom_nflow_update"] == 4
+    assert len(result.manifest) == 3
+
+
+def test_legacy_manifest_has_no_invented_recovery_record():
+    assert parse_control_recovery_manifest(["[RNIC manifest] physical_quiescence=verified"]) == {}
+
+
+@pytest.mark.parametrize("lines", [
+    ["[RNIC manifest] rnic_cn_control_headroom_admissions=-1"],
+    ["[RNIC manifest] rnic_cn_control_headroom_admissions=1",
+     "[RNIC manifest] rnic_cn_control_headroom_admissions=2"],
+])
+def test_control_manifest_rejects_negative_or_conflicting_counters(lines):
+    with pytest.raises(ValueError):
+        parse_control_recovery_manifest(lines)
