@@ -427,7 +427,11 @@ def plot(result: dict, output: Path) -> None:
     import matplotlib.pyplot as plt
 
     old = json.loads(lf_bytes(ROOT / "examples/frontier_comparison_v1/results.json"))
-    fig, axes = plt.subplots(1, 2, figsize=(9, 3.6), layout="constrained")
+    fig, axes = plt.subplots(1, 2, figsize=(7, 4.2), layout="constrained")
+    for ax in axes:
+        ax.tick_params(labelsize=8)
+        ax.xaxis.label.set_size(9)
+        ax.yaxis.label.set_size(9)
     for color, arm in enumerate(("1.0", "0.8", "0.6")):
         for label, source, style in [
             ("Old", old["families"]["X3"], "--"),
@@ -455,12 +459,9 @@ def plot(result: dict, output: Path) -> None:
         xscale="log",
         yscale="log",
     )
-    axes[0].legend(fontsize=7)
-    axes[0].set_title(
-        "X3 frontier: old (dashed) and successor (solid)\n"
-        "pair contract 2,097,152 FLOPs; prefill +4.346% at 3,500 tokens, decode +0.003%",
-        fontsize=8,
-    )
+    axes[0].set_xlim(left=30)
+    axes[0].legend(fontsize=8, loc="lower left", labelspacing=0.3)
+    axes[0].set_title("X3 frontiers", fontsize=10)
     e_star = {}
     for label, key, marker, size in [("Old", "old_x2", "o", 9), ("Successor", "x2", "x", 7)]:
         values = [result[key][f"{p}_e_star"]["decimal"] for p in ("decode", "prefill")]
@@ -473,33 +474,45 @@ def plot(result: dict, output: Path) -> None:
             markerfacecolor="none" if marker == "o" else None,
             label=label,
         )
-    axes[1].axhline(0.4, color="gray", linestyle=":", label="Frozen lower bound 0.4")
+    band_floor = result["x2"]["e_star_band"]["minimum"]
+    axes[1].axhline(
+        band_floor, color="gray", linestyle=":", label=f"Frozen floor {band_floor:g}"
+    )
     axes[1].annotate(
-        f"old = successor = {e_star['Old'][0]:.4f}",
+        f"old = successor\n{e_star['Old'][0]:.4f}",
         xy=(0, e_star["Old"][0]),
         xytext=(0.12, e_star["Old"][0] - 0.06),
-        fontsize=7,
+        fontsize=8,
         ha="left",
         va="top",
     )
     axes[1].annotate(
-        f"old {e_star['Old'][1]:.4f}\nsuccessor {e_star['Successor'][1]:.4f}\n(both below the band)",
+        f"old {e_star['Old'][1]:.4f}\nsuccessor {e_star['Successor'][1]:.4f}\n(both below the floor)",
         xy=(1, e_star["Successor"][1]),
-        xytext=(0.62, e_star["Successor"][1] + 0.12),
-        fontsize=7,
+        xytext=(0.40, e_star["Successor"][1] + 0.12),
+        fontsize=8,
         ha="left",
         va="bottom",
         arrowprops={"arrowstyle": "-", "color": "gray", "lw": 0.6},
     )
-    axes[1].set(ylabel="Implied efficiency e-star (dimensionless)", ylim=(0, 0.7))
-    axes[1].set_title("X2c implied efficiency, frozen band floor", fontsize=9)
-    axes[1].legend(fontsize=7, loc="upper right")
+    axes[1].set(
+        xlabel="Phase",
+        ylabel="Implied efficiency e-star (dimensionless)",
+        ylim=(0, 0.7),
+    )
+    axes[1].set_title("X2c implied efficiency", fontsize=10)
+    axes[1].legend(fontsize=8, loc="upper right")
     axes[1].margins(x=0.25)
+    fig.supxlabel(
+        f"Pair coefficient: {result['work']['attention_flops_per_pair']:,} FLOPs\n"
+        "Work: prefill +4.346% (3,500 uncached tokens); decode +0.003% (context 4,250)",
+        fontsize=8,
+    )
     output.mkdir(parents=True, exist_ok=True)
     for ext in ("png", "pdf"):
         fig.savefig(
             output / f"attention-pair-successor.{ext}",
-            dpi=160,
+            dpi=300,
             metadata={"CreationDate": None} if ext == "pdf" else None,
         )
     plt.close(fig)

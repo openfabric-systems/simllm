@@ -88,8 +88,15 @@ Neither implied efficiency is installed as a model parameter.
 
 The [plain comparison figure](figures/attention-pair-successor.png), also
 available as [PDF](figures/attention-pair-successor.pdf), places old and
-successor frontiers together and shows both X2 implied efficiencies. All
-three successor frontiers remain monotone. Matched throughput never rises.
+successor X3 frontiers together on logarithmic axes at efficiencies 1.0,
+0.8 and 0.6: dashed lines are old, solid lines are successor, and black
+crosses are external rows. The right panel shows X2c implied efficiencies
+as open circles (old) and crosses (successor). Decode overlaps at 0.5861;
+prefill rises from 0.1426 to 0.1487, both below the dotted frozen floor of
+0.4. The pair coefficient is 2,097,152 floating-point operations (FLOPs).
+Whole-model work rises 4.346 percent at 3,500 uncached prefill tokens and
+0.003 percent at decode context 4,250. All three successor frontiers remain
+monotone. Matched throughput never rises.
 X3a remains 4/4, X3b 10/10 and X3c 3/10 against its minimum of eight.
 The modest attention correction does not close the calibration gap.
 
