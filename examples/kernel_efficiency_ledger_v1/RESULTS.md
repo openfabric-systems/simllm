@@ -56,11 +56,19 @@ with at least 160 MiB of declared key/value traffic; it does not describe all
 compute-bound, 80 launch-bound and five unclassifiable rows. Those are inventory
 counts, not independent experiments or passes.
 
-![Ranked fractions and denominator sensitivity](figures/ledger.png)
+![Roofline, memory side and ranked fractions](figures/ledger.png)
 
-The [PDF figure](figures/ledger.pdf) has the same content. Crosses on the left
-identify per-cell envelope breaches. The many inherited source-void rows are
-included in both curves and explicitly disclosed in the title.
+The [PDF figure](figures/ledger.pdf) has the same content. Panel A places every
+A100 cell with declared arithmetic on the roofline: achieved FLOP/s against
+arithmetic intensity, under the measured HBM envelope and the clock-derived
+arithmetic ceiling. Panel B is the memory side for both devices: achieved
+bytes per second against declared bytes, with each device's measured
+envelope as a horizontal line, so the decode-attention cells sit visibly one
+to two decades below the roof while the copies sit on it. Panel C is the
+ranked fraction curve; red crosses identify per-cell envelope breaches.
+Hollow markers are cells whose source study or own guard is void, filled
+markers are nonvoid, triangles are GH200 cells; the inherited source-void
+rows are included everywhere and disclosed in the title.
 
 ## What the fractions mean
 
