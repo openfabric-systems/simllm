@@ -77,7 +77,7 @@ pre-change placement records byte for byte. See the
 
 ### Completeness
 
-- PLACE-1 (Completeness; P2; L): fabric topology schema contents and general
+- PLACE-1 (Completeness; P1; L): fabric topology schema contents and general
   NIC selection in the mapper, sourcing intra-node structure from NCCL
   topology dumps. This is no longer blocked: CORE-4 validated the first
   fixed resource profile of eight GPUs per node, one WQE submission queue or
@@ -85,18 +85,21 @@ pre-change placement records byte for byte. See the
   eight feeding their GPU-affine 400G RNICs, with intra-node transfers on an
   NVLink-class path. The fixed rail profile does not need general inventory
   discovery.
+  P1 since 2026-09-07: TRAF-88's fabric variants opt in; the first slice is
+  the rail-optimized and node-local leaf variants of the reference Clos under
+  the existing `simllm-fabric-topology-v1` schema.
 - PLACE-2 (Completeness; P2; M): `unique-nic` GOAL-rank mapping (depends on
   PLACE-1). Also deferred behind the fixed eight-GPU, eight-RNIC profile;
   `gpu-rank` and `unique-nic`
   happen to have the same cardinality there, but the general mapper must not
   assume that affinity.
 
-### Uncategorized
-
-- PLACE-3: expert-parallel group memberships and declared expert ownership
-  in `declared_manifest`. The builder emits tp/pp/dp groups only, so the
-  M5 MoE studies pass an explicit `ep_ranks` list to `HtsimStepSink`
-  instead of reading an EP group from a manifest; a declared EP layout
-  (group lists plus per-layer `local_num_experts` ownership) would close
-  the gap, and the extracted manifest's per-MoE-layer expert IDs already
+- PLACE-3 (Completeness; P1; M): expert-parallel group memberships and
+  declared expert ownership in `declared_manifest`. The builder emits tp/pp/dp
+  groups only, so the M5 MoE studies pass an explicit `ep_ranks` list to
+  `HtsimStepSink` instead of reading an EP group from a manifest; a declared
+  EP layout (group lists plus per-layer `local_num_experts` ownership) would
+  close the gap, and the extracted manifest's per-MoE-layer expert IDs already
   model the live half.
+  P1 since 2026-09-07: the expert-parallel tail studies read the EP group from
+  the manifest.
