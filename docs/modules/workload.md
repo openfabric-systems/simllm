@@ -60,9 +60,9 @@ contract; its matching workload and timing rows remain diagnostic only. See
   and measure the coordinator's queue contribution separately from framework
   queueing.
 
-### Uncategorized
+- WORK-1 (Completeness; P2; M): shared-prefix prompt structure (system-prompt
+  pools, multi-turn sessions) emitting token-ID sequences; the
+  length-distribution part of this task landed with M1.
 
-- WORK-1: shared-prefix prompt structure (system-prompt pools, multi-turn
-  sessions) emitting token-ID sequences; the length-distribution part of
-  this task landed with M1.
-- WORK-2: bursty/MMPP arrival process for congestion-sensitive studies.
+- WORK-2 (Completeness; P2; M): bursty/MMPP arrival process for
+  congestion-sensitive studies.
