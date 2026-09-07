@@ -45,10 +45,19 @@ def close(left: float, right: float) -> bool:
     return math.isclose(left, right, rel_tol=5e-9, abs_tol=1e-12)
 
 
+def source_digest(path: Path) -> str:
+    """SHA-256 of a tracked text source with line endings normalized to LF.
+
+    Windows checkouts may materialize CRLF line endings for text files; the
+    frozen digests were taken over LF content, so the digest is computed on
+    the normalized bytes on every platform.
+    """
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+
+
 def verify_sources(root: Path, freeze: dict) -> None:
     for name, digest in freeze["source_sha256"].items():
-        require(hashlib.sha256((root / name).read_bytes()).hexdigest() == digest,
-                f"source digest mismatch: {name}")
+        require(source_digest(root / name) == digest, f"source digest mismatch: {name}")
     require(freeze["thresholds"] == list(THRESHOLDS), "threshold freeze mismatch")
     require(freeze["envelope_sources"] == list(SOURCES), "envelope freeze mismatch")
     require(freeze["compute_peak_factors"] == [0.5, 1, 2], "peak sweep mismatch")
