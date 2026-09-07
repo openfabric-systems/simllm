@@ -73,15 +73,21 @@ not a scored performance result.
 
 ![Diagnostic exclusive phase costs](figures/phase_cost.png)
 
-The [PDF](figures/phase_cost.pdf) has the same content. Panel A ranks the
-reference cell's exclusive phase medians per complete loop, with the
-amortized cost per engine step on the upper axis (258 steps per loop, so
-the historical 139.55 ms is a whole workload, not one step) and each
-phase's share of the phase sum. Panel B is the sweep's one clean relation:
-the all-decode scheduler time per step at the concurrency cap against the
-cap for the three token budgets, with a linear reference through the
-reference cell; the observed 1.89x to 2.23x per doubling is diagnostic
-because the run is void.
+The [PDF](figures/phase_cost.pdf) has the same content at a seven-inch print
+width. Panel A ranks median exclusive phase costs per complete 128-request
+loop in the reference cell (cap 16, token budget 512). The upper axis divides
+each loop cost by 258 engine steps; it is an amortized average, including
+driver work, rather than an individual step median. Bar labels give shares
+of the 163.353 ms sum of phase medians. Panel B plots inclusive scheduler
+time, including nested cache work, per all-decode step at the concurrency
+cap on logarithmic axes. Blue circles, red squares and green triangles denote
+token budgets 512, 256 and 1,024, respectively, as the bottom legend shows.
+The gray dashed line is proportional to the cap, anchored at 203.624 µs
+for cap 16 and budget 512. Between caps 32 and 128, available same-budget
+observations grow by 1.89x to 2.23x per cap doubling; the reference-to-cap-32
+increase is 1.856x. Budget 256 has no all-decode sample at cap 128, so its
+curve stops at cap 64. Both panels remain diagnostic because
+the run is void; the historical 139.55 ms describes a whole workload.
 
 ## Function-level finding
 
