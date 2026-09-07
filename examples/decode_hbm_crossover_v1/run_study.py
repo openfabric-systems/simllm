@@ -536,7 +536,8 @@ def write_results(out: Path, rows: list[dict], summary: dict, relations: list[di
             writer.writeheader()
             writer.writerows(rows)
     for name, data in (("results.json", summary), ("relation_instances.json", relations)):
-        (out / name).write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+        # Bytes, not text: Windows text mode would translate the LF terminators.
+        (out / name).write_bytes((json.dumps(data, indent=2, sort_keys=True) + "\n").encode("utf-8"))
 
 
 def main() -> None:
