@@ -2438,25 +2438,44 @@ shipped collectives.
   allreduce with a reduce-scatter plus allgather of 1/W the bytes around the
   norm/dropout regions.
 
-- TRAF-8 (Completeness; P1; L): pipeline-parallel activation traffic from step
-  records. Records carry no PP stage attribution yet, so `step_comm` emits TP
-  and EP collectives only; the M1 workload-B GOAL shows the target
-  activation-chain shape.
-  P1 since 2026-09-07: the first slice is a declared pipeline width with
-  forward-only stage-to-stage activation sends ordered between the stages'
-  compute, an identity off path at width one, and TRAF-88 as the first
-  consumer.
+- TRAF-8 (Completeness; P1; L): capture pipeline-stage attribution from serving
+  adapters and connect concurrent pipeline microbatches to packet-backed
+  completion events and request TTFT/TPOT metrics. The declared forward slice
+  uses `PipelineStepLowerer` to compose existing stage graphs and
+  `step_pp_activations` to send the full new-token activation from each
+  stage's last rank to the next stage's first rank. Width one delegates to the
+  original lowerer with byte-identical graph, GOAL and runtime evidence.
+  Multi-rank stage barriers retain whole-operation dependencies; a fully
+  concurrent packet runtime must preserve them without serializing unrelated
+  expert traffic. The [rail study](../../examples/pp_rail_topology_v1/RESULTS.md)
+  supplies packet-flow evidence and separate coarse-runtime request-metric
+  reachability, not calibrated serving closure. Acceptance needs captured
+  stage and microbatch identities, exact forward-byte conservation and
+  receive-before-compute ordering, packet completions reaching TTFT/TPOT, and
+  unchanged disabled-path artifacts and metrics. PLACE-1 owns general fabric
+  discovery beyond the two fixed 64-endpoint manifest variants.
+  P1 since 2026-09-07: TRAF-88 is the first consumer; the declared forward
+  slice above landed with the pipeline rail topology study and the width-one
+  identity path is tested.
 
 - TRAF-88 (Completeness; P1; L): compare a rail-optimized fabric with a
-  node-local leaf fabric under pipeline-parallel activation traffic. TRAF-8
-  supplies the stage-to-stage activation flows and PLACE-1 the fabric-manifest
-  variants (rail-optimized: NIC index i of every node on leaf i; node-local:
-  all NICs of a node on one leaf); this task owns the packet-level study over
-  the reference 8 by 8 400G Clos that sweeps fabric variant, pipeline width
-  and concurrent expert-parallel fan-in, and reports the pipeline hop FCT tail,
-  the phase makespans and the step critical-path share on both fabrics.
-  Acceptance: with no concurrent traffic both fabrics agree to 0 ps on the
-  ideal profile; on the rail fabric the hop FCT is independent of fan-in; on
-  the node-local fabric its p99 rises with fan-in inside the bound set by the
-  shared uplink bytes; the disabled variant preserves the declared Clos byte
-  for byte.
+  node-local leaf fabric under pipeline-parallel activation traffic. The first
+  probe, the pipeline rail topology study, measured the path-length effect: on
+  the physical `rnic-cn` Clos the node-local attachment raises the eight-stage
+  PP hop p99 from 10.3356 to 12.5852 us, 21.8 percent, because every hop
+  crosses the spine instead of one leaf; it also refuted the shared-uplink
+  hypothesis registered here on 2026-09-07, since 32-way concurrent
+  expert-parallel traffic moved the PP hop p99 by exactly 0 ps on both
+  fabrics. The reference Clos has equal endpoint and uplink capacity per leaf
+  and the backend routes per packet round-robin, so no uplink is
+  oversubscribed by that workload. The remaining task is the contention
+  experiment under a fresh freeze: an explicitly oversubscribed variant (fewer
+  spines or slower uplinks, expressed in the same manifest schema) or a
+  routing hypothesis with flow-hash collisions instead of per-packet spraying,
+  swept against pipeline width and expert-parallel fan-in, reporting the PP
+  hop tail, the phase makespans and the step critical-path share on both
+  attachments. Acceptance: with no concurrent traffic both fabrics still agree
+  to 0 ps on the ideal profile, the oversubscribed or hashed arm shows a
+  load-dependent node-local penalty with its floor stated from the shared-link
+  bytes before the run, and the declared full-bisection Clos stays
+  byte-identical.
