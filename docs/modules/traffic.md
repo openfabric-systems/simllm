@@ -2089,6 +2089,16 @@ shipped collectives.
   the dispatch and combine all-to-alls, which the expert-parallel tail studies
   price.
 
+- TRAF-89 (Precision; P2; S): account for the one-nanosecond `calc 0` joins in
+  the exact standalone ring oracle. The collective width tail study's eight
+  standalone ring points and four rate relations miss their zero-tolerance
+  prediction by exactly `(2W-3)` ns (13,000; 29,000; 61,000; 125,000 ps at
+  widths 8 to 64), because exact-frontier rendering inserts one `calc 0` join
+  per inter-round boundary and the pinned backend executes each as 1 ns. The
+  supported sink runs rounds as ordered artifacts and agrees exactly.
+  Acceptance: a re-frozen oracle that names the join term matches all twelve
+  rows at 0 ps, and no backend timing changes.
+
 ### Completeness
 
 - TRAF-49 (Completeness; P2; M): let a profile that supports only the widths it
