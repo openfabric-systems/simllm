@@ -423,7 +423,20 @@ def draw(summary: dict, directory: Path) -> None:
                     floor = bounds(variant, 2, width, 0)["data_arrival_floor_ps"] / 1e6
                     ax.axhline(floor, linestyle=":", color="0.5", label="Data floor")
                     ax.set_ylim(0, 20)
+                    unloaded = {row["spine_count"]: row[metric] for row in rows
+                                if row["variant"] == variant and row["pp_width"] == width
+                                and row["ep_width"] == 0}
+                    if {2, 8} <= set(unloaded):
+                        offset = (unloaded[2] - unloaded[8]) / 1e6
+                        ax.text(0.04, unloaded[8] / 1e6 / 20 - 0.06,
+                                f"4:1 minus 1:1 at W=0: +{offset:.2f} us\n"
+                                "(unloaded control effect)", transform=ax.transAxes,
+                                va="top", fontsize=6.5, color="C1")
                 else:
+                    floors = [bounds(variant, 8, width, ep)["ep_phase_floor_ps"] / scale
+                              for ep in EP_WIDTHS]
+                    ax.plot(EP_WIDTHS, floors, linestyle=":", marker="_", markersize=7,
+                            color="0.5", label="1:1 EP phase floor")
                     shares = [row for row in rows if row["variant"] == variant
                               and row["pp_width"] == width and row["spine_count"] == 2]
                     if shares:
