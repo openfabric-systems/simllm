@@ -557,8 +557,9 @@ otherwise progress independently. `interaction_terms` is required to be empty.
 A nonempty term set is rejected until a versioned interface amendment and a new
 expectations-only freeze define and identify another law.
 Launch mode affects only the host launch path. There is no device-front-end
-service stage, and no residual is charged by subtraction alone. COMP-48
-identifies the host term while preserving kernel service exactly.
+service stage, and no residual is charged by subtraction alone. COMP-44
+(COMP-48 folded into it on 2026-09-07) identifies the host term while
+preserving kernel service exactly.
 
 The mechanistic version-1 model uses exact `DeviceServiceEntry` cells and never
 interpolates resource demand or reservations. Its optional scalar profile-table

@@ -398,9 +398,11 @@ def test_clean_repetition_closes_core63_and_promotes_core64() -> None:
     assert core.count("- CORE-63 (") == 0
     assert "CORE-63" in ledger["closed"]
     assert "so CORE-63 is complete" in core
-    assert core.count("- CORE-64 (") == 1
-    assert "now unconditionally promoted by the clean CORE-63" in core
-    assert "CORE-64" not in ledger["closed"]
+    # CORE-64 was folded into CORE-66 by maintainer triage on 2026-09-07.
+    assert core.count("- CORE-64 (") == 0
+    assert "CORE-64 folded here on 2026-09-07" in core
+    assert ledger["folded"]["CORE-64"] == "CORE-66"
+    assert "CORE-64" in ledger["closed"]
 
 
 def test_published_result_is_honest_calibration_only_undercorrection() -> None:
