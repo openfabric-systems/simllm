@@ -262,8 +262,8 @@ owns removal of this compatibility-domain restriction.
 
 This first slice is observability only. It does not create a runtime authority,
 emit a `CompletionEvent`, change a `StepResult`, or model communication time.
-It therefore makes no TTFT or TPOT claim. VLLM-19, VLLM-20, and VLLM-21 own
-the explicit residuals. CORE-4 and CORE-5 have landed, so runtime projection
+It therefore makes no TTFT or TPOT claim. VLLM-19, VLLM-20, and VLLM-48
+(VLLM-21 folded into it on 2026-09-07) own the explicit residuals. CORE-4 and CORE-5 have landed, so runtime projection
 is unblocked and is VLLM-19's remaining work.
 
 Placement capture (`simllm/adapters/vllm/worker_ext.py`), used on *real* runs:
@@ -985,8 +985,8 @@ A100.
   omitted or inert unless a supported study opts into them. SGL-11 remains the
   untouched SGLang half and should reuse this torch-optional shape/event base.
   This ID explicitly excludes runtime projection and every timing claim:
-  VLLM-19, VLLM-20, and VLLM-21 own those residuals on the landed CORE-4 and
-  CORE-5 runtime and reduction path.
+  VLLM-19, VLLM-20, and VLLM-48 (VLLM-21 folded into it) own those residuals
+  on the landed CORE-4 and CORE-5 runtime and reduction path.
 - VLLM-19 (Completeness; P1; L): now that CORE-4 and CORE-5 have landed,
   project each
   coordinator `CollectiveWork` through the single runtime authority into

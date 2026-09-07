@@ -245,5 +245,6 @@ def test_registry_movement_closes_only_core63_condition() -> None:
     )
     assert movement["core65"] == {"free_on_base_main": True, "reserved": True}
     assert "- CORE-63 (Precision" not in open_tasks
-    assert "- CORE-64 (Precision" in open_tasks
-    assert "now unconditionally promoted by the clean CORE-63" in open_tasks
+    # CORE-64 was folded into CORE-66 by maintainer triage on 2026-09-07.
+    assert "- CORE-64 (" not in open_tasks
+    assert "CORE-64 folded here on 2026-09-07" in open_tasks

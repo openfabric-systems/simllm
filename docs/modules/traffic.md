@@ -418,7 +418,8 @@ validation coverage differs by pattern: scatter/gather are validated end to
 end against the packet-level backends with picosecond-exact closed forms
 (examples/m1/RESULTS.md), the M4 studies did the same for ring allreduce on
 both null-network profiles (examples/m4/RESULTS.md checks A and C), and the
-M5 studies closed the pairwise all-to-allv part of TRAF-4 on the fluid
+M5 studies closed the pairwise all-to-allv part of TRAF-4 (retracted on
+2026-09-07; its broadcast part is no longer registered) on the fluid
 profile (examples/m5/RESULTS.md check A: symmetric all-to-allv exact to
 0 ps across size x width, using the whole-bps floor and whole-ps ceil
 quantization of the fluid manifold read from the backend source); the

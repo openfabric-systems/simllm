@@ -1579,9 +1579,9 @@ host submission, 1,629,633 ps per eager launch against a flat 1.6 microseconds
 per graph replay at any chain length, from a device-side per-kernel cost that
 is 1.415 to 1.506 microseconds larger in eager mode than in a graph. The
 standing ruling assigns that last number to the modeled host launch path,
-which is why COMP-48 exists. Neither
-study registers a closure; between them they register COMP-43, COMP-44,
-COMP-45, COMP-46, COMP-47 and COMP-48.
+which is why COMP-48 existed until the 2026-09-07 triage folded it into
+COMP-44. Neither study registers a closure; between them they register
+COMP-43, COMP-44, COMP-45, COMP-46, COMP-47 and COMP-48.
 
 The [fixed host-step study](../../examples/host_step_cost_v1/RESULTS.md)
 re-established that measurement under a corrected freeze before installing
@@ -2018,7 +2018,8 @@ Hopper campaign, one remainder record).
   below eager. The same study observes a real kernel period 1.42 to 1.51
   microseconds larger in eager mode than in a graph, of which a null kernel
   accounts for 1.08. The standing kernel-time ruling keeps that launch-mode
-  effect outside service; COMP-48 owns identifying it as a host launch term.
+  effect outside service; COMP-44 (COMP-48 folded into it on 2026-09-07) owns
+  identifying it as a host launch term.
 - COMP-5 (Precision; P1; L): provide the production capture
   environment required by COMP-1. This task owns qualification policy,
   validity and stability evidence, fatal void rules and the hardware harness.
@@ -2858,7 +2859,7 @@ Hopper campaign, one remainder record).
   forms, with per-entry `MEASURED`, `DECLARED` and `DISCLOSED` classes and no
   imputed absent row. The 2026-08-27 campaign measured the DeepSeek physical
   cells but could not start the unstaged Granite targets, so COMP-64 remains
-  open through COMP-72 and its exact COMP-78 remainder.
+  open through COMP-72 (COMP-78 folded into it on 2026-09-07).
 - COMP-65 (Completeness; P1; L): add static decode-graph inference where a
   pinned framework exposes a compile product. Before a GPU replay, read the
   framework-owned compiled graph and emit the ordered kernel implementation
@@ -2926,17 +2927,19 @@ Hopper campaign, one remainder record).
   signed residual remain absent. The partial successor record is
   `d868a4f35d633032daa238168d00f42c2ab47fc569db649b19b907008072e107`;
   the `ff46f6d8...` predecessor remains immutable. This does not meet the
-  literal acceptance above, so COMP-72 stays open and COMP-78 owns the exact
-  remainder. The later CORE-61 retry satisfies that depth sub-arm with base
+  literal acceptance above, so COMP-72 stays open; COMP-78 owned the exact
+  remainder until it was folded here. The later CORE-61 retry satisfies that depth sub-arm with base
   job `200137` and exact decode job `200138`; COMP-72 now stays open on the
   still-empty Granite prefix and final successor work, not on depth linearity.
   COMP-78 folded here 2026-09-07: its execution record
   (`examples/hopper_kernel_cycle_candidate_v1/COMP78_RESULTS.md`, base job
   `200120`, decode attempts `200123` and `200128`, both failed before the
-  scored boundary) and its acceptance are carried unchanged: the complete
-  1,212-cell Granite prefix, both digest-complete CORE-61 outputs, all
-  retained source and output digests, and a final content-addressed successor
-  with `ff46f6d8...`, `d868a4f3...` and `58d16986...` immutable.
+  scored boundary) and its acceptance are carried unchanged: the currently
+  0-of-1,212 Granite prefix completed in full, both digest-complete CORE-61
+  outputs, all retained source and output digests, and a final
+  content-addressed successor with `ff46f6d8...`, `d868a4f3...` and
+  `58d16986...` immutable.
+
 - COMP-73 (Completeness; P1; L): produce the key-compatible target record that
   makes the CORE-53 frozen disaggregated session grid total. The accepted
   retained fixture is A100, vLLM 0.26, tensor parallel one and partial decode
@@ -2973,7 +2976,8 @@ Hopper campaign, one remainder record).
 - COMP-80 (Completeness; P1; L): collect independent repetitions for the
   Granite arm absent from the partial COMP-72 campaign and propagate them per
   exact framework, pool, launch mode, parallelism and shape key. Resume only
-  after the COMP-78 Granite campaign has retained digest-complete physical
+  after the COMP-72 Granite campaign (COMP-78 folded into it) has retained
+  digest-complete physical
   cells. Do not pool across framework, role, launch mode, KV placement or shape,
   and do not reinterpret the predecessor's 12 retained Granite rows as campaign
   repetitions. Acceptance requires at least two independent observations for

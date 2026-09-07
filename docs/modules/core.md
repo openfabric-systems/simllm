@@ -1142,7 +1142,9 @@ Additionally, two pre-reader incidents make the CORE-65 forbidden-access
 ledger nonempty, so its literal protocol clause cannot pass in this worker.
 CORE-65 remains open and CORE-66 receives the exact EP72 hardware-capture
 remainder. All 154 preservation locks pass; no parameter was fitted, no MTP
-value was used or compared, and no fifth scored run occurred.
+value was used or compared, and no fifth scored run occurred. On 2026-09-07
+the maintainer triage folded CORE-64 into CORE-66, which now carries the gap
+and the feasible capture path; CORE-65 stays open for the derivation.
 
 The [CORE-66 feasible-capture result](../../examples/deployment_curve_v1/core66_capture_result.md)
 records no hardware submission. The registered 72-rank cell is impossible on
@@ -1178,12 +1180,25 @@ broader exact SGLang EP72 capture and communication remainder.
 
 ## Open tasks
 
-Folded 2026-09-07 (maintainer triage): CORE-64 and CORE-65 into CORE-66. All
-three were slices of one gap, the -57.164268 percent standard-decode
-undercorrection against the 22,282 tokens/s/node anchor; CORE-66 carries both
-conclusions and the feasible path.
+Folded 2026-09-07 (maintainer triage): CORE-64 into CORE-66. Both were slices
+of one gap, the -57.164268 percent standard-decode undercorrection against the
+22,282 tokens/s/node anchor; CORE-66 carries CORE-64's conclusion and the
+feasible capture path, and CORE-65 stays open for the derivation once that
+capture exists.
 
 ### Precision
+
+- CORE-65 (Precision; P0; L): resolve the exact remaining -12,737.342204
+  tokens/s/node, or -57.164268 percent, standard-decode physical attribution
+  gap after CORE-64 proves that every disclosed EP72 per-rank request, KV,
+  MLA, shared-expert, dense, router and output shape matches the TP1 capture.
+  Bind the retained kernel stream totally to SGLang's EP72 physical operation
+  identities or obtain a matching EP72 per-rank capture, then derive any
+  component-specific service movement without fitting a calibration constant.
+  Preserve the inherited routed `1/9` scale, the 489 ps fixed term, every
+  prior artifact and the explicit family-locality ledger. The held-out MTP
+  value and fifth scored run remain out of scope, and decode-side overlap
+  remains deferred until a real decode communication service term exists.
 
 - CORE-66 (Precision; P0; L): obtain the exact SGLang EP72 physical capture
   that CORE-65 proves is missing. Run the pinned DeepSeek-V3 standard-decode
@@ -1247,12 +1262,14 @@ conclusions and the feasible path.
   EP4 captures inside the four-GPU policy that bind the DeepEP dispatch and
   combine launches and their payloads, and (c) a declared, content-addressed
   EP4-to-EP72 extrapolation candidate that is labeled candidate evidence and
-  never a measured closure. CORE-64 and CORE-65 folded here on 2026-09-07:
-  CORE-64 established that architecture-only residency-shape physics does not
-  close the -57.164268 percent standard-decode gap without a fitted constant,
-  and CORE-65 that every disclosed EP72 per-rank request, KV, MLA,
+  never a measured closure. CORE-64 folded here on 2026-09-07 (the gap is
+  -12,737.342204 tokens/s/node): it established that architecture-only
+  residency-shape physics does not close the -57.164268 percent
+  standard-decode gap without a fitted constant, and CORE-65's binding round
+  established that every disclosed EP72 per-rank request, KV, MLA,
   shared-expert, dense, router and output shape matches the TP1 capture, so
-  the EP72 physical capture is the missing evidence.
+  the EP72 physical capture is the missing evidence and CORE-65 derives the
+  movement once it exists.
 
 - CORE-53 (Precision; P1; M): replace the first disaggregated session slice's
   roofline bootstrap with the accepted COMP-64 kernel-cycle lookup record.
@@ -1636,8 +1653,9 @@ conclusions and the feasible path.
   three-anchor verdict REFUTED. The deployment-frontier figure stays
   byte-locked because its v2 contract has no MTP marker slot. CORE-54 stays
   open on COMP-76's decode calibration reproduction, COMP-74 distribution
-  propagation now partially unlocked by two retained observations, COMP-78's
-  Granite campaign arm, SGL-36 and TRAF-64.
+  propagation now partially unlocked by two retained observations, COMP-72's
+  Granite campaign arm (COMP-78 folded into it on 2026-09-07), SGL-36 and
+  TRAF-64.
 - CORE-52 (Completeness; P1; L): run the live 16-prefill plus 40-decode target
   through the same disaggregated session with 448 simulated workers. Retain
   every engine simultaneously, route requests through every declared pool
