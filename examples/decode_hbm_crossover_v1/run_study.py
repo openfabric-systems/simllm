@@ -75,7 +75,14 @@ def identity(row: dict) -> tuple:
 
 
 def digest(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    """SHA-256 of a tracked text input with line endings normalized to LF.
+
+    Windows checkouts may materialize CRLF line endings; the frozen digests
+    were taken over LF content, so the working-tree check normalizes first.
+    The committed-blob check in `chronology_findings` reads git's own bytes
+    and needs no normalization.
+    """
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
 
 
 def frozen_findings(frozen: dict) -> list[str]:
