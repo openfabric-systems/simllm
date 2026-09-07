@@ -147,6 +147,8 @@ def install_timers(timers, stack, oracle, llm, worker):
 
 
 def run_once(oracle, config, cell, model, directory, arm):
+    import torch
+
     directory.mkdir(parents=True, exist_ok=False)
     llm = None
     timers = Timers()
@@ -157,6 +159,8 @@ def run_once(oracle, config, cell, model, directory, arm):
             llm, worker, sampling, _, _ = oracle._construct_live_engine(
                 cell, config, model, directory, capture=False)
             resolved = oracle._resolved_tuple(llm, cell)
+            device_before = device_is_absent(getattr(worker, "device", None),
+                                             torch.cuda.is_initialized())
             with ExitStack() as stack:
                 if arm == "timed":
                     install_timers(timers, stack, oracle, llm, worker)
@@ -185,7 +189,11 @@ def run_once(oracle, config, cell, model, directory, arm):
                 "phase_totals_ns": phase_totals,
                 "reconstruction_relative_error": abs(sum(phase_totals.values())
                                                      - elapsed) / elapsed,
-                "device_absent": not hasattr(worker, "device"),
+                "device_absent": device_before and device_is_absent(
+                    getattr(worker, "device", None), torch.cuda.is_initialized()),
+                "worker_device": str(worker.device) if worker.device is not None else None,
+                "cuda_initialized": torch.cuda.is_initialized(),
+                "torch_version": torch.__version__, "torch_cuda_build": torch.version.cuda,
             }
             for event in timers.events:
                 if event["phase"] == "scheduler":
@@ -207,6 +215,10 @@ def run_once(oracle, config, cell, model, directory, arm):
         if llm is not None:
             llm.llm_engine.engine_core.shutdown()
         oracle.reset_configuration()
+
+
+def device_is_absent(worker_device, cuda_initialized):
+    return worker_device is None and not cuda_initialized
 
 
 def portable_function(filename, line, name):

@@ -171,3 +171,10 @@ def test_scheduler_observer_preserves_native_throttle_argument():
     assert scheduler.schedule is schedule
     event = next(e for e in timers.events if e["phase"] == "scheduler")
     assert event["running_before"] == event["scheduled"] == 1
+
+
+def test_device_guard_accepts_explicit_none_and_rejects_device_work():
+    assert study.device_is_absent(None, False)
+    assert not study.device_is_absent("cuda:0", False)
+    assert not study.device_is_absent("cpu", False)
+    assert not study.device_is_absent(None, True)
