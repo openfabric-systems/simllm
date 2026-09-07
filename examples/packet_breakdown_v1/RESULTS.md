@@ -170,6 +170,12 @@ All checks passed!
 OK: 11 module doc(s) match docs/modules/FORMAT.md
 ```
 
+Integration note (2026-09-07): the collective width tail record named in the
+fixture inputs was rebuilt by the BACK-68 landing with all 800 ideal numerical
+fields unchanged. The fixture's input digest was refreshed by re-collecting the
+tracked rows on the merged tree; results.json stayed byte-identical and every
+cell, relation and artifact comparison reproduced.
+
 ## Reproduce
 
 ```sh

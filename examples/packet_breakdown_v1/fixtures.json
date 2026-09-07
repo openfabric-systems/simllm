@@ -4620,7 +4620,7 @@
   "expectations_commit": "7b39399",
   "inputs": {
     "examples/breakdown/run_breakdown.py": "7dd7c551b2ddbf36c4fde6af9128ba57999a7cbf6a791896a56e6755eb9094ea",
-    "examples/collective_width_tail_v1/results.json": "38e71049199cdda5b34210ea97e306602012051b33ab8b2e31f94ca2329aaf36",
+    "examples/collective_width_tail_v1/results.json": "86b53561b596de67fd036fbf85e55ec63a75c95e96e432d9da856e62a30c08c2",
     "examples/m4/fixtures/sglang-m3-steps.jsonl": "656772148cd8fbda71a25af08215d806f38f3886abb068f72c9e0ddc8cb7c26f",
     "examples/m4/fixtures/vllm-m2-steps.jsonl": "a226fcc17908844ba080587fe6607c5c8f34b178d17111fbd384819731b26fb7",
     "examples/packet_breakdown_v1/expectations.md": "b8d00181c161545503b03404e72d50f3788b251347f1511d0a54903a1f2ebc17"
