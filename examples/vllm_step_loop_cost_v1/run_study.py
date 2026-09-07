@@ -25,6 +25,9 @@ ROOT = Path(__file__).resolve().parents[2]
 STUDY = Path(__file__).resolve().parent
 FREEZE = "3c7d2a090bfa12f747087c66e22612ebe4e4e8ca"
 AMENDMENT = "c7a0da5fad517135f0e40f500ad32db2b3b34c17"
+CONTROLLED_FREEZE = "becdddc65852b3b4d988238ad723f807f4f25af0"
+THREAD_ENV = ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS",
+              "NUMEXPR_NUM_THREADS")
 PHASES = (
     "scheduler", "kv_allocate", "kv_free", "executor", "scheduler_output",
     "frontend_output", "engine_residual", "admission", "output_collection",
@@ -39,6 +42,40 @@ def canonical(value):
 
 def digest(value):
     return hashlib.sha256(canonical(value)).hexdigest()
+
+
+def text_matches(raw, frozen):
+    """Accept checkout CRLF conversion without accepting a content change."""
+    return raw.replace(b"\r\n", b"\n") == frozen.replace(b"\r\n", b"\n")
+
+
+def text_hashes(raw):
+    return {"raw": hashlib.sha256(raw).hexdigest(),
+            "lf": hashlib.sha256(raw.replace(b"\r\n", b"\n")).hexdigest()}
+
+
+def host_snapshot(torch):
+    # nproc honors OpenMP overrides; remove them only in this inventory command.
+    environment = {k: v for k, v in os.environ.items()
+                   if k not in ("OMP_NUM_THREADS", "OMP_THREAD_LIMIT")}
+    return {"unix_time_ns": time.time_ns(), "load_average": list(os.getloadavg()),
+            "taskset_output": subprocess.check_output(
+                ["taskset", "-p", str(os.getpid())], text=True).strip(),
+            "nproc": int(subprocess.check_output(["nproc"], env=environment, text=True)),
+            "nproc_environment": "OpenMP count overrides removed for CPU inventory only",
+            "affinity": sorted(os.sched_getaffinity(0)),
+            "thread_environment": {name: os.getenv(name) for name in THREAD_ENV},
+            "torch_intraop_threads": torch.get_num_threads(),
+            "torch_interop_threads": torch.get_num_interop_threads()}
+
+
+def host_guard(before, after):
+    return all(snapshot["affinity"] == list(range(24, 32))
+               and snapshot["nproc"] == 8
+               and snapshot["torch_intraop_threads"] == 1
+               and snapshot["torch_interop_threads"] == 1
+               and all(snapshot["thread_environment"][name] == "1" for name in THREAD_ENV)
+               for snapshot in (before, after))
 
 
 def write_once(path, value):
@@ -297,7 +334,8 @@ def summarize_cell(cell, runs, events):
         if e["phase"] in ("kv_allocate", "kv_free"):
             groups[(e["phase"], e["blocks"])].append(e["inclusive_ns"])
     kv_groups = [{"phase": phase, "blocks": blocks, "calls": len(values),
-                  "median_ns": statistics.median(values)}
+                  "median_ns": statistics.median(values),
+                  "median_ns_per_block": statistics.median(values) / blocks if blocks else None}
                  for (phase, blocks), values in sorted(groups.items())]
     plain_median = stability_rows["plain"]["median_ns"]
     overhead = stability_rows["timed"]["median_ns"] / plain_median - 1
@@ -369,26 +407,35 @@ def preflight(oracle, config, model):
              "examples/surrogate_conformance_v1/study_config.json"]
     for name in files:
         frozen = subprocess.check_output(["git", "show", f"{FREEZE}:{name}"], cwd=ROOT)
-        if (ROOT / name).read_bytes() != frozen:
+        if not text_matches((ROOT / name).read_bytes(), frozen):
             raise RuntimeError(f"frozen source changed: {name}")
     subprocess.run(["git", "merge-base", "--is-ancestor", FREEZE, "HEAD"], cwd=ROOT, check=True)
     subprocess.run(["git", "merge-base", "--is-ancestor", AMENDMENT, "HEAD"], cwd=ROOT, check=True)
+    subprocess.run(["git", "merge-base", "--is-ancestor", CONTROLLED_FREEZE, "HEAD"],
+                   cwd=ROOT, check=True)
     actual = sha(Path(scheduler.__file__))
-    if actual != config["oracle"]["scheduler_sha256"]:
+    if config["oracle"]["scheduler_sha256"] not in text_hashes(
+            Path(scheduler.__file__).read_bytes()).values():
         raise RuntimeError("scheduler source hash mismatch")
     distribution = importlib.metadata.version("vllm")
     require_versions(distribution, vllm.__version__)
-    if sha(model / "config.json") != config["oracle"]["model_config_sha256"]:
+    if config["oracle"]["model_config_sha256"] not in text_hashes(
+            (model / "config.json").read_bytes()).values():
         raise RuntimeError("model configuration hash mismatch")
     if model.name != config["oracle"]["model_revision"]:
         raise RuntimeError("select the exact pinned model revision snapshot")
     return {"distribution_version": distribution, "module_version": vllm.__version__,
             "scheduler_sha256": actual, "source_sha256": {n: sha(ROOT / n) for n in files},
+            "source_text_hashes": {n: text_hashes((ROOT / n).read_bytes()) for n in files},
             "workload_sha256": digest([vars(r) for r in oracle.wall_cell(config).requests]),
             "model_revision": model.name, "model_config_sha256": sha(model / "config.json")}
 
 
 def run(args):
+    import torch
+
+    torch.set_num_threads(1)
+    torch.set_num_interop_threads(1)
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
     from examples.surrogate_conformance_v1 import run_study as oracle
@@ -399,6 +446,8 @@ def run(args):
     provenance = preflight(oracle, config, args.model)
     provenance["implementation_commit"] = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    host_before = host_snapshot(torch)
+    write_once(attempt / "host_before.json", host_before)
     floor = attribute_floor()
     write_once(attempt / "attribute_floor.json", floor)
     print("Physical floor: N *", floor["minimum_ns_per_access"], "ns per attribute access.",
@@ -421,14 +470,27 @@ def run(args):
         summaries.append(summary)
     profile, _ = run_once(oracle, config, cells(oracle, config)[0], args.model,
                           attempt / "profile", "profile")
+    host_after = host_snapshot(torch)
+    write_once(attempt / "host_after.json", host_after)
     violations = [f"{r['cell_id']}:{g}" for r in summaries
                   for g, passed in r["fatal_guards"].items() if not passed]
+    if not host_guard(host_before, host_after):
+        violations.append("controlled_host")
     relations = evaluate_relations(summaries)
     cpu_model = next((line.split(":", 1)[1].strip() for line in
                       Path("/proc/cpuinfo").read_text().splitlines()
                       if line.startswith("model name")), "undisclosed")
-    result = {"schema": "simllm-vllm-step-loop-cost-v1", "expectation_commit": AMENDMENT,
+    result = {"schema": "simllm-vllm-step-loop-cost-v1",
+              "expectation_commit": subprocess.check_output(
+                  ["git", "rev-parse", CONTROLLED_FREEZE], cwd=ROOT, text=True).strip(),
+              "distribution_amendment_commit": AMENDMENT,
               "original_expectation_commit": FREEZE,
+              "host_control": {"protocol": "eight-core-affinity-single-thread-v1",
+                               "before": host_before, "after": host_after,
+                               "passed": host_guard(host_before, host_after),
+                               "no_concurrent_local_suite": args.no_concurrent_local_suite,
+                               "background": "Other wave workers use different cores; "
+                               "other users' background jobs remain unpinned."},
               "attempt": args.attempt, "provenance": provenance,
               "status": "void" if violations else "nonvoid",
               "fatal_violations": violations, "attribute_floor": floor,
@@ -561,7 +623,7 @@ def plot(result, output):
     plt.close(fig)
 
 
-def publish(attempt, output):
+def publish(attempt, output, retained=()):
     raw = attempt / "results.json"
     result = json.loads(raw.read_text())
     functions = profile_rows(str(attempt / "profile" / "functions.prof"))
@@ -575,6 +637,11 @@ def publish(attempt, output):
         "correction": "Preserve simllm/adapters/vllm as a project-qualified profile path; "
                       "reproject the retained profile without a new run or any timing change.",
     }
+    result["publication"]["retained_attempts"] = [
+        {"artifact": path.name, "text_sha256": text_hashes(path.read_bytes()),
+         **{key: value for key, value in json.loads(path.read_bytes()).items()
+            if key in ("attempt", "status", "expectation_commit", "fatal_violations")}}
+        for path in retained]
     write_once(output, result)
 
 
@@ -585,24 +652,29 @@ def main():
     execute.add_argument("--run-root", type=Path, default=os.getenv("SIMLLM_DATA_ROOT"))
     execute.add_argument("--model", type=Path, default=os.getenv("SIMLLM_VLLM_MODEL"))
     execute.add_argument("--attempt", default="attempt-001")
+    execute.add_argument("--no-concurrent-local-suite", action="store_true", required=True,
+                         help="attest no local suite, plot or other study runs during timing")
     render = commands.add_parser("plot")
     render.add_argument("--results", type=Path, required=True)
     render.add_argument("--output", type=Path, default=STUDY / "figures")
     publication = commands.add_parser("publish")
     publication.add_argument("--attempt-dir", type=Path, required=True)
-    publication.add_argument("--output", type=Path, default=STUDY / "results.json")
+    publication.add_argument("--output", type=Path, default=STUDY / "controlled_results.json")
+    publication.add_argument("--retained-result", type=Path, action="append",
+                             default=[STUDY / "results.json"])
     args = parser.parse_args()
     if args.command == "plot":
         plot(json.loads(args.results.read_text()), args.output)
         return 0
     if args.command == "publish":
-        publish(args.attempt_dir, args.output)
+        publish(args.attempt_dir, args.output, args.retained_result)
         return 0
     if args.run_root is None or args.model is None:
         parser.error("configure SIMLLM_DATA_ROOT and SIMLLM_VLLM_MODEL or pass --run-root/--model")
     interpreter = os.getenv("SIMLLM_VLLM_PYTHON")
     if not interpreter:
         parser.error("configure SIMLLM_VLLM_PYTHON with the supplied pinned interpreter")
+    os.environ.update({name: "1" for name in THREAD_ENV})
     if os.path.abspath(sys.executable) != os.path.abspath(interpreter):
         environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
         return subprocess.call([interpreter, "-B", str(Path(__file__)), *sys.argv[1:]],

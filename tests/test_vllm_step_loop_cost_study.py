@@ -1,6 +1,7 @@
 """Deterministic checks of the attribution study's evidence reductions."""
 
 import importlib.util
+import json
 import sys
 from contextlib import ExitStack
 from pathlib import Path
@@ -183,3 +184,86 @@ def test_device_guard_accepts_explicit_none_and_rejects_device_work():
 def test_profile_names_distinguish_adapter_from_upstream_framework():
     assert study.portable_function("simllm/adapters/vllm/worker.py", 487, "execute_model") == (
         "simllm/adapters/vllm/worker.py:487:execute_model")
+
+
+def controlled_snapshot():
+    return {"affinity": list(range(24, 32)), "nproc": 8,
+            "torch_intraop_threads": 1, "torch_interop_threads": 1,
+            "thread_environment": dict.fromkeys(study.THREAD_ENV, "1")}
+
+
+@pytest.mark.parametrize("field,value", [
+    ("affinity", list(range(8))), ("affinity", list(range(24, 31))),
+    ("nproc", 7), ("torch_intraop_threads", 2), ("torch_interop_threads", 2),
+    ("thread_environment", dict.fromkeys(study.THREAD_ENV, "2")),
+])
+@pytest.mark.parametrize("boundary", ["before", "after"])
+def test_host_guard_refuses_protocol_drift_at_either_boundary(field, value, boundary):
+    snapshots = {"before": controlled_snapshot(), "after": controlled_snapshot()}
+    assert study.host_guard(**snapshots)
+    snapshots[boundary][field] = value
+    assert not study.host_guard(**snapshots)
+
+
+def test_host_inventory_retains_load_and_does_not_change_affinity(monkeypatch):
+    calls = []
+
+    def output(command, **kwargs):
+        calls.append((command, kwargs))
+        return "8\n" if command == ["nproc"] else "pid 123's current affinity mask: ff000000\n"
+
+    monkeypatch.setattr(study.subprocess, "check_output", output)
+    monkeypatch.setattr(study.os, "getloadavg", lambda: (11.0, 12.0, 13.0), raising=False)
+    monkeypatch.setattr(study.os, "sched_getaffinity", lambda pid: set(range(24, 32)),
+                        raising=False)
+    monkeypatch.setattr(study.os, "getpid", lambda: 123)
+    for name in study.THREAD_ENV:
+        monkeypatch.setenv(name, "1")
+    monkeypatch.setenv("OMP_THREAD_LIMIT", "1")
+    torch = SimpleNamespace(get_num_threads=lambda: 1, get_num_interop_threads=lambda: 1)
+    snapshot = study.host_snapshot(torch)
+    assert snapshot["load_average"] == [11, 12, 13]
+    assert snapshot["taskset_output"].endswith("ff000000")
+    assert calls[0][0] == ["taskset", "-p", "123"]
+    assert "OMP_NUM_THREADS" not in calls[1][1]["env"]
+    assert "OMP_THREAD_LIMIT" not in calls[1][1]["env"]
+    assert study.os.environ["OMP_NUM_THREADS"] == "1"
+    assert study.host_guard(snapshot, snapshot)
+
+
+def test_text_digest_accepts_crlf_but_refuses_content_changes():
+    frozen = b'{"value": 1}\n'
+    converted = b'{"value": 1}\r\n'
+    assert study.text_matches(converted, frozen)
+    assert study.text_hashes(converted)["lf"] == study.text_hashes(frozen)["raw"]
+    assert not study.text_matches(b'{"value": 2}\r\n', frozen)
+    assert study.text_hashes(b'{"value": 2}\r\n')["lf"] != study.text_hashes(frozen)["raw"]
+
+
+def test_publication_retains_void_record_without_rescoring_or_overwriting(tmp_path, monkeypatch):
+    attempt = tmp_path / "controlled"
+    prior = tmp_path / "prior.json"
+    output = tmp_path / "published.json"
+    previous = {"attempt": "prior", "status": "void", "fatal_violations": ["stability"]}
+    study.write_once(prior, previous)
+    prior_bytes = prior.read_bytes()
+    result = {"attempt": "controlled", "status": "void", "behavioral_score": None,
+              "fatal_violations": ["n32-b256:stability"], "plain_ns": [100] * 7}
+    study.write_once(attempt / "results.json", result)
+    (attempt / "profile").mkdir()
+    (attempt / "profile" / "functions.prof").write_bytes(b"profile fixture")
+    functions = [{"function": "schedule", "self_ns": 10, "cumulative_ns": 20}]
+    monkeypatch.setattr(study, "profile_rows", lambda path: functions)
+    study.publish(attempt, output, [prior])
+    published = json.loads(output.read_bytes())
+    assert published["status"] == "void" and published["behavioral_score"] is None
+    assert published["plain_ns"] == result["plain_ns"]
+    assert published["fatal_violations"] == result["fatal_violations"]
+    retained = published["publication"]["retained_attempts"][0]
+    assert retained["status"] == "void" and retained["artifact"] == "prior.json"
+    assert retained["text_sha256"] == study.text_hashes(prior_bytes)
+    assert prior.read_bytes() == prior_bytes
+    assert (attempt / "results.json").read_bytes() == study.canonical(result)
+    assert output.read_bytes().endswith(b"\n") and b"\r" not in output.read_bytes()
+    with pytest.raises(FileExistsError):
+        study.publish(attempt, output, [prior])
