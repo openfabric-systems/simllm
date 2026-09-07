@@ -1883,20 +1883,6 @@ created" statement stands and refers to different, never-registered work.
   are exported through the C facade and the DPI shim, with a test that walks
   one registered region's accesses and reproduces the stage sequence.
 
-- BACK-69 (Completeness; P1; M): make the packet-level sinks emit the
-  runtime's `CriticalPathBreakdown` and per-visit queue waits. `HtsimStepSink`
-  and the persistent sink report collective shares through
-  `HtsimRequestMetricReducer.attribute_step_detail`, but they supply no
-  `CompletionEvent` segments, no per-visit `eligible_at` and `started_at`, and
-  no conserved launch-queue, device-queue, service and delivery split, so a
-  physical run cannot feed the CORE-67 bottleneck report and a physical tail
-  cannot be split between control, switch queues and endpoint work.
-  Acceptance: every completed packet step conserves its elapsed time into the
-  same five segments the coarse runtime emits, the shares the reducer already
-  reports are reproduced exactly from those segments, and the disabled path
-  leaves every accepted artifact byte-identical. The width-64 ideal steps of
-  the collective width tail study are the first cells.
-
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
 Scope note for the ConnectX-5 calibration (BACK-54): the DCQCN comparator

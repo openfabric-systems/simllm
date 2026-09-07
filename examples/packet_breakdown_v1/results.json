@@ -1,0 +1,2570 @@
+{
+  "backend_binaries": {
+    "SIMLLM_HTSIM_RNIC": "803a0188b35ecee97c34e4d94431388ab8c99fac06a2a0551fa7978c502df00e",
+    "SIMLLM_TXT2BIN": "c9512f7dd94438343be6d3353881ca13af915f207f669fba7376bc1d143cee79"
+  },
+  "cells": [
+    {
+      "accepted_snapshot_sha256": "469a0c5eb16392897ae6024da7e9eeade43314e1ab12e18f14d1901a090a80a2",
+      "accepted_width_equal": true,
+      "byte_locks": [
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "omitted",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "disabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "enabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-off",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-on",
+          "outcomes": true,
+          "reducer": true
+        }
+      ],
+      "csv_sha256": "a6cc20c38c0fe68ea4c24b0b17e2f47387ac1c372d460efce03859d5682204c8",
+      "goal_sha256": "17841a9f5a45781d9d3835fc959ecf3e6db2d8526bec8cc0810c7c9d005296f4",
+      "kind": "width",
+      "name": "width-ring-64-400",
+      "pattern": "ring",
+      "profile": "rnic-nn",
+      "rate": 400,
+      "status": "complete",
+      "steps": [
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 30,
+          "external_dependency_ps": 100000000,
+          "fabric_ceiling_ps": 629798400,
+          "fabric_floor_ps": 586575360,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 608832000,
+            "kernel_ps": 100000000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 708832000,
+          "propagation_ps": 504000000,
+          "service_ps": 608832000,
+          "step": 0,
+          "visit_count": 6
+        }
+      ],
+      "width": 64
+    },
+    {
+      "accepted_snapshot_sha256": "a5ca3a55f9aa215d1b3b7610695ad624003210d121279cb2a2606a00a6f6d048",
+      "accepted_width_equal": true,
+      "byte_locks": [
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "omitted",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "disabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "enabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-off",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-on",
+          "outcomes": true,
+          "reducer": true
+        }
+      ],
+      "csv_sha256": "bcf98c774e87ea9e7b88ed8bbe47fb78f0f814ab6fd40377876569bac3138f11",
+      "goal_sha256": "17841a9f5a45781d9d3835fc959ecf3e6db2d8526bec8cc0810c7c9d005296f4",
+      "kind": "width",
+      "name": "width-ring-64-200",
+      "pattern": "ring",
+      "profile": "rnic-nn",
+      "rate": 200,
+      "status": "complete",
+      "steps": [
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 30,
+          "external_dependency_ps": 100000000,
+          "fabric_ceiling_ps": 755596800,
+          "fabric_floor_ps": 669150720,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 713664000,
+            "kernel_ps": 100000000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 813664000,
+          "propagation_ps": 504000000,
+          "service_ps": 713664000,
+          "step": 0,
+          "visit_count": 6
+        }
+      ],
+      "width": 64
+    },
+    {
+      "accepted_snapshot_sha256": "59321948258ed09ae8de56ac6b5f2b11e7a1344b0a22fc4e65931801bfe8ab8b",
+      "accepted_width_equal": true,
+      "byte_locks": [
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "omitted",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "disabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "enabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-off",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-on",
+          "outcomes": true,
+          "reducer": true
+        }
+      ],
+      "csv_sha256": "58ea4062a5d01efdc4d58710485a12c7db59be6b906de880e30970322454060d",
+      "goal_sha256": "f232bf4e5ebe5f856d4c3fca42e65016c7f0c51024009a20c65171e76d93d402",
+      "kind": "width",
+      "name": "width-ring-8-400",
+      "pattern": "ring",
+      "profile": "rnic-nn",
+      "rate": 400,
+      "status": "complete",
+      "steps": [
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 30,
+          "external_dependency_ps": 100000000,
+          "fabric_ceiling_ps": 135206400,
+          "fabric_floor_ps": 129400320,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 132876800,
+            "kernel_ps": 100000000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 232876800,
+          "propagation_ps": 56000000,
+          "service_ps": 132876800,
+          "step": 0,
+          "visit_count": 6
+        }
+      ],
+      "width": 8
+    },
+    {
+      "accepted_snapshot_sha256": "7f473a14366989180aeaccd92c0cda629b4add6c6496a02e3ca2366ecc69fe97",
+      "accepted_width_equal": true,
+      "byte_locks": [
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "omitted",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "disabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "enabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-off",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-on",
+          "outcomes": true,
+          "reducer": true
+        }
+      ],
+      "csv_sha256": "757c99ebbf70131ca23ed50a669eb98217e2b1f2a262251fda4190ce9e321b83",
+      "goal_sha256": "f232bf4e5ebe5f856d4c3fca42e65016c7f0c51024009a20c65171e76d93d402",
+      "kind": "width",
+      "name": "width-ring-8-200",
+      "pattern": "ring",
+      "profile": "rnic-nn",
+      "rate": 200,
+      "status": "complete",
+      "steps": [
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 30,
+          "external_dependency_ps": 100000000,
+          "fabric_ceiling_ps": 214412800,
+          "fabric_floor_ps": 202800640,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 209753600,
+            "kernel_ps": 100000000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 309753600,
+          "propagation_ps": 56000000,
+          "service_ps": 209753600,
+          "step": 0,
+          "visit_count": 6
+        }
+      ],
+      "width": 8
+    },
+    {
+      "accepted_snapshot_sha256": "127bed2f54dd41390dccd7bd0c7212093192449c1d88374f95ef211ae326b0b5",
+      "accepted_width_equal": true,
+      "byte_locks": [
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "omitted",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "disabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "enabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-off",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-on",
+          "outcomes": true,
+          "reducer": true
+        }
+      ],
+      "csv_sha256": "bff88f1e82c1b44b25438679e2d86466e310abbc33d122cf4f2fd4aa4060fd57",
+      "goal_sha256": "558705b7cb4f49708a506499c9ff7acb71ab31aecc7b123faf417812a8d54338",
+      "kind": "width",
+      "name": "width-all-to-all-64-400",
+      "pattern": "all-to-all",
+      "profile": "rnic-nn",
+      "rate": 400,
+      "status": "complete",
+      "steps": [
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 30,
+          "external_dependency_ps": 100000000,
+          "fabric_ceiling_ps": 9546208000,
+          "fabric_floor_ps": 150800640,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 2040000
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 153260800,
+            "kernel_ps": 100000000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 253260800,
+          "propagation_ps": 4000000,
+          "service_ps": 153260800,
+          "step": 0,
+          "visit_count": 6
+        }
+      ],
+      "width": 64
+    },
+    {
+      "accepted_snapshot_sha256": "4890931e32e75673065d0d71949ff27e5263fc788ed8f0c344323ca57c0dfd19",
+      "accepted_width_equal": true,
+      "byte_locks": [
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "omitted",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "disabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "enabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-off",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-on",
+          "outcomes": true,
+          "reducer": true
+        }
+      ],
+      "csv_sha256": "56769548194e6c71641564ee714750aaa0dce6df9e2f5165fef31ff5c1fa9336",
+      "goal_sha256": "558705b7cb4f49708a506499c9ff7acb71ab31aecc7b123faf417812a8d54338",
+      "kind": "width",
+      "name": "width-all-to-all-64-200",
+      "pattern": "all-to-all",
+      "profile": "rnic-nn",
+      "rate": 200,
+      "status": "complete",
+      "steps": [
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 30,
+          "external_dependency_ps": 100000000,
+          "fabric_ceiling_ps": 19088416000,
+          "fabric_floor_ps": 297601280,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 2040000
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 302521600,
+            "kernel_ps": 100000000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 402521600,
+          "propagation_ps": 4000000,
+          "service_ps": 302521600,
+          "step": 0,
+          "visit_count": 6
+        }
+      ],
+      "width": 64
+    },
+    {
+      "accepted_snapshot_sha256": "ef8247bf65fe3675b3fb2ecc537900de5947ca4d93e2c984259580a081e800d4",
+      "accepted_width_equal": true,
+      "byte_locks": [
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "omitted",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "disabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "enabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-off",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-on",
+          "outcomes": true,
+          "reducer": true
+        }
+      ],
+      "csv_sha256": "7d2a56d088fb9afb797fef0e9954cbaf7f6983dfa5971fec88c65a01b4c9a06d",
+      "goal_sha256": "1186712e44ffdbcdc4fe0457c14c6f0570fe6b47efe46cd50539d81af077fb7e",
+      "kind": "width",
+      "name": "width-all-to-all-8-400",
+      "pattern": "all-to-all",
+      "profile": "rnic-nn",
+      "rate": 400,
+      "status": "complete",
+      "steps": [
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 30,
+          "external_dependency_ps": 100000000,
+          "fabric_ceiling_ps": 153260800,
+          "fabric_floor_ps": 22350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 22803200,
+            "kernel_ps": 100000000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 122803200,
+          "propagation_ps": 4000000,
+          "service_ps": 22803200,
+          "step": 0,
+          "visit_count": 6
+        }
+      ],
+      "width": 8
+    },
+    {
+      "accepted_snapshot_sha256": "38ded444ec2de68b22fc8d57407843cad1a2200b769052629cca4fcdda0af257",
+      "accepted_width_equal": true,
+      "byte_locks": [
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "omitted",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "disabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "enabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-off",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-on",
+          "outcomes": true,
+          "reducer": true
+        }
+      ],
+      "csv_sha256": "77e2ce4c2a99a217a5b7d9d329d4b49cf318ea89c530b72de59a8d766dc93fb4",
+      "goal_sha256": "1186712e44ffdbcdc4fe0457c14c6f0570fe6b47efe46cd50539d81af077fb7e",
+      "kind": "width",
+      "name": "width-all-to-all-8-200",
+      "pattern": "all-to-all",
+      "profile": "rnic-nn",
+      "rate": 200,
+      "status": "complete",
+      "steps": [
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 30,
+          "external_dependency_ps": 100000000,
+          "fabric_ceiling_ps": 302521600,
+          "fabric_floor_ps": 40700160,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 41606400,
+            "kernel_ps": 100000000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 141606400,
+          "propagation_ps": 4000000,
+          "service_ps": 41606400,
+          "step": 0,
+          "visit_count": 6
+        }
+      ],
+      "width": 8
+    },
+    {
+      "accepted_breakdown_network_residual_ps": 0,
+      "accepted_snapshot_sha256": "3971d186c39c87a229fba526043831212132e3d84ccc5d92f44a1455177c8451",
+      "byte_locks": [
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "omitted",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "disabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "enabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-off",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-on",
+          "outcomes": true,
+          "reducer": true
+        }
+      ],
+      "csv_sha256": "201d4c74aa9dfae407968f43540ea4d0a37dee7821f9312f59c4461867e8f509",
+      "goal_sha256": "4044b9ecdcba93b3bdd454ae60e3a466d2d5583ae8d359aa9f573444b5cfa3a0",
+      "kind": "breakdown",
+      "name": "breakdown-2-rnic-nn-fluid",
+      "profile": "rnic-nn-fluid",
+      "rate": 400,
+      "status": "complete",
+      "steps": [
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 11781312000,
+          "fabric_ceiling_ps": 21730836480,
+          "fabric_floor_ps": 21730836480,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 21730836480,
+            "kernel_ps": 11781312000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 33512148480,
+          "propagation_ps": 256000000,
+          "service_ps": 21730836480,
+          "step": 0,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 1457888000,
+          "fabric_ceiling_ps": 266485760,
+          "fabric_floor_ps": 266485760,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 266485760,
+            "kernel_ps": 1457888000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 1724373760,
+          "propagation_ps": 256000000,
+          "service_ps": 266485760,
+          "step": 1,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 1457888000,
+          "fabric_ceiling_ps": 266485760,
+          "fabric_floor_ps": 266485760,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 266485760,
+            "kernel_ps": 1457888000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 1724373760,
+          "propagation_ps": 256000000,
+          "service_ps": 266485760,
+          "step": 2,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 1457920000,
+          "fabric_ceiling_ps": 266485760,
+          "fabric_floor_ps": 266485760,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 266485760,
+            "kernel_ps": 1457920000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 1724405760,
+          "propagation_ps": 256000000,
+          "service_ps": 266485760,
+          "step": 3,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 1457920000,
+          "fabric_ceiling_ps": 266485760,
+          "fabric_floor_ps": 266485760,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 266485760,
+            "kernel_ps": 1457920000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 1724405760,
+          "propagation_ps": 256000000,
+          "service_ps": 266485760,
+          "step": 4,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 1457952000,
+          "fabric_ceiling_ps": 266485760,
+          "fabric_floor_ps": 266485760,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 266485760,
+            "kernel_ps": 1457952000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 1724437760,
+          "propagation_ps": 256000000,
+          "service_ps": 266485760,
+          "step": 5,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 1457952000,
+          "fabric_ceiling_ps": 266485760,
+          "fabric_floor_ps": 266485760,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 266485760,
+            "kernel_ps": 1457952000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 1724437760,
+          "propagation_ps": 256000000,
+          "service_ps": 266485760,
+          "step": 6,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 1457952000,
+          "fabric_ceiling_ps": 266485760,
+          "fabric_floor_ps": 266485760,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 266485760,
+            "kernel_ps": 1457952000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 1724437760,
+          "propagation_ps": 256000000,
+          "service_ps": 266485760,
+          "step": 7,
+          "visit_count": 192
+        }
+      ],
+      "width": 2
+    },
+    {
+      "accepted_breakdown_network_residual_ps": 0,
+      "accepted_snapshot_sha256": "33c46609e5502c0df681fb873ad67b27be05d6aa3cb69c0faac41792cf6789c0",
+      "byte_locks": [
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "omitted",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "disabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "enabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-off",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-on",
+          "outcomes": true,
+          "reducer": true
+        }
+      ],
+      "csv_sha256": "47216c1be40da12cdc16affd1643fa8e8c9399efab224507af5a15cd9d86b5f3",
+      "goal_sha256": "4044b9ecdcba93b3bdd454ae60e3a466d2d5583ae8d359aa9f573444b5cfa3a0",
+      "kind": "breakdown",
+      "name": "breakdown-2-rnic-nn",
+      "profile": "rnic-nn",
+      "rate": 400,
+      "status": "complete",
+      "steps": [
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 11781312000,
+          "fabric_ceiling_ps": 22087680000,
+          "fabric_floor_ps": 21730836480,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 22077030400,
+            "kernel_ps": 11781312000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 33858342400,
+          "propagation_ps": 256000000,
+          "service_ps": 22077030400,
+          "step": 0,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 1457888000,
+          "fabric_ceiling_ps": 287948800,
+          "fabric_floor_ps": 266485760,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 277299200,
+            "kernel_ps": 1457888000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 1735187200,
+          "propagation_ps": 256000000,
+          "service_ps": 277299200,
+          "step": 1,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 1457888000,
+          "fabric_ceiling_ps": 287948800,
+          "fabric_floor_ps": 266485760,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 277299200,
+            "kernel_ps": 1457888000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 1735187200,
+          "propagation_ps": 256000000,
+          "service_ps": 277299200,
+          "step": 2,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 1457920000,
+          "fabric_ceiling_ps": 287948800,
+          "fabric_floor_ps": 266485760,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 277299200,
+            "kernel_ps": 1457920000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 1735219200,
+          "propagation_ps": 256000000,
+          "service_ps": 277299200,
+          "step": 3,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 1457920000,
+          "fabric_ceiling_ps": 287948800,
+          "fabric_floor_ps": 266485760,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 277299200,
+            "kernel_ps": 1457920000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 1735219200,
+          "propagation_ps": 256000000,
+          "service_ps": 277299200,
+          "step": 4,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 1457952000,
+          "fabric_ceiling_ps": 287948800,
+          "fabric_floor_ps": 266485760,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 277299200,
+            "kernel_ps": 1457952000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 1735251200,
+          "propagation_ps": 256000000,
+          "service_ps": 277299200,
+          "step": 5,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 1457952000,
+          "fabric_ceiling_ps": 287948800,
+          "fabric_floor_ps": 266485760,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 277299200,
+            "kernel_ps": 1457952000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 1735251200,
+          "propagation_ps": 256000000,
+          "service_ps": 277299200,
+          "step": 6,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 1457952000,
+          "fabric_ceiling_ps": 287948800,
+          "fabric_floor_ps": 266485760,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 277299200,
+            "kernel_ps": 1457952000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 1735251200,
+          "propagation_ps": 256000000,
+          "service_ps": 277299200,
+          "step": 7,
+          "visit_count": 192
+        }
+      ],
+      "width": 2
+    },
+    {
+      "accepted_breakdown_network_residual_ps": 0,
+      "accepted_snapshot_sha256": "5b18dd0893a1c180e0bb41b3d306b0b552eb1f9e651563838aee431d7f658bdc",
+      "byte_locks": [
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "omitted",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "disabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "enabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-off",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-on",
+          "outcomes": true,
+          "reducer": true
+        }
+      ],
+      "csv_sha256": "89abf6bdc2db79e39c715c0053f5f65a3e12b8b2d14c77ab53a75df5949701c2",
+      "goal_sha256": "5c0f2bdbc025044b173a6e770861984cef31172b55653e390a31618cc73cc7d4",
+      "kind": "breakdown",
+      "name": "breakdown-8-rnic-nn-fluid",
+      "profile": "rnic-nn-fluid",
+      "rate": 400,
+      "status": "complete",
+      "steps": [
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 2945952000,
+          "fabric_ceiling_ps": 39372963840,
+          "fabric_floor_ps": 39372963840,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 39372963840,
+            "kernel_ps": 2945952000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 42318915840,
+          "propagation_ps": 1792000000,
+          "service_ps": 39372963840,
+          "step": 0,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 505184000,
+          "fabric_ceiling_ps": 1810350080,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1810350080,
+            "kernel_ps": 505184000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2315534080,
+          "propagation_ps": 1792000000,
+          "service_ps": 1810350080,
+          "step": 1,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 505184000,
+          "fabric_ceiling_ps": 1810350080,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1810350080,
+            "kernel_ps": 505184000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2315534080,
+          "propagation_ps": 1792000000,
+          "service_ps": 1810350080,
+          "step": 2,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 505184000,
+          "fabric_ceiling_ps": 1810350080,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1810350080,
+            "kernel_ps": 505184000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2315534080,
+          "propagation_ps": 1792000000,
+          "service_ps": 1810350080,
+          "step": 3,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 505184000,
+          "fabric_ceiling_ps": 1810350080,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1810350080,
+            "kernel_ps": 505184000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2315534080,
+          "propagation_ps": 1792000000,
+          "service_ps": 1810350080,
+          "step": 4,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 505184000,
+          "fabric_ceiling_ps": 1810350080,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1810350080,
+            "kernel_ps": 505184000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2315534080,
+          "propagation_ps": 1792000000,
+          "service_ps": 1810350080,
+          "step": 5,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 505184000,
+          "fabric_ceiling_ps": 1810350080,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1810350080,
+            "kernel_ps": 505184000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2315534080,
+          "propagation_ps": 1792000000,
+          "service_ps": 1810350080,
+          "step": 6,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 505184000,
+          "fabric_ceiling_ps": 1810350080,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1810350080,
+            "kernel_ps": 505184000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2315534080,
+          "propagation_ps": 1792000000,
+          "service_ps": 1810350080,
+          "step": 7,
+          "visit_count": 192
+        }
+      ],
+      "width": 8
+    },
+    {
+      "accepted_breakdown_network_residual_ps": 0,
+      "accepted_snapshot_sha256": "531784f36540d29a1ac5d542b8cda49df774117fe442754f2bec633d8393dfc2",
+      "byte_locks": [
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "omitted",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "disabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "enabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-off",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-on",
+          "outcomes": true,
+          "reducer": true
+        }
+      ],
+      "csv_sha256": "980f6794511ffb0562c10eba3aa58431a490d3a1573c62ede08eead844cdeb38",
+      "goal_sha256": "5c0f2bdbc025044b173a6e770861984cef31172b55653e390a31618cc73cc7d4",
+      "kind": "breakdown",
+      "name": "breakdown-8-rnic-nn",
+      "profile": "rnic-nn",
+      "rate": 400,
+      "status": "complete",
+      "steps": [
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 2945952000,
+          "fabric_ceiling_ps": 40109260800,
+          "fabric_floor_ps": 39372963840,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 40034713600,
+            "kernel_ps": 2945952000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 42980665600,
+          "propagation_ps": 1792000000,
+          "service_ps": 40034713600,
+          "step": 0,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 505184000,
+          "fabric_ceiling_ps": 2015641600,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1886044160,
+            "kernel_ps": 505184000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2391228160,
+          "propagation_ps": 1792000000,
+          "service_ps": 1886044160,
+          "step": 1,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 505184000,
+          "fabric_ceiling_ps": 2015641600,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1886044160,
+            "kernel_ps": 505184000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2391228160,
+          "propagation_ps": 1792000000,
+          "service_ps": 1886044160,
+          "step": 2,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 505184000,
+          "fabric_ceiling_ps": 2015641600,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1886044160,
+            "kernel_ps": 505184000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2391228160,
+          "propagation_ps": 1792000000,
+          "service_ps": 1886044160,
+          "step": 3,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 505184000,
+          "fabric_ceiling_ps": 2015641600,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1886044160,
+            "kernel_ps": 505184000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2391228160,
+          "propagation_ps": 1792000000,
+          "service_ps": 1886044160,
+          "step": 4,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 505184000,
+          "fabric_ceiling_ps": 2015641600,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1886044160,
+            "kernel_ps": 505184000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2391228160,
+          "propagation_ps": 1792000000,
+          "service_ps": 1886044160,
+          "step": 5,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 505184000,
+          "fabric_ceiling_ps": 2015641600,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1886044160,
+            "kernel_ps": 505184000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2391228160,
+          "propagation_ps": 1792000000,
+          "service_ps": 1886044160,
+          "step": 6,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 505184000,
+          "fabric_ceiling_ps": 2015641600,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1886044160,
+            "kernel_ps": 505184000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2391228160,
+          "propagation_ps": 1792000000,
+          "service_ps": 1886044160,
+          "step": 7,
+          "visit_count": 192
+        }
+      ],
+      "width": 8
+    },
+    {
+      "accepted_snapshot_sha256": "45907da4c2767b6ff2e9ebe5a96326c292d3f5c6f3096cc254ac0ebc532c26e6",
+      "byte_locks": [
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "omitted",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "disabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "enabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-off",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-on",
+          "outcomes": true,
+          "reducer": true
+        }
+      ],
+      "csv_sha256": "f8c7ecfbe8220f1fd75c6b101d8564a3fd4e8e60a3e69519727547d1dfac213a",
+      "fixture": "vllm-m2",
+      "goal_sha256": "657e9522a6242766f8435b04965b51972414aea89fc23c739642797b13a81d73",
+      "kind": "m4",
+      "name": "m4-vllm-m2",
+      "profile": "rnic-nn-fluid",
+      "rate": 400,
+      "status": "complete",
+      "steps": [
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 499232000,
+          "fabric_ceiling_ps": 2085601280,
+          "fabric_floor_ps": 2085601280,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 2085601280,
+            "kernel_ps": 499232000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2584833280,
+          "propagation_ps": 1792000000,
+          "service_ps": 2085601280,
+          "step": 0,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 499232000,
+          "fabric_ceiling_ps": 1810350080,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1810350080,
+            "kernel_ps": 499232000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2309582080,
+          "propagation_ps": 1792000000,
+          "service_ps": 1810350080,
+          "step": 1,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 499296000,
+          "fabric_ceiling_ps": 1957150720,
+          "fabric_floor_ps": 1957150720,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1957150720,
+            "kernel_ps": 499296000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2456446720,
+          "propagation_ps": 1792000000,
+          "service_ps": 1957150720,
+          "step": 2,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 499296000,
+          "fabric_ceiling_ps": 1828700160,
+          "fabric_floor_ps": 1828700160,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1828700160,
+            "kernel_ps": 499296000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2327996160,
+          "propagation_ps": 1792000000,
+          "service_ps": 1828700160,
+          "step": 3,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 499232000,
+          "fabric_ceiling_ps": 1810350080,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1810350080,
+            "kernel_ps": 499232000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2309582080,
+          "propagation_ps": 1792000000,
+          "service_ps": 1810350080,
+          "step": 4,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 499264000,
+          "fabric_ceiling_ps": 2030551040,
+          "fabric_floor_ps": 2030551040,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 2030551040,
+            "kernel_ps": 499264000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2529815040,
+          "propagation_ps": 1792000000,
+          "service_ps": 2030551040,
+          "step": 5,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 499264000,
+          "fabric_ceiling_ps": 1828700160,
+          "fabric_floor_ps": 1828700160,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1828700160,
+            "kernel_ps": 499264000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2327964160,
+          "propagation_ps": 1792000000,
+          "service_ps": 1828700160,
+          "step": 6,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 499232000,
+          "fabric_ceiling_ps": 1810350080,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1810350080,
+            "kernel_ps": 499232000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2309582080,
+          "propagation_ps": 1792000000,
+          "service_ps": 1810350080,
+          "step": 7,
+          "visit_count": 192
+        }
+      ],
+      "width": 8
+    },
+    {
+      "accepted_snapshot_sha256": "4084879f3c99cacb25d59474c40a6b342fb222f4831d52479a86751ff9e519b0",
+      "byte_locks": [
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "omitted",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "disabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "enabled",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-off",
+          "outcomes": true,
+          "reducer": true
+        },
+        {
+          "binary_goals": true,
+          "completions": true,
+          "goals": true,
+          "mode": "prepared-on",
+          "outcomes": true,
+          "reducer": true
+        }
+      ],
+      "csv_sha256": "dcd5d1683f1f8ad11ab2eef4528bd51aa382d328fe846f518bc31d818262192e",
+      "fixture": "sglang-m3",
+      "goal_sha256": "6beb021df7a1a5c1ddd6a26c89419ea826ba2915b4266c6960565607e036e2b9",
+      "kind": "m4",
+      "name": "m4-sglang-m3",
+      "profile": "rnic-nn-fluid",
+      "rate": 400,
+      "status": "complete",
+      "steps": [
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 499232000,
+          "fabric_ceiling_ps": 2012200960,
+          "fabric_floor_ps": 2012200960,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 2012200960,
+            "kernel_ps": 499232000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2511432960,
+          "propagation_ps": 1792000000,
+          "service_ps": 2012200960,
+          "step": 0,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 499232000,
+          "fabric_ceiling_ps": 1810350080,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1810350080,
+            "kernel_ps": 499232000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2309582080,
+          "propagation_ps": 1792000000,
+          "service_ps": 1810350080,
+          "step": 1,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 499264000,
+          "fabric_ceiling_ps": 1920450560,
+          "fabric_floor_ps": 1920450560,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1920450560,
+            "kernel_ps": 499264000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2419714560,
+          "propagation_ps": 1792000000,
+          "service_ps": 1920450560,
+          "step": 2,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 499264000,
+          "fabric_ceiling_ps": 1828700160,
+          "fabric_floor_ps": 1828700160,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1828700160,
+            "kernel_ps": 499264000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2327964160,
+          "propagation_ps": 1792000000,
+          "service_ps": 1828700160,
+          "step": 3,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 499232000,
+          "fabric_ceiling_ps": 1810350080,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1810350080,
+            "kernel_ps": 499232000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2309582080,
+          "propagation_ps": 1792000000,
+          "service_ps": 1810350080,
+          "step": 4,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 499264000,
+          "fabric_ceiling_ps": 1993850880,
+          "fabric_floor_ps": 1993850880,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1993850880,
+            "kernel_ps": 499264000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2493114880,
+          "propagation_ps": 1792000000,
+          "service_ps": 1993850880,
+          "step": 5,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 499264000,
+          "fabric_ceiling_ps": 1828700160,
+          "fabric_floor_ps": 1828700160,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1828700160,
+            "kernel_ps": 499264000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2327964160,
+          "propagation_ps": 1792000000,
+          "service_ps": 1828700160,
+          "step": 6,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 499232000,
+          "fabric_ceiling_ps": 1810350080,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1810350080,
+            "kernel_ps": 499232000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2309582080,
+          "propagation_ps": 1792000000,
+          "service_ps": 1810350080,
+          "step": 7,
+          "visit_count": 192
+        },
+        {
+          "completion_delivery_ps": 0,
+          "critical_path_queue_ps": 0,
+          "device_queue_ps": 0,
+          "event_count": 960,
+          "external_dependency_ps": 499232000,
+          "fabric_ceiling_ps": 1810350080,
+          "fabric_floor_ps": 1810350080,
+          "launch_queue_ps": 0,
+          "masked": {
+            "fabric_ps": 0,
+            "nvlink_ps": 0
+          },
+          "media": {
+            "co_critical_ps": 0,
+            "collective_base_ps": 0,
+            "collective_floor_ps": 0,
+            "collective_registration_ps": 0,
+            "control_ps": 0,
+            "fabric_ps": 1810350080,
+            "kernel_ps": 499232000,
+            "nvlink_ps": 0,
+            "queue_ps": 0
+          },
+          "operation_latency_ps": 2309582080,
+          "propagation_ps": 1792000000,
+          "service_ps": 1810350080,
+          "step": 8,
+          "visit_count": 192
+        }
+      ],
+      "width": 8
+    }
+  ],
+  "evidence": "native ideal runs; five deterministic artifact replays per cell",
+  "expectations_commit": "7b39399",
+  "relations": [
+    {
+      "family": "width_service_share",
+      "ok": true,
+      "pattern": "ring",
+      "rate": 400
+    },
+    {
+      "family": "width_service_share",
+      "ok": true,
+      "pattern": "ring",
+      "rate": 200
+    },
+    {
+      "family": "serialization_doubling",
+      "ok": true,
+      "pattern": "ring",
+      "propagation_ps": 56000000,
+      "residual_ps": 0,
+      "width": 8
+    },
+    {
+      "family": "serialization_doubling",
+      "ok": true,
+      "pattern": "ring",
+      "propagation_ps": 504000000,
+      "residual_ps": 0,
+      "width": 64
+    },
+    {
+      "family": "width_service_share",
+      "ok": true,
+      "pattern": "all-to-all",
+      "rate": 400
+    },
+    {
+      "family": "width_service_share",
+      "ok": true,
+      "pattern": "all-to-all",
+      "rate": 200
+    },
+    {
+      "family": "serialization_doubling",
+      "ok": true,
+      "pattern": "all-to-all",
+      "propagation_ps": 4000000,
+      "residual_ps": 0,
+      "width": 8
+    },
+    {
+      "family": "serialization_doubling",
+      "ok": true,
+      "pattern": "all-to-all",
+      "propagation_ps": 4000000,
+      "residual_ps": 0,
+      "width": 64
+    }
+  ]
+}
