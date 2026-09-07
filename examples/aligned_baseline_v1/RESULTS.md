@@ -118,3 +118,18 @@ SIMLLM_TXT2BIN first. The runner rejects an existing evidence directory.
 Use --summarize-only to project retained raw evidence without simulation.
 
 ![Controlled receiver-service ratios](figures/aligned_baseline.png)
+
+Panel (a) projects the table's minimum per-flow ratios: hollow circles
+and triangles show local- and remote-leaf controls at one and two senders.
+All controls remain above one. For unequal pairs the legend gives the
+smaller payload S; the other flow carries 4S. G denotes Gbit/s.
+At 8, 16 and 32 senders, solid lines with filled circles show the
+minimum per-flow ratio; dashed lines with squares show the phase
+makespan ratio. The unit line is a per-flow lower bound only for an
+unshared receiver. At 32 senders, 64 KiB and 200 Gbit/s, the minimum
+is 0.737140 while the phase ratio is 1.706787.
+Panel (b) shows that cell's elapsed time to the kth earliest completion
+divided by the first k completions' cumulative payload service time
+plus the common path propagation. Every prefix stays above the fatal
+floor of one. Both panels use dimensionless ratios; the sender axis
+in (a) is logarithmic. All values come from results.json.

@@ -505,7 +505,7 @@ def plot_results(report, destination):
     frozen phase floors, then the per-flow completion-time tail at 400 Gbit/s
     (p50 and p99 for both profiles, with the payload floor). Bottom row: the
     supported ideal step shares for the two-ring and expert steps, then the
-    physical-over-ideal phase ratio against the 2x comparator target. Missing
+    physical-over-ideal phase ratio with a 2x visual reference. Missing
     physical width-64 all-to-all points are the fatal control-loss exits.
     """
     import matplotlib
@@ -559,9 +559,12 @@ def plot_results(report, destination):
                     color=colors[profile], linestyle=":", markerfacecolor="white")
         selected = pick("collective", "all-to-all", "rnic-nn", 400)
         floor = selected[0]["bounds"]["flow_propagation_floor_ps"] / 1e6
+        physical = pick("collective", "all-to-all", "rnic-cn", 400)
+        physical_floor = physical[0]["bounds"]["flow_propagation_floor_ps"] / 1e6
         ax.axhline(floor, color="gray", linewidth=.9)
-        ax.axhline(floor + 2, color="gray", linewidth=.9, linestyle=":")
-        ax.text(.04, .08, f"Byte + path floors:\nNN {floor:.5f}, CN {floor + 2:.5f} µs", transform=ax.transAxes,
+        ax.axhline(physical_floor, color="gray", linewidth=.9, linestyle=":")
+        ax.text(.04, .08, f"Gray byte + path floors (µs):\nNN solid: {floor:.5f}\n"
+                f"CN dotted: {physical_floor:.5f}", transform=ax.transAxes,
                 fontsize=7, va="bottom")
         ax.set(title="(c) All-to-all flow tail\n400 Gbit/s; CN width 64 void",
                ylabel="Flow completion time (µs)", yscale="log", ylim=(.8, 110))
@@ -595,9 +598,11 @@ def plot_results(report, destination):
                          for r in physical], marker=marker, color=colors["rnic-cn"],
                         linestyle="-" if rate == 400 else "--")
         ax.axhline(2.0, color="black", linewidth=.8)
-        ax.text(.98, 2.12, "2× comparator", transform=ax.get_yaxis_transform(),
+        ax.text(.98, 2.12, "2× reference", transform=ax.get_yaxis_transform(),
                 ha="right", fontsize=7)
         ax.axhline(1.0, color="gray", linewidth=.6)
+        ax.text(.98, 1.12, "Fatal phase floor = 1", transform=ax.get_yaxis_transform(),
+                ha="right", fontsize=7)
         ax.set(title="(f) Phase makespan ratio\nPhysical / ideal",
                ylabel="CN / NN (dimensionless)", ylim=(.7, 7.6))
         ax.legend(handles=[Line2D([], [], color=colors["rnic-cn"], marker="o",
@@ -618,8 +623,8 @@ def plot_results(report, destination):
             Line2D([], [], color=colors["rnic-nn"], label="NN: rnic-nn ideal"),
             Line2D([], [], color=colors["rnic-cn"], label="CN: rnic-cn physical"),
             Line2D([], [], color="gray", label="NN phase floor (a, b)"),
-            Line2D([], [], color="black", linestyle="-", label="400 Gbit/s"),
-            Line2D([], [], color="black", linestyle="--", label="200 Gbit/s"),
+            Line2D([], [], color="black", linestyle="-", label="400 Gbit/s (except c)"),
+            Line2D([], [], color="black", linestyle="--", label="200 Gbit/s (except c)"),
         ], loc="upper center", bbox_to_anchor=(.5, .923), ncols=3,
             frameon=False, columnspacing=1.2, handlelength=2)
         destination.mkdir(parents=True, exist_ok=True)

@@ -281,7 +281,7 @@ def plot(report, destination):
     if not incast:
         return
     selected = min(incast, key=lambda r: r["comparison"]["min_flow_ratio"])
-    fig, axes = plt.subplots(1, 2, figsize=(9.6, 4.0), layout="constrained",
+    fig, axes = plt.subplots(1, 2, figsize=(7.2, 4.5), layout="constrained",
                              gridspec_kw={"width_ratios": (1.25, 1)})
     placement_markers = {"local": "o", "remote": "^", "spread": "o"}
     for payload in (65536, 262144, 1048576):
@@ -317,29 +317,39 @@ def plot(report, destination):
     axes[0].set_xticks((1, 2, 8, 16, 32))
     axes[0].get_xaxis().set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:g}"))
     axes[0].get_xaxis().set_minor_formatter(plt.NullFormatter())
-    axes[0].set(xlabel="Senders sharing the receiver link (count)",
-                ylabel="Physical / ideal completion (ratio)",
-                title="Per-flow minimum (solid) and phase makespan (dashed)")
-    axes[0].text(1.02, 0.74, "unit line: a per-flow lower bound only\nwhen the receiver "
-                 "link is unshared", fontsize=7, va="bottom")
-    axes[0].text(0.36, 0.60, "hollow: isolated (1) and two-flow (2) controls,\n"
-                 "circle local leaf, triangle remote leaf; none below 1",
-                 transform=axes[0].transAxes, fontsize=7, ha="left", va="bottom", color="0.3")
-    axes[0].legend(fontsize=7, loc="upper right", ncol=2)
+    axes[0].set(xlabel="Senders sharing receiver (count)",
+                ylabel="Physical / ideal completion (ratio)", ylim=(.45, 4.65))
+    axes[0].set_title("(a) Per-flow minimum (solid)\nPhase makespan (dashed)", fontsize=9)
+    axes[0].text(0.33, 0.53, "Hollow: 1- and 2-sender controls\n"
+                 "Circle: local; triangle: remote\nAll controls above 1",
+                 transform=axes[0].transAxes, fontsize=7.5, ha="left", va="bottom", color="0.3")
+    axes[0].annotate(f"Minimum: {selected['comparison']['min_flow_ratio']:.3f}",
+                     xy=(selected["fan_in"], selected["comparison"]["min_flow_ratio"]),
+                     xytext=(5, .56), fontsize=7.5,
+                     arrowprops={"arrowstyle": "->", "linewidth": .7})
+    axes[0].legend(fontsize=7.5, loc="upper right", ncol=2,
+                   columnspacing=.8, handlelength=1.5, handletextpad=.4)
     prefixes = selected["prefix_rows"]
     axes[1].plot([p["k"] for p in prefixes], [p["elapsed_ps"] / p["floor_ps"] for p in prefixes],
                  "o-", markersize=4)
     axes[1].axhline(1, color="black", linewidth=.8)
-    axes[1].text(0.98, 0.9, "fatal floor: every k at or above 1", transform=axes[1].transAxes,
-                 fontsize=7, ha="right", va="top", color="0.3")
+    axes[1].text(0.98, 0.82, "Every completion prefix\nremains above the floor",
+                 transform=axes[1].transAxes, fontsize=7.5, ha="right", va="top", color="0.3")
     axes[1].set(xlabel="Earliest completions k (count)",
-                ylabel="Elapsed / cumulative byte floor (ratio)",
-                title=f"Completion-prefix floor, F={selected['fan_in']}, "
-                      f"{selected['payload'] // 1024} KiB, {selected['rate']}G")
+                ylabel="Elapsed / byte-plus-path floor (ratio)")
+    axes[1].set_title(f"(b) Completion-prefix floor\n{selected['fan_in']} senders, "
+                      f"{selected['payload'] // 1024} KiB, {selected['rate']} Gbit/s", fontsize=9)
     axes[1].set_ylim(bottom=0)
+    axes[1].text(.98, 1.12, "Fatal floor = 1", transform=axes[1].get_yaxis_transform(),
+                 ha="right", va="bottom", fontsize=7.5)
+    for ax in axes:
+        ax.tick_params(labelsize=8)
+        ax.xaxis.label.set_size(8)
+        ax.yaxis.label.set_size(8)
+        ax.spines[["top", "right"]].set_visible(False)
     destination.mkdir(parents=True, exist_ok=True)
     for suffix in ("png", "pdf"):
-        fig.savefig(destination / f"aligned_baseline.{suffix}", dpi=180,
+        fig.savefig(destination / f"aligned_baseline.{suffix}", dpi=240,
                     metadata={"CreationDate": None} if suffix == "pdf" else None)
     plt.close(fig)
 
@@ -444,7 +454,21 @@ def report_markdown(report):
               "Set SIMLLM_DATA_ROOT, SIMLLM_HTSIM_BUILD, SIMLLM_HTSIM_RNIC and",
               "SIMLLM_TXT2BIN first. The runner rejects an existing evidence directory.",
               "Use --summarize-only to project retained raw evidence without simulation.", "",
-              "![Controlled receiver-service ratios](figures/aligned_baseline.png)", ""]
+              "![Controlled receiver-service ratios](figures/aligned_baseline.png)", "",
+              "Panel (a) projects the table's minimum per-flow ratios: hollow circles",
+              "and triangles show local- and remote-leaf controls at one and two senders.",
+              "All controls remain above one. For unequal pairs the legend gives the",
+              "smaller payload S; the other flow carries 4S. G denotes Gbit/s.",
+              "At 8, 16 and 32 senders, solid lines with filled circles show the",
+              "minimum per-flow ratio; dashed lines with squares show the phase",
+              "makespan ratio. The unit line is a per-flow lower bound only for an",
+              "unshared receiver. At 32 senders, 64 KiB and 200 Gbit/s, the minimum",
+              "is 0.737140 while the phase ratio is 1.706787.",
+              "Panel (b) shows that cell's elapsed time to the kth earliest completion",
+              "divided by the first k completions' cumulative payload service time",
+              "plus the common path propagation. Every prefix stays above the fatal",
+              "floor of one. Both panels use dimensionless ratios; the sender axis",
+              "in (a) is logarithmic. All values come from results.json.", ""]
     return "\n".join(lines)
 
 
