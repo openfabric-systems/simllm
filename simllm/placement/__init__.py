@@ -56,6 +56,11 @@ from simllm.placement.manifest import (
     RankPlacement,
 )
 from simllm.placement.mapper import RankMapper
+from simllm.placement.rail import (
+    RAIL_FABRIC_VARIANTS,
+    declared_pipeline_placement,
+    declared_rail_fabric,
+)
 from simllm.placement.sglang_disaggregated import (
     SglangPoolArrangement,
     sglang_disaggregated_manifests,
@@ -71,6 +76,7 @@ __all__ = [
     "DECLARED_CLOS_TOPOLOGY_NAME",
     "FABRIC_SCHEMA",
     "PLACEMENT_SCHEMA",
+    "RAIL_FABRIC_VARIANTS",
     "DisaggregatedDeploymentManifests",
     "FabricLink",
     "FabricNodePlacement",
@@ -85,6 +91,8 @@ __all__ = [
     "RankPlacement",
     "SglangPoolArrangement",
     "declared_manifest",
+    "declared_pipeline_placement",
+    "declared_rail_fabric",
     "disaggregated_manifests",
     "sglang_disaggregated_manifests",
 ]

@@ -2072,6 +2072,22 @@ and arbiter value.
 
 ### Completeness
 
+- TRAF-8 (Completeness; P1; L): capture pipeline-stage attribution from serving
+  adapters and connect concurrent pipeline microbatches to packet-backed
+  completion events and request TTFT/TPOT metrics. The declared forward slice
+  uses `PipelineStepLowerer` to compose existing stage graphs and
+  `step_pp_activations` to send the full new-token activation from each
+  stage's last rank to the next stage's first rank. Width one delegates to the
+  original lowerer with byte-identical graph, GOAL and runtime evidence.
+  Multi-rank stage barriers retain whole-operation dependencies; a fully
+  concurrent packet runtime must preserve them without serializing unrelated
+  expert traffic. The [rail study](../../examples/pp_rail_topology_v1/RESULTS.md)
+  supplies packet-flow evidence and separate coarse-runtime request-metric
+  reachability, not calibrated serving closure. Acceptance needs captured
+  stage and microbatch identities, exact forward-byte conservation and
+  receive-before-compute ordering, packet completions reaching TTFT/TPOT, and
+  unchanged disabled-path artifacts and metrics. PLACE-1 owns general fabric
+  discovery beyond the two fixed 64-endpoint manifest variants.
 - TRAF-49 (Completeness; P2; M): let a profile that supports only the widths it
   measured join a fixed-cost envelope. `CollectiveFixedCostEnvelope` requires
   both arms to support identical participant counts, and every shipped arm
@@ -2433,10 +2449,6 @@ and arbiter value.
   full activation on every rank; SP would replace each allreduce with a
   reduce-scatter plus allgather of 1/W the bytes around the norm/dropout
   regions.
-- TRAF-8: pipeline-parallel activation traffic from step records. Records
-  carry no PP stage attribution yet, so `step_comm` emits TP and EP
-  collectives only; the M1 workload-B GOAL shows the target activation-chain
-  shape.
 - TRAF-9: MoE layer op ordering. `render_step_goal` renders one calc per
   layer followed by the TP allreduces and then dispatch and combine back
   to back; a real MoE layer splits its compute around the all-to-alls
