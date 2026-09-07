@@ -1,0 +1,5 @@
+*.md text eol=lf
+*.py text eol=lf
+*.json text eol=lf
+figures/**/*.png -text -diff
+figures/**/*.pdf -text -diff
