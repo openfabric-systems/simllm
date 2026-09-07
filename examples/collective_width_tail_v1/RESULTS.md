@@ -199,13 +199,20 @@ All physical step cells stay null because restarting the backend between
 artifacts loses state. BACK-38 must provide that execution before this sweep
 can report a physical step fraction without a second timing authority.
 
-![Diagnostic phase makespans and supported ideal step shares](figures/collective_tail.png)
+![Phase makespans, the per-flow tail, ideal step shares and the physical-over-ideal ratio](figures/collective_tail.png)
 
-The figure shows diagnostic measurements from a void study. The missing
-width-64 CN points are fatal backend exits, and the lower panels are ideal
-steps only. PNG and vector PDF are generated from `results.json`; the first
-plain figure has been visually checked for clipping and overlap. The
-orchestrator's final figure pass remains separate.
+The figure shows diagnostic measurements from a void study. Top row: the
+ring and all-to-all phase makespans against width for both profiles and both
+link rates, with the frozen phase floors as gray lines (the ideal profile
+sits on its floor; the missing physical width-64 all-to-all points are the
+fatal control-loss exits), then the per-flow completion-time tail at 400G:
+p50 and p99 for both profiles above the payload floor. Bottom row: the
+supported ideal step shares for the two-ring and expert steps, then the
+physical-over-ideal phase makespan ratio against the 2x comparator target;
+the ring stays between 3x and 6.6x above the ideal at every width, the
+all-to-all between 2x and 2.5x. PNG and vector PDF are generated from
+`results.json`; only the analysis-script hash in that record changes when
+the figure code changes.
 
 ## Reproduction and residual work
 

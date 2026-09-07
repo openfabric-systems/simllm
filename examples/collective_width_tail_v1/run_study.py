@@ -451,46 +451,98 @@ def verdict(rows, exact, behavioral, expected_count=None):
 
 
 def plot_results(report, destination):
+    """Six views of the sweep: makespans, the per-flow tail, ratios and step shares.
+
+    Top row: ring and all-to-all phase makespans against width with the
+    frozen phase floors, then the per-flow completion-time tail at 400 Gbit/s
+    (p50 and p99 for both profiles, with the payload floor). Bottom row: the
+    supported ideal step shares for the two-ring and expert steps, then the
+    physical-over-ideal phase ratio against the 2x comparator target. Missing
+    physical width-64 all-to-all points are the fatal control-loss exits.
+    """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    fig, axes = plt.subplots(2, 2, figsize=(7, 5.4), layout="constrained")
     rows = [r for r in report["configurations"] if r["status"] == "complete"]
+    colors = {"rnic-nn": "#1f77b4", "rnic-cn": "#d62728"}
+
+    def pick(mode, pattern, profile, rate):
+        return sorted([r for r in rows if r["mode"] == mode and r["pattern"] == pattern
+                       and r["profile"] == profile and r["rate_gbps"] == rate],
+                      key=lambda r: r["width"])
+
+    fig, axes = plt.subplots(2, 3, figsize=(12.5, 7.2), layout="constrained")
+    titles = {"ring": "Ring all-reduce", "all-to-all": "Remote all-to-all"}
     for col, pattern in enumerate(("ring", "all-to-all")):
+        ax = axes[0, col]
         for profile in PROFILES:
             for rate in RATES:
-                selected = sorted([r for r in rows if r["mode"] == "collective"
-                                   and r["pattern"] == pattern and r["profile"] == profile
-                                   and r["rate_gbps"] == rate], key=lambda r: r["width"])
-                axes[0, col].plot([r["width"] for r in selected],
-                                  [r["phase_makespan_ps"] / 1e6 for r in selected],
-                                  marker="o", linestyle="-" if rate == 400 else "--",
-                                  label=f"{profile}, {rate}G")
+                selected = pick("collective", pattern, profile, rate)
+                ax.plot([r["width"] for r in selected],
+                        [r["phase_makespan_ps"] / 1e6 for r in selected],
+                        marker="o", color=colors[profile],
+                        linestyle="-" if rate == 400 else "--", label=f"{profile}, {rate}G")
         for rate in RATES:
-            selected = sorted([r for r in rows if r["mode"] == "step"
-                               and r["pattern"] == pattern and r["profile"] == "rnic-nn"
-                               and r["rate_gbps"] == rate], key=lambda r: r["width"])
-            axes[1, col].plot([r["width"] for r in selected],
-                              [100 * r["collective_share"] for r in selected],
-                              marker="o", linestyle="-" if rate == 400 else "--",
-                              label=f"rnic-nn, {rate}G")
-        axes[0, col].set_title("Ring" if pattern == "ring" else "Remote all-to-all")
-        axes[0, col].set_ylabel("Phase makespan (us)")
-        axes[0, col].set_yscale("log")
-        axes[1, col].set_ylabel("Step collective share (%)")
-        axes[1, col].set_ylim(0, 100)
-        axes[1, col].set_title("Two-ring step" if pattern == "ring" else "Single-engine expert step")
-        for ax in axes[:, col]:
-            ax.set_xlabel("Participating ranks")
-            ax.set_xticks(WIDTHS)
-            ax.tick_params(labelsize=8)
-        handles, labels = axes[1, col].get_legend_handles_labels()
-        axes[1, col].legend(handles[::-1], labels[::-1], fontsize=7, loc="lower right")
-    handles, labels = axes[0, 0].get_legend_handles_labels()
-    fig.legend(handles[::-1], labels[::-1], loc="outside upper center", ncols=2, fontsize=8)
-    axes[0, 1].text(.97, .05, "CN width 64: fatal control loss",
+            selected = pick("collective", pattern, "rnic-nn", rate)
+            ax.plot([r["width"] for r in selected],
+                    [r["bounds"]["phase_floor_ps"] / 1e6 for r in selected],
+                    color="gray", linewidth=0.8, linestyle="-" if rate == 400 else "--",
+                    label=f"phase floor, {rate}G")
+        ax.set(title=f"{titles[pattern]}: phase makespan", ylabel="Phase makespan (us)",
+               yscale="log", xlabel="Participating ranks", xticks=WIDTHS)
+        ax.legend(fontsize=7, loc="upper left", ncols=2)
+    axes[0, 1].text(.97, .05, "rnic-cn width 64: fatal control loss",
                     transform=axes[0, 1].transAxes, ha="right", fontsize=7)
+
+    ax = axes[0, 2]
+    for profile in PROFILES:
+        selected = pick("collective", "all-to-all", profile, 400)
+        widths = [r["width"] for r in selected]
+        ax.plot(widths, [r["fct_p50_ps"] / 1e6 for r in selected], marker="o",
+                color=colors[profile], linestyle="-", label=f"{profile} p50")
+        ax.plot(widths, [r["fct_p99_ps"] / 1e6 for r in selected], marker="^",
+                color=colors[profile], linestyle=":", label=f"{profile} p99")
+    selected = pick("collective", "all-to-all", "rnic-nn", 400)
+    ax.plot([r["width"] for r in selected],
+            [r["bounds"]["flow_payload_floor_ps"] / 1e6 for r in selected],
+            color="gray", linewidth=0.8, label="payload floor")
+    ax.set(title="All-to-all per-flow FCT at 400G", ylabel="Flow completion time (us)",
+           yscale="log", xlabel="Participating ranks", xticks=WIDTHS)
+    ax.legend(fontsize=7, loc="lower right")
+
+    for col, pattern in enumerate(("ring", "all-to-all")):
+        ax = axes[1, col]
+        for rate in RATES:
+            selected = pick("step", pattern, "rnic-nn", rate)
+            ax.plot([r["width"] for r in selected],
+                    [100 * r["collective_share"] for r in selected], marker="o",
+                    color=colors["rnic-nn"], linestyle="-" if rate == 400 else "--",
+                    label=f"rnic-nn, {rate}G")
+        ax.set(title="Two-ring step: fabric share of TTFT" if pattern == "ring"
+               else "Expert step: fabric share of TTFT",
+               ylabel="Collective share of step latency (%)", ylim=(0, 100),
+               xlabel="Participating ranks", xticks=WIDTHS)
+        ax.legend(fontsize=7, loc="lower right")
+
+    ax = axes[1, 2]
+    for pattern, marker in (("ring", "o"), ("all-to-all", "s")):
+        for rate in RATES:
+            ideal = {r["width"]: r for r in pick("collective", pattern, "rnic-nn", rate)}
+            physical = pick("collective", pattern, "rnic-cn", rate)
+            ax.plot([r["width"] for r in physical],
+                    [r["phase_makespan_ps"] / ideal[r["width"]]["phase_makespan_ps"]
+                     for r in physical], marker=marker, color=colors["rnic-cn"],
+                    linestyle="-" if rate == 400 else "--", label=f"{pattern}, {rate}G")
+    ax.axhline(2.0, color="black", linewidth=0.8, label="2x comparator target")
+    ax.axhline(1.0, color="gray", linewidth=0.6)
+    ax.set(title="Physical over ideal phase makespan", ylabel="rnic-cn / rnic-nn (dimensionless)",
+           xlabel="Participating ranks", xticks=WIDTHS)
+    ax.legend(fontsize=7, loc="upper left")
+    for ax in axes.flat:
+        ax.tick_params(labelsize=8)
+    fig.suptitle("Collective width tail (void study with findings): 64 ranks on the two-tier "
+                 "400G Clos, rnic-nn ideal versus rnic-cn physical", fontsize=10)
     destination.mkdir(parents=True, exist_ok=True)
     fig.savefig(destination / "collective_tail.png", dpi=180)
     fig.savefig(destination / "collective_tail.pdf", metadata={"CreationDate": None})

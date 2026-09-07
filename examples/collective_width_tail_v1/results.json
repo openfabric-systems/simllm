@@ -5140,7 +5140,7 @@
     "expectations_commit": "aae9adf0d29c875bdf2c7aeb49dbf2f8c2ec966a",
     "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
     "htsim_pin": "617ce203bb8e4d60343be6b7c5f1bd0eff4f053f",
-    "script_sha256": "ea2b8f0ae3ceed8f375cb94873a3771aa1d1952345c30f865e6981ba26f756b7",
+    "script_sha256": "773560c25d18274162f0fa83bdacec7590c869945910209869523cbdc769ce5b",
     "topology_sha256": "69b2fc9c8183ff054149fee985217d37b69140e116dcfd28983fe3809624eb98"
   },
   "verdict": {
