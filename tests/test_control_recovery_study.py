@@ -71,13 +71,14 @@ def test_fatal_failure_voids_study_without_becoming_a_score():
 def test_expected_off_mode_loss_has_no_manufactured_completion(tmp_path):
     cell = STUDY.Cell("collective", tmp_path, 64, 400, "all-to-all",
                       tmp_path / "topology", "collective", "1", True)
-    row = STUDY.analyze(cell, tmp_path, "htsim_rnic: rnic-cn fabric dropped control lifecycle 7",
+    manifest = "[RNIC manifest] rnic_cn_control_recovery=none rnic_cn_control_headroom_admissions=0\n"
+    row = STUDY.analyze(cell, tmp_path, manifest + "htsim_rnic: rnic-cn fabric dropped control lifecycle 7",
                         2, "none", "candidate", {})
     assert row["status"] == "expected-control-loss"
     assert row["phase_makespan_ps"] is None
     assert row["compatibility_oracle"] is None
     assert row["fatal_findings"] == []
-    wrong = STUDY.analyze(cell, tmp_path, "unrelated error", 2, "none", "candidate", {})
+    wrong = STUDY.analyze(cell, tmp_path, manifest + "unrelated error", 2, "none", "candidate", {})
     assert wrong["fatal_findings"] == ["expected control-loss identity exit missing"]
 
 
@@ -106,3 +107,11 @@ def test_published_record_keeps_provenance_and_evidence_classes_separate():
         if row["compatibility_oracle"] is not None:
             assert row["compatibility_oracle"]["byte_identical"] == (
                 row["completion_sha256"] == row["compatibility_oracle"]["reference_sha256"])
+
+
+def test_resume_accepts_lf_digest_without_loosening_binary_identity():
+    saved = {"goal_text_sha256": ["lf"], "binary_sha256": "one"}
+    current = {"goal_text_sha256": ["crlf", "lf"], "binary_sha256": "one"}
+    assert STUDY.compatible_locks(saved, current)
+    current["binary_sha256"] = "two"
+    assert not STUDY.compatible_locks(saved, current)

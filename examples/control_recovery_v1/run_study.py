@@ -11,6 +11,7 @@ import re
 import shutil
 import subprocess
 from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from itertools import pairwise
 from pathlib import Path
@@ -22,12 +23,14 @@ from simllm.backends.htsim_rnic import (
     build_htsim_rnic_command,
     parse_completion_csv,
     parse_control_recovery_manifest,
+    prepare_htsim_child_lifetime,
 )
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 FREEZE = "e936f5d"
 HTSIM_FREEZE = "10f66f5"
+HTSIM_INDEX_FREEZE = "0adaf7e"
 KINDS = ("declare", "accept", "grant_update", "gap_nack", "gap_resolved", "retire", "nflow_update")
 
 
@@ -39,6 +42,13 @@ def text_digests(path):
     data = Path(path).read_bytes()
     return sorted({hashlib.sha256(data).hexdigest(),
                    hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest()})
+
+
+def compatible_locks(saved, current):
+    digest_fields = {"expectations_sha256", "goal_text_sha256", "topology_sha256"}
+    return saved.keys() == current.keys() and all(
+        bool(set(saved[key]) & set(current[key])) if key in digest_fields
+        else saved[key] == current[key] for key in saved)
 
 
 def write_json(path, value):
@@ -187,6 +197,9 @@ def analyze(cell, output, stdout, returncode, mode, arm, bounds):
            "cn_nn_phase_ratio": None, "flow_count": 0, "completion_sha256": None,
            "compatibility_oracle": None, "job_completion_ps": None}
     fatal = row["fatal_findings"]
+    if (arm == "candidate" and mode == "none" and
+            (record.get("recovery") != "none" or record.get("headroom_admissions") != 0)):
+        fatal.append("off mode changed control admission policy")
     if expected_failure:
         if not control_loss:
             fatal.append("expected control-loss identity exit missing")
@@ -194,7 +207,10 @@ def analyze(cell, output, stdout, returncode, mode, arm, bounds):
     if returncode != 0 or "physical_quiescence=verified" not in stdout:
         row["status"] = "failed"
         fatal.append("enabled or previously completed cell did not quiesce")
-        row["failure_kind"] = ("control-loss" if control_loss else "backend-exit")
+        row["failure_kind"] = ("wall-clock-timeout" if returncode == 124 else
+                               "control-loss" if control_loss else
+                               "data-retry-exhaustion" if "deterministic retransmission exhausted" in stdout
+                               else "backend-exit")
         row["failure_line"] = next((line for line in stdout.splitlines()
                                     if line.startswith("htsim_rnic:") and "Usage:" not in line), "")
         return row
@@ -257,7 +273,8 @@ def analyze(cell, output, stdout, returncode, mode, arm, bounds):
     return row
 
 
-def run_cell(cell, mode, arm, binary, output_root, provenance, resume=False):
+def run_cell(cell, mode, arm, binary, output_root, provenance, resume=False, timeout_s=3600,
+             prior_candidate=None):
     output = output_root / cell.name / f"{arm}-{mode}"
     output.mkdir(parents=True, exist_ok=True)
     lock = {"expectations_sha256": provenance["expectations_sha256"],
@@ -269,13 +286,23 @@ def run_cell(cell, mode, arm, binary, output_root, provenance, resume=False):
             "ideal_completion_sha256": digest(cell.ideal / "completion.csv"),
             "bounds": pre_run_bounds(cell), "seed": cell.seed, "rate_gbps": cell.rate}
     lock_path = output / "inputs.json"
-    if resume and (output / "execution.json").is_file():
-        if json.loads(lock_path.read_text()) != lock:
-            raise ValueError(f"resume input mismatch: {cell.name}")
-        execution = json.loads((output / "execution.json").read_text())
-    else:
-        if lock_path.exists():
+    execution = None
+    if lock_path.exists():
+        if not resume:
             raise FileExistsError(f"existing cell requires --resume or a fresh --out: {output}")
+        if not compatible_locks(json.loads(lock_path.read_text()), lock):
+            raise ValueError(f"resume input mismatch: {cell.name}")
+        if (output / "execution.json").is_file():
+            execution = json.loads((output / "execution.json").read_text())
+        if execution is None or (execution["returncode"] == 124 and
+                                 execution.get("timeout_s", 0) < timeout_s):
+            archive = output / f"incomplete-attempt-{len(list(output.glob('incomplete-attempt-*'))) + 1}"
+            archive.mkdir()
+            for path in output.iterdir():
+                if path.is_file():
+                    path.rename(archive / path.name)
+            execution = None
+    if execution is None:
         write_json(lock_path, lock)
         shutil.copyfile(cell.reference / f"{cell.goal_stem}.bin", output / "input.bin")
         (output / "input.goal").write_bytes(cell.goal.read_bytes().replace(b"\r\n", b"\n"))
@@ -284,16 +311,44 @@ def run_cell(cell, mode, arm, binary, output_root, provenance, resume=False):
                               completion_csv=output / "completion.csv", topology=output / "clos.topo",
                               extra_flags={"-rnic_cn_prbs_seed": cell.seed}, control_recovery=mode)
         command = build_htsim_rnic_command(binary, cfg)
-        result = run_owned_process(command, timeout_s=600)
-        stdout = result.stdout + "\n" + result.stderr
+        try:
+            result = run_owned_process(command, timeout_s=timeout_s)
+            stdout = result.stdout + "\n" + result.stderr
+            returncode = result.returncode
+        except subprocess.TimeoutExpired as error:
+            def decoded(value):
+                return value.decode(errors="replace") if isinstance(value, bytes) else value or ""
+            stdout = decoded(error.output) + "\n" + decoded(error.stderr)
+            stdout += f"\nStudy wall-clock timeout after {timeout_s} seconds\n"
+            returncode = 124
         (output / "run.log").write_bytes(stdout.encode())
-        execution = {"returncode": result.returncode, "command": command,
-                     "script_sha256": digest(__file__), "htsim_commit": provenance["htsim_commit"]}
+        execution = {"returncode": returncode, "command": command, "timeout_s": timeout_s,
+                     "script_sha256": provenance["script_sha256"], "htsim_commit": provenance["htsim_commit"]}
         write_json(output / "execution.json", execution)
     stdout = (output / "run.log").read_text()
     row = analyze(cell, output, stdout, execution["returncode"], mode, arm, lock["bounds"])
     row["inputs"] = lock
     row["execution_script_sha256"] = execution["script_sha256"]
+    row["interrupted_prior_attempts"] = len(list(output.glob("incomplete-attempt-*")))
+    if prior_candidate is not None and arm == "candidate":
+        prior = prior_candidate / cell.name / f"candidate-{mode}"
+        if (prior / "cell.json").is_file():
+            old = json.loads((prior / "cell.json").read_text())
+            if old["phase_makespan_ps"] is not None:
+                identical = (output / "completion.csv").is_file() and (
+                    (output / "completion.csv").read_bytes() == (prior / "completion.csv").read_bytes())
+                row["timeout_index_oracle"] = {"byte_identical": identical,
+                                               "prior_sha256": digest(prior / "completion.csv")}
+                if not identical:
+                    row["fatal_findings"].append("timeout index changed prior candidate completion bytes")
+            elif old["returncode"] == 2:
+                same = (old["returncode"], old["status"], old.get("failure_kind"),
+                        old.get("failure_line")) == (
+                            row["returncode"], row["status"], row.get("failure_kind"),
+                            row.get("failure_line"))
+                row["timeout_index_failure_identity"] = same
+                if not same:
+                    row["fatal_findings"].append("timeout index changed prior candidate failure class")
     write_json(output / "cell.json", row)
     print(f"{cell.name} {arm}/{mode}: {row['status']} {row['fatal_findings']}", flush=True)
     return row
@@ -354,17 +409,25 @@ def plot(result, output):
                     if row["phase_makespan_ps"] is not None:
                         count = row["control_recovery"].get("headroom_admissions", 0)
                         axes[0].annotate(str(count), (row["width"], row["phase_makespan_ps"] / 1e6),
-                                         xytext=(0, 6), textcoords="offset points", ha="center", fontsize=8)
+                                         xytext=(0, -16 if row["width"] == 64 and rate == 200 else 6),
+                                         textcoords="offset points", ha="center", fontsize=8)
     axes[0].set_ylabel("Physical phase makespan (µs)")
     axes[1].set_ylabel("Physical / ideal phase makespan")
     axes[1].axhline(1, color="gray", linewidth=.8, label="Physical phase floor")
     for ax in axes:
+        ax.set_yscale("log")
+        ax.plot([64], [.03], marker="x", color="black", transform=ax.get_xaxis_transform())
+    if result["verdict"] == "void":
+        fig.suptitle("Diagnostic results from a void study", fontsize=11)
+    for ax in axes:
         ax.set_xlabel("All-to-all width (ranks)")
         ax.set_xticks([8, 16, 32, 64])
         ax.margins(x=.08, y=.18)
-    axes[0].text(.98, .03, "Width 64, none: control-loss exits at both rates\nNumbers: headroom admissions",
-                 transform=axes[0].transAxes, ha="right", va="bottom", fontsize=8)
-    axes[1].legend(loc="best", fontsize=8)
+    fig.supxlabel("Numbers: headroom admissions. Bottom crosses: width-64 none exits (no valid latency).",
+                  fontsize=8)
+    handles, labels = axes[1].get_legend_handles_labels()
+    order = [2, 3, 0, 1, 4]
+    axes[1].legend([handles[i] for i in order], [labels[i] for i in order], loc="upper left", fontsize=8)
     fig.savefig(output / "control_recovery.png", dpi=160)
     fig.savefig(output / "control_recovery.pdf", metadata={"CreationDate": None, "ModDate": None})
     plt.close(fig)
@@ -378,7 +441,13 @@ def main():
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--publish", action="store_true")
     parser.add_argument("--summarize-only", action="store_true")
+    parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--timeout-s", type=int, default=3600)
+    parser.add_argument("--prior-candidate", type=Path,
+                        default=os.getenv("SIMLLM_CONTROL_PRIOR_CANDIDATE"))
     args = parser.parse_args()
+    if args.workers < 1 or args.timeout_s < 1:
+        parser.error("workers and timeout must be positive")
     if args.out is None:
         if not os.getenv("SIMLLM_DATA_ROOT"):
             parser.error("configure SIMLLM_DATA_ROOT or --out")
@@ -400,22 +469,34 @@ def main():
                       "expectations_sha256": text_digests(HERE / "expectations.md"),
                       "htsim_expectations_commit": git("rev-parse", HTSIM_FREEZE, cwd=source),
                       "htsim_commit": git("rev-parse", "HEAD", cwd=source),
+                      "htsim_timeout_index_expectations_commit":
+                          git("rev-parse", HTSIM_INDEX_FREEZE, cwd=source),
                       "htsim_pin": "617ce203bb8e4d60343be6b7c5f1bd0eff4f053f",
                       "binary_sha256": digest(binaries[0]), "pin_binary_sha256": digest(binaries[1]),
-                      "script_sha256": digest(__file__)}
+                      "script_sha256": digest(__file__),
+                      "collective_reference_name": args.collective_reference.name,
+                      "pipeline_reference_name": args.pipeline_reference.name}
         if git("status", "--porcelain", cwd=source):
             parser.error("backend source must be committed before recording binary provenance")
         # Freeze all bounds before executing or reading any completion rows.
         write_json(args.out / "pre_run_bounds.json", {c.name: pre_run_bounds(c) for c in cells})
         write_json(args.out / "provenance.json", provenance)
+        snapshots = args.out / "runner-snapshots"
+        snapshots.mkdir(exist_ok=True)
+        (snapshots / f"{provenance['script_sha256']}.py").write_bytes(Path(__file__).read_bytes())
         jobs = [(c, mode, "candidate", Path(binaries[0])) for c in cells for mode in ("none", "headroom")]
         jobs += [(c, "none", "pin", Path(binaries[1])) for c in cells
                  if c.main or (c.source == "pipeline" and c.formerly_failed)]
         # New recovery cells run first so their loss evidence is available while
         # the independent compatibility replays finish. Every job is retained.
         jobs.sort(key=lambda job: (not job[0].formerly_failed, job[0].name, job[2], job[1]))
-        rows = [run_cell(c, mode, arm, binary, args.out, provenance, args.resume)
-                for c, mode, arm, binary in jobs]
+        prepare_htsim_child_lifetime()
+        def execute(job):
+            c, mode, arm, binary = job
+            return run_cell(c, mode, arm, binary, args.out, provenance, args.resume, args.timeout_s,
+                            args.prior_candidate)
+        with ThreadPoolExecutor(max_workers=args.workers) as pool:
+            rows = list(pool.map(execute, jobs))
         result = summarize(rows, provenance)
         write_json(args.out / "results.json", result)
     result["provenance"]["report_script_sha256"] = digest(__file__)
