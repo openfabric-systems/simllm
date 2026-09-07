@@ -418,7 +418,8 @@ validation coverage differs by pattern: scatter/gather are validated end to
 end against the packet-level backends with picosecond-exact closed forms
 (examples/m1/RESULTS.md), the M4 studies did the same for ring allreduce on
 both null-network profiles (examples/m4/RESULTS.md checks A and C), and the
-M5 studies closed the pairwise all-to-allv part of TRAF-4 on the fluid
+M5 studies closed the pairwise all-to-allv part of TRAF-4 (retracted on
+2026-09-07; its broadcast part is no longer registered) on the fluid
 profile (examples/m5/RESULTS.md check A: symmetric all-to-allv exact to
 0 ps across size x width, using the whole-bps floor and whole-ps ceil
 quantization of the fluid manifold read from the backend source); the
@@ -1195,6 +1196,14 @@ unidentified A100 credit, buffer, virtual-channel, return-encoding, striping
 and arbiter value.
 
 ## Open tasks
+
+Folded 2026-09-07 (maintainer triage): TRAF-3 into TRAF-61 (the disaggregated
+KV transfer is the prefill-decode record it named) and TRAF-59 and TRAF-60 into
+TRAF-58 (one registration gate and one authority also settles the cross-check
+offset and the prepared-but-unconsumed replay). Retracted 2026-09-07 by
+maintainer decision: TRAF-4, the binomial broadcast closed-form validation; no
+active path renders a broadcast, and the M1, M4 and M5 patterns cover the
+shipped collectives.
 
 ### Precision
 
@@ -2070,24 +2079,18 @@ and arbiter value.
   expectations remain unchanged. H1, H2 and H3 are registered but not run, so
   no candidate value or policy is promoted and TRAF-73 remains open.
 
+- TRAF-9 (Precision; P1; M): MoE layer op ordering. `render_step_goal` renders
+  one calc per layer followed by the TP allreduces and then dispatch and
+  combine back to back; a real MoE layer splits its compute around the
+  all-to-alls (attention and router before dispatch, expert MLP between
+  dispatch and combine) and may overlap shared-expert work with the a2avs. The
+  serial whole-layer calc keeps the makespan correct only to first order.
+  P1 since 2026-09-07: the split decides how much expert compute can overlap
+  the dispatch and combine all-to-alls, which the expert-parallel tail studies
+  price.
+
 ### Completeness
 
-- TRAF-8 (Completeness; P1; L): capture pipeline-stage attribution from serving
-  adapters and connect concurrent pipeline microbatches to packet-backed
-  completion events and request TTFT/TPOT metrics. The declared forward slice
-  uses `PipelineStepLowerer` to compose existing stage graphs and
-  `step_pp_activations` to send the full new-token activation from each
-  stage's last rank to the next stage's first rank. Width one delegates to the
-  original lowerer with byte-identical graph, GOAL and runtime evidence.
-  Multi-rank stage barriers retain whole-operation dependencies; a fully
-  concurrent packet runtime must preserve them without serializing unrelated
-  expert traffic. The [rail study](../../examples/pp_rail_topology_v1/RESULTS.md)
-  supplies packet-flow evidence and separate coarse-runtime request-metric
-  reachability, not calibrated serving closure. Acceptance needs captured
-  stage and microbatch identities, exact forward-byte conservation and
-  receive-before-compute ordering, packet completions reaching TTFT/TPOT, and
-  unchanged disabled-path artifacts and metrics. PLACE-1 owns general fabric
-  discovery beyond the two fixed 64-endpoint manifest variants.
 - TRAF-49 (Completeness; P2; M): let a profile that supports only the widths it
   measured join a fixed-cost envelope. `CollectiveFixedCostEnvelope` requires
   both arms to support identical participant counts, and every shipped arm
@@ -2361,7 +2364,7 @@ and arbiter value.
   artifact stays byte-identical. Trigger: BACK-48 lands the
   port-kind-independent vocabulary and the compute-side port taxonomy carries a
   UALink row.
-- TRAF-58 (Completeness; P2; S): give collective registration one gate and one
+- TRAF-58 (Completeness; P2; M): give collective registration one gate and one
   authority. Two registration states exist today and agree only by convention.
   `CollectiveRegistrationLedger` keys
   `(communicator, generation, channel, buffer)` and owns the charge, while
@@ -2378,34 +2381,13 @@ and arbiter value.
   path stay byte-identical, including every accepted `nccl_stack_v1` sequence
   and every `nccl_registration_v1` artifact. Trigger: any study that opts the
   seam gate and the live charge in at once, which none does today.
-- TRAF-59 (Completeness; P2; S): teach the dependency cross-check about the
-  registration offset. `HtsimStepSink._execute_plan` advances
-  `artifact_offset_ps` by the composed service, which now includes the
-  registration charge, so every authority flow timestamp handed to
-  `complete_dependency_cross_check` is shifted by that charge while the
-  independently rendered comparison schedule carries none. Selecting
-  `dependency_cross_check` together with `collective_registration` therefore
-  reports a completion disagreement equal to the charge and calls a correct run
-  wrong. The class is pre-existing, since the calibrated base latency shifts
-  the same offsets, and that spelling is refused by an explicit configuration
-  guard while this one is not. Either refuse the pair the way the calibrated
-  profile is refused, or subtract the semantic terms before comparing.
-  Acceptance: the two selections either compose with no spurious disagreement
-  or are refused before the workdir exists, and the accepted cross-check
-  artifacts stay byte-identical. Trigger: a study selects both.
-- TRAF-60 (Completeness; P2; S): reconcile the registration ledger with
-  prepared-but-unconsumed replays. `HtsimPersistentStepSink.prepare` lowers
-  every record in the batch up front, so the ledger is charged for all of them,
-  while `StepCollectiveRegistrationOutcome` values are published only as each
-  record is consumed. A batch that is prepared and then abandoned, or consumed
-  in part, leaves the ledger's charged total ahead of every published
-  projection, which is exactly the authority-and-projection divergence the
-  repository's one-authority rule exists to prevent. Decide which of the two is
-  authoritative for an unconsumed step and make the other its exact projection,
-  or refuse preparation while a registration model is selected. Acceptance: the
-  ledger total and the published outcomes agree after any prefix of a prepared
-  batch is consumed, and the serial sink stays byte-identical. Trigger: a study
-  uses the persistent sink with a registration model, which none does today.
+  Folded here 2026-09-07: TRAF-59 (selecting `dependency_cross_check` together
+  with `collective_registration` must either subtract the semantic
+  registration term before comparing or be refused before the workdir exists,
+  with the accepted cross-check artifacts byte-identical) and TRAF-60 (the
+  ledger total and the published `StepCollectiveRegistrationOutcome` values
+  agree after any prefix of a prepared persistent-sink batch is consumed, with
+  the serial sink byte-identical). Both acceptance clauses are kept.
 - TRAF-61 (Completeness; P1; M): render the prefill-to-decode KV transfer of
   the disaggregated session as fabric traffic. Per-request KV bytes derive
   from the model geometry and the request's context length, sourced at the
@@ -2419,6 +2401,9 @@ and arbiter value.
   accounting, one timing authority and zero backend runs. The closed TRAF-62
   packet-rendered half delivers the bounded mechanism. This task stays open
   until TRAF-64 qualifies that mechanism on the fixed target topology.
+  TRAF-3 folded here 2026-09-07: the disaggregated KV transfer is the
+  prefill-decode record it named; the cache-miss re-prefill record returns
+  only with a study that opts in.
 - TRAF-64 (Completeness; P1; L): qualify the delivered packet KV handoff on
   PLACE-5's fixed physical target topology. Derive source and destination
   ranks, chunks and paths from the accepted role-aware placement rather than
@@ -2435,23 +2420,52 @@ and arbiter value.
   the complete fabric manifest and paths into the packet driver, so TRAF-64
   remains open and this evidence is not a target-path qualification.
 
-### Uncategorized
-
-- TRAF-3: KV-transfer records for PD-disaggregation and cache-miss
-  re-prefill (milestone M6).
-- TRAF-4 (ring-allreduce part closed by examples/m4, pairwise-a2av part
-  closed by examples/m5): end-to-end closed-form validation of binomial
-  broadcast against the fluid backend, extending the M1/M4/M5 study
-  pattern.
-- TRAF-5: the JSONL collective-trace consumer (parse
+- TRAF-5 (Completeness; P2; S): the JSONL collective-trace consumer (parse
   `simllm-collective-trace-v1` records and hand them to pattern expansion).
-- TRAF-6: sequence parallelism in the step model. `step_comm` reduces the
-  full activation on every rank; SP would replace each allreduce with a
-  reduce-scatter plus allgather of 1/W the bytes around the norm/dropout
-  regions.
-- TRAF-9: MoE layer op ordering. `render_step_goal` renders one calc per
-  layer followed by the TP allreduces and then dispatch and combine back
-  to back; a real MoE layer splits its compute around the all-to-alls
-  (attention and router before dispatch, expert MLP between dispatch and
-  combine) and may overlap shared-expert work with the a2avs. The serial
-  whole-layer calc keeps the makespan correct only to first order.
+
+- TRAF-6 (Completeness; P2; M): sequence parallelism in the step model.
+  `step_comm` reduces the full activation on every rank; SP would replace each
+  allreduce with a reduce-scatter plus allgather of 1/W the bytes around the
+  norm/dropout regions.
+
+- TRAF-8 (Completeness; P1; L): capture pipeline-stage attribution from serving
+  adapters and connect concurrent pipeline microbatches to packet-backed
+  completion events and request TTFT/TPOT metrics. The declared forward slice
+  uses `PipelineStepLowerer` to compose existing stage graphs and
+  `step_pp_activations` to send the full new-token activation from each
+  stage's last rank to the next stage's first rank. Width one delegates to the
+  original lowerer with byte-identical graph, GOAL and runtime evidence.
+  Multi-rank stage barriers retain whole-operation dependencies; a fully
+  concurrent packet runtime must preserve them without serializing unrelated
+  expert traffic. The [rail study](../../examples/pp_rail_topology_v1/RESULTS.md)
+  supplies packet-flow evidence and separate coarse-runtime request-metric
+  reachability, not calibrated serving closure. Acceptance needs captured
+  stage and microbatch identities, exact forward-byte conservation and
+  receive-before-compute ordering, packet completions reaching TTFT/TPOT, and
+  unchanged disabled-path artifacts and metrics. PLACE-1 owns general fabric
+  discovery beyond the two fixed 64-endpoint manifest variants.
+  P1 since 2026-09-07: TRAF-88 is the first consumer; the declared forward
+  slice above landed with the pipeline rail topology study and the width-one
+  identity path is tested.
+
+- TRAF-88 (Completeness; P1; L): compare a rail-optimized fabric with a
+  node-local leaf fabric under pipeline-parallel activation traffic. The first
+  probe, the pipeline rail topology study, measured the path-length effect: on
+  the physical `rnic-cn` Clos the node-local attachment raises the eight-stage
+  PP hop p99 from 10.3356 to 12.5852 us, 21.8 percent, because every hop
+  crosses the spine instead of one leaf; it also refuted the shared-uplink
+  hypothesis registered here on 2026-09-07, since 32-way concurrent
+  expert-parallel traffic moved the PP hop p99 by exactly 0 ps on both
+  fabrics. The reference Clos has equal endpoint and uplink capacity per leaf
+  and the backend routes per packet round-robin, so no uplink is
+  oversubscribed by that workload. The remaining task is the contention
+  experiment under a fresh freeze: an explicitly oversubscribed variant (fewer
+  spines or slower uplinks, expressed in the same manifest schema) or a
+  routing hypothesis with flow-hash collisions instead of per-packet spraying,
+  swept against pipeline width and expert-parallel fan-in, reporting the PP
+  hop tail, the phase makespans and the step critical-path share on both
+  attachments. Acceptance: with no concurrent traffic both fabrics still agree
+  to 0 ps on the ideal profile, the oversubscribed or hashed arm shows a
+  load-dependent node-local penalty with its floor stated from the shared-link
+  bytes before the run, and the declared full-bisection Clos stays
+  byte-identical.

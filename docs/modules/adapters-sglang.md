@@ -847,16 +847,18 @@ closed id.
   relations. Disabling the native connector must preserve every driver-level
   join record, timestamp, batch and random draw exactly.
 
-### Uncategorized
+- SGL-3 (Completeness; P2; M): RadixCache-aware studies: prefix-hit rate and
+  re-prefill traffic vs shared-prefix workload structure.
 
-- SGL-3: RadixCache-aware studies: prefix-hit rate and re-prefill traffic
-  vs shared-prefix workload structure.
-- SGL-5: logprobs, speculative decoding and the dLLM/hybrid modes are
-  refused or unreachable rather than fabricated.
-- SGL-6: overlap-schedule support (the scheduler-side dual-stream loop with
-  its result queue; needs delayed-sample semantics in the fabricated
-  result). Its observed host-side order and completion waits lower to graph
-  dependencies; device overlap itself remains owned by CORE-4/TRAF-7.
-- SGL-7: mamba/hybrid-attention models need the auxiliary-state pool the
-  stub does not build; the stub currently builds a plain `ReqToTokenPool`
-  only.
+- SGL-5 (Completeness; P2; M): logprobs, speculative decoding and the
+  dLLM/hybrid modes are refused or unreachable rather than fabricated.
+
+- SGL-6 (Completeness; P2; L): overlap-schedule support (the scheduler-side
+  dual-stream loop with its result queue; needs delayed-sample semantics in
+  the fabricated result). Its observed host-side order and completion waits
+  lower to graph dependencies; device overlap itself remains owned by
+  CORE-4/TRAF-7.
+
+- SGL-7 (Completeness; P2; L): mamba/hybrid-attention models need the
+  auxiliary-state pool the stub does not build; the stub currently builds a
+  plain `ReqToTokenPool` only.

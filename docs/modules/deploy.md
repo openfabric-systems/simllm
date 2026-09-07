@@ -290,10 +290,11 @@ protected disaggregated result.
 
 ### Completeness
 
-- DEPLOY-2 (Completeness; P2; M): Wire accepted candidates into the structural
+- DEPLOY-2 (Completeness; P1; M): Wire accepted candidates into the structural
   placement and fabric renderers and return rendered host packing to
   feasibility; preserve the declared one-engine-per-node arithmetic exactly
   when structural rendering is disabled.
+  P1 since 2026-09-07: DEPLOY-25 opts in.
 - DEPLOY-3 (Completeness; P2; M): Construct strict deployment candidates from
   SGLang configuration and inventory evidence without moving scheduling
   authority into `simllm.deploy`; preserve manual candidate construction and
@@ -307,11 +308,12 @@ protected disaggregated result.
   identity off path, including candidate and batch order, exact fractions,
   stamps, rejection records and the zero-subprocess guarantee when parallel
   execution is disabled.
-- DEPLOY-8 (Completeness; P2; L): In wave P-4, define the promotion protocol
+- DEPLOY-8 (Completeness; P1; L): In wave P-4, define the promotion protocol
   that joins an accepted frontier point and estimator stamp to the structural
   placement, execution and simulation records by candidate key. Depend on
   DEPLOY-2 for rendered host packing, and preserve the planning-only record
   exactly when promotion is disabled.
+  P1 since 2026-09-07: DEPLOY-25 opts in.
 - DEPLOY-9 (Completeness; P2; M): Generalize deployment candidate enumeration
   beyond the frontier comparison's frozen TP2, TP4 and TP8 widths, positive
   role-worker splits and bounded decode batch ladder. Accept caller-declared,
@@ -348,3 +350,16 @@ protected disaggregated result.
   identity off path, isolate wall time from virtual timestamps and TTFT/TPOT,
   and accept only the separately frozen adjacent-step boundary rule and
   aggregate batch-size band for the wall-timed mode.
+
+- DEPLOY-25 (Completeness; P1; L): close the loop between an estimated frontier
+  point, its structural simulation and its measurement. DEPLOY-8 joins an
+  accepted frontier point to the structural records by candidate key; this task
+  adds the protocol that runs every promoted point through the structural
+  simulation, compares the simulated TTFT and TPOT against the estimate and,
+  when the target silicon is reachable, against the measured deployment, and
+  reports one frontier distance per point (the signed relative error of
+  throughput per GPU at matched per-request delay). The identity off path
+  leaves the planning-only frontier record byte-identical. Acceptance: a frozen
+  frontier of at least six points crosses all three rungs, every
+  estimate-versus-simulation residual is explained by a named mechanism or
+  filed as a defect, and the measured rung is scored on held-out points only.

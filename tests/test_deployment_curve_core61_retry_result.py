@@ -85,7 +85,13 @@ def test_published_result_closes_only_the_literal_depth_registry():
     assert "so CORE-63 is complete" in core
     assert "CORE-61" in ledger["closed"]
     assert "CORE-63" in ledger["closed"]
-    assert "COMP-72 and COMP-78 remain\n  open on the 0-of-1,212 Granite" in compute
+    # COMP-78 was folded into COMP-72 by maintainer triage on 2026-09-07; the
+    # Granite prefix remainder now lives in COMP-72 alone.
+    assert "- COMP-78 (" not in compute
+    assert "- COMP-72 (Completeness; P1; L):" in compute
+    assert "COMP-78 folded here 2026-09-07" in compute
+    assert ledger["folded"]["COMP-78"] == "COMP-72"
+    assert "COMP-78" in ledger["closed"]
     assert "COMP-76 remains untouched" in (
         STUDY_DIR / "core61_depth_retry_result.md"
     ).read_text(encoding="utf-8")
