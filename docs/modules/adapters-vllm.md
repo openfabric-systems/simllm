@@ -874,19 +874,25 @@ A100.
   first token or time per output token consequence while the capture-disabled
   baseline remains byte-identical.
 
-- VLLM-51 (Precision; P1; M): attribute the live vLLM 0.27.1 CPU engine-loop
-  cost to its phases. The surrogate conformance study measured a 139,552,358 ns
-  median steady step on the frozen 128-request workload against the surrogate's
-  58,711,515 ns, and DEPLOY-21 owns the surrogate side; nothing yet says which
-  scheduler, KV-cache manager, model-runner stub or output-processing function
-  owns the live cost, so a framework inefficiency cannot be told apart from
-  inherent scheduling work. Identifying observables: per-phase monotonic host
-  timers and one function-level profile over the identical workload at 32, 64
-  and 128 running requests. Acceptance: the attributed phases sum to the
-  measured loop within 5 percent, the per-request scheduler cost and the
-  per-block KV-manager cost are reported with their scaling direction, the
-  repeated-run median is stable within 10 percent as a fatal guard, and the
-  record names the dominant function.
+- VLLM-51 (Precision; P1; M): finish absolute CPU loop attribution on a
+  host that meets the frozen 10 percent repeated-median fatal guard, with
+  instrumented versus plain loop cost within the separate 5 percent allowance.
+  The controlled `examples/vllm_step_loop_cost_v1` attempt retained the exact
+  128-request workload, eight-core affinity mask `ff000000`, one-thread timing
+  and no concurrent local suite, but drift still reached 38.98 percent and
+  made the attempt VOID. Every other evaluated fatal guard held. Instrumented
+  versus plain medians differed by 6.72 to 23.09 percent; the reference gap
+  was 11.84 percent despite a 0.032337 percent sum-of-phase-medians residual.
+  The record names `Scheduler.schedule` as dominant by profile self time and
+  reports roughly proportional scheduler cost with running requests and
+  increasing allocation call cost with blocks touched; free-cost scaling is
+  unidentifiable because every free releases six blocks. These remain
+  diagnostic observations until fresh evidence meets the timing guards.
+  Preserve the original source, workload, identity and accounting guards and
+  validate the absolute per-request and per-block costs. The historical
+  139,552,358 ns is a complete workload over 258 steps, with both scheduler
+  work and `_observe_outputs` cumulative-token validation; no inherent-cost
+  or removable-fraction claim is certified. DEPLOY-21 is unchanged.
 
 ### Completeness
 
