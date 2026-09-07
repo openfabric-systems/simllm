@@ -154,7 +154,19 @@ figure. Panel A projects the table above; its upper axis divides loop cost by
 258. Panel B plots median inclusive scheduler time at actual all-decode caps
 on logarithmic axes. Its proportional reference is anchored at cap 16,
 budget 512. Budget 256 stops at 64 because no all-decode step reaches 128.
-The figure is diagnostic throughout, including cells with intact drift guards. Panel C shows the seven measured whole-workload loops of the arm with the largest frozen drift statistic (128 requests, budget 1024, instrumented: the first three loops sit near 170 ms and the last four near 122 ms, a 38.98 percent separation against the 10 percent band drawn around the seven-run median) next to the reference plain arm at 5.91 percent, so the reason for the void status is visible: a level shift between consecutive loops, not a trend or a single spike.
+The figure is diagnostic throughout, including cells with intact drift guards.
+Panel C shows all seven measured loops of the worst arm (cap 128, budget
+1024, instrumented, red circles) and the reference plain arm (cap 16, budget
+512, blue squares). The worst arm shifts from three loops near 170 ms to four
+near 122 ms. Shading marks each arm's own seven-run median ±10%; the dotted
+red and dashed blue lines mark those medians. Every reference loop lies
+inside its blue band. The frozen guard compares the first-three, last-three
+and seven-run medians: their largest pairwise separation divided by the
+seven-run median is 38.98% for the worst arm and 5.91% for the reference,
+against a 10% fatal limit. The annotations use the first and last three
+loops, as the guard requires; the shaded bands do not define a per-loop
+outlier test. The visible level shift explains the void finding without
+establishing its physical cause.
 
 ### Per-request scheduler and per-block KV costs
 

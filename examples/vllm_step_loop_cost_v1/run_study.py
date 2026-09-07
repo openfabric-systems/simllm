@@ -568,8 +568,8 @@ def plot(result, output):
     phases = sorted(reference["phase_medians_ns"].items(), key=lambda kv: kv[1])
     total = sum(ns for _, ns in phases)
     fig = plt.figure(figsize=(7, 11.2))
-    left = fig.add_axes((0.38, 0.685, 0.60, 0.225))
-    right = fig.add_axes((0.12, 0.395, 0.86, 0.195))
+    left = fig.add_axes((0.38, 0.672, 0.60, 0.225))
+    right = fig.add_axes((0.12, 0.385, 0.86, 0.180))
     bottom = fig.add_axes((0.12, 0.115, 0.86, 0.17))
     labels = [PHASE_LABELS.get(name, name.replace("_", " ")) for name, _ in phases]
     values = [ns / 1e6 for _, ns in phases]
@@ -583,7 +583,7 @@ def plot(result, output):
                                                    lambda us: us * steps / 1e3))
     upper.set_xlabel("Amortized time per engine step (µs)", fontsize=9)
     upper.tick_params(labelsize=8.5)
-    fig.text(0.04, 0.955, f"A  Ranked exclusive phases: cap {reference['cap']}, "
+    fig.text(0.04, 0.942, f"A  Ranked exclusive phases: cap {reference['cap']}, "
              f"token budget {reference['budget']}", fontsize=10, weight="bold")
     left.tick_params(labelsize=8.5)
     left.set_ylim(-0.5, len(phases) - 0.5)
@@ -617,11 +617,11 @@ def plot(result, output):
     right.get_xaxis().set_minor_formatter(plt.NullFormatter())
     right.get_yaxis().set_minor_formatter(plt.NullFormatter())
     handles, legend_labels = right.get_legend_handles_labels()
-    order = sorted(range(len(budgets)), key=lambda i: (budgets[i] != 512, budgets[i]))
-    order.append(len(budgets))
+    order = [len(budgets), budgets.index(256), budgets.index(1024), budgets.index(512)]
     right.legend([handles[i] for i in order], [legend_labels[i] for i in order],
-                 fontsize=8, loc="upper left", ncol=2, frameon=False)
-    fig.text(0.04, 0.615, "B  Scheduler cost grows with running requests", fontsize=10,
+                 fontsize=8, loc="lower left", bbox_to_anchor=(0, 1.015),
+                 ncol=2, frameon=False, borderaxespad=0)
+    fig.text(0.04, 0.605, "B  Scheduler cost grows with running requests", fontsize=10,
              weight="bold")
     right.tick_params(labelsize=8.5)
     right.grid(True, which="major", alpha=0.25)
@@ -639,12 +639,16 @@ def plot(result, output):
         ref_loops = [ns / 1e6 for ns in reference["plain_ns"]]
         index = list(range(1, len(loops) + 1))
         median = statistics.median(loops)
+        ref_median = statistics.median(ref_loops)
+        bottom.axhspan(0.9 * ref_median, 1.1 * ref_median, color="#1f77b4", alpha=0.08,
+                       zorder=1)
+        bottom.axhline(ref_median, color="#1f77b4", linewidth=0.8, linestyle="--", zorder=2)
         bottom.axhspan(0.9 * median, 1.1 * median, color="#d62728", alpha=0.10,
-                       zorder=1, label="Frozen 10% band around the seven-run median")
+                       zorder=1)
         bottom.axhline(median, color="#d62728", linewidth=0.8, linestyle=":", zorder=2)
         bottom.plot(index, loops, marker="o", color="#d62728", linewidth=1.4,
                     markersize=6, markerfacecolor="white", markeredgewidth=1.2, zorder=3,
-                    label=f"Worst arm: {cell['cap']} requests, budget {cell['budget']}, "
+                    label=f"Worst arm: cap {cell['cap']}, budget {cell['budget']}, "
                           f"{arm} ({100 * drift:.2f}% drift)")
         bottom.plot(index[:len(ref_loops)], ref_loops, marker="s", color="#1f77b4",
                     linewidth=1.2, markersize=5, markerfacecolor="white",
@@ -668,8 +672,11 @@ def plot(result, output):
         low = min(loops + ref_loops)
         high = max(loops + ref_loops)
         bottom.set_ylim(0.72 * low, 1.14 * high)
-        bottom.legend(fontsize=8, loc="upper center", bbox_to_anchor=(0.5, -0.2),
-                      ncol=1, frameon=False)
+        handles, legend_labels = bottom.get_legend_handles_labels()
+        bottom.legend(handles[::-1], legend_labels[::-1], fontsize=8, loc="upper center",
+                      bbox_to_anchor=(0.5, -0.2), ncol=1, frameon=False)
+        fig.text(0.55, 0.025, "Shading: each arm's median ±10%; lines: seven-run medians",
+                 fontsize=8, ha="center")
         bottom.tick_params(labelsize=8.5)
         bottom.grid(True, which="major", alpha=0.25)
         bottom.spines[["top", "right"]].set_visible(False)
