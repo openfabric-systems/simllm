@@ -573,7 +573,7 @@ def render(rows: list[dict], output: Path) -> None:
 def write_artifacts(rows: list[dict], summary: dict, output: Path, plot: bool = True) -> None:
     csv_text = ledger_csv(rows)
     output.mkdir(parents=True, exist_ok=True)
-    (output / "results.csv").write_text(csv_text, encoding="utf-8")
+    (output / "results.csv").write_bytes((csv_text).encode("utf-8"))
     summary = {**summary, "ledger_sha256": hashlib.sha256(csv_text.encode()).hexdigest()}
     (output / "results.json").write_text(json.dumps(summary, indent=2, sort_keys=True, allow_nan=False) + "\n",
                                          encoding="utf-8")
