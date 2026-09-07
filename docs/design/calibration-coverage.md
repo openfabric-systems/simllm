@@ -102,7 +102,8 @@ Every cell's denominators span the launch modes the backend supports: eager
 and captured CUDA graph, per the frozen measurement design. vLLM serves
 decode under CUDA graphs by default, so the captured-graph lane is the
 deployment-realistic one. Launch mode never participates in kernel
-dispatch; the launch-mode-conditioned host residual is owned by COMP-48,
+dispatch; the launch-mode-conditioned host residual is owned by COMP-44
+(COMP-48 folded into it on 2026-09-07),
 and in-graph instrumentation follows the constraint the
 [a100_graph_launch_v1](../../examples/a100_graph_launch_v1/RESULTS.md)
 study measured: the driver refuses CUDA-event timing on capture-recorded
