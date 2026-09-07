@@ -456,17 +456,45 @@ def plot(result: dict, output: Path) -> None:
         yscale="log",
     )
     axes[0].legend(fontsize=7)
-    for label, key, marker in [("Old", "old_x2", "o"), ("Successor", "x2", "x")]:
+    axes[0].set_title(
+        "X3 frontier: old (dashed) and successor (solid)\n"
+        "pair contract 2,097,152 FLOPs; prefill +4.346% at 3,500 tokens, decode +0.003%",
+        fontsize=8,
+    )
+    e_star = {}
+    for label, key, marker, size in [("Old", "old_x2", "o", 9), ("Successor", "x2", "x", 7)]:
+        values = [result[key][f"{p}_e_star"]["decimal"] for p in ("decode", "prefill")]
+        e_star[label] = values
         axes[1].plot(
             ["Decode", "Prefill"],
-            [result[key][f"{p}_e_star"]["decimal"] for p in ("decode", "prefill")],
+            values,
             marker,
+            markersize=size,
+            markerfacecolor="none" if marker == "o" else None,
             label=label,
         )
-    axes[1].axhline(0.4, color="gray", linestyle=":", label="Frozen lower bound")
+    axes[1].axhline(0.4, color="gray", linestyle=":", label="Frozen lower bound 0.4")
+    axes[1].annotate(
+        f"old = successor = {e_star['Old'][0]:.4f}",
+        xy=(0, e_star["Old"][0]),
+        xytext=(0.12, e_star["Old"][0] - 0.06),
+        fontsize=7,
+        ha="left",
+        va="top",
+    )
+    axes[1].annotate(
+        f"old {e_star['Old'][1]:.4f}\nsuccessor {e_star['Successor'][1]:.4f}\n(both below the band)",
+        xy=(1, e_star["Successor"][1]),
+        xytext=(0.62, e_star["Successor"][1] + 0.12),
+        fontsize=7,
+        ha="left",
+        va="bottom",
+        arrowprops={"arrowstyle": "-", "color": "gray", "lw": 0.6},
+    )
     axes[1].set(ylabel="Implied efficiency e-star (dimensionless)", ylim=(0, 0.7))
-    axes[1].legend(fontsize=8, loc="upper right")
-    axes[1].margins(x=0.2)
+    axes[1].set_title("X2c implied efficiency, frozen band floor", fontsize=9)
+    axes[1].legend(fontsize=7, loc="upper right")
+    axes[1].margins(x=0.25)
     output.mkdir(parents=True, exist_ok=True)
     for ext in ("png", "pdf"):
         fig.savefig(
