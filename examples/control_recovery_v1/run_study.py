@@ -411,19 +411,39 @@ def plot(result, output):
                         axes[0].annotate(str(count), (row["width"], row["phase_makespan_ps"] / 1e6),
                                          xytext=(0, -16 if row["width"] == 64 and rate == 200 else 6),
                                          textcoords="offset points", ha="center", fontsize=8)
+    ideal = sorted(((r["width"], r["phase_makespan_ps"] / r["cn_nn_phase_ratio"] / 1e6)
+                    for r in main if r["mode"] == "headroom" and r["rate_gbps"] == 400
+                    and r["phase_makespan_ps"] is not None and r["cn_nn_phase_ratio"]),
+                   key=lambda item: item[0])
+    axes[0].plot([w for w, _ in ideal], [v for _, v in ideal], color="gray", linestyle="--",
+                 linewidth=.9, label="ideal rnic-nn, 400 Gbit/s")
+    axes[0].axhline(50_000, color="black", linewidth=.8, linestyle="-.")
+    axes[0].annotate("50 ms data retransmission timeout:\nthe width-64 phase ends one RTO\n"
+                     "after a tail loss, not on fabric time",
+                     (16, 50_000), xytext=(0, -34), textcoords="offset points", fontsize=7.5,
+                     ha="left", va="top")
+    for row in main:
+        if row["mode"] == "headroom" and row["width"] == 64 and row["cn_nn_phase_ratio"]:
+            axes[1].annotate(f"{row['cn_nn_phase_ratio']:.0f}x",
+                             (64, row["cn_nn_phase_ratio"]),
+                             xytext=(-8, 0), textcoords="offset points", ha="right",
+                             va="center", fontsize=8)
     axes[0].set_ylabel("Physical phase makespan (µs)")
     axes[1].set_ylabel("Physical / ideal phase makespan")
     axes[1].axhline(1, color="gray", linewidth=.8, label="Physical phase floor")
+    axes[0].legend(fontsize=7.5, loc="center left", bbox_to_anchor=(0.02, 0.5))
     for ax in axes:
         ax.set_yscale("log")
         ax.plot([64], [.03], marker="x", color="black", transform=ax.get_xaxis_transform())
     if result["verdict"] == "void":
-        fig.suptitle("Diagnostic results from a void study", fontsize=11)
+        fig.suptitle("All-to-all on the physical Clos with control headroom: "
+                     "void study, diagnostic values", fontsize=11)
     for ax in axes:
         ax.set_xlabel("All-to-all width (ranks)")
         ax.set_xticks([8, 16, 32, 64])
         ax.margins(x=.08, y=.18)
-    fig.supxlabel("Numbers: headroom admissions. Bottom crosses: width-64 none exits (no valid latency).",
+    fig.supxlabel("Numbers: headroom admissions per cell (0 below width 64). "
+                  "Bottom crosses: width-64 with recovery none exits on control loss (no valid latency).",
                   fontsize=8)
     handles, labels = axes[1].get_legend_handles_labels()
     order = [2, 3, 0, 1, 4]
