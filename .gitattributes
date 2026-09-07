@@ -528,3 +528,7 @@ examples/decode_hbm_crossover_v1/*.json text eol=lf
 examples/kernel_efficiency_ledger_v1/*.csv text eol=lf
 examples/kernel_efficiency_ledger_v1/*.json text eol=lf
 examples/kernel_efficiency_ledger_v1/*.md text eol=lf
+examples/pp_rail_contention_v1/*.md text eol=lf
+examples/pp_rail_contention_v1/*.py text eol=lf
+examples/pp_rail_contention_v1/*.json text eol=lf
+tests/test_pp_rail_contention.py text eol=lf
