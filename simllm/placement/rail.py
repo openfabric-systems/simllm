@@ -1,8 +1,8 @@
 """Fixed 64-endpoint rail and node-local variants of the declared Clos.
 
-Both variants use the existing v1 physical graph. Only NIC attachments change;
-link rates, propagation, switch latency and spine wiring retain their declared
-values. PLACE-1 owns general inventory and topology discovery.
+Both variants use the existing v1 physical graph schema. Explicit spine count
+and uplink rate select capacity variants; defaults retain the accepted graph
+bytes. PLACE-1 owns general inventory and topology discovery.
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ from dataclasses import replace
 from simllm.placement.declared import declared_manifest
 from simllm.placement.disaggregated import (
     DECLARED_CLOS_EVIDENCE_CLASS,
+    DECLARED_CLOS_LINK_RATE_BPS,
     DECLARED_CLOS_SWITCH_LATENCY_PS,
     _declared_clos_graph,
     _endpoint_link_id,
@@ -46,6 +47,8 @@ def declared_rail_fabric(
     placement: PlacementManifest,
     *,
     variant: str,
+    spine_count: int = 8,
+    uplink_rate_bps: int = DECLARED_CLOS_LINK_RATE_BPS,
 ) -> FabricTopologyManifest:
     """Attach exactly eight nodes of eight affine NICs to the fixed Clos.
 
@@ -53,11 +56,17 @@ def declared_rail_fabric(
     is local_rank, which must match the position within the eight-rank block.
     Inputs are never mutated. The variant is mandatory so existing builders
     and their default artifacts keep their original semantics and bytes.
+    Spine count changes only the fully connected leaf-spine subgraph. Uplink
+    rate applies only to those links; all endpoint links remain at 400 Gbit/s.
     """
     if not isinstance(placement, PlacementManifest):
         raise TypeError("placement must be a PlacementManifest")
     if variant not in RAIL_FABRIC_VARIANTS:
         raise ValueError(f"variant must be one of {RAIL_FABRIC_VARIANTS}")
+    if type(spine_count) is not int or spine_count not in (2, 4, 8):
+        raise ValueError("spine_count must be one of 2, 4, 8")
+    if type(uplink_rate_bps) is not int or uplink_rate_bps <= 0 or uplink_rate_bps % 1_000_000_000:
+        raise ValueError("uplink_rate_bps must be a positive whole Gbit/s rate")
     if placement.source != "declared":
         raise ValueError("fixed rail fabrics require a declared placement")
     if [rank.global_rank for rank in placement.ranks] != list(range(64)):
@@ -75,6 +84,20 @@ def declared_rail_fabric(
         raise ValueError("the fabric requires eight distinct physical nodes")
 
     switches, original_links = _declared_clos_graph(64)
+    # Retain the original order and identities, pruning only the unselected
+    # spine links and their ports. Avoid changing the shared graph builder.
+    spines = tuple(switch for switch in switches if switch.tier == 1)
+    removed_ports = {port.port_id for spine in spines[spine_count:] for port in spine.ports}
+    removed_links = tuple(link for link in original_links
+                          if link.endpoint_a in removed_ports or link.endpoint_b in removed_ports)
+    removed_ports.update(endpoint for link in removed_links
+                         for endpoint in (link.endpoint_a, link.endpoint_b))
+    retained_spines = {spine.switch_id for spine in spines[:spine_count]}
+    switches = tuple(replace(switch, ports=tuple(port for port in switch.ports
+                                               if port.port_id not in removed_ports))
+                     for switch in switches if switch.tier == 0 or switch.switch_id in retained_spines)
+    original_links = tuple(link for link in original_links
+                           if link.endpoint_a not in removed_ports and link.endpoint_b not in removed_ports)
     endpoint_slots = {
         rank.global_rank: (rank.local_rank * 8 + rank.global_rank // 8)
         if variant == "rail" else rank.global_rank
@@ -83,7 +106,8 @@ def declared_rail_fabric(
     rank_by_link = {_endpoint_link_id(rank): rank for rank in range(64)}
     links = tuple(
         replace(link, endpoint_b=_endpoint_port_id(endpoint_slots[rank]))
-        if (rank := rank_by_link.get(link.link_id)) is not None else link
+        if (rank := rank_by_link.get(link.link_id)) is not None
+        else replace(link, link_rate_bps=uplink_rate_bps)
         for link in original_links
     )
     nodes = []

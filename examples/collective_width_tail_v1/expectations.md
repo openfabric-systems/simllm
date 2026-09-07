@@ -5,6 +5,32 @@ chain. These expectations precede implementation and every study run. The
 result report cites this expectations-only commit. Predictions below are
 analytical, not measured values. Backend source pin: `617ce20`.
 
+## BACK-68 guard amendment before the fresh rerun
+
+The controlled aligned_baseline_v1 experiment frozen at `7078cc5` supports
+scheduler-dependent per-flow completion under receiver contention. This
+expectations-only amendment changes only the baseline fatal guard and the
+survivability of the known width-64 control-loss exit. All 64 configurations,
+placements, payloads, exact points, behavioral bands and unsupported-step
+handling below remain frozen. The original standalone TRAF-89 oracle misses
+remain misses. Results cite both expectations commits.
+
+For every completed standalone receiver phase, sort completion rows by time
+and retain every k-prefix byte floor: elapsed from first start must be at
+least the bytes of those k completed messages over the receiver link rate,
+plus the common path propagation (2 us ideal, 4 us remote physical). This
+also applies conservatively across chained ring rounds. Match the complete
+identical GOAL and normalize each physical phase's first-start-to-last-
+completion makespan to the ideal phase. Both prefix and phase-baseline
+floors are fatal, along with the original individual physical floors.
+
+Only the width-64 rnic-cn standalone all-to-all exit explicitly reporting
+`fabric dropped control lifecycle` (HTSIM-40) is a survivable fatal. Those
+two cells remain void and unscored; independently completed cells, their
+exact oracles and the existing behavioral relation instances remain
+interpretable. Other crashes, missing cells or failed floors still prevent
+acceptance. BACK-38 rejected steps retain null timing and share fields.
+
 ## Sweep and placement
 
 Run 32 standalone configurations: pattern in {ring, all-to-all}, participating
@@ -85,8 +111,11 @@ capacity halves; there is no registered exact scaling for congestion control.
 Physical comparator: match identical GOAL messages by source, destination and
 tag, validate equal payload and multiplicity, then retain ratios only when
 start_time_ps matches exactly across profiles. Use `simllm.backends.fct` for
-those rows. Require aligned physical FCT >= ideal FCT as a fatal baseline
-guard. Score the <=2x upper band as a behavioral hypothesis, and report <=1.2x
+those rows. Require aligned physical FCT >= ideal FCT only where no other
+aligned flow shares the bottleneck link (the initial ring round). Shared
+receiver per-flow ratios below one are diagnostic, not fatal. Require every
+receiver completion-prefix byte floor and physical phase makespan >= ideal
+phase makespan as fatal guards. Score the <=2x upper band as a behavioral hypothesis, and report <=1.2x
 as a separate tighter target with no extra pass denominator. Unaligned flows
 retain raw FCT only; compare first-start-to-last-completion phase makespans.
 A 2x miss is a real result, never repaired by relaxing the band after the run.
@@ -141,11 +170,14 @@ GOAL digests, manifest lines and the expectation hash. Write outputs through
 
 Fatal guards are physical quiescence, exact flow identities/counts/bytes,
 nonnegative consistent timestamps, no local flow on fabric, physical floors,
-no aligned ratio below one, and conservation of every supported step's reducer
-partition and TTFT. Any violation makes the entire study void for closure,
-retains all evidence, and leaves COMP-9 open. Never mix fatal guards into a
-behavioral score. No guard is declared survivable. Backend crashes/timeouts
-record incomplete cells and prevent acceptance, with their diagnostics retained.
+no unshared aligned ratio below one, receiver completion-prefix byte floors,
+phase-baseline floors, and conservation of every supported step's reducer
+partition and TTFT. Any non-survivable violation makes the entire study void
+for closure, retains all evidence, and leaves COMP-9 open. Never mix fatal
+guards into a behavioral score. Only the specific HTSIM-40 exit declared in
+the amendment is survivable, retaining void cells separately. Other backend
+crashes/timeouts record incomplete cells and prevent acceptance, with their
+diagnostics retained.
 
 An independent external check uses NVIDIA's published all-reduce bandwidth
 accounting: per-rank bus bandwidth is S/T times 2(W-1)/W and cannot exceed

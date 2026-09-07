@@ -13,6 +13,7 @@ from .record_types import RecordObject
 
 MODEL_KERNEL_INVENTORY_SCHEMA = "simllm-model-kernel-inventory-v1"
 ABSENT_BY_DESIGN = "absent-by-design"
+ATTENTION_PAIR_SHAPE_SCHEMA = "simllm-attn-score-invocation-shape-v2"
 
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 _GIT_ID = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
@@ -388,6 +389,30 @@ class KernelProjection:
         _integer(self.aggregate_flops, "KernelProjection.aggregate_flops")
         _integer(self.aggregate_hbm_bytes, "KernelProjection.aggregate_hbm_bytes")
 
+    @property
+    def attention_pairs(self) -> int:
+        """Analytical pairs carried by v2, independent of phase or batch shape."""
+        if (
+            self.family_id != "attn_score"
+            or self.shape_vector.shape_schema_id != ATTENTION_PAIR_SHAPE_SCHEMA
+            or len(self.shape_vector.values) != 3
+        ):
+            raise ValueError("attention pairs require the attn_score v2 shape")
+        return self.shape_vector.values[2]
+
+    @property
+    def attention_flops_per_pair(self) -> int | None:
+        """Exact aggregate coefficient; zero pairs cannot identify one."""
+        pairs = self.attention_pairs
+        if pairs == 0:
+            if self.aggregate_flops:
+                raise ValueError("zero attention pairs require zero FLOPs")
+            return None
+        coefficient, remainder = divmod(self.aggregate_flops, pairs)
+        if remainder:
+            raise ValueError("attention FLOPs must divide exactly by attention pairs")
+        return coefficient
+
     def to_obj(self) -> dict[str, Any]:
         return {
             "family_id": self.family_id,
@@ -601,6 +626,12 @@ class ModelKernelInventory:
         schema_by_id = {schema.shape_schema_id: schema for schema in self.shape_schemas}
         if len(schema_by_id) != len(self.shape_schemas):
             raise ValueError("inventory shape schema IDs must be unique")
+        pair_schema = schema_by_id.get(ATTENTION_PAIR_SHAPE_SCHEMA)
+        if pair_schema is not None and tuple(
+            (axis.axis_id, axis.unit) for axis in pair_schema.axes
+        ) != (("new_tokens", "tokens"), ("kv_tokens", "tokens"),
+              ("attention_pairs", "pairs")):
+            raise ValueError("attention v2 schema requires the ordered pair axis in pairs")
         family_ids = tuple(family.family_id for family in self.kernel_families)
         if len(family_ids) != len(set(family_ids)):
             raise ValueError("inventory kernel family IDs must be unique")
@@ -640,6 +671,18 @@ class ModelKernelInventory:
                         f"launch count {projection.logical_launch_count}, expected "
                         f"{expected_count}"
                     )
+                if family.shape_schema_id == ATTENTION_PAIR_SHAPE_SCHEMA:
+                    pairs = projection.attention_pairs
+                    geometry = self.model.geometry
+                    expected_flops = (
+                        4 * pairs * projection.logical_launch_count
+                        * geometry.num_heads * geometry.head_size
+                    )
+                    if projection.aggregate_flops != expected_flops:
+                        raise ValueError(
+                            f"case {case.case_id!r} attention pair FLOPs disagree "
+                            "with query-head geometry and represented layers"
+                        )
 
     @property
     def record(self) -> RecordObject:

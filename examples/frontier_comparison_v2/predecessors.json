@@ -1,0 +1,19 @@
+{
+  "examples/frontier_comparison_v1/RESULTS.md": "cb11842e3e5e9fd7bb5dd35ab56e5c142741cbdabdf1dac43383aa9ef723a31f",
+  "examples/frontier_comparison_v1/expectations.md": "68b9263e3c236de591be12711c1f4c50707195991e9512f23910674026b70d2a",
+  "examples/frontier_comparison_v1/external.sha256": "af099226ed5deca35cfe8a4ab954e9d131c6784493d985abea16a108d35e3d7f",
+  "examples/frontier_comparison_v1/external/agg_pareto.csv": "89b062634eacb75acacf7a6935e00d42992d112359a302eb8a998992f52ab1f3",
+  "examples/frontier_comparison_v1/external/disagg_best_topn.csv": "809aebbf58dd68136d8a035d895371d75c8783b11d7a6da3494d8c100eb62cf7",
+  "examples/frontier_comparison_v1/external/disagg_pareto.csv": "8b437860a9ad00bafefa53f956b1f9b958e5709f7fb721c76b3fe3f2820688b4",
+  "examples/frontier_comparison_v1/external/provenance.txt": "005c916c368fb3ed94ee5da8fdc815773f4f74bc5709bdb33a1c1073e1f1425d",
+  "examples/frontier_comparison_v1/figures/frontier-comparison.pdf": "1f9f81fe5b077d37964d29285d722223f01c76f301445a29e2da3399468279e5",
+  "examples/frontier_comparison_v1/figures/frontier-comparison.png": "4c4058c6cc231f2d8e8768182a5ff828db8d760726afb855f0c8c7b2ebfe36bf",
+  "examples/frontier_comparison_v1/plot_study.py": "65496e43a60c5b579e9f5e4e950210759919732daea018693103b07ac00965c7",
+  "examples/frontier_comparison_v1/publish_study.py": "858a7a6a24560306ab9e6c54d49f2357ee28c07781a8d00caedc52c61dcfb1f6",
+  "examples/frontier_comparison_v1/results.csv": "18845ff21dc2a32180022ea5e56872506bbbca41a4fa9045412fad2251997130",
+  "examples/frontier_comparison_v1/results.json": "c33154071d5e0275bd15d25813102b629a25eca702f98b527949b53b37728017",
+  "examples/frontier_comparison_v1/run_study.py": "ffc75205e967bd81590b58d3d63a56b4a9eab66209f63ac549b1d585fb3ca825",
+  "offline/calibration/model-inventories/51740b52625002a964e75fddb679e9f8394a08a7d7c62556d2535c3bc60515e3.json": "51740b52625002a964e75fddb679e9f8394a08a7d7c62556d2535c3bc60515e3",
+  "offline/calibration/model-inventories/c8832ba8ba21e49517b6b74e89554c2abdb0d9e76530f647a7849f3f8448ec56.json": "c8832ba8ba21e49517b6b74e89554c2abdb0d9e76530f647a7849f3f8448ec56",
+  "offline/calibration/suites/qwen3-32b-fp8-text-v1-frameworks-2026-08-28/suite.json": "f0830d3692029dca5464af6932f273d7147258d72edaf5986aada37a0ba25435"
+}
