@@ -3,13 +3,19 @@
 from __future__ import annotations
 
 import copy
+import importlib.util
 import json
 import subprocess
 from fractions import Fraction
+from pathlib import Path
 
 import pytest
 
-from examples.decode_hbm_crossover_v1 import run_study as study
+STUDY_PATH = Path(__file__).resolve().parents[1] / "examples" / "decode_hbm_crossover_v1"
+SPEC = importlib.util.spec_from_file_location("decode_hbm_crossover_study", STUDY_PATH / "run_study.py")
+assert SPEC is not None and SPEC.loader is not None
+study = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(study)
 
 
 @pytest.fixture(scope="module")
@@ -51,6 +57,8 @@ def test_retained_results_replay_exactly(evidence, tmp_path):
     assert json.loads((tmp_path / "results.json").read_text()) == summary
     assert json.loads((study.STUDY / "results.json").read_text()) == summary
     assert study.read_csv(study.STUDY / "results.csv") == rows
+    for name in ("results.csv", "results.json"):
+        assert (tmp_path / name).read_bytes() == (study.STUDY / name).read_bytes()
 
 
 def test_nonzero_cache_refutes_exact_flatness(evidence):
@@ -101,7 +109,7 @@ def test_external_row_remains_unscored_and_unfitted(evidence):
     assert external["bound"] == "memory"
 
 
-@pytest.mark.parametrize("mutation", ["drop", "duplicate", "work", "normalization", "stamp"])
+@pytest.mark.parametrize("mutation", ["drop", "duplicate", "work", "normalization", "width", "stamp"])
 def test_fatal_mutations_void_scores(evidence, frozen, mutation):
     rows = copy.deepcopy(evidence[0])
     if mutation == "drop":
@@ -112,6 +120,10 @@ def test_fatal_mutations_void_scores(evidence, frozen, mutation):
         rows[0]["flops"] += 1
     elif mutation == "normalization":
         rows[0]["throughput_tokens_per_second_per_gpu"] = "1"
+    elif mutation == "width":
+        rows[0]["tp"] = 2
+        rows[0]["throughput_tokens_per_second_per_gpu"] = str(
+            Fraction(rows[0]["throughput_tokens_per_second_per_gpu"]) / 2)
     else:
         rows[0]["deployment_guards_ok"] = False
     summary = evaluate(rows, frozen)
@@ -181,3 +193,13 @@ def test_failure_retains_completed_cells(monkeypatch):
     assert len(rows) == 2
     assert summary["verdict"] == "VOID"
     assert any("injected pricing defect" in f for f in summary["fatal_findings"])
+
+
+def test_crossover_label_cannot_drift_from_frozen_value(evidence, frozen):
+    rows = copy.deepcopy(evidence[0])
+    select(rows)["crossover_batch"] = "100"
+    summary = evaluate(rows, frozen)
+    assert summary["nonvoid"]
+    assert summary["verdict"] == "FAIL"
+    family = summary["behavioral_families"]["B5-crossover"]
+    assert family["passed"] == family["instances"] - 1

@@ -223,6 +223,7 @@ def audit(rows: list[dict], frozen: dict, expected: list[dict],
     actual = {identity(row): row for row in rows}
     if len(actual) != len(rows) or set(actual) != set(predictions):
         findings.append("cell identities are missing, duplicated or unexpected")
+    models = {m["id"]: m for m in [*frozen["models"], frozen["external"]]}
     mismatches = []
     max_residual = 0
     rational_differences = []
@@ -244,7 +245,9 @@ def audit(rows: list[dict], frozen: dict, expected: list[dict],
         if (abs(delta) > 1 or t + 1 < row["weight_floor_ps"]
                 or t > row["serial_ceiling_ps"]):
             findings.append(f"physical bounds: {key}")
-        if (Fraction(row["throughput_tokens_per_second_per_gpu"])
+        if (row["tp"] != models[row["model"]]["tp"]
+                or row["ep"] != models[row["model"]]["ep"]
+                or Fraction(row["throughput_tokens_per_second_per_gpu"])
                 != Fraction(row["batch"] * PS, row["tp"] * t)
                 or Fraction(row["request_tokens_per_second"]) != Fraction(PS, t)):
             findings.append(f"output-token normalization: {key}")
@@ -309,6 +312,8 @@ def audit(rows: list[dict], frozen: dict, expected: list[dict],
             keys = list(dict.fromkeys([(*prefix, lo), (*prefix, hi)]))
             passed = all(k in actual and actual[k]["bound"] ==
                          ("memory" if k[-1] < value else "compute") for k in keys)
+        matching = [row for key, row in actual.items() if key[:4] == prefix]
+        passed = passed and all(row["crossover_batch"] == (cross or "none") for row in matching)
         emit("B5-crossover", keys, passed, crossover_batch=cross)
     nonvoid = not findings
     scores = {family: {"instances": sum(r["family"] == family for r in relations),
@@ -396,27 +401,33 @@ def plot(rows: list[dict], out: Path) -> None:
                 selected.sort(key=lambda r: r["batch"])
                 if not selected:
                     continue
-                ax.loglog([r["tpot_ms"] for r in selected],
-                          [r["throughput_decimal"] for r in selected],
-                          "o--" if context == 2048 else "o-", color=colors[dev],
-                          markersize=3, linewidth=1)
+                curve = [(r["batch"], r["tpot_ms"], r["throughput_decimal"])
+                         for r in selected]
                 first = selected[0]
                 if first["crossover_batch"] != "none" and context != 2048:
                     cross = Fraction(first["crossover_batch"])
                     time = cross * Fraction(first["flops"], first["peak_flops"])
                     throughput = cross / (model["tp"] * time)
+                    curve.append((float(cross), float(time * 1000), float(throughput)))
                     ax.plot(float(time * 1000), float(throughput), "D", color=colors[dev],
-                            markerfacecolor="white", markersize=5)
+                            markerfacecolor="white", markersize=5, zorder=4)
+                curve.sort()
+                ax.loglog([p[1] for p in curve], [p[2] for p in curve],
+                          "--" if context == 2048 else "-", color=colors[dev], linewidth=1)
+                ax.plot([r["tpot_ms"] for r in selected],
+                        [r["throughput_decimal"] for r in selected],
+                        "o", color=colors[dev], markersize=3)
         ax.set_title(model["label"], fontsize=10)
         ax.set_xlabel("Time per output token (ms)")
         ax.set_ylabel("Output tokens/s/GPU")
         ax.grid(True, which="major", alpha=0.25)
         ax.margins(x=0.12, y=0.18)
-    handles = [Line2D([], [], color=colors[d], label=d.upper()) for d in frozen["devices"]]
+    handles = [Line2D([], [], color=colors[d], label=d.upper()) for d in reversed(frozen["devices"])]
     handles += [Line2D([], [], color="black", linestyle="-", label="C=1 (EP72: C=2000)"),
                 Line2D([], [], color="black", linestyle="--", label="C=2048"),
                 Line2D([], [], color="black", marker="D", markerfacecolor="white",
                        linestyle="none", label="Analytical B*")]
+    fig.suptitle("Decode roofline at nominal HBM bandwidth", fontsize=11)
     fig.legend(handles=handles, loc="outside lower center", ncols=4, fontsize=8)
     out.mkdir(parents=True, exist_ok=True)
     for suffix in ("png", "pdf"):
@@ -429,7 +440,7 @@ def write_results(out: Path, rows: list[dict], summary: dict, relations: list[di
     out.mkdir(parents=True, exist_ok=True)
     if rows:
         with (out / "results.csv").open("w", newline="", encoding="utf-8") as handle:
-            writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+            writer = csv.DictWriter(handle, fieldnames=list(rows[0]), lineterminator="\n")
             writer.writeheader()
             writer.writerows(rows)
     for name, data in (("results.json", summary), ("relation_instances.json", relations)):
