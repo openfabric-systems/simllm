@@ -120,12 +120,17 @@ on the full memory floor. At batch 256 and context 2048, memory alone requires
 cell represents 83,728,793,600 bytes of weights plus cache; the shipped
 `GpuSpec` has no capacity surface, so this is not a certified feasible point.
 
-Independently, DeepSeek on H200 at batch 128 needs at least 14.529885 ms for
-its operations and 9.465891 ms for its bytes, with a 23.995776 ms serial
+At the declared BF16 arithmetic peak, DeepSeek on H200 at batch 128 needs
+at least 14.529885 ms for its operations and 9.465891 ms for its bytes,
+with a 23.995776 ms serial
 ceiling. Its 14.529885 ms price is arithmetic-bound. H100 and H200 have the
 same shipped arithmetic peak, so both converge to 8809.430 output tokens/s/GPU
 in that regime despite different memory bandwidths. That is an aggregate
-rate across requests, not an individual request's token rate.
+rate across requests, not an individual request's token rate. DeepSeek's
+weight bytes come from the existing quantized inventory, but this sweep keeps
+the earlier deployment study's BF16 arithmetic envelope. Its compute plateau
+is conditional on that envelope; it is not a physical limit for faster FP8
+kernels or a calibrated mixed-precision deployment prediction.
 
 For the external angle, the retained
 [frontier comparison row 4](../frontier_comparison_v1/RESULTS.md) uses
@@ -133,8 +138,9 @@ Qwen3-32B FP8, four-way tensor parallelism, batch 64 and context 4250 on H200.
 Its memory floor is 5.379516 ms, arithmetic floor 0.589191 ms and ideal serial
 ceiling 5.968707 ms. The installed price is exactly 5,379,515,733 ps, or
 58.606773 percent of the external 9,179,000,000 ps. The external value exceeds
-the ideal serial ceiling because actual operation service and other serving
-costs need not achieve either peak. It is consistent with the roofline's
+the ideal serial ceiling, which is compatible with operation service below
+peak rates and additional serving costs. This comparison does not identify
+which omitted cost causes the gap. It is consistent with the roofline's
 role as an optimistic floor, and is not evidence of calibrated accuracy.
 
 The external row is an offline estimate from aiconfigurator 0.11.0 and its
