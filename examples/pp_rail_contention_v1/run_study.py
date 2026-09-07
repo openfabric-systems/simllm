@@ -394,12 +394,12 @@ def draw(summary: dict, directory: Path) -> None:
             if row["cell_status"] == "clear" and row["profile"] == "rnic-cn"]
     directory.mkdir(parents=True, exist_ok=True)
     for name, metric, ylabel, scale in (
-        ("pp_tail", "pp_fct_p99_ps", "PP hop p99 FCT (us)", 1e6),
+        ("pp_tail", "pp_fct_p99_ps", "PP hop p99 FCT (µs)", 1e6),
         ("phase_share", "ep_phase_makespan_ps", "EP phase makespan (ms)", 1e9),
     ):
-        figure, axes = plt.subplots(2, 3, figsize=(7.2, 5.4), sharex=True)
-        figure.subplots_adjust(left=0.09, right=0.98, top=0.88, bottom=0.18,
-                               wspace=0.25, hspace=0.4)
+        figure, axes = plt.subplots(2, 3, figsize=(7.2, 6.4), sharex=True)
+        figure.subplots_adjust(left=0.085, right=0.985, top=0.89, bottom=0.20,
+                               wspace=0.48, hspace=0.58)
         for column, width in enumerate(WIDTHS):
             for row_index, variant in enumerate(VARIANTS):
                 ax = axes[row_index, column]
@@ -408,49 +408,61 @@ def draw(summary: dict, directory: Path) -> None:
                                        and row["pp_width"] == width and row["spine_count"] == spines),
                                       key=lambda row: row["ep_width"])
                     ax.plot([row["ep_width"] for row in selected],
-                            [row[metric] / scale for row in selected], marker="o", markersize=3,
+                            [row[metric] / scale for row in selected], marker="o",
+                            markersize=5 if spines == 2 else 3,
+                            markerfacecolor="white" if spines == 2 else "C0",
+                            markeredgewidth=1.1, linewidth=1.5,
                             linestyle=linestyle, color="C1" if spines == 2 else "C0",
-                            label=f"{8 // spines}:1")
+                            label=f"{8 // spines}:1 ({spines} spines)")
                 ax.set_title(f"{variant}, P={width}", fontsize=9)
                 ax.set_xticks(EP_WIDTHS)
-                if row_index == 1:
-                    ax.set_xlabel("EP participants", fontsize=8)
-                if column == 0:
-                    ax.set_ylabel(ylabel, fontsize=8)
-                ax.tick_params(labelsize=7)
+                ax.set_xlabel("EP participants, W (count)", fontsize=8)
+                ax.set_ylabel(ylabel, fontsize=8)
+                ax.tick_params(labelsize=8, labelbottom=True)
                 ax.margins(x=0.08, y=0.18)
                 if name == "pp_tail":
-                    floor = bounds(variant, 2, width, 0)["data_arrival_floor_ps"] / 1e6
-                    ax.axhline(floor, linestyle=":", color="0.5", label="Data floor")
+                    floor = selected[0]["bounds"]["data_arrival_floor_ps"] / scale
+                    ax.axhline(floor, linestyle=":", color="0.45", label="PP data floor")
                     ax.set_ylim(0, 20)
+                    ax.set_yticks((0, 5, 10, 15, 20))
                     unloaded = {row["spine_count"]: row[metric] for row in rows
                                 if row["variant"] == variant and row["pp_width"] == width
                                 and row["ep_width"] == 0}
                     if {2, 8} <= set(unloaded):
                         offset = (unloaded[2] - unloaded[8]) / 1e6
                         ax.text(0.04, unloaded[8] / 1e6 / 20 - 0.06,
-                                f"4:1 minus 1:1 at W=0: +{offset:.2f} us\n"
-                                "(unloaded control effect)", transform=ax.transAxes,
-                                va="top", fontsize=6.5, color="C1")
+                                "4:1 minus 1:1, W=0\n"
+                                f"+{offset:.2f} µs (unloaded)", transform=ax.transAxes,
+                                va="top", fontsize=7.5, color="0.2")
+                    changes = []
+                    for spines in (2, 8):
+                        by_ep = {row["ep_width"]: row[metric] for row in rows
+                                 if row["variant"] == variant and row["pp_width"] == width
+                                 and row["spine_count"] == spines}
+                        changes.append(by_ep[8] - by_ep[0])
+                    delta = (f"{changes[0]:,} ps (both fabrics)" if changes[0] == changes[1]
+                             else f"{changes[0]:,} / {changes[1]:,} ps (4:1 / 1:1)")
+                    ax.text(0.04, 0.14, f"p99 change, W=0 to 8\n{delta}",
+                            transform=ax.transAxes, va="top", fontsize=7.5)
                 else:
-                    floors = [bounds(variant, 8, width, ep)["ep_phase_floor_ps"] / scale
-                              for ep in EP_WIDTHS]
+                    floors = [row["bounds"]["ep_phase_floor_ps"] / scale for row in selected]
                     ax.plot(EP_WIDTHS, floors, linestyle=":", marker="_", markersize=7,
-                            color="0.5", label="1:1 EP phase floor")
+                            color="0.45", label="1:1 EP phase floor")
                     shares = [row for row in rows if row["variant"] == variant
                               and row["pp_width"] == width and row["spine_count"] == 2]
                     if shares:
                         shares.sort(key=lambda row: row["ep_width"])
                         text = ", ".join(f"{100 * row['pp_hop_critical_path_share']:.1f}" for row in shares)
-                        ax.text(0.04, 0.95, f"4:1 hop share (%)\nW=0,8: {text}", transform=ax.transAxes,
-                                va="top", fontsize=7)
-                    ax.set_ylim(0, 1.3)
-                ax.text(0.98, 0.07 if name == "phase_share" else 0.94, "4:1 W=32: void",
-                        transform=ax.transAxes, ha="right", va="top", fontsize=6.5, color="0.35")
+                        ax.text(0.04, 0.95, f"4:1 PP hop share (%)\nW=0,8: {text}",
+                                transform=ax.transAxes, va="top", fontsize=7.5)
+                    ax.set_ylim(-0.035, 1.3)
+                    ax.set_yticks((0, 0.4, 0.8, 1.2))
+                ax.text(0.98, 0.10 if name == "phase_share" else 0.94, "4:1 W=32: void",
+                        transform=ax.transAxes, ha="right", va="top", fontsize=7.5, color="0.35")
         handles, labels = axes[0, 0].get_legend_handles_labels()
-        figure.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.065),
+        figure.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.09),
                       ncols=len(handles), fontsize=8, frameon=False)
-        figure.text(0.5, 0.025, "Void cells have no timing value. TP=1; TP phase is zero.",
+        figure.text(0.5, 0.045, "Void cells have no timing value. TP=1; TP phase is zero.",
                     ha="center", fontsize=8)
         figure.suptitle("Physical Clos: " + ("PP finite-chain maximum" if name == "pp_tail"
                                             else "EP phase and PP critical path"), fontsize=11)

@@ -149,14 +149,24 @@ Background-inclusive job completion is stored separately in the result table.
 
 ![Physical PP tails and data floors](figures/pp_tail.png)
 
-The [PP PDF](figures/pp_tail.pdf) shows clear cells only. At EP width 32,
-each 4:1 curve ends without a timing point because its backend run is void.
+The [PP PDF](figures/pp_tail.pdf) shows physical pipeline-parallel (PP) hop
+flow completion time (FCT): p99 is the maximum of P-1 hops, not a population
+tail estimate. Orange solid curves with open circles use two spines (4:1);
+blue dashed curves with filled circles use eight (1:1). Gray dotted lines
+mark the data-arrival floors. Every panel labels the exact 0 ps p99 change
+from expert-parallel (EP) width W=0 to W=8 in both fabrics and the unloaded
+4:1 offset, rounded to +3.99 us. The cause of this offset remains unresolved.
+At W=32, all six 4:1 cells are marked void and have no timing point.
 
 ![EP phase and PP hop share](figures/phase_share.png)
 
-The [phase PDF](figures/phase_share.pdf) reports EP completion separately from
-the PP share. Share annotations cover W=0 and W=8 only. These are plain
-matplotlib figures, inspected for clipping and label overlap.
+The [phase PDF](figures/phase_share.pdf) plots EP phase makespan in
+milliseconds using the same fabric colors, line styles and markers. Gray
+dotted lines mark the 1:1 EP phase floor. Each panel separately annotates the
+4:1 PP hop share, 100 times the sum of PP hop FCT divided by PP step
+completion, at W=0 and W=8; these percentages do not describe the EP phase.
+All six 4:1 W=32 cells are void, with no timing point or share reported.
+Tensor parallelism (TP) is one and its phase is zero in both figures.
 
 ## Frozen relations and fatal evidence
 
