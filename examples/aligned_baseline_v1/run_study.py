@@ -264,6 +264,14 @@ def analyze(rows, out):
 
 
 def plot(report, destination):
+    """Per-flow and phase ratios against senders, plus the byte-floor prefix curve.
+
+    The left panel carries every physical cell: isolated controls at one
+    sender, the two-flow pairs at two, and the many-to-one cells at 8 to 32.
+    Only shared-receiver cells may dip below the unit line, which is the
+    BACK-68 finding; the right panel shows the fatal completion-prefix floor
+    for the cell with the smallest per-flow ratio.
+    """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -273,26 +281,62 @@ def plot(report, destination):
     if not incast:
         return
     selected = min(incast, key=lambda r: r["comparison"]["min_flow_ratio"])
-    fig, axes = plt.subplots(1, 2, figsize=(9, 3.8), layout="constrained")
-    for payload in (65536, 1048576):
+    fig, axes = plt.subplots(1, 2, figsize=(9.6, 4.0), layout="constrained",
+                             gridspec_kw={"width_ratios": (1.25, 1)})
+    placement_markers = {"local": "o", "remote": "^", "spread": "o"}
+    for payload in (65536, 262144, 1048576):
         for rate in RATES:
-            subset = sorted([r for r in incast if r["payload"] == payload and r["rate"] == rate],
-                            key=lambda r: r["fan_in"])
-            line, = axes[0].plot([r["fan_in"] for r in subset],
-                                [r["comparison"]["min_flow_ratio"] for r in subset], "o-",
-                                label=f"{payload // 1024} KiB, {rate}G")
-            axes[0].plot([r["fan_in"] for r in subset],
-                         [r["comparison"]["phase_ratio"] for r in subset], "s--",
-                         color=line.get_color())
+            series = sorted([r for r in rows if r["payload"] == payload and r["rate"] == rate],
+                            key=lambda r: (r["fan_in"], r["placement"]))
+            if not series:
+                continue
+            subset = [r for r in series if r["kind"] == "incast"]
+            label = f"{payload // 1024} KiB, {rate}G"
+            if subset:
+                line, = axes[0].plot([r["fan_in"] for r in subset],
+                                    [r["comparison"]["min_flow_ratio"] for r in subset], "o-",
+                                    label=label)
+                color = line.get_color()
+                axes[0].plot([r["fan_in"] for r in subset],
+                             [r["comparison"]["phase_ratio"] for r in subset], "s--",
+                             color=color)
+            else:
+                color = None
+            for r in series:
+                if r["kind"] == "incast":
+                    continue
+                marker = placement_markers.get(r["placement"], "o")
+                handle, = axes[0].plot([r["fan_in"]], [r["comparison"]["min_flow_ratio"]],
+                                       marker=marker, linestyle="none", markersize=6,
+                                       markerfacecolor="white", color=color,
+                                       label=None if color else label)
+                if color is None:
+                    color = handle.get_color()
     axes[0].axhline(1, color="black", linewidth=.8)
-    axes[0].set(xlabel="Senders (count)", ylabel="Physical / ideal (ratio)",
-                title="Flow minimum (solid), phase (dashed)", xticks=(8, 16, 32))
-    axes[0].legend(fontsize=7)
+    axes[0].set_xscale("log", base=2)
+    axes[0].set_xticks((1, 2, 8, 16, 32))
+    axes[0].get_xaxis().set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:g}"))
+    axes[0].get_xaxis().set_minor_formatter(plt.NullFormatter())
+    axes[0].set(xlabel="Senders sharing the receiver link (count)",
+                ylabel="Physical / ideal completion (ratio)",
+                title="Per-flow minimum (solid) and phase makespan (dashed)")
+    axes[0].text(1.02, 0.74, "unit line: a per-flow lower bound only\nwhen the receiver "
+                 "link is unshared", fontsize=7, va="bottom")
+    axes[0].text(0.36, 0.60, "hollow: isolated (1) and two-flow (2) controls,\n"
+                 "circle local leaf, triangle remote leaf; none below 1",
+                 transform=axes[0].transAxes, fontsize=7, ha="left", va="bottom", color="0.3")
+    axes[0].legend(fontsize=7, loc="upper right", ncol=2)
     prefixes = selected["prefix_rows"]
-    axes[1].plot([p["k"] for p in prefixes], [p["elapsed_ps"] / p["floor_ps"] for p in prefixes], "o-")
+    axes[1].plot([p["k"] for p in prefixes], [p["elapsed_ps"] / p["floor_ps"] for p in prefixes],
+                 "o-", markersize=4)
     axes[1].axhline(1, color="black", linewidth=.8)
-    axes[1].set(xlabel="Earliest completions k (count)", ylabel="Elapsed / byte floor (ratio)",
-                title=f"F={selected['fan_in']}, {selected['payload'] // 1024} KiB, {selected['rate']}G")
+    axes[1].text(0.98, 0.9, "fatal floor: every k at or above 1", transform=axes[1].transAxes,
+                 fontsize=7, ha="right", va="top", color="0.3")
+    axes[1].set(xlabel="Earliest completions k (count)",
+                ylabel="Elapsed / cumulative byte floor (ratio)",
+                title=f"Completion-prefix floor, F={selected['fan_in']}, "
+                      f"{selected['payload'] // 1024} KiB, {selected['rate']}G")
+    axes[1].set_ylim(bottom=0)
     destination.mkdir(parents=True, exist_ok=True)
     for suffix in ("png", "pdf"):
         fig.savefig(destination / f"aligned_baseline.{suffix}", dpi=180,
