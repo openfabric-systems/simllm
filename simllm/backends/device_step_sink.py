@@ -46,11 +46,18 @@ class DeviceRuntimeStepSink:
         config: SerialStepLowererConfig,
         *,
         runtime: CoarseDeviceRuntime | None = None,
+        emit_bottleneck_report: bool = False,
+        bottleneck_kernel_cells=None,
     ) -> None:
         if not isinstance(config, SerialStepLowererConfig):
             raise TypeError("config must be a SerialStepLowererConfig")
         if runtime is not None and not isinstance(runtime, CoarseDeviceRuntime):
             raise TypeError("runtime must be a CoarseDeviceRuntime")
+        if type(emit_bottleneck_report) is not bool:
+            raise TypeError("emit_bottleneck_report must be boolean")
+        self.emit_bottleneck_report = emit_bottleneck_report
+        self.bottleneck_kernel_cells = bottleneck_kernel_cells
+        self.bottleneck_reports = []
         self.lowerer = ObservedStepLowerer(config)
         self.runtime = runtime or CoarseDeviceRuntime()
         self._clock: VirtualClock | None = None
@@ -87,7 +94,8 @@ class DeviceRuntimeStepSink:
         if self._outcomes:
             raise RuntimeError("cannot bind a clock after step execution")
         self._clock = clock
-        self._reducer = CompletionReducer(clock)
+        self._reducer = CompletionReducer(clock, emit_bottleneck_report=self.emit_bottleneck_report)
+        self.bottleneck_reports = self._reducer.bottleneck_reports
 
     def bind_expert_group(self, ep_ranks: Sequence[int]) -> None:
         """Adopt the adapter-derived expert-parallel group before any step.
@@ -139,11 +147,19 @@ class DeviceRuntimeStepSink:
         runtime_report = self.runtime.last_report
         if runtime_report is None:
             raise RuntimeError("device runtime returned no RuntimeReport")
+        bottleneck_segments = None
+        if self.emit_bottleneck_report:
+            from simllm.core.bottleneck import classify_runtime
+            bottleneck_segments = classify_runtime(
+                graph, runtime_report, self.runtime.selected_critical_visits,
+                self.lowerer.config.gpu, kernel_cells=self.bottleneck_kernel_cells,
+            )
         step_result = self._reducer.reduce(
             record,
             graph,
             execution_result,
             runtime_report,
+            bottleneck_segments=bottleneck_segments,
         )
         self._outcomes.append(
             DeviceStepOutcome(
