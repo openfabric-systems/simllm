@@ -73,9 +73,15 @@ not a scored performance result.
 
 ![Diagnostic exclusive phase costs](figures/phase_cost.png)
 
-The first plain matplotlib figure is also available as
-[PDF](figures/phase_cost.pdf). Axis labels, units and clipping were inspected;
-the orchestrator's figure pass remains separate.
+The [PDF](figures/phase_cost.pdf) has the same content. Panel A ranks the
+reference cell's exclusive phase medians per complete loop, with the
+amortized cost per engine step on the upper axis (258 steps per loop, so
+the historical 139.55 ms is a whole workload, not one step) and each
+phase's share of the phase sum. Panel B is the sweep's one clean relation:
+the all-decode scheduler time per step at the concurrency cap against the
+cap for the three token budgets, with a linear reference through the
+reference cell; the observed 1.89x to 2.23x per doubling is diagnostic
+because the run is void.
 
 ## Function-level finding
 

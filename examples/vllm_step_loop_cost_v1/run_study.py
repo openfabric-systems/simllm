@@ -452,17 +452,97 @@ def run(args):
     return 2 if violations else 0
 
 
+PHASE_LABELS = {
+    "executor": "simulated executor and model-runner stub",
+    "scheduler": "scheduler, excluding cache allocate/free",
+    "kv_allocate": "KV cache allocation",
+    "frontend_output": "frontend output processing",
+    "scheduler_output": "scheduler output update",
+    "admission": "request admission",
+    "driver_residual": "driver residual",
+    "engine_residual": "engine-step residual",
+    "output_collection": "driver output collection and validation",
+    "kv_free": "KV cache free",
+}
+
+
+def _median(value):
+    """Median of a repetition list, or the median field of a stability record."""
+    if isinstance(value, dict):
+        for key in ("median_ns", "median"):
+            if key in value:
+                return value[key]
+    if isinstance(value, (list, tuple)):
+        ordered = sorted(value)
+        middle = len(ordered) // 2
+        return ordered[middle] if len(ordered) % 2 else (ordered[middle - 1] + ordered[middle]) / 2
+    return value
+
+
 def plot(result, output):
+    """Two views: the reference cell's exclusive phases and the concurrency sweep.
+
+    Panel A ranks the exclusive phase medians of the reference cell per
+    complete 128-request loop, with the amortized cost per engine step on
+    the upper axis (the loop holds 258 steps, so the historical 139.55 ms is
+    a whole workload, not one step). Panel B shows the sweep: the plain and
+    instrumented complete-loop medians against the concurrency cap for each
+    token budget, and the all-decode scheduler time per step at the cap,
+    the quantity the frozen R1 relation expected to grow with running
+    requests. The title carries the run status; a VOID run keeps its
+    numbers as diagnostics.
+    """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     reference = result["cells"][0]
+    steps = reference["step_count"]
     phases = sorted(reference["phase_medians_ns"].items(), key=lambda kv: kv[1])
-    fig, ax = plt.subplots(figsize=(7, 4.7), layout="constrained")
-    ax.barh([p.replace("_", " ") for p, _ in phases], [ns / 1e6 for _, ns in phases])
-    ax.set_xlabel("Median exclusive time per complete 128-request loop (ms)")
-    ax.set_title(f"Reference: cap 16, token budget 512; {result['status'].upper()}")
+    total = sum(ns for _, ns in phases)
+    fig, (left, right) = plt.subplots(1, 2, figsize=(13, 5.2), layout="constrained",
+                                      gridspec_kw={"width_ratios": (1.25, 1.0)})
+    labels = [PHASE_LABELS.get(name, name.replace("_", " ")) for name, _ in phases]
+    values = [ns / 1e6 for _, ns in phases]
+    bars = left.barh(labels, values, color="#1f77b4")
+    for bar, (_, ns) in zip(bars, phases):
+        left.text(bar.get_width() + 0.4, bar.get_y() + bar.get_height() / 2,
+                  f"{100 * ns / total:.1f}%", va="center", fontsize=7)
+    left.set_xlabel(f"Median exclusive time per complete 128-request loop (ms), {steps} engine steps")
+    upper = left.secondary_xaxis("top", functions=(lambda ms: ms * 1e3 / steps, lambda us: us * steps / 1e3))
+    upper.set_xlabel("Amortized microseconds per engine step")
+    left.set_title(f"A: reference cell (cap {reference['cap']}, budget {reference['budget']}); "
+                   f"run status {result['status'].upper()}", fontsize=9)
+    left.tick_params(labelsize=8)
+    left.margins(x=0.15)
+
+    cells = sorted(result["cells"], key=lambda cell: (cell["budget"], cell["cap"]))
+    budgets = sorted({cell["budget"] for cell in cells})
+    colors = dict(zip(budgets, ("#d62728", "#1f77b4", "#2ca02c")))
+    caps = sorted({cell["cap"] for cell in cells})
+    for budget in budgets:
+        selected = [cell for cell in cells if cell["budget"] == budget
+                    and cell.get("decode_at_cap_scheduler_ns") is not None]
+        right.plot([cell["cap"] for cell in selected],
+                   [cell["decode_at_cap_scheduler_ns"] / 1e3 for cell in selected], marker="o",
+                   color=colors[budget], label=f"token budget {budget}")
+    anchor = reference["decode_at_cap_scheduler_ns"] / 1e3
+    right.plot(caps, [anchor * cap / reference["cap"] for cap in caps], color="gray",
+               linewidth=0.8, linestyle="--", label="linear in running requests (R1 reference)")
+    right.set(xscale="log", yscale="log", xlabel="Concurrency cap (running requests)",
+              ylabel="Scheduler time per all-decode step at the cap (us)", xticks=caps,
+              yticks=(100, 200, 400, 800, 1600))
+    right.get_xaxis().set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:g}"))
+    right.get_yaxis().set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:g}"))
+    right.get_xaxis().set_minor_formatter(plt.NullFormatter())
+    right.get_yaxis().set_minor_formatter(plt.NullFormatter())
+    right.legend(fontsize=7.5, loc="upper left")
+    right.set_title("B: scheduler cost per step against running requests, "
+                    "1.89x to 2.23x per doubling", fontsize=9)
+    right.tick_params(labelsize=8)
+    right.grid(True, which="major", alpha=0.25)
+    fig.suptitle("vLLM 0.27.1 CPU engine loop over the frozen 128-request workload: "
+                 "where the time goes", fontsize=10)
     output.mkdir(parents=True, exist_ok=True)
     for extension in ("png", "pdf"):
         fig.savefig(output / f"phase_cost.{extension}", dpi=180)
