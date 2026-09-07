@@ -1380,17 +1380,6 @@ created" statement stands and refers to different, never-registered work.
   cut (3 to 39 ms after congestion) and the recovery to 95 percent (447 plus
   or minus 10 ms after the last cut) against the campaign values.
 
-- BACK-68 (Precision; P0; M) (integration closure only): numerical acceptance
-  is complete in the [controlled baseline experiment](../../examples/aligned_baseline_v1/RESULTS.md)
-  and [fresh width-tail rerun](../../examples/collective_width_tail_v1/RESULTS.md).
-  All receiver-prefix and phase floors pass; sub-one shared-flow ratios are
-  diagnostic, with reusable phase normalization and conservation metrics now
-  live. All 800 original ideal numerical fields and 24 exact-oracle rows
-  reproduce unchanged. Remaining scope: the orchestrator removes this entry
-  and regenerates the protected README_PRO task-progress projection together
-  when integrating the wave. No backend modeling investigation or study rerun
-  remains under BACK-68; HTSIM-40 and TRAF-89 retain their separate findings.
-
 ### Completeness
 
 - BACK-9 (Completeness; P1; L): replace the timing-neutral WQE ledger with
