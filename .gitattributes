@@ -536,3 +536,7 @@ examples/frontier_comparison_v2/*.json text eol=lf
 tests/test_attention_pair_inventory.py text eol=lf
 offline/calibration/model-inventories/b3ec33edcab6a81868c00efdc2147df4d41b633bd932cb6c4831ea282a1d79fe.json text eol=lf
 offline/calibration/model-inventories/d25471742a987e31d872dc6fbf8c60ee8746ba17eb25e95a245689064ed3a8d7.json text eol=lf
+examples/pp_rail_contention_v1/*.md text eol=lf
+examples/pp_rail_contention_v1/*.py text eol=lf
+examples/pp_rail_contention_v1/*.json text eol=lf
+tests/test_pp_rail_contention.py text eol=lf
