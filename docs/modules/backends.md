@@ -123,9 +123,22 @@ backend submodules.
   advance a WQE or simulator resource.
 - `simllm.backends.fct.normalized_fct`: per-flow FCT normalized to the
   `rnic-nn` baseline of the identical GOAL, matched by
-  (source, destination, tag). Valid for aligned-start flows; for phases
-  with model-dependent start stagger use the phase makespan ratio
-  (M1 finding F1).
+  (source, destination, tag). An aligned-start ratio is a lower bound only
+  when a flow does not share its bottleneck link with another aligned flow,
+  including unshared chained handoffs. Under receiver sharing it is diagnostic:
+  the fair ideal and physical packet scheduler can finish flows in different
+  orders. `normalized_phase_makespan` compares the identical complete GOAL
+  phase's first start to last completion, physical over ideal, validating
+  identities, multiplicities and payloads. The reviewable shared-phase evidence
+  is this ratio with two fatal floors: physical phase >= ideal phase, and
+  `earliest_completion_byte_floors` for every receiver's k earliest completions
+  (their cumulative bytes over link rate plus one common propagation delay).
+  Callers verify identical GOAL semantics, link/path assumptions and quiescence.
+  Model-dependent starts also require phase comparison (M1 finding F1).
+  BACK-68's [controlled experiment](../../examples/aligned_baseline_v1/RESULTS.md)
+  discriminates scheduling from the registered byte-service defect prediction;
+  the [fresh width-tail rerun](../../examples/collective_width_tail_v1/RESULTS.md)
+  applies the amended guards without changing the original ideal results.
 - `HtsimDcqcnConfig` + `run_htsim_dcqcn`: GOAL-driven RoCEv2 DCQCN runs
   over a topology-file ns-tm3 Clos (`htsim_dcqcn_atlahs`, landed via the
   backend DCQCN PR); same completion-CSV schema and quiescence contract.
@@ -1367,22 +1380,16 @@ created" statement stands and refers to different, never-registered work.
   cut (3 to 39 ms after congestion) and the recovery to 95 percent (447 plus
   or minus 10 ms after the last cut) against the campaign values.
 
-- BACK-68 (Precision; P0; M): resolve the aligned-baseline refutation the
-  [collective width tail
-  study](../../examples/collective_width_tail_v1/RESULTS.md) recorded: at
-  expert-parallel fan-in 32, 47 physical `rnic-cn` flows at 400 Gbit/s and 75
-  at 200 Gbit/s complete below the `rnic-nn` ideal per-flow bound, minimum
-  ratio 0.575342, which the metrics convention calls a modeling bug by
-  definition for aligned-start flows. Either the ideal profile's instant
-  central max-min allocation is not a per-flow lower bound under the physical
-  packet scheduler (a fair allocation can finish some flows later while the
-  phase finishes earlier), in which case the convention is restated as
-  phase-makespan normalization above the fan-in where the two schedulers
-  diverge and the per-flow ratio is reported as diagnostic only, or the
-  physical path credits a flow twice. Acceptance: a controlled two-flow and
-  one many-to-one experiment that proves which, a corrected convention or
-  backend fix, and the study rerun with the fatal guard restated before the
-  run.
+- BACK-68 (Precision; P0; M) (integration closure only): numerical acceptance
+  is complete in the [controlled baseline experiment](../../examples/aligned_baseline_v1/RESULTS.md)
+  and [fresh width-tail rerun](../../examples/collective_width_tail_v1/RESULTS.md).
+  All receiver-prefix and phase floors pass; sub-one shared-flow ratios are
+  diagnostic, with reusable phase normalization and conservation metrics now
+  live. All 800 original ideal numerical fields and 24 exact-oracle rows
+  reproduce unchanged. Remaining scope: the orchestrator removes this entry
+  and regenerates the protected README_PRO task-progress projection together
+  when integrating the wave. No backend modeling investigation or study rerun
+  remains under BACK-68; HTSIM-40 and TRAF-89 retain their separate findings.
 
 ### Completeness
 

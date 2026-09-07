@@ -1,178 +1,144 @@
-# Collective width tail: void study with findings
+# Collective width tail: completed components and two void cells
 
-S3 ran the frozen tensor-parallel ring and expert-parallel all-to-all sweep,
-then attempted the corresponding steps through `HtsimStepSink` and its request
-completion reducer. The study is **void**: 122 aligned physical flows beat the
-frozen ideal per-flow lower bound, and both width-64 physical all-to-all runs
-terminate on fatal control-message loss.
+## What ran
 
-COMP-9 remains open. The supported ideal steps expose a useful bottleneck:
-at width 64 and 400 Gbit/s, fabric service owns **85.892%** of the two-ring
-step and **60.515%** of the single-engine expert step. BACK-38 still blocks all
-physical step shares. These findings locate candidate mechanisms and failures;
-they close no task, validate no held-out request tail, and move no milestone.
-The deterministic compute contract and shipped defaults remain unchanged.
+The full 64-cell matrix ran fresh after the BACK-68 guard amendment.
+Original expectations-only commit: `aae9adf0d29c875bdf2c7aeb49dbf2f8c2ec966a`.
+Amendment-only commit: `3d818f7df7204b577e8eaaa20db3f61ef426c591`.
+Backend pin remains `617ce20`; hashes and GOAL identities are in results.json.
+No old bulk results were reused. The reference ring/all-to-all payloads,
+rail-major placement, 400/200 Gbit/s rates, profiles, exact points and
+behavioral bands are unchanged. The supported expert step retains the
+already corrected source-major ordering of the same selected ranks.
 
-## Frozen record and evidence classes
+Standalone: 30/32 complete, two physical width-64 all-to-all control-loss exits. Supported step attempts: 16/32 complete, all ideal;
+all 16 physical steps are rejected by BACK-38 with null timing and shares.
+Raw populations: 54,432 standalone flows and 42,980 step-artifact flows. These are flow
+populations within configurations, not independent request-tail samples.
 
-The pre-run expectations-only commit is
-`aae9adf0d29c875bdf2c7aeb49dbf2f8c2ec966a`.
-The full hash is also stored in `results.json`. The freeze precedes both the study implementation
-and its first run. No measured result was added to that commit and no history
-was rewritten. Backend pin is `617ce20`; executable hashes are in the result
-provenance. The final report distinguishes the original simulation script hash
-on each cell from the current analysis-script hash.
+## What came out
 
-- Run configurations: 32 standalone attempts, with 30 completed and two fatal
-  backend exits; 32 step attempts, with 16 completed ideal steps and 16 physical
-  steps rejected by BACK-38. Rejected steps have null timing and share fields.
-- Raw completion evidence: 54,432 standalone flow rows and 42,980 step-artifact
-  flow rows in separate bulk files. These are flow populations, not independent
-  workload samples or request-percentile observations.
-- Exact oracles: 24 rows. Eight standalone ring points and four standalone rate
-  relations disagree with their frozen zero-tolerance prediction. The eight
-  ideal ring step points and four corresponding rate relations agree exactly.
-- Behavioral relations: five families, 95 parameterized instances. The
-  behavioral score is uninterpretable because fatal guards failed. Individual
-  diagnostic check records remain available; no pass fraction is reported.
-- Fatal findings: the aligned-baseline guard fails at F=32 at both rates;
-  physical quiescence is not established at F=64 at either rate because of
-  control lifecycle loss. No fatal guard was declared survivable.
-- Offline tests exercise quantiles, identity matching, physical floors, void
-  handling, canonical step pair ordering, topology rate changes and the
-  state-preserving execution guard. They do not run a simulator or validate
-  backend physics.
+Study status: **component-evidence-with-survivable-voids**.
+The two HTSIM-40 cells are still fatal, void and unscored. Their exact
+control-loss signature was declared survivable before the rerun, so
+completed components retain interpretable evidence. No failed guard is
+included in a behavioral score and no missing completion is synthesized.
 
-The first attempt supplied the selected expert ranks in rail-major order to
-the step interface. At widths above eight, its generated pair table violated
-the required source-major order before any backend started. The runner now
-sorts the same selected expert rank set for the step interface. Membership,
-per-destination bytes, physical placement and engine rank remain identical.
-The twelve rejected inputs and their diagnostics remain in bulk as
-`original-attempt.json` and `original-error.txt`. Only those inputs were retried.
-No standalone measurement was rerun or replaced. This is an input-encoding fix,
-not a change to a frozen behavioral band.
+All 54,432 receiver completion-prefix floors pass. The minimum physical prefix slack is 6,926,720 ps.
+All 14 completed physical phases satisfy physical makespan >= ideal
+makespan, and all original individual byte-plus-propagation floors pass.
+Exact oracles: 24 rows, 12 misses. Behavioral relations: five families, 95 instances, 14 misses in completed components.
+These denominators are separate from fatal guards and coverage gaps.
 
-## Physical bounds before the measured numbers
+Preservation against the tracked morning record at `80eef42`: all 800 numerical fields in 32 ideal configurations reproduce exactly;
+all 24 original exact-oracle records are identical, including their failures.
+GOAL digests and completion statuses also reproduce. The source record
+digest and a zero-mismatch comparison are stored in morning_reproduction.
 
-Flow floor: payload bytes divided by endpoint rate, strengthened by 2 us
-propagation on the ideal profile or 4 us across leaves on the physical Clos.
-Flow ceiling: no finite physical upper bound follows from link rate when
-control, arbitration and queueing can delay completion; ideal conditional
-ceilings are recorded per configuration in `results.json`.
+## Physical bounds before headline numbers
 
-Ring phase floor: `2(W-1)*(S/W*ps_per_byte + propagation_ps)`.
-Ring ideal ceiling: the frozen packetized point plus one full packet slot per
-round. At W=64 and 400G these bounds are 293.287680 and 314.899200 us; the
-measured ideal phase is 304.541000 us, inside the interval. For the physical
-arm the corresponding floor is 545.287680 us and the ceiling is unbounded;
-its measured phase is 1429.404800 us.
+At 400G, byte service costs 20 ps/byte; at 200G, 40 ps/byte. Every
+flow floor is its own payload service plus 2 us ideal propagation or
+4 us for the physical remote Clos path. These floors appear beside every
+p50 below. No finite physical ceiling follows from link capacity under
+queueing and flow control. The frozen packetized ideal envelopes remain
+the conditional ceilings in results.json, not relaxed oracle tolerances.
 
-All-to-all phase floor: `D*65536*ps_per_byte + propagation_ps`, where
-`D=7F/8` after excluding same-node pairs. At F=64 and 400G the ideal floor is
-75.400320 us; the conditional global-serialization ceiling is 4773.104000 us.
-The ideal phase is 76.630400 us, just above the floor. The physical lower bound
-is 77.400320 us; no valid completion exists to compare with it.
+For a ring, the dependency-depth floor is 2(W-1)*(S/W*ps_per_byte+P).
+At W=64 and 400G the ideal phase interval is [293.287680, 314.899200] us;
+the physical floor is 545.287680 us and its ceiling is unbounded.
+For all-to-all, each receiver has D=7F/8 remote senders and floor
+D*65536*ps_per_byte+P. At F=64 and 400G the ideal interval is
+[75.400320, 4773.104000] us. The physical floor is 77.400320 us,
+with no valid phase completion because of control loss.
 
-Step floor: the fixed 100 us compute interval plus two corresponding ideal
-phase floors. Step ceiling: 100 us plus two conditional phase ceilings.
-At width 64 and 400G the ring interval is [686.575360, 729.798400] us and the
-expert interval is [250.800640, 9646.208000] us. Their measured step latencies,
-708.832000 and 253.260800 us, lie inside those bounds. Collective-share floors
-are respectively 85.435% and 60.128%, with ceiling 100%; measured shares are
-85.892% and 60.515%. The compute floor and ceiling are both 100 us by input.
-This denominator is a synthetic control, not a calibrated model's GPU service.
+The fixed compute service has floor and ceiling 100 us by input.
+Step bounds add that service to twice the corresponding network bounds.
+Shares have floor 0 and ceiling 1, tightened per cell in JSON. At width
+64 and 400G the ring step is bounded by [686.575360, 729.798400] us,
+and the expert step by [250.800640, 9646.208000] us. Their fabric share
+floors are 85.435% and 60.128%, respectively. This compute denominator
+is a synthetic control, not calibrated GPU throughput.
 
-Three independent checks frame interpretation. Endpoint serialization rules out
-impossible goodput; all completed flow minima exceed their payload floor, with
-the tightest ratio 1.429. Dependency depth explains why narrower ring chunks
-can complete faster individually while the entire collective becomes slower.
-NVIDIA's [NCCL bandwidth accounting](https://github.com/NVIDIA/nccl-tests/blob/master/doc/PERFORMANCE.md)
-provides the independent collective transfer factor `2(W-1)/W`: the ideal
-width-64 400G ring implies about 6.779 GB/s per-rank bus bandwidth, below the
-50 GB/s endpoint limit. This external check validates units and transfer work,
-not a deployment latency or held-out tail prediction.
+The independent ring transfer factor 2(W-1)/W implies 6.779 GB/s per
+rank at W=64, 400G from the ideal phase, below the 50 GB/s endpoint
+capacity. This checks work and units, not a measured deployment tail.
 
-## Standalone raw flow completion times
+## Standalone flow and phase measurements
 
-All numbers below are microseconds. FCT means flow completion time. The p50
-and p99 are nearest-rank percentiles within one configuration. The payload
-floor applies to both profiles in that row and is printed beside every median.
-NN is the packetized ideal endpoint manifold. CN is the physical two-tier Clos.
-The NN propagation is 2 us; CN cross-leaf propagation is 4 us. Thus inflation
-includes the different path propagation as well as physical control and queues.
+All times below are us. Quantiles are nearest rank within each cell.
+NN is rnic-nn; CN is rnic-cn. Each floor includes the profile's path
+propagation. CN width-64 all-to-all stays void. Physical ceilings are unbounded.
 
-| Ring W | Gbit/s | Payload floor | NN p50 / p99 | CN p50 / p99 | NN phase | CN phase |
-|---|---|---|---|---|---|---|
-| 8 | 400 | 2.621440 | 4.745600 / 4.745600 | 13.832600 / 14.331800 | 66.451400 | 196.387200 |
-| 8 | 200 | 5.242880 | 7.491200 / 7.491200 | 23.653400 / 24.642200 | 104.889800 | 336.604800 |
-| 16 | 400 | 1.310720 | 3.414400 / 3.414400 | 12.411800 / 12.667800 | 102.461000 | 375.027200 |
-| 16 | 200 | 2.621440 | 4.828800 / 4.828800 | 20.821400 / 21.487000 | 144.893000 | 630.035200 |
-| 32 | 400 | 0.655360 | 2.748800 / 2.748800 | 11.666200 / 11.912600 | 170.486600 | 727.532800 |
-| 32 | 200 | 1.310720 | 3.497600 / 3.497600 | 19.324800 / 19.823000 | 216.912200 | 1206.534400 |
-| 64 | 400 | 0.327680 | 2.416000 / 2.416000 | 11.253400 / 11.496600 | 304.541000 | 1429.404800 |
-| 64 | 200 | 0.655360 | 2.832000 / 2.832000 | 18.495000 / 18.991000 | 356.957000 | 2354.476800 |
+### ring
 
-| All-to-all F | Gbit/s | Payload floor | NN p50 / p99 | CN p50 / p99 | NN phase | CN phase |
-|---|---|---|---|---|---|---|
-| 8 | 400 | 1.310720 | 11.152000 / 11.401600 | 20.902400 / 26.083200 | 11.401600 | 26.083200 |
-| 8 | 200 | 2.621440 | 20.304000 / 20.803200 | 37.500800 / 47.366400 | 20.803200 | 47.366400 |
-| 16 | 400 | 1.310720 | 20.137600 / 20.720000 | 31.324800 / 45.203200 | 20.720000 | 51.827200 |
-| 16 | 200 | 2.621440 | 38.275200 / 39.440000 | 58.390400 / 84.934400 | 39.440000 | 89.078400 |
-| 32 | 400 | 1.310720 | 38.192000 / 39.356800 | 51.718400 / 75.555200 | 39.356800 | 79.891200 |
-| 32 | 200 | 2.621440 | 74.384000 / 76.713600 | 100.310400 / 141.302400 | 76.713600 | 150.342400 |
-| 64 | 400 | 1.310720 | 74.300800 / 76.630400 | fatal loss | 76.630400 | unavailable |
-| 64 | 200 | 2.621440 | 146.601600 / 151.260800 | fatal loss | 151.260800 | unavailable |
+| Width | Gbit/s | NN floor | NN p50 / p99 | CN floor | CN p50 / p99 | NN phase | CN phase |
+|---|---|---|---|---|---|---|---|
+| 8 | 400 | 4.621440 | 4.745600 / 4.745600 | 6.621440 | 13.832600 / 14.331800 | 66.451400 | 196.387200 |
+| 8 | 200 | 7.242880 | 7.491200 / 7.491200 | 9.242880 | 23.653400 / 24.642200 | 104.889800 | 336.604800 |
+| 16 | 400 | 3.310720 | 3.414400 / 3.414400 | 5.310720 | 12.411800 / 12.667800 | 102.461000 | 375.027200 |
+| 16 | 200 | 4.621440 | 4.828800 / 4.828800 | 6.621440 | 20.821400 / 21.487000 | 144.893000 | 630.035200 |
+| 32 | 400 | 2.655360 | 2.748800 / 2.748800 | 4.655360 | 11.666200 / 11.912600 | 170.486600 | 727.532800 |
+| 32 | 200 | 3.310720 | 3.497600 / 3.497600 | 5.310720 | 19.324800 / 19.823000 | 216.912200 | 1206.534400 |
+| 64 | 400 | 2.327680 | 2.416000 / 2.416000 | 4.327680 | 11.253400 / 11.496600 | 304.541000 | 1429.404800 |
+| 64 | 200 | 2.655360 | 2.832000 / 2.832000 | 4.655360 | 18.495000 / 18.991000 | 356.957000 | 2354.476800 |
+
+### all-to-all
+
+| Width | Gbit/s | NN floor | NN p50 / p99 | CN floor | CN p50 / p99 | NN phase | CN phase |
+|---|---|---|---|---|---|---|---|
+| 8 | 400 | 3.310720 | 11.152000 / 11.401600 | 5.310720 | 20.902400 / 26.083200 | 11.401600 | 26.083200 |
+| 8 | 200 | 4.621440 | 20.304000 / 20.803200 | 6.621440 | 37.500800 / 47.366400 | 20.803200 | 47.366400 |
+| 16 | 400 | 3.310720 | 20.137600 / 20.720000 | 5.310720 | 31.324800 / 45.203200 | 20.720000 | 51.827200 |
+| 16 | 200 | 4.621440 | 38.275200 / 39.440000 | 6.621440 | 58.390400 / 84.934400 | 39.440000 | 89.078400 |
+| 32 | 400 | 3.310720 | 38.192000 / 39.356800 | 5.310720 | 51.718400 / 75.555200 | 39.356800 | 79.891200 |
+| 32 | 200 | 4.621440 | 74.384000 / 76.713600 | 6.621440 | 100.310400 / 141.302400 | 76.713600 | 150.342400 |
+| 64 | 400 | 3.310720 | 74.300800 / 76.630400 | 5.310720 | void | 76.630400 | void |
+| 64 | 200 | 4.621440 | 146.601600 / 151.260800 | 6.621440 | void | 151.260800 | void |
 
 ## Refutations and their limits
 
-Aligned flow normalization retains 2,592 flow pairs. For a ring, only the first
-round has matching start times, so later rounds retain raw FCT and compare via
-phase makespan. Every completed all-to-all has matching zero-time releases.
-At F=32, 47 physical flows at 400G and 75 at 200G violate the frozen baseline
-floor. The minimum ratios are 0.759090 and 0.575342. The latter is flow
-0 to 8, tag 1000, if identified by the raw table rather than by percentile.
-No payload-serialization floor fails. A fair allocation is not in general a
-lower bound on each flow under a different scheduler: some flows can finish
-earlier while the phase finishes later. That is a possible explanation of the
-refuted assumption, not a proved backend root cause or permission to relax the
-frozen guard. The phase ratios at F=32 are 2.029921 and 1.959788.
+There are 2,592 aligned flow pairs. 122 physical flows remain below the ideal FCT:
+47 at F=32, 400G and 75 at F=32, 200G. Their minima remain 0.759090
+and 0.575342. The latter is source 0 to 8, tag 1000. The corresponding
+phase ratios are 2.029921 and 1.959788, both above their fatal floor 1.
+The [controlled experiment](../aligned_baseline_v1/RESULTS.md) finds
+sub-one shared-flow ratios with every byte prefix and phase floor intact,
+and none in isolated controls. This resolves the BACK-68 convention
+refutation as scheduling under the registered decision rule. It does not
+prove the absence of every possible hidden credit defect.
 
-The physical 2x target also misses: 304 retained aligned pairs exceed 2x, and
-the largest ratio is 6.646328 at ring W=64, 200G. The 1.2x tighter target is
-reported separately in JSON. These counts are diagnostic populations, not a
-behavioral score after the fatal guard has made the run void.
+Shared per-flow ratios are now diagnostic. The unshared initial ring
+round retains its aligned per-flow lower bound. Later ring starts differ
+across profiles, so those flows retain raw FCT and compare by full phase.
+The two conservation floors remain fatal in every completed cell.
 
-At F=64, the backend reports `fabric dropped control lifecycle` and exits 2
-at both rates. Its manifest declares fatal control loss without control
-recovery; the buffer is the unchanged 1,048,576-byte default. No valid FCT or
-phase makespan is manufactured from a partial completion CSV, and no buffer
-increase or recovery-policy change is used to obtain a favorable result.
-The captured diagnostics identify the failing lifecycle and flow in bulk.
+The unchanged per-flow 2x target still misses: 304 aligned pairs exceed it, maximum 6.646328.
+The 1.2x diagnostic remains separately recorded. Fairness corrections
+do not repair a slow physical tail or relax any upper behavioral band.
 
-The standalone exact ring formula omits a schedule detail. Exact-frontier
-rendering inserts `calc 0` joins, and the pinned backend's
-`htsim/sim/logsim-interface.cpp` executes them as 1 ns. There are `2W-3` such
-inter-round joins before the final flow completes. The observed residual is
-therefore exactly `(2W-3)*1000` ps: 13,000; 29,000; 61,000; 125,000 at either
-rate. This source-based explanation is post-specified and does not convert the
-eight failed exact points into passes. It also explains the four negative
-rate-relation residuals: subtracting only propagation leaves a rate-independent
-join term. The supported sink runs rounds as ordered artifacts and has no
-inter-round GOAL join cost, so its frozen ring step values and serialization
-scaling agree exactly. No backend timing was edited.
+At width 64 the physical backend again exits 2 with `fabric dropped
+control lifecycle` at both rates. The 1,048,576-byte buffer default
+and control policy are unchanged. Raw error.txt files remain in bulk.
+HTSIM-40 still owns recovery. Partial CSVs are never treated as completed phases.
+
+TRAF-89 is unchanged: standalone ideal ring points miss their frozen
+prediction by exactly (2W-3) ns: 13, 29, 61 and 125 ns at either rate.
+The earlier study attributed this to zero-cost GOAL joins executed as
+1 ns. This rerun preserves that observation and the four rate-relation
+misses; it does not revise the frozen oracle. Supported ring step points
+and rate relations still match exactly because their ordered artifact
+execution has a different schedule boundary.
 
 ## Supported critical-path contribution
 
-Before reading these shares, their bounds are [0,1], strengthened by the
-per-cell floor and ceiling above and in JSON. The completion reducer selects
-each ordered artifact's realized local/fabric maximum, then conserves the
-step's elapsed time. Its collective and fabric shares coincide in all 16
-completed steps. Local expert transfers have positive work above width eight,
-but finish behind fabric service and contribute zero to the selected path.
-Their masked work remains separately named and is never added to step latency.
+The real HtsimRequestMetricReducer and attribute_step_detail partition
+each supported step's ordered artifacts. All 16 ideal steps conserve
+the partition and TTFT. Collective and fabric shares coincide here.
+Local expert service is masked by the larger fabric service; its work
+remains separate in JSON. Times are us; shares are fractions of the step.
 
-| Width | Gbit/s | Ring step / TTFT us | Ring fabric share | Expert step / TTFT us | Expert fabric share |
+| Width | Gbit/s | Ring step / TTFT | Ring fabric share | Expert step / TTFT | Expert fabric share |
 |---|---|---|---|---|---|
 | 8 | 400 | 232.876800 | 57.059% | 122.803200 | 18.569% |
 | 8 | 200 | 309.753600 | 67.716% | 141.606400 | 29.382% |
@@ -183,85 +149,55 @@ Their masked work remains separately named and is never added to step latency.
 | 64 | 400 | 708.832000 | 85.892% | 253.260800 | 60.515% |
 | 64 | 200 | 813.664000 | 87.710% | 402.521600 | 75.157% |
 
-TTFT means time to first token. Here it is one synthetic sampled prefill step,
-so TTFT equals that step's latency. There is no sampled time-per-output-token
-(TPOT) distribution. The expert step is the supported one-engine dispatch and
-reverse combine, not the standalone full-population exchange. Its fan-in and
-per-destination bytes still match the frozen endpoint-load axis.
+## What it changes
 
-This is `HtsimRequestMetricReducer` with `attribute_step_detail`, not the
-`CriticalPathBreakdown` emitted by the coarse device runtime. The packet-level
-sink does not supply that object, per-visit packet queue waits or matching
-`CompletionEvent` segments. Their absence is explicit in the JSON. A whole
-collective share is not the share of excess p99 latency; neither can identify
-how much of a physical tail belongs to control, switch queues or endpoint work.
-All physical step cells stay null because restarting the backend between
-artifacts loses state. BACK-38 must provide that execution before this sweep
-can report a physical step fraction without a second timing authority.
+BACK-68 acceptance is met: controlled pair and incast experiments, a
+corrected shared-flow convention with reusable live metrics, a pre-run
+guard amendment, and a fresh full matrix preserving the original ideal
+numbers exactly. Its backends.md entry now retains only orchestrator
+integration closure: remove the entry and regenerate the protected
+README_PRO task-progress projection together. The worker cannot edit
+that projection; removing the entry alone fails the repository's progress
+consistency gate. No numerical or backend work remains under BACK-68.
 
-![Phase makespans, the per-flow tail, ideal step shares and the physical-over-ideal ratio](figures/collective_tail.png)
+## What it does not change
 
-The figure shows diagnostic measurements from a void study. Blue denotes
-rnic-nn (NN), the ideal endpoint model; red denotes rnic-cn (CN), the physical
-Clos. Panels (a), (b), (d), (e) and (f) use solid lines for 400 Gbit/s and
-dashed lines for 200 Gbit/s. Panels (a) and (b) show phase makespans above the
-gray ideal-profile phase floors, including 293.287680 µs for the ring and
-75.400320 µs for all-to-all at width 64 and 400 Gbit/s. Physical-profile phase
-floors are not drawn. Panel (c) shows within-configuration flow completion
-times at 400 Gbit/s: solid circles denote the median (p50), dotted open
-triangles the 99th percentile (p99), and gray the 1.310720 µs payload floor.
-The physical p99 exceeds its median at every completed width. Panels (d) and
-(e) show fabric service divided by step latency, equal here to time to first
-token (TTFT), with fixed 100 µs compute service. At width 64 and 400 Gbit/s,
-the ideal two-ring and single-engine expert shares reach 85.892% and 60.515%.
-These are whole fabric shares, not excess-tail attribution; physical step
-shares remain unavailable under BACK-38. Panel (f) uses circles for the ring
-and squares for all-to-all: physical-to-ideal phase ratios span 2.96x to 6.60x
-for the ring, all above the 2x comparator reference, and 1.96x to 2.50x for
-all-to-all. This phase reference is distinct from the frozen aligned-flow
-acceptance checks. Missing physical width-64 all-to-all points in (b), (c)
-and (f) reflect fatal control-loss exits at both rates, not zero latency.
-PNG and vector PDF are generated from `results.json`; only the analysis-script
-hash in that record changes when the figure code changes.
+COMP-9 still needs held-out request-tail and removal-of-contention
+validation. BACK-38 still blocks physical multi-artifact steps. BACK-69
+still owns packet-level critical-path segments; these sinks do not emit
+CriticalPathBreakdown or per-visit queue waits. HTSIM-40 control loss
+and TRAF-89 join timing remain unresolved. No task IDs are registered,
+and neither BACK-69 nor HTSIM-40 registry text is changed. No README,
+native backend, backend pin, compute default or third_party source changes.
 
-## Reproduction and residual work
+![Width-tail measurements and supported ideal step shares](figures/collective_tail.png)
 
-Configure gitignored `.env.local.sh` with `SIMLLM_HTSIM_BUILD`,
-`SIMLLM_HTSIM_RNIC`, `SIMLLM_TXT2BIN` and external bulk `SIMLLM_DATA_ROOT`.
-Then run:
+The PNG and PDF project results.json: phase times and ideal floors,
+400G within-cell p50/p99 with byte-plus-path floors, ideal step shares
+and full physical/ideal phase ratios. Missing CN width-64 all-to-all
+points denote void cells. Whole fabric shares are not excess-tail attribution.
 
-```sh
+## Reproduction and validation
+
+results.json is the numerical authority; this report and both figure
+formats are projections. Per-cell GOALs, manifests, raw completions and
+receiver_prefix_floors.csv remain under the external bulk root.
+
+```bash
 . ./.env.local.sh
-.venv/bin/python examples/collective_width_tail_v1/run_study.py --publish
+.venv/bin/python examples/collective_width_tail_v1/run_study.py --out "$SIMLLM_DATA_ROOT/collective_width_tail_back68_v1" --publish
 ```
 
-Exit 2 means the study is void or incomplete, not that its evidence should be
-discarded. A fresh external `--out` reproduces the full matrix. `--resume`
-reuses saved cells with the same expectation digest; `--summarize-only`
-rebuilds the compact report and figure without rerunning the simulator. Cell
-hashes preserve the executed source version. Raw manifests retain local paths
-only in bulk; the published projection uses relative artifact names.
-
-COMP-9 retains held-out request-tail prediction and removal-of-contention
-validation. The orchestrator must register or route the aligned-baseline
-refutation, width-64 control loss and unavailable packet-level critical-path
-segments against merged main; S3 creates no new task IDs. BACK-38 retains the
-physical multi-artifact execution prerequisite. The 1 ns join finding needs a
-future expectation that explicitly accounts for the chosen schedule boundary;
-this run does not retroactively preregister that explanation. No production
-code, module registry, README, backend pin or backend source changed.
-
-## Validation
-
-The final worktree gates completed without a GPU or network dependency:
-
-```text
-.venv/bin/ruff check .
-All checks passed!
-.venv/bin/pytest -q
-4186 passed, 26 skipped in 325.21s (0:05:25)
-.venv/bin/python scripts/check_docs_format.py
-OK: 11 module doc(s) match docs/modules/FORMAT.md
-```
-
-Green code gates establish harness integrity; the numerical study remains void.
+Use a fresh --out for simulation. --summarize-only projects existing
+evidence, checking expectation and executable provenance. Tracked text
+digests accept LF normalization; generated text artifacts use LF bytes.
+Exit 2 means an undeclared fatal or incomplete matrix. The two declared
+void cells remain explicit even when the completed-component run exits 0.
+The first full test gate found two unrelated older-study executable-hash
+mismatches when this wave's native binary variables were inherited, and
+a stale protected progress projection after removing BACK-68. The final
+offline gate omits those native variables and keeps the truthful integration
+residual entry; no tests or historical artifact hashes were weakened.
+Final ruff, full pytest and module-format gate output is retained in the
+wave handoff. Offline tests exercise early-prefix overcredit, phase-only
+failure, scheduler order, identity/multiplicity drift and survivable voids.

@@ -636,7 +636,7 @@
         "phase_floor_ps": 64700160,
         "propagation_ps": 2000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 4745600,
       "fct_min_ps": 4745600,
       "fct_p50_ps": 4745600,
@@ -670,6 +670,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 124160,
+          "ok": true,
+          "rows": 112
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -686,7 +693,7 @@
       "phase_makespan_ps": 66451400,
       "profile": "rnic-nn",
       "rate_gbps": 400,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 8
     },
@@ -711,7 +718,7 @@
         "phase_floor_ps": 92700160,
         "propagation_ps": 4000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 14331800,
       "fct_min_ps": 13583000,
       "fct_p50_ps": 13832600,
@@ -745,6 +752,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 7128960,
+          "ok": true,
+          "rows": 112
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -753,7 +767,13 @@
           "ok": true
         },
         {
-          "family": "aligned_baseline_floor",
+          "family": "phase_baseline_floor",
+          "ideal_ps": 66451400,
+          "ok": true,
+          "physical_ps": 196387200
+        },
+        {
+          "family": "unshared_aligned_baseline_floor",
           "ok": true
         }
       ],
@@ -765,7 +785,7 @@
       "phase_makespan_ps": 196387200,
       "profile": "rnic-cn",
       "rate_gbps": 400,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 8
     },
@@ -786,7 +806,7 @@
         "phase_floor_ps": 101400320,
         "propagation_ps": 2000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 7491200,
       "fct_min_ps": 7491200,
       "fct_p50_ps": 7491200,
@@ -820,6 +840,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 248320,
+          "ok": true,
+          "rows": 112
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -836,7 +863,7 @@
       "phase_makespan_ps": 104889800,
       "profile": "rnic-nn",
       "rate_gbps": 200,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 8
     },
@@ -861,7 +888,7 @@
         "phase_floor_ps": 129400320,
         "propagation_ps": 4000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 24651800,
       "fct_min_ps": 23154200,
       "fct_p50_ps": 23653400,
@@ -895,6 +922,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 14241920,
+          "ok": true,
+          "rows": 112
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -903,7 +937,13 @@
           "ok": true
         },
         {
-          "family": "aligned_baseline_floor",
+          "family": "phase_baseline_floor",
+          "ideal_ps": 104889800,
+          "ok": true,
+          "physical_ps": 336604800
+        },
+        {
+          "family": "unshared_aligned_baseline_floor",
           "ok": true
         }
       ],
@@ -915,7 +955,7 @@
       "phase_makespan_ps": 336604800,
       "profile": "rnic-cn",
       "rate_gbps": 200,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 8
     },
@@ -936,7 +976,7 @@
         "phase_floor_ps": 99321600,
         "propagation_ps": 2000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 3414400,
       "fct_min_ps": 3414400,
       "fct_p50_ps": 3414400,
@@ -970,6 +1010,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 103680,
+          "ok": true,
+          "rows": 480
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -986,7 +1033,7 @@
       "phase_makespan_ps": 102461000,
       "profile": "rnic-nn",
       "rate_gbps": 400,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 16
     },
@@ -1011,7 +1058,7 @@
         "phase_floor_ps": 159321600,
         "propagation_ps": 4000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 12831000,
       "fct_min_ps": 12251800,
       "fct_p50_ps": 12411800,
@@ -1045,6 +1092,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 6942080,
+          "ok": true,
+          "rows": 480
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -1053,7 +1107,13 @@
           "ok": true
         },
         {
-          "family": "aligned_baseline_floor",
+          "family": "phase_baseline_floor",
+          "ideal_ps": 102461000,
+          "ok": true,
+          "physical_ps": 375027200
+        },
+        {
+          "family": "unshared_aligned_baseline_floor",
           "ok": true
         }
       ],
@@ -1065,7 +1125,7 @@
       "phase_makespan_ps": 375027200,
       "profile": "rnic-cn",
       "rate_gbps": 400,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 16
     },
@@ -1086,7 +1146,7 @@
         "phase_floor_ps": 138643200,
         "propagation_ps": 2000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 4828800,
       "fct_min_ps": 4828800,
       "fct_p50_ps": 4828800,
@@ -1120,6 +1180,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 207360,
+          "ok": true,
+          "rows": 480
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -1136,7 +1203,7 @@
       "phase_makespan_ps": 144893000,
       "profile": "rnic-nn",
       "rate_gbps": 200,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 16
     },
@@ -1161,7 +1228,7 @@
         "phase_floor_ps": 198643200,
         "propagation_ps": 4000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 21490200,
       "fct_min_ps": 20489600,
       "fct_p50_ps": 20821400,
@@ -1195,6 +1262,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 13868160,
+          "ok": true,
+          "rows": 480
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -1203,7 +1277,13 @@
           "ok": true
         },
         {
-          "family": "aligned_baseline_floor",
+          "family": "phase_baseline_floor",
+          "ideal_ps": 144893000,
+          "ok": true,
+          "physical_ps": 630035200
+        },
+        {
+          "family": "unshared_aligned_baseline_floor",
           "ok": true
         }
       ],
@@ -1215,7 +1295,7 @@
       "phase_makespan_ps": 630035200,
       "profile": "rnic-cn",
       "rate_gbps": 200,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 16
     },
@@ -1236,7 +1316,7 @@
         "phase_floor_ps": 164632320,
         "propagation_ps": 2000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 2748800,
       "fct_min_ps": 2748800,
       "fct_p50_ps": 2748800,
@@ -1270,6 +1350,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 93440,
+          "ok": true,
+          "rows": 1984
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -1286,7 +1373,7 @@
       "phase_makespan_ps": 170486600,
       "profile": "rnic-nn",
       "rate_gbps": 400,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 32
     },
@@ -1311,7 +1398,7 @@
         "phase_floor_ps": 288632320,
         "propagation_ps": 4000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 11999000,
       "fct_min_ps": 11586200,
       "fct_p50_ps": 11666200,
@@ -1345,6 +1432,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 6931840,
+          "ok": true,
+          "rows": 1984
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -1353,7 +1447,13 @@
           "ok": true
         },
         {
-          "family": "aligned_baseline_floor",
+          "family": "phase_baseline_floor",
+          "ideal_ps": 170486600,
+          "ok": true,
+          "physical_ps": 727532800
+        },
+        {
+          "family": "unshared_aligned_baseline_floor",
           "ok": true
         }
       ],
@@ -1365,7 +1465,7 @@
       "phase_makespan_ps": 727532800,
       "profile": "rnic-cn",
       "rate_gbps": 400,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 32
     },
@@ -1386,7 +1486,7 @@
         "phase_floor_ps": 205264640,
         "propagation_ps": 2000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 3497600,
       "fct_min_ps": 3497600,
       "fct_p50_ps": 3497600,
@@ -1420,6 +1520,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 186880,
+          "ok": true,
+          "rows": 1984
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -1436,7 +1543,7 @@
       "phase_makespan_ps": 216912200,
       "profile": "rnic-nn",
       "rate_gbps": 200,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 32
     },
@@ -1461,7 +1568,7 @@
         "phase_floor_ps": 329264640,
         "propagation_ps": 4000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 20325400,
       "fct_min_ps": 19158400,
       "fct_p50_ps": 19324800,
@@ -1495,6 +1602,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 13847680,
+          "ok": true,
+          "rows": 1984
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -1503,7 +1617,13 @@
           "ok": true
         },
         {
-          "family": "aligned_baseline_floor",
+          "family": "phase_baseline_floor",
+          "ideal_ps": 216912200,
+          "ok": true,
+          "physical_ps": 1206534400
+        },
+        {
+          "family": "unshared_aligned_baseline_floor",
           "ok": true
         }
       ],
@@ -1515,7 +1635,7 @@
       "phase_makespan_ps": 1206534400,
       "profile": "rnic-cn",
       "rate_gbps": 200,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 32
     },
@@ -1536,7 +1656,7 @@
         "phase_floor_ps": 293287680,
         "propagation_ps": 2000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 2416000,
       "fct_min_ps": 2416000,
       "fct_p50_ps": 2416000,
@@ -1570,6 +1690,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 88320,
+          "ok": true,
+          "rows": 8064
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -1586,7 +1713,7 @@
       "phase_makespan_ps": 304541000,
       "profile": "rnic-nn",
       "rate_gbps": 400,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 64
     },
@@ -1611,7 +1738,7 @@
         "phase_floor_ps": 545287680,
         "propagation_ps": 4000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 11669400,
       "fct_min_ps": 11250200,
       "fct_p50_ps": 11253400,
@@ -1645,6 +1772,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 6926720,
+          "ok": true,
+          "rows": 8064
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -1653,7 +1787,13 @@
           "ok": true
         },
         {
-          "family": "aligned_baseline_floor",
+          "family": "phase_baseline_floor",
+          "ideal_ps": 304541000,
+          "ok": true,
+          "physical_ps": 1429404800
+        },
+        {
+          "family": "unshared_aligned_baseline_floor",
           "ok": true
         }
       ],
@@ -1665,7 +1805,7 @@
       "phase_makespan_ps": 1429404800,
       "profile": "rnic-cn",
       "rate_gbps": 400,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 64
     },
@@ -1686,7 +1826,7 @@
         "phase_floor_ps": 334575360,
         "propagation_ps": 2000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 2832000,
       "fct_min_ps": 2832000,
       "fct_p50_ps": 2832000,
@@ -1720,6 +1860,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 176640,
+          "ok": true,
+          "rows": 8064
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -1736,7 +1883,7 @@
       "phase_makespan_ps": 356957000,
       "profile": "rnic-nn",
       "rate_gbps": 200,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 64
     },
@@ -1761,7 +1908,7 @@
         "phase_floor_ps": 586575360,
         "propagation_ps": 4000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 19656600,
       "fct_min_ps": 18492800,
       "fct_p50_ps": 18495000,
@@ -1795,6 +1942,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 13837440,
+          "ok": true,
+          "rows": 8064
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -1803,7 +1957,13 @@
           "ok": true
         },
         {
-          "family": "aligned_baseline_floor",
+          "family": "phase_baseline_floor",
+          "ideal_ps": 356957000,
+          "ok": true,
+          "physical_ps": 2354476800
+        },
+        {
+          "family": "unshared_aligned_baseline_floor",
           "ok": true
         }
       ],
@@ -1815,7 +1975,7 @@
       "phase_makespan_ps": 2354476800,
       "profile": "rnic-cn",
       "rate_gbps": 200,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 64
     },
@@ -1836,7 +1996,7 @@
         "phase_floor_ps": 11175040,
         "propagation_ps": 2000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 11401600,
       "fct_min_ps": 10902400,
       "fct_p50_ps": 11152000,
@@ -1870,6 +2030,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 226560,
+          "ok": true,
+          "rows": 56
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -1886,7 +2053,7 @@
       "phase_makespan_ps": 11401600,
       "profile": "rnic-nn",
       "rate_gbps": 400,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 8
     },
@@ -1911,7 +2078,7 @@
         "phase_floor_ps": 13175040,
         "propagation_ps": 4000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 26083200,
       "fct_min_ps": 17497600,
       "fct_p50_ps": 20902400,
@@ -1945,6 +2112,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 8874880,
+          "ok": true,
+          "rows": 56
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -1953,8 +2127,10 @@
           "ok": true
         },
         {
-          "family": "aligned_baseline_floor",
-          "ok": true
+          "family": "phase_baseline_floor",
+          "ideal_ps": 11401600,
+          "ok": true,
+          "physical_ps": 26083200
         }
       ],
       "last_completion_ps": 26083200,
@@ -1965,7 +2141,7 @@
       "phase_makespan_ps": 26083200,
       "profile": "rnic-cn",
       "rate_gbps": 400,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 8
     },
@@ -1986,7 +2162,7 @@
         "phase_floor_ps": 20350080,
         "propagation_ps": 2000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 20803200,
       "fct_min_ps": 19804800,
       "fct_p50_ps": 20304000,
@@ -2020,6 +2196,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 453120,
+          "ok": true,
+          "rows": 56
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -2036,7 +2219,7 @@
       "phase_makespan_ps": 20803200,
       "profile": "rnic-nn",
       "rate_gbps": 200,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 8
     },
@@ -2061,7 +2244,7 @@
         "phase_floor_ps": 22350080,
         "propagation_ps": 4000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 47366400,
       "fct_min_ps": 29644800,
       "fct_p50_ps": 37500800,
@@ -2095,6 +2278,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 17496320,
+          "ok": true,
+          "rows": 56
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -2103,8 +2293,10 @@
           "ok": true
         },
         {
-          "family": "aligned_baseline_floor",
-          "ok": true
+          "family": "phase_baseline_floor",
+          "ideal_ps": 20803200,
+          "ok": true,
+          "physical_ps": 47366400
         }
       ],
       "last_completion_ps": 47366400,
@@ -2115,7 +2307,7 @@
       "phase_makespan_ps": 47366400,
       "profile": "rnic-cn",
       "rate_gbps": 200,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 8
     },
@@ -2136,7 +2328,7 @@
         "phase_floor_ps": 20350080,
         "propagation_ps": 2000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 20720000,
       "fct_min_ps": 19638400,
       "fct_p50_ps": 20137600,
@@ -2170,6 +2362,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 369920,
+          "ok": true,
+          "rows": 224
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -2186,7 +2385,7 @@
       "phase_makespan_ps": 20720000,
       "profile": "rnic-nn",
       "rate_gbps": 400,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 16
     },
@@ -2211,7 +2410,7 @@
         "phase_floor_ps": 22350080,
         "propagation_ps": 4000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 51827200,
       "fct_min_ps": 22992000,
       "fct_p50_ps": 31324800,
@@ -2245,6 +2444,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 10817280,
+          "ok": true,
+          "rows": 224
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -2253,8 +2459,10 @@
           "ok": true
         },
         {
-          "family": "aligned_baseline_floor",
-          "ok": true
+          "family": "phase_baseline_floor",
+          "ideal_ps": 20720000,
+          "ok": true,
+          "physical_ps": 51827200
         }
       ],
       "last_completion_ps": 51827200,
@@ -2265,7 +2473,7 @@
       "phase_makespan_ps": 51827200,
       "profile": "rnic-cn",
       "rate_gbps": 400,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 16
     },
@@ -2286,7 +2494,7 @@
         "phase_floor_ps": 38700160,
         "propagation_ps": 2000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 39440000,
       "fct_min_ps": 37276800,
       "fct_p50_ps": 38275200,
@@ -2320,6 +2528,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 739840,
+          "ok": true,
+          "rows": 224
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -2336,7 +2551,7 @@
       "phase_makespan_ps": 39440000,
       "profile": "rnic-nn",
       "rate_gbps": 200,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 16
     },
@@ -2361,7 +2576,7 @@
         "phase_floor_ps": 40700160,
         "propagation_ps": 4000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 89078400,
       "fct_min_ps": 39660800,
       "fct_p50_ps": 58390400,
@@ -2395,6 +2610,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 22487680,
+          "ok": true,
+          "rows": 224
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -2403,8 +2625,10 @@
           "ok": true
         },
         {
-          "family": "aligned_baseline_floor",
-          "ok": true
+          "family": "phase_baseline_floor",
+          "ideal_ps": 39440000,
+          "ok": true,
+          "physical_ps": 89078400
         }
       ],
       "last_completion_ps": 89078400,
@@ -2415,7 +2639,7 @@
       "phase_makespan_ps": 89078400,
       "profile": "rnic-cn",
       "rate_gbps": 200,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 16
     },
@@ -2436,7 +2660,7 @@
         "phase_floor_ps": 38700160,
         "propagation_ps": 2000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 39356800,
       "fct_min_ps": 37110400,
       "fct_p50_ps": 38192000,
@@ -2470,6 +2694,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 656640,
+          "ok": true,
+          "rows": 896
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -2486,7 +2717,7 @@
       "phase_makespan_ps": 39356800,
       "profile": "rnic-nn",
       "rate_gbps": 400,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 32
     },
@@ -2511,7 +2742,7 @@
         "phase_floor_ps": 40700160,
         "propagation_ps": 4000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 79891200,
       "fct_min_ps": 28595200,
       "fct_p50_ps": 51718400,
@@ -2545,6 +2776,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 19090560,
+          "ok": true,
+          "rows": 896
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -2553,8 +2791,10 @@
           "ok": true
         },
         {
-          "family": "aligned_baseline_floor",
-          "ok": false
+          "family": "phase_baseline_floor",
+          "ideal_ps": 39356800,
+          "ok": true,
+          "physical_ps": 79891200
         }
       ],
       "last_completion_ps": 79891200,
@@ -2565,7 +2805,7 @@
       "phase_makespan_ps": 79891200,
       "profile": "rnic-cn",
       "rate_gbps": 400,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 32
     },
@@ -2586,7 +2826,7 @@
         "phase_floor_ps": 75400320,
         "propagation_ps": 2000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 76713600,
       "fct_min_ps": 72220800,
       "fct_p50_ps": 74384000,
@@ -2620,6 +2860,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 1313280,
+          "ok": true,
+          "rows": 896
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -2636,7 +2883,7 @@
       "phase_makespan_ps": 76713600,
       "profile": "rnic-nn",
       "rate_gbps": 200,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 32
     },
@@ -2661,7 +2908,7 @@
         "phase_floor_ps": 77400320,
         "propagation_ps": 4000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 150342400,
       "fct_min_ps": 42604800,
       "fct_p50_ps": 100310400,
@@ -2695,6 +2942,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 35983360,
+          "ok": true,
+          "rows": 896
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -2703,8 +2957,10 @@
           "ok": true
         },
         {
-          "family": "aligned_baseline_floor",
-          "ok": false
+          "family": "phase_baseline_floor",
+          "ideal_ps": 76713600,
+          "ok": true,
+          "physical_ps": 150342400
         }
       ],
       "last_completion_ps": 150342400,
@@ -2715,7 +2971,7 @@
       "phase_makespan_ps": 150342400,
       "profile": "rnic-cn",
       "rate_gbps": 200,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 32
     },
@@ -2736,7 +2992,7 @@
         "phase_floor_ps": 75400320,
         "propagation_ps": 2000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 76630400,
       "fct_min_ps": 72054400,
       "fct_p50_ps": 74300800,
@@ -2770,6 +3026,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 1230080,
+          "ok": true,
+          "rows": 3584
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -2786,20 +3049,21 @@
       "phase_makespan_ps": 76630400,
       "profile": "rnic-nn",
       "rate_gbps": 400,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 64
     },
     {
       "collective_share": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": null,
       "failure_detail": "htsim_rnic exit 2: htsim_rnic: rnic-cn fabric dropped control lifecycle 11230 for flow 206158430255",
       "guards": [
         {
           "family": "quiescence",
           "ok": false,
-          "reason": "fatal control lifecycle loss"
+          "reason": "fatal control lifecycle loss",
+          "survivable": true
         }
       ],
       "mode": "collective",
@@ -2808,7 +3072,7 @@
       "profile": "rnic-cn",
       "rate_gbps": 400,
       "reason": "RuntimeError",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "error",
       "step_latency_ps": null,
       "ttft_ps": null,
@@ -2831,7 +3095,7 @@
         "phase_floor_ps": 148800640,
         "propagation_ps": 2000000
       },
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fct_max_ps": 151260800,
       "fct_min_ps": 142108800,
       "fct_p50_ps": 146601600,
@@ -2865,6 +3129,13 @@
           "ok": true
         },
         {
+          "failed_rows": [],
+          "family": "receiver_prefix_floor",
+          "minimum_slack_ps": 2460160,
+          "ok": true,
+          "rows": 3584
+        },
+        {
           "family": "quiescence",
           "ok": true
         },
@@ -2881,20 +3152,21 @@
       "phase_makespan_ps": 151260800,
       "profile": "rnic-nn",
       "rate_gbps": 200,
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "width": 64
     },
     {
       "collective_share": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": null,
       "failure_detail": "htsim_rnic exit 2: htsim_rnic: rnic-cn fabric dropped control lifecycle 9837 for flow 111669149723",
       "guards": [
         {
           "family": "quiescence",
           "ok": false,
-          "reason": "fatal control lifecycle loss"
+          "reason": "fatal control lifecycle loss",
+          "survivable": true
         }
       ],
       "mode": "collective",
@@ -2903,7 +3175,7 @@
       "profile": "rnic-cn",
       "rate_gbps": 200,
       "reason": "RuntimeError",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "error",
       "step_latency_ps": null,
       "ttft_ps": null,
@@ -2927,7 +3199,7 @@
       "collective_share": 0.5705883969549564,
       "collective_share_floor": 0.564080817324056,
       "critical_path_breakdown": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": 0.5705883969549564,
       "fct_max_ps": 4745600,
       "fct_min_ps": 4745600,
@@ -2999,7 +3271,7 @@
       "profile": "rnic-nn",
       "rate_gbps": 400,
       "reducer": "HtsimRequestMetricReducer/attribute_step_detail",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "step_ceiling_ps": 235206400,
       "step_floor_ps": 229400320,
@@ -3010,7 +3282,7 @@
     },
     {
       "collective_share": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": null,
       "mode": "step",
       "name": "step-ring-w8-400g-rnic-cn",
@@ -3018,7 +3290,7 @@
       "profile": "rnic-cn",
       "rate_gbps": 400,
       "reason": "BACK-38 state-preserving execution required",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "unsupported",
       "step_latency_ps": null,
       "ttft_ps": null,
@@ -3042,7 +3314,7 @@
       "collective_share": 0.6771627512965144,
       "collective_share_floor": 0.6697497072661405,
       "critical_path_breakdown": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": 0.6771627512965144,
       "fct_max_ps": 7491200,
       "fct_min_ps": 7491200,
@@ -3114,7 +3386,7 @@
       "profile": "rnic-nn",
       "rate_gbps": 200,
       "reducer": "HtsimRequestMetricReducer/attribute_step_detail",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "step_ceiling_ps": 314412800,
       "step_floor_ps": 302800640,
@@ -3125,7 +3397,7 @@
     },
     {
       "collective_share": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": null,
       "mode": "step",
       "name": "step-ring-w8-200g-rnic-cn",
@@ -3133,7 +3405,7 @@
       "profile": "rnic-cn",
       "rate_gbps": 200,
       "reason": "BACK-38 state-preserving execution required",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "unsupported",
       "step_latency_ps": null,
       "ttft_ps": null,
@@ -3157,7 +3429,7 @@
       "collective_share": 0.6719848850635037,
       "collective_share_floor": 0.66515226196344,
       "critical_path_breakdown": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": 0.6719848850635037,
       "fct_max_ps": 3414400,
       "fct_min_ps": 3414400,
@@ -3229,7 +3501,7 @@
       "profile": "rnic-nn",
       "rate_gbps": 400,
       "reducer": "HtsimRequestMetricReducer/attribute_step_detail",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "step_ceiling_ps": 309856000,
       "step_floor_ps": 298643200,
@@ -3240,7 +3512,7 @@
     },
     {
       "collective_share": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": null,
       "mode": "step",
       "name": "step-ring-w16-400g-rnic-cn",
@@ -3248,7 +3520,7 @@
       "profile": "rnic-cn",
       "rate_gbps": 400,
       "reason": "BACK-38 state-preserving execution required",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "unsupported",
       "step_latency_ps": null,
       "ttft_ps": null,
@@ -3272,7 +3544,7 @@
       "collective_share": 0.7434107890631415,
       "collective_share_floor": 0.7349493647266374,
       "critical_path_breakdown": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": 0.7434107890631415,
       "fct_max_ps": 4828800,
       "fct_min_ps": 4828800,
@@ -3344,7 +3616,7 @@
       "profile": "rnic-nn",
       "rate_gbps": 200,
       "reducer": "HtsimRequestMetricReducer/attribute_step_detail",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "step_ceiling_ps": 399712000,
       "step_floor_ps": 377286400,
@@ -3355,7 +3627,7 @@
     },
     {
       "collective_share": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": null,
       "mode": "step",
       "name": "step-ring-w16-200g-rnic-cn",
@@ -3363,7 +3635,7 @@
       "profile": "rnic-cn",
       "rate_gbps": 200,
       "reason": "BACK-38 state-preserving execution required",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "unsupported",
       "step_latency_ps": null,
       "ttft_ps": null,
@@ -3387,7 +3659,7 @@
       "collective_share": 0.7731660932305503,
       "collective_share_floor": 0.7670434722971825,
       "critical_path_breakdown": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": 0.7731660932305503,
       "fct_max_ps": 2748800,
       "fct_min_ps": 2748800,
@@ -3459,7 +3731,7 @@
       "profile": "rnic-nn",
       "rate_gbps": 400,
       "reducer": "HtsimRequestMetricReducer/attribute_step_detail",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "step_ceiling_ps": 451168000,
       "step_floor_ps": 429264640,
@@ -3470,7 +3742,7 @@
     },
     {
       "collective_share": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": null,
       "mode": "step",
       "name": "step-ring-w32-400g-rnic-cn",
@@ -3478,7 +3750,7 @@
       "profile": "rnic-cn",
       "rate_gbps": 400,
       "reason": "BACK-38 state-preserving execution required",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "unsupported",
       "step_latency_ps": null,
       "ttft_ps": null,
@@ -3502,7 +3774,7 @@
       "collective_share": 0.8126296602750896,
       "collective_share_floor": 0.804124848627683,
       "critical_path_breakdown": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": 0.8126296602750896,
       "fct_max_ps": 3497600,
       "fct_min_ps": 3497600,
@@ -3574,7 +3846,7 @@
       "profile": "rnic-nn",
       "rate_gbps": 200,
       "reducer": "HtsimRequestMetricReducer/attribute_step_detail",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "step_ceiling_ps": 554336000,
       "step_floor_ps": 510529280,
@@ -3585,7 +3857,7 @@
     },
     {
       "collective_share": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": null,
       "mode": "step",
       "name": "step-ring-w32-200g-rnic-cn",
@@ -3593,7 +3865,7 @@
       "profile": "rnic-cn",
       "rate_gbps": 200,
       "reason": "BACK-38 state-preserving execution required",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "unsupported",
       "step_latency_ps": null,
       "ttft_ps": null,
@@ -3617,7 +3889,7 @@
       "collective_share": 0.8589228477269649,
       "collective_share_floor": 0.8543495647731955,
       "critical_path_breakdown": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": 0.8589228477269649,
       "fct_max_ps": 2416000,
       "fct_min_ps": 2416000,
@@ -3689,7 +3961,7 @@
       "profile": "rnic-nn",
       "rate_gbps": 400,
       "reducer": "HtsimRequestMetricReducer/attribute_step_detail",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "step_ceiling_ps": 729798400,
       "step_floor_ps": 686575360,
@@ -3700,7 +3972,7 @@
     },
     {
       "collective_share": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": null,
       "mode": "step",
       "name": "step-ring-w64-400g-rnic-cn",
@@ -3708,7 +3980,7 @@
       "profile": "rnic-cn",
       "rate_gbps": 400,
       "reason": "BACK-38 state-preserving execution required",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "unsupported",
       "step_latency_ps": null,
       "ttft_ps": null,
@@ -3732,7 +4004,7 @@
       "collective_share": 0.8770991465764738,
       "collective_share_floor": 0.8699864702720423,
       "critical_path_breakdown": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": 0.8770991465764738,
       "fct_max_ps": 2832000,
       "fct_min_ps": 2832000,
@@ -3804,7 +4076,7 @@
       "profile": "rnic-nn",
       "rate_gbps": 200,
       "reducer": "HtsimRequestMetricReducer/attribute_step_detail",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "step_ceiling_ps": 855596800,
       "step_floor_ps": 769150720,
@@ -3815,7 +4087,7 @@
     },
     {
       "collective_share": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": null,
       "mode": "step",
       "name": "step-ring-w64-200g-rnic-cn",
@@ -3823,7 +4095,7 @@
       "profile": "rnic-cn",
       "rate_gbps": 200,
       "reason": "BACK-38 state-preserving execution required",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "unsupported",
       "step_latency_ps": null,
       "ttft_ps": null,
@@ -3847,7 +4119,7 @@
       "collective_share": 0.18568897227433812,
       "collective_share_floor": 0.182673194819325,
       "critical_path_breakdown": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": 0.18568897227433812,
       "fct_max_ps": 11401600,
       "fct_min_ps": 10902400,
@@ -3919,7 +4191,7 @@
       "profile": "rnic-nn",
       "rate_gbps": 400,
       "reducer": "HtsimRequestMetricReducer/attribute_step_detail",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "step_ceiling_ps": 253260800,
       "step_floor_ps": 122350080,
@@ -3930,7 +4202,7 @@
     },
     {
       "collective_share": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": null,
       "mode": "step",
       "name": "step-all-to-all-w8-400g-rnic-cn",
@@ -3938,7 +4210,7 @@
       "profile": "rnic-cn",
       "rate_gbps": 400,
       "reason": "BACK-38 state-preserving execution required",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "unsupported",
       "step_latency_ps": null,
       "ttft_ps": null,
@@ -3962,7 +4234,7 @@
       "collective_share": 0.2938172285998373,
       "collective_share_floor": 0.28926875420752896,
       "critical_path_breakdown": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": 0.2938172285998373,
       "fct_max_ps": 20803200,
       "fct_min_ps": 19804800,
@@ -4034,7 +4306,7 @@
       "profile": "rnic-nn",
       "rate_gbps": 200,
       "reducer": "HtsimRequestMetricReducer/attribute_step_detail",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "step_ceiling_ps": 402521600,
       "step_floor_ps": 140700160,
@@ -4045,7 +4317,7 @@
     },
     {
       "collective_share": null,
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": null,
       "mode": "step",
       "name": "step-all-to-all-w8-200g-rnic-cn",
@@ -4053,7 +4325,7 @@
       "profile": "rnic-cn",
       "rate_gbps": 200,
       "reason": "BACK-38 state-preserving execution required",
-      "script_sha256": "b5eefd691300ab769930d9feb9f8428e097aaa14e7aacea20b527c1b866f7241",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "unsupported",
       "step_latency_ps": null,
       "ttft_ps": null,
@@ -4077,8 +4349,7 @@
       "collective_share": 0.29298642533936653,
       "collective_share_floor": 0.28926875420752896,
       "critical_path_breakdown": null,
-      "earlier_attempt": "source-major input rejected before backend execution",
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": 0.29298642533936653,
       "fct_max_ps": 20720000,
       "fct_min_ps": 19638400,
@@ -4150,7 +4421,7 @@
       "profile": "rnic-nn",
       "rate_gbps": 400,
       "reducer": "HtsimRequestMetricReducer/attribute_step_detail",
-      "script_sha256": "5a5a05a7563e33b83592c759ed04b777272895763c14c4398d6823bc4cadf8f1",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "step_ceiling_ps": 700544000,
       "step_floor_ps": 140700160,
@@ -4161,8 +4432,7 @@
     },
     {
       "collective_share": null,
-      "earlier_attempt": "source-major input rejected before backend execution",
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": null,
       "mode": "step",
       "name": "step-all-to-all-w16-400g-rnic-cn",
@@ -4170,7 +4440,7 @@
       "profile": "rnic-cn",
       "rate_gbps": 400,
       "reason": "BACK-38 state-preserving execution required",
-      "script_sha256": "5a5a05a7563e33b83592c759ed04b777272895763c14c4398d6823bc4cadf8f1",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "unsupported",
       "step_latency_ps": null,
       "ttft_ps": null,
@@ -4194,8 +4464,7 @@
       "collective_share": 0.4409660107334526,
       "collective_share_floor": 0.43630315886690624,
       "critical_path_breakdown": null,
-      "earlier_attempt": "source-major input rejected before backend execution",
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": 0.4409660107334526,
       "fct_max_ps": 39440000,
       "fct_min_ps": 37276800,
@@ -4267,7 +4536,7 @@
       "profile": "rnic-nn",
       "rate_gbps": 200,
       "reducer": "HtsimRequestMetricReducer/attribute_step_detail",
-      "script_sha256": "5a5a05a7563e33b83592c759ed04b777272895763c14c4398d6823bc4cadf8f1",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "step_ceiling_ps": 1297088000,
       "step_floor_ps": 177400320,
@@ -4278,8 +4547,7 @@
     },
     {
       "collective_share": null,
-      "earlier_attempt": "source-major input rejected before backend execution",
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": null,
       "mode": "step",
       "name": "step-all-to-all-w16-200g-rnic-cn",
@@ -4287,7 +4555,7 @@
       "profile": "rnic-cn",
       "rate_gbps": 200,
       "reason": "BACK-38 state-preserving execution required",
-      "script_sha256": "5a5a05a7563e33b83592c759ed04b777272895763c14c4398d6823bc4cadf8f1",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "unsupported",
       "step_latency_ps": null,
       "ttft_ps": null,
@@ -4311,8 +4579,7 @@
       "collective_share": 0.44044549491476864,
       "collective_share_floor": 0.43630315886690624,
       "critical_path_breakdown": null,
-      "earlier_attempt": "source-major input rejected before backend execution",
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": 0.44044549491476864,
       "fct_max_ps": 39356800,
       "fct_min_ps": 37110400,
@@ -4384,7 +4651,7 @@
       "profile": "rnic-nn",
       "rate_gbps": 400,
       "reducer": "HtsimRequestMetricReducer/attribute_step_detail",
-      "script_sha256": "5a5a05a7563e33b83592c759ed04b777272895763c14c4398d6823bc4cadf8f1",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "step_ceiling_ps": 2489676800,
       "step_floor_ps": 177400320,
@@ -4395,8 +4662,7 @@
     },
     {
       "collective_share": null,
-      "earlier_attempt": "source-major input rejected before backend execution",
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": null,
       "mode": "step",
       "name": "step-all-to-all-w32-400g-rnic-cn",
@@ -4404,7 +4670,7 @@
       "profile": "rnic-cn",
       "rate_gbps": 400,
       "reason": "BACK-38 state-preserving execution required",
-      "script_sha256": "5a5a05a7563e33b83592c759ed04b777272895763c14c4398d6823bc4cadf8f1",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "unsupported",
       "step_latency_ps": null,
       "ttft_ps": null,
@@ -4428,8 +4694,7 @@
       "collective_share": 0.6054093641092985,
       "collective_share_floor": 0.6012769345405179,
       "critical_path_breakdown": null,
-      "earlier_attempt": "source-major input rejected before backend execution",
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": 0.6054093641092985,
       "fct_max_ps": 76713600,
       "fct_min_ps": 72220800,
@@ -4501,7 +4766,7 @@
       "profile": "rnic-nn",
       "rate_gbps": 200,
       "reducer": "HtsimRequestMetricReducer/attribute_step_detail",
-      "script_sha256": "5a5a05a7563e33b83592c759ed04b777272895763c14c4398d6823bc4cadf8f1",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "step_ceiling_ps": 4875353600,
       "step_floor_ps": 250800640,
@@ -4512,8 +4777,7 @@
     },
     {
       "collective_share": null,
-      "earlier_attempt": "source-major input rejected before backend execution",
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": null,
       "mode": "step",
       "name": "step-all-to-all-w32-200g-rnic-cn",
@@ -4521,7 +4785,7 @@
       "profile": "rnic-cn",
       "rate_gbps": 200,
       "reason": "BACK-38 state-preserving execution required",
-      "script_sha256": "5a5a05a7563e33b83592c759ed04b777272895763c14c4398d6823bc4cadf8f1",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "unsupported",
       "step_latency_ps": null,
       "ttft_ps": null,
@@ -4545,8 +4809,7 @@
       "collective_share": 0.6051501061356515,
       "collective_share_floor": 0.6012769345405179,
       "critical_path_breakdown": null,
-      "earlier_attempt": "source-major input rejected before backend execution",
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": 0.6051501061356515,
       "fct_max_ps": 76630400,
       "fct_min_ps": 72054400,
@@ -4618,7 +4881,7 @@
       "profile": "rnic-nn",
       "rate_gbps": 400,
       "reducer": "HtsimRequestMetricReducer/attribute_step_detail",
-      "script_sha256": "5a5a05a7563e33b83592c759ed04b777272895763c14c4398d6823bc4cadf8f1",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "step_ceiling_ps": 9646208000,
       "step_floor_ps": 250800640,
@@ -4629,8 +4892,7 @@
     },
     {
       "collective_share": null,
-      "earlier_attempt": "source-major input rejected before backend execution",
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": null,
       "mode": "step",
       "name": "step-all-to-all-w64-400g-rnic-cn",
@@ -4638,7 +4900,7 @@
       "profile": "rnic-cn",
       "rate_gbps": 400,
       "reason": "BACK-38 state-preserving execution required",
-      "script_sha256": "5a5a05a7563e33b83592c759ed04b777272895763c14c4398d6823bc4cadf8f1",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "unsupported",
       "step_latency_ps": null,
       "ttft_ps": null,
@@ -4662,8 +4924,7 @@
       "collective_share": 0.7515661271345438,
       "collective_share_floor": 0.7484917553585341,
       "critical_path_breakdown": null,
-      "earlier_attempt": "source-major input rejected before backend execution",
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": 0.7515661271345438,
       "fct_max_ps": 151260800,
       "fct_min_ps": 142108800,
@@ -4735,7 +4996,7 @@
       "profile": "rnic-nn",
       "rate_gbps": 200,
       "reducer": "HtsimRequestMetricReducer/attribute_step_detail",
-      "script_sha256": "5a5a05a7563e33b83592c759ed04b777272895763c14c4398d6823bc4cadf8f1",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "complete",
       "step_ceiling_ps": 19188416000,
       "step_floor_ps": 397601280,
@@ -4746,8 +5007,7 @@
     },
     {
       "collective_share": null,
-      "earlier_attempt": "source-major input rejected before backend execution",
-      "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+      "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
       "fabric_share": null,
       "mode": "step",
       "name": "step-all-to-all-w64-200g-rnic-cn",
@@ -4755,7 +5015,7 @@
       "profile": "rnic-cn",
       "rate_gbps": 200,
       "reason": "BACK-38 state-preserving execution required",
-      "script_sha256": "5a5a05a7563e33b83592c759ed04b777272895763c14c4398d6823bc4cadf8f1",
+      "script_sha256": "be19d38bbbf3c68b9bb1b7c685222bd1ecfef0f1adbf97b4b6229f5f11c16433",
       "status": "unsupported",
       "step_latency_ps": null,
       "ttft_ps": null,
@@ -4948,6 +5208,15 @@
       "slow": "step-ring-w64-200g-rnic-nn"
     }
   ],
+  "morning_reproduction": {
+    "all_exact_oracle_rows_identical": true,
+    "ideal_configurations": 32,
+    "ideal_numeric_fields": 800,
+    "mismatches": [],
+    "ok": true,
+    "source_commit": "80eef42",
+    "source_sha256": "38e71049199cdda5b34210ea97e306602012051b33ab8b2e31f94ca2329aaf36"
+  },
   "normalization": [
     {
       "above_1_2x": 8,
@@ -4955,6 +5224,7 @@
       "aligned_flows": 8,
       "below_1x": 0,
       "cell": "collective-ring-w8-400g-rnic-cn",
+      "per_flow_interpretation": "unshared-aligned-bound",
       "phase_ratio": 2.9553508278230405,
       "slowdown_max": 2.9851652056641944,
       "slowdown_min": 2.8975050573162506,
@@ -4968,6 +5238,7 @@
       "aligned_flows": 8,
       "below_1x": 0,
       "cell": "collective-ring-w8-200g-rnic-cn",
+      "per_flow_interpretation": "unshared-aligned-bound",
       "phase_ratio": 3.2091280563029008,
       "slowdown_max": 3.2238359675352415,
       "slowdown_min": 3.134985049124306,
@@ -4981,6 +5252,7 @@
       "aligned_flows": 16,
       "below_1x": 0,
       "cell": "collective-ring-w16-400g-rnic-cn",
+      "per_flow_interpretation": "unshared-aligned-bound",
       "phase_ratio": 3.660194610632338,
       "slowdown_max": 3.6860356138706654,
       "slowdown_min": 3.5885660731021556,
@@ -4994,6 +5266,7 @@
       "aligned_flows": 16,
       "below_1x": 0,
       "cell": "collective-ring-w16-200g-rnic-cn",
+      "per_flow_interpretation": "unshared-aligned-bound",
       "phase_ratio": 4.34827907490355,
       "slowdown_max": 4.378396288933068,
       "slowdown_min": 4.243207422133864,
@@ -5007,6 +5280,7 @@
       "aligned_flows": 32,
       "below_1x": 0,
       "cell": "collective-ring-w32-400g-rnic-cn",
+      "per_flow_interpretation": "unshared-aligned-bound",
       "phase_ratio": 4.267389929765741,
       "slowdown_max": 4.3329452852153665,
       "slowdown_min": 4.215366705471478,
@@ -5020,6 +5294,7 @@
       "aligned_flows": 32,
       "below_1x": 0,
       "cell": "collective-ring-w32-200g-rnic-cn",
+      "per_flow_interpretation": "unshared-aligned-bound",
       "phase_ratio": 5.562316919011471,
       "slowdown_max": 5.620311070448308,
       "slowdown_min": 5.4775846294602015,
@@ -5033,6 +5308,7 @@
       "aligned_flows": 64,
       "below_1x": 0,
       "cell": "collective-ring-w64-400g-rnic-cn",
+      "per_flow_interpretation": "unshared-aligned-bound",
       "phase_ratio": 4.693636653192838,
       "slowdown_max": 4.757615894039735,
       "slowdown_min": 4.658278145695364,
@@ -5046,6 +5322,7 @@
       "aligned_flows": 64,
       "below_1x": 0,
       "cell": "collective-ring-w64-200g-rnic-cn",
+      "per_flow_interpretation": "unshared-aligned-bound",
       "phase_ratio": 6.595967581529428,
       "slowdown_max": 6.646327683615819,
       "slowdown_min": 6.5299435028248585,
@@ -5059,6 +5336,7 @@
       "aligned_flows": 56,
       "below_1x": 0,
       "cell": "collective-all-to-all-w8-400g-rnic-cn",
+      "per_flow_interpretation": "shared-receiver-diagnostic",
       "phase_ratio": 2.2876789222565255,
       "slowdown_max": 2.374308185260705,
       "slowdown_min": 1.5808037004914715,
@@ -5072,6 +5350,7 @@
       "aligned_flows": 56,
       "below_1x": 0,
       "cell": "collective-all-to-all-w8-200g-rnic-cn",
+      "per_flow_interpretation": "shared-receiver-diagnostic",
       "phase_ratio": 2.2768804799261653,
       "slowdown_max": 2.3521372954075956,
       "slowdown_min": 1.4600472813238772,
@@ -5085,6 +5364,7 @@
       "aligned_flows": 224,
       "below_1x": 0,
       "cell": "collective-all-to-all-w16-400g-rnic-cn",
+      "per_flow_interpretation": "shared-receiver-diagnostic",
       "phase_ratio": 2.5013127413127414,
       "slowdown_max": 2.5013127413127414,
       "slowdown_min": 1.1186361513311536,
@@ -5098,6 +5378,7 @@
       "aligned_flows": 224,
       "below_1x": 0,
       "cell": "collective-all-to-all-w16-200g-rnic-cn",
+      "per_flow_interpretation": "shared-receiver-diagnostic",
       "phase_ratio": 2.258580121703854,
       "slowdown_max": 2.287533897608678,
       "slowdown_min": 1.0452897022855696,
@@ -5111,6 +5392,7 @@
       "aligned_flows": 896,
       "below_1x": 47,
       "cell": "collective-all-to-all-w32-400g-rnic-cn",
+      "per_flow_interpretation": "shared-receiver-diagnostic",
       "phase_ratio": 2.029921131799333,
       "slowdown_max": 2.1055916336341403,
       "slowdown_min": 0.7590897640440003,
@@ -5124,6 +5406,7 @@
       "aligned_flows": 896,
       "below_1x": 75,
       "cell": "collective-all-to-all-w32-200g-rnic-cn",
+      "per_flow_interpretation": "shared-receiver-diagnostic",
       "phase_ratio": 1.959788094940141,
       "slowdown_max": 2.025143457882518,
       "slowdown_min": 0.5753424657534246,
@@ -5138,14 +5421,17 @@
       "SIMLLM_TXT2BIN": "c9512f7dd94438343be6d3353881ca13af915f207f669fba7376bc1d143cee79"
     },
     "expectations_commit": "aae9adf0d29c875bdf2c7aeb49dbf2f8c2ec966a",
-    "expectations_sha256": "d7d22e549e924b0879c5e76dbadb50faf5319533858820bb2b4bdc94161693cb",
+    "expectations_sha256": "ca5e370da4ed40daac61c7142539a296e63dda3756646e466407d0cfc49df7e3",
+    "guard_amendment_commit": "3d818f7df7204b577e8eaaa20db3f61ef426c591",
     "htsim_pin": "617ce203bb8e4d60343be6b7c5f1bd0eff4f053f",
-    "script_sha256": "86f0fdccb08efcfd58b821c189d535c3ea5bb73b4ac2c030a472eb95aa41ec02",
+    "report_script_sha256": "09613ee200fc1a8dc8a0c8f69d3cd8c0bde7962fe8f61c849ae3b038be11ae12",
+    "script_sha256": "dee33ada4d5bb253ca5f95cbf893ea76760c440e30753a1e7e28c8cdb2fd84f6",
     "topology_sha256": "69b2fc9c8183ff054149fee985217d37b69140e116dcfd28983fe3809624eb98"
   },
   "verdict": {
     "behavioral_relations": {
-      "failed": null,
+      "completed_component_interpretable": true,
+      "failed": 14,
       "families": [
         "aligned_physical_2x",
         "all_to_all_rate_band",
@@ -5167,26 +5453,18 @@
     ],
     "fatal_violations": [
       {
-        "cell": "collective-all-to-all-w32-400g-rnic-cn",
-        "family": "aligned_baseline_floor",
-        "ok": false
-      },
-      {
-        "cell": "collective-all-to-all-w32-200g-rnic-cn",
-        "family": "aligned_baseline_floor",
-        "ok": false
-      },
-      {
         "cell": "collective-all-to-all-w64-400g-rnic-cn",
         "family": "quiescence",
         "ok": false,
-        "reason": "fatal control lifecycle loss"
+        "reason": "fatal control lifecycle loss",
+        "survivable": true
       },
       {
         "cell": "collective-all-to-all-w64-200g-rnic-cn",
         "family": "quiescence",
         "ok": false,
-        "reason": "fatal control lifecycle loss"
+        "reason": "fatal control lifecycle loss",
+        "survivable": true
       }
     ],
     "missing_configurations": 0,
@@ -5208,6 +5486,10 @@
       "step-all-to-all-w64-400g-rnic-cn",
       "step-all-to-all-w64-200g-rnic-cn"
     ],
-    "status": "void"
+    "status": "component-evidence-with-survivable-voids",
+    "survivable_void_cells": [
+      "collective-all-to-all-w64-200g-rnic-cn",
+      "collective-all-to-all-w64-400g-rnic-cn"
+    ]
   }
 }

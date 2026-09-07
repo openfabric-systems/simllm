@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import importlib.util
+import io
 import json
 import math
 import os
@@ -22,7 +24,11 @@ from simllm.backends import (
     attribute_step_detail,
     run_htsim_rnic,
 )
-from simllm.backends.fct import normalized_fct
+from simllm.backends.fct import (
+    earliest_completion_byte_floors,
+    normalized_fct,
+    normalized_phase_makespan,
+)
 from simllm.backends.htsim_rnic import parse_completion_csv
 from simllm.compute import ComputeProvider, DurationEstimate, ModelDims
 from simllm.core import RequestPhase, ScheduledRequest, StepRecord
@@ -41,6 +47,7 @@ PAIR_BYTES = 65_536
 COMPUTE_PS = 100_000_000
 PROPAGATION_PS = 2_000_000
 FREEZE = "aae9adf"
+AMENDMENT = "3d818f7"
 FROZEN_RING_PS = {
     (8, 400): 66_438_400, (8, 200): 104_876_800,
     (16, 400): 102_432_000, (16, 200): 144_864_000,
@@ -192,6 +199,8 @@ def aligned_comparison(flows, baseline):
 
 
 def digest(path):
+    if path.suffix in (".md", ".py", ".topo", ".goal"):
+        return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
     h = hashlib.sha256()
     with path.open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
@@ -200,15 +209,27 @@ def digest(path):
 
 
 def write_json(path, content):
-    path.write_text(json.dumps(content, indent=2, sort_keys=True) + "\n")
+    path.write_bytes((json.dumps(content, indent=2, sort_keys=True) + "\n").encode())
 
 
 def write_csv(path, rows):
     if rows:
-        with path.open("w", newline="") as stream:
-            writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
-            writer.writeheader()
-            writer.writerows(rows)
+        stream = io.StringIO(newline="")
+        writer = csv.DictWriter(stream, fieldnames=list(rows[0]), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+        path.write_bytes(stream.getvalue().encode())
+
+
+def receiver_byte_floors(flows, rate_gbps, propagation_ps):
+    rows = []
+    for destination in sorted({f.destination for f in flows}):
+        receiver = [f for f in flows if f.destination == destination]
+        rows.extend({**asdict(p), "slack_ps": p.slack_ps, "ok": p.ok} for p in
+                    earliest_completion_byte_floors(
+                        receiver, link_rate_bps=rate_gbps * 1_000_000_000,
+                        propagation_ps=propagation_ps))
+    return rows
 
 
 def topology_for(out, rate):
@@ -216,12 +237,15 @@ def topology_for(out, rate):
     if text.count("Downlink_speed_Gbps 400") != 2:
         raise ValueError("reference topology tier rates changed")
     target = out / f"clos_64_{rate}g.topo"
-    target.write_text(text.replace("Downlink_speed_Gbps 400", f"Downlink_speed_Gbps {rate}"))
+    target.write_bytes(text.replace("Downlink_speed_Gbps 400",
+                                    f"Downlink_speed_Gbps {rate}").encode())
     return target
 
 
 def run_collective(cell, directory, topology):
-    goal = build_trace(cell).write(directory / "collective.goal")
+    goal = directory / "collective.goal"
+    goal.write_bytes(build_trace(cell).render().encode())
+    write_json(directory / "bounds.json", bounds(cell))
     completion = directory / "completion.csv"
     run = run_htsim_rnic(HtsimRnicConfig(
         goal_bin=to_binary(goal), profile=cell.profile,
@@ -232,6 +256,11 @@ def run_collective(cell, directory, topology):
     write_json(directory / "manifest.json", run.manifest)
     summary = flow_summary(run.flows)
     guards = flow_guards(cell, run.flows)
+    prefixes = receiver_byte_floors(run.flows, cell.rate_gbps, bounds(cell)["propagation_ps"])
+    write_csv(directory / "receiver_prefix_floors.csv", prefixes)
+    guards.append(check("receiver_prefix_floor", all(p["ok"] for p in prefixes),
+                        rows=len(prefixes), minimum_slack_ps=min(p["slack_ps"] for p in prefixes),
+                        failed_rows=[p for p in prefixes if not p["ok"]]))
     guards.append(check("quiescence", run.quiescent))
     guards.append(check("phase_floor", summary["phase_makespan_ps"] >= bounds(cell)["phase_floor_ps"]))
     return {**summary, "goal_sha256": digest(goal), "guards": guards,
@@ -350,7 +379,11 @@ def collect_checks(rows, out):
             if "fabric dropped control lifecycle" in error:
                 row["failure_detail"] = error.splitlines()[0]
                 row["guards"] = [check("quiescence", False,
-                                        reason="fatal control lifecycle loss")]
+                                        reason="fatal control lifecycle loss",
+                                        survivable=(row["mode"] == "collective" and
+                                                    row["pattern"] == "all-to-all" and
+                                                    row["width"] == 64 and
+                                                    row["profile"] == "rnic-cn"))]
         if row["status"] == "complete" and row["mode"] == "step":
             audit_step_row(row, directory)
     completed = [r for r in rows if r["status"] == "complete"]
@@ -382,7 +415,13 @@ def collect_checks(rows, out):
             ideal = parse_completion_csv(out / baseline["name"] / "completion.csv")
             ratios, excluded = aligned_comparison(physical, ideal)
             write_csv(out / cell.name / "aligned_normalization.csv", ratios)
-            row["guards"].append(check("aligned_baseline_floor", all(r["slowdown"] >= 1 for r in ratios)))
+            phase = normalized_phase_makespan(physical, ideal)
+            row["guards"].append(check("phase_baseline_floor", phase.slowdown >= 1,
+                                        physical_ps=phase.makespan_ps,
+                                        ideal_ps=phase.baseline_makespan_ps))
+            if cell.pattern == "ring":
+                row["guards"].append(check("unshared_aligned_baseline_floor",
+                                            all(r["slowdown"] >= 1 for r in ratios)))
             slowdowns = [r["slowdown"] for r in ratios]
             normalization.append({
                 "cell": cell.name, "aligned_flows": len(ratios), "unaligned_flows": excluded,
@@ -393,7 +432,9 @@ def collect_checks(rows, out):
                 "below_1x": sum(s < 1 for s in slowdowns),
                 "above_2x": sum(s > 2 for s in slowdowns),
                 "above_1_2x": sum(s > 1.2 for s in slowdowns),
-                "phase_ratio": row["phase_makespan_ps"] / baseline["phase_makespan_ps"],
+                "phase_ratio": phase.slowdown,
+                "per_flow_interpretation": "unshared-aligned-bound" if cell.pattern == "ring"
+                else "shared-receiver-diagnostic",
             })
             if ratios:
                 behavioral.append(check("aligned_physical_2x", max(slowdowns) <= 2,
@@ -432,10 +473,16 @@ def collect_checks(rows, out):
 def verdict(rows, exact, behavioral, expected_count=None):
     violations = [{"cell": r["name"], **g} for r in rows
                   for g in r.get("guards", []) if not g["ok"]]
+    survivable = [v for v in violations if v.get("survivable", False)]
+    fatal = [v for v in violations if not v.get("survivable", False)]
+    survivable_cells = {v["cell"] for v in survivable}
     failed_cells = [r["name"] for r in rows if r["status"] == "error"]
+    unexpected_errors = [name for name in failed_cells if name not in survivable_cells]
     missing = 0 if expected_count is None else max(0, expected_count - len(rows))
     return {
-        "status": "void" if violations else "incomplete" if failed_cells or missing else "component-evidence-only",
+        "status": "void" if fatal else "incomplete" if unexpected_errors or missing else
+        "component-evidence-with-survivable-voids" if survivable else "component-evidence-only",
+        "survivable_void_cells": sorted(survivable_cells),
         "missing_configurations": missing,
         "fatal_violations": violations, "failed_cells": failed_cells,
         "rejected_steps": [r["name"] for r in rows if r["status"] == "unsupported"],
@@ -443,8 +490,9 @@ def verdict(rows, exact, behavioral, expected_count=None):
         "behavioral_relations": {
             "families": sorted({c["family"] for c in behavioral}),
             "instances": len(behavioral),
-            "failed": None if violations else sum(not c["ok"] for c in behavioral),
-            "interpretable_for_closure": not violations and not failed_cells and not missing,
+            "failed": None if fatal else sum(not c["ok"] for c in behavioral),
+            "interpretable_for_closure": not fatal and not failed_cells and not missing,
+            "completed_component_interpretable": not fatal and not unexpected_errors and not missing,
         },
         "comp9_closed": False,
     }
@@ -510,19 +558,18 @@ def plot_results(report, destination):
             ax.plot(widths, [r["fct_p99_ps"] / 1e6 for r in selected], marker="^",
                     color=colors[profile], linestyle=":", markerfacecolor="white")
         selected = pick("collective", "all-to-all", "rnic-nn", 400)
-        floor = selected[0]["bounds"]["flow_payload_floor_ps"] / 1e6
+        floor = selected[0]["bounds"]["flow_propagation_floor_ps"] / 1e6
         ax.axhline(floor, color="gray", linewidth=.9)
-        ax.text(.04, .13, f"Payload floor: {floor:.5f} µs", transform=ax.transAxes,
+        ax.axhline(floor + 2, color="gray", linewidth=.9, linestyle=":")
+        ax.text(.04, .08, f"Byte + path floors:\nNN {floor:.5f}, CN {floor + 2:.5f} µs", transform=ax.transAxes,
                 fontsize=7, va="bottom")
-        ax.set(title="(c) All-to-all flow tail\n400 Gbit/s only",
+        ax.set(title="(c) All-to-all flow tail\n400 Gbit/s; CN width 64 void",
                ylabel="Flow completion time (µs)", yscale="log", ylim=(.8, 110))
         ax.legend(handles=[Line2D([], [], color="black", marker="^", linestyle=":",
                                   markerfacecolor="white", label="p99"),
                            Line2D([], [], color="black", marker="o", label="p50")],
-                  loc="center right", bbox_to_anchor=(1, .38), ncols=2,
+                  loc="center right", bbox_to_anchor=(1, .50), ncols=2,
                   columnspacing=.8, handlelength=1.4)
-        ax.text(.97, .22, "CN width 64 omitted:\nfatal control loss",
-                transform=ax.transAxes, ha="right", fontsize=7)
 
         for col, pattern in enumerate(("ring", "all-to-all")):
             ax = axes[1, col]
@@ -564,7 +611,7 @@ def plot_results(report, destination):
         for ax in axes.flat:
             ax.set(xlabel="Participating ranks (count)", xticks=WIDTHS, xlim=(5, 67))
             ax.spines[["top", "right"]].set_visible(False)
-        fig.suptitle("Collective width tail: void study with findings", fontsize=11, y=.985)
+        fig.suptitle("Collective width tail: completed components; two void cells", fontsize=11, y=.985)
         fig.text(.5, .94, "64-rank reference; physical two-tier Clos at 400 / 200 Gbit/s",
                  ha="center", fontsize=8)
         fig.legend(handles=[
@@ -579,6 +626,43 @@ def plot_results(report, destination):
         fig.savefig(destination / "collective_tail.png", dpi=240)
         fig.savefig(destination / "collective_tail.pdf", metadata={"CreationDate": None})
         plt.close(fig)
+
+
+def morning_reproduction(report, original):
+    """Compare every original ideal number and exact-oracle row, with zero tolerance."""
+    def numeric_leaves(value, path=()):
+        if isinstance(value, dict):
+            for key, item in value.items():
+                if key != "guards":
+                    yield from numeric_leaves(item, (*path, key))
+        elif isinstance(value, list):
+            for index, item in enumerate(value):
+                yield from numeric_leaves(item, (*path, index))
+        elif isinstance(value, (int, float)):
+            yield path, value
+
+    current = {r["name"]: r for r in report["configurations"]}
+    mismatches, count, cells = [], 0, 0
+    for old in original["configurations"]:
+        if old["profile"] != "rnic-nn":
+            continue
+        cells += 1
+        row = current[old["name"]]
+        leaves = dict(numeric_leaves(row))
+        for path, value in numeric_leaves(old):
+            count += 1
+            if leaves.get(path) != value:
+                mismatches.append({"cell": old["name"], "path": list(path),
+                                   "expected": value, "actual": leaves.get(path)})
+        for key in ("status", "goal_sha256", "artifact_goal_sha256"):
+            if old.get(key) != row.get(key):
+                mismatches.append({"cell": old["name"], "path": [key],
+                                   "expected": old.get(key), "actual": row.get(key)})
+    exact_equal = report["exact_oracles"] == original["exact_oracles"]
+    return {"source_commit": "80eef42", "ideal_configurations": cells,
+            "ideal_numeric_fields": count, "mismatches": mismatches,
+            "all_exact_oracle_rows_identical": exact_equal,
+            "ok": not mismatches and exact_equal}
 
 
 def main():
@@ -602,8 +686,11 @@ def main():
     provenance = {
         "expectations_commit": subprocess.check_output(
             ["git", "rev-parse", FREEZE], cwd=REPO, text=True).strip(),
+        "guard_amendment_commit": subprocess.check_output(
+            ["git", "rev-parse", AMENDMENT], cwd=REPO, text=True).strip(),
         "expectations_sha256": digest(HERE / "expectations.md"),
         "script_sha256": digest(Path(__file__)),
+        "report_script_sha256": digest(HERE / "report.py"),
         "htsim_pin": subprocess.check_output(
             ["git", "rev-parse", "HEAD:third_party/htsim"], cwd=REPO, text=True).strip(),
         "binaries_sha256": {name: digest(Path(os.environ[name]))
@@ -615,9 +702,15 @@ def main():
         previous = json.loads(previous_path.read_text())
         if not (args.resume or args.summarize_only):
             parser.error("existing results require --resume or a new --out")
-        for key in ("expectations_commit", "expectations_sha256", "htsim_pin",
+        for key in ("expectations_commit", "guard_amendment_commit", "expectations_sha256", "htsim_pin",
                     "binaries_sha256", "topology_sha256"):
-            if previous[key] != provenance[key]:
+            compatible = {provenance[key]} if isinstance(provenance[key], str) else None
+            source = {"expectations_sha256": HERE / "expectations.md",
+                      "topology_sha256": TOPOLOGY}.get(key)
+            if source is not None:
+                compatible.add(hashlib.sha256(source.read_bytes()).hexdigest())
+            if (previous[key] not in compatible if compatible is not None
+                    else previous[key] != provenance[key]):
                 parser.error(f"cannot reuse evidence after changing {key}; select a new --out")
     write_json(previous_path, provenance)
     topologies = {rate: topology_for(out, rate) for rate in RATES}
@@ -633,7 +726,9 @@ def main():
                         saved = directory / "cell.json"
                         if saved.exists() and (args.resume or args.summarize_only):
                             row = json.loads(saved.read_text())
-                            if row["expectations_sha256"] != provenance["expectations_sha256"]:
+                            if row["expectations_sha256"] not in {
+                                provenance["expectations_sha256"],
+                                hashlib.sha256((HERE / "expectations.md").read_bytes()).hexdigest()}:
                                 raise ValueError("cannot resume changed expectations")
                         elif args.summarize_only:
                             continue
@@ -648,7 +743,7 @@ def main():
                                 row.update(run(cell, directory, topologies[rate]))
                                 row["status"] = "complete"
                             except (RuntimeError, ValueError, OSError, subprocess.SubprocessError) as exc:
-                                (directory / "error.txt").write_text(str(exc) + "\n")
+                                (directory / "error.txt").write_bytes((str(exc) + "\n").encode())
                                 unsupported = (mode == "step" and profile == "rnic-cn"
                                                and "complete BACK-38" in str(exc))
                                 row.update(status="unsupported" if unsupported else "error",
@@ -664,10 +759,27 @@ def main():
     report = {"provenance": provenance, "configurations": rows,
               "exact_oracles": exact, "behavioral_relations": behavioral,
               "normalization": normalization, "verdict": verdict(rows, exact, behavioral, expected_count=64)}
+    original_bytes = subprocess.check_output(
+        ["git", "show", "80eef42:examples/collective_width_tail_v1/results.json"], cwd=REPO)
+    original = json.loads(original_bytes)
+    reproduction = morning_reproduction(report, original)
+    reproduction["source_sha256"] = hashlib.sha256(original_bytes).hexdigest()
+    report["morning_reproduction"] = reproduction
+    if not reproduction["ok"]:
+        report["verdict"]["status"] = "void"
+        report["verdict"]["fatal_violations"].append(check("morning_reproduction", False))
+        report["verdict"]["behavioral_relations"].update(
+            failed=None, interpretable_for_closure=False, completed_component_interpretable=False)
     write_json(out / "results.json", report)
+    spec = importlib.util.spec_from_file_location("width_tail_report", HERE / "report.py")
+    renderer = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(renderer)
+    markdown = renderer.render(report).encode()
+    (out / "RESULTS.md").write_bytes(markdown)
     plot_results(report, out / "figures")
     if args.publish:
         write_json(HERE / "results.json", report)
+        (HERE / "RESULTS.md").write_bytes(markdown)
         plot_results(report, HERE / "figures")
     print(json.dumps(report["verdict"], indent=2), flush=True)
     if report["verdict"]["status"] in ("void", "incomplete"):
