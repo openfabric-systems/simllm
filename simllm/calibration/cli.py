@@ -44,6 +44,7 @@ def build_parser() -> argparse.ArgumentParser:
     extract_parser.add_argument("--suite-root", type=Path)
     extract_parser.add_argument("--checkpoint-root", type=Path, required=True)
     extract_parser.add_argument("--step-records", type=Path, required=True)
+    extract_parser.add_argument("--attention-shape-version", type=int, choices=(1, 2), default=1)
     extract_parser.add_argument("--output-root", type=Path, required=True)
 
     run_parser = subparsers.add_parser(
@@ -190,10 +191,15 @@ def _call_extractor(arguments: argparse.Namespace) -> dict[str, Any]:
             raise ValueError(
                 f"framework {arguments.framework!r} has no extraction driver"
             )
+        shape_options = (
+            {"attention_shape_version": arguments.attention_shape_version}
+            if arguments.attention_shape_version != 1 else {}
+        )
         inventory = extractor(
             suite_raw=suite_file.read_bytes(),
             checkpoint_root=arguments.checkpoint_root,
             step_records_path=arguments.step_records,
+            **shape_options,
         )
         record = ObjectStore(arguments.output_root).write(inventory.record)
     except (ImportError, OSError, RuntimeError, ValueError) as error:

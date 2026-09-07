@@ -149,7 +149,8 @@
     "VLLM-41",
     "VLLM-42",
     "VLLM-6",
-    "WORK-3"
+    "WORK-3",
+    "COMP-81"
   ],
   "retired_never_landed": [
     "HTSIM-19"
