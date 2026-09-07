@@ -575,8 +575,9 @@ def write_artifacts(rows: list[dict], summary: dict, output: Path, plot: bool = 
     output.mkdir(parents=True, exist_ok=True)
     (output / "results.csv").write_bytes((csv_text).encode("utf-8"))
     summary = {**summary, "ledger_sha256": hashlib.sha256(csv_text.encode()).hexdigest()}
-    (output / "results.json").write_text(json.dumps(summary, indent=2, sort_keys=True, allow_nan=False) + "\n",
-                                         encoding="utf-8")
+    # Bytes, not text: Windows text mode would translate the LF terminators.
+    (output / "results.json").write_bytes(
+        (json.dumps(summary, indent=2, sort_keys=True, allow_nan=False) + "\n").encode("utf-8"))
     if plot:
         render(rows, output / "figures")
 
