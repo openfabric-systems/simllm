@@ -2478,3 +2478,7 @@ shipped collectives.
   floor. Retain exact ideal-profile equality and full-bisection identity as
   regressions. The current build exposes no Clos flow-hash routing option;
   TRAF-8 still owns captured stages, microbatches and general serving metrics.
+  Blocked since 2026-09-07 by HTSIM-41: with control headroom the six cells
+  pass the former control-loss point and exhaust the eight-attempt data
+  retry limit, so the freeze above waits for the data-loss recovery
+  mechanism (see the control recovery study).
