@@ -132,6 +132,12 @@ from simllm.traffic.patterns import (
     ring_allreduce,
     scatter,
 )
+from simllm.traffic.pipeline import (
+    PipelineStepLowerer,
+    compose_pipeline_graph,
+    pipeline_stage_membership,
+    step_pp_activations,
+)
 from simllm.traffic.request_fidelity import (
     RequestFidelityError,
     RequestFidelityReport,
@@ -275,6 +281,7 @@ __all__ = [
     "MoeMessageSequence",
     "PacketKvHandoffArtifact",
     "PacketKvHandoffPolicy",
+    "PipelineStepLowerer",
     "RequestFidelityError",
     "RequestFidelityReport",
     "RoutedConservationReport",
@@ -295,6 +302,7 @@ __all__ = [
     "compare_collective_service_to_floor",
     "compare_goal_request_attribution",
     "compare_request_moe_fidelity",
+    "compose_pipeline_graph",
     "critical_collective_endpoint_bytes",
     "distribute_collective_serialization_ps",
     "fit_collective_floor_calibration",
@@ -304,6 +312,7 @@ __all__ = [
     "observed_routed_byte_evidence",
     "ordered_pairwise_messages",
     "pairwise_all_to_allv",
+    "pipeline_stage_membership",
     "plan_execution_graph_collectives",
     "plan_execution_graph_locality",
     "plan_step_locality",
@@ -325,6 +334,7 @@ __all__ = [
     "step_communication_phases",
     "step_moe_alltoalls",
     "step_moe_message_sequences",
+    "step_pp_activations",
     "step_tp_allreduces",
     "validate_execution_graph_locality_projection",
     "validate_expert_placement_snapshot",

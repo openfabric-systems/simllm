@@ -36,8 +36,8 @@ simplification is a numbered task in docs/modules/traffic.md:
 - `render_step_goal` retains the strict serial compatibility schedule;
   `lower_step_observations` instead preserves adapter-observed queues and
   dependency edges; VLLM-22 supplies the accepted Granite MoE producer;
-- no pipeline-parallel activation traffic (records carry no PP stage
-  information yet): TRAF-8;
+- captured pipeline-stage attribution remains TRAF-8; declared forward
+  stages compose through :class:`simllm.traffic.PipelineStepLowerer`;
 - the MoE layer is rendered as one calc, then the TP allreduces, then
   dispatch and combine back to back, instead of splitting the layer's
   compute around the all-to-alls: TRAF-9.
