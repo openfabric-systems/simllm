@@ -1142,7 +1142,9 @@ Additionally, two pre-reader incidents make the CORE-65 forbidden-access
 ledger nonempty, so its literal protocol clause cannot pass in this worker.
 CORE-65 remains open and CORE-66 receives the exact EP72 hardware-capture
 remainder. All 154 preservation locks pass; no parameter was fitted, no MTP
-value was used or compared, and no fifth scored run occurred.
+value was used or compared, and no fifth scored run occurred. On 2026-09-07
+the maintainer triage folded CORE-64 into CORE-66, which now carries the gap
+and the feasible capture path; CORE-65 stays open for the derivation.
 
 The [CORE-66 feasible-capture result](../../examples/deployment_curve_v1/core66_capture_result.md)
 records no hardware submission. The registered 72-rank cell is impossible on
@@ -1178,16 +1180,13 @@ broader exact SGLang EP72 capture and communication remainder.
 
 ## Open tasks
 
-### Precision
+Folded 2026-09-07 (maintainer triage): CORE-64 into CORE-66. Both were slices
+of one gap, the -57.164268 percent standard-decode undercorrection against the
+22,282 tokens/s/node anchor; CORE-66 carries CORE-64's conclusion and the
+feasible capture path, and CORE-65 stays open for the derivation once that
+capture exists.
 
-- CORE-64 (Precision; P0; M): resolve the exact -57.164268 percent
-  standard-decode undercorrection that remains after the architecture-only
-  expert-residency scale, now unconditionally promoted by the clean CORE-63
-  repetition. Identify component-backed EP72 residency-shape physics without
-  fitting a calibration constant, preserve attention, MLA and shared-expert
-  locality explicitly, and publish the signed movement from 9,544.657796
-  tokens/s/node against the 22,282 calibration anchor. Decode-side overlap
-  remains out of scope until a real decode communication service term exists.
+### Precision
 
 - CORE-65 (Precision; P0; L): resolve the exact remaining -12,737.342204
   tokens/s/node, or -57.164268 percent, standard-decode physical attribution
@@ -1256,6 +1255,21 @@ broader exact SGLang EP72 capture and communication remainder.
   communication. CORE-66 therefore stays open on the exact SGLang EP72
   dispatch/combine service and physical identity remainder; the vLLM ladder
   does not substitute a zero communication price for that missing evidence.
+  Feasible path under current cluster policy (maintainer triage 2026-09-07):
+  the registered EP72 cell needs nine eight-GPU nodes that the `gpu_general`
+  association cannot allocate, so the task proceeds through (a) a runnable
+  cu129, CPython 3.11, aarch64 pinned SGLang plus DeepEP dependency set, (b)
+  EP4 captures inside the four-GPU policy that bind the DeepEP dispatch and
+  combine launches and their payloads, and (c) a declared, content-addressed
+  EP4-to-EP72 extrapolation candidate that is labeled candidate evidence and
+  never a measured closure. CORE-64 folded here on 2026-09-07 (the gap is
+  -12,737.342204 tokens/s/node): it established that architecture-only
+  residency-shape physics does not close the -57.164268 percent
+  standard-decode gap without a fitted constant, and CORE-65's binding round
+  established that every disclosed EP72 per-rank request, KV, MLA,
+  shared-expert, dense, router and output shape matches the TP1 capture, so
+  the EP72 physical capture is the missing evidence and CORE-65 derives the
+  movement once it exists.
 
 - CORE-53 (Precision; P1; M): replace the first disaggregated session slice's
   roofline bootstrap with the accepted COMP-64 kernel-cycle lookup record.
@@ -1639,8 +1653,9 @@ broader exact SGLang EP72 capture and communication remainder.
   three-anchor verdict REFUTED. The deployment-frontier figure stays
   byte-locked because its v2 contract has no MTP marker slot. CORE-54 stays
   open on COMP-76's decode calibration reproduction, COMP-74 distribution
-  propagation now partially unlocked by two retained observations, COMP-78's
-  Granite campaign arm, SGL-36 and TRAF-64.
+  propagation now partially unlocked by two retained observations, COMP-72's
+  Granite campaign arm (COMP-78 folded into it on 2026-09-07), SGL-36 and
+  TRAF-64.
 - CORE-52 (Completeness; P1; L): run the live 16-prefill plus 40-decode target
   through the same disaggregated session with 448 simulated workers. Retain
   every engine simultaneously, route requests through every declared pool
@@ -1650,3 +1665,21 @@ broader exact SGLang EP72 capture and communication remainder.
   and must remain byte-identical. If the integration host cannot retain all 56
   engines, keep this task open and report the measured stopping point rather
   than extrapolating a pass. Depends on VLLM-35 and PLACE-5.
+
+- CORE-67 (Completeness; P1; M): emit a bottleneck classification for every
+  reported TTFT and TPOT from the critical-path breakdown.
+  `CriticalPathBreakdown` already conserves an operation's latency into launch
+  queue, device queue,
+  service, completion delivery and external dependency, and `LatencyAttribution`
+  names the owner, but no record says which physical resource bound the
+  request: an HBM-bound or compute-bound kernel (the achieved fraction of the
+  binding roofline from the COMP-90 kernel efficiency ledger), an intra-node
+  collective wait by participant width, a cross-node collective or fabric
+  queueing wait (the per-flow FCT tail share), host launch, or the batching
+  queue. Add a strict versioned `simllm-bottleneck-report-v1` record beside
+  `StepResult` that ranks those classes per request and per step from the
+  selected critical path only, never from additive visit sums; its absence
+  preserves every accepted artifact byte for byte. Acceptance: on the m4,
+  breakdown and collective width tail studies the report names the class the
+  study identified, the ranked shares conserve the request's critical-path
+  latency exactly, and the disabled path is byte-identical.
