@@ -122,20 +122,19 @@ def records_for(case):
 
 def physical_bounds(case, record, config):
     """Derive transport and work limits before executing or reading outcomes."""
+    kernel = step_kernel(config.dims, record, num_sampled=record.num_sampled if record.num_sampled is not None else len(record.scheduled))
+    physical_kernel_floor = int(max(kernel.flops / config.gpu.peak_flops,
+                                    kernel.bytes_moved / config.gpu.mem_bandwidth) * 1e12)
     if case["kind"] == "width":
         limits = WIDTH.bounds(WIDTH.Cell(case["pattern"], case["width"], case["rate"], case["profile"], "step"))
         fabric_floor = 2 * limits["phase_floor_ps"]
         fabric_ceiling = 2 * limits["phase_ceiling_ps"]
         compute_floor = compute_ceiling = WIDTH.COMPUTE_PS
-        physical_kernel_floor = 0
     else:
         payload = record.total_new_tokens * M4.HIDDEN * M4.DTYPE_BYTES
         rounds = 2 * M4.LAYERS * 2 * (case["width"] - 1)
         fabric_floor = rounds * (payload // case["width"] * (8000 // case["rate"]) + 2_000_000)
         fabric_ceiling = fabric_floor
-        kernel = step_kernel(config.dims, record, num_sampled=record.num_sampled if record.num_sampled is not None else len(record.scheduled))
-        physical_kernel_floor = int(max(kernel.flops / config.gpu.peak_flops,
-                                        kernel.bytes_moved / config.gpu.mem_bandwidth) * 1e12)
         duration = config.provider.estimate(kernel, config.gpu).duration_ps
         compute_floor = compute_ceiling = M4.LAYERS * max(duration // (M4.LAYERS * 1000), 1) * 1000
     return {"fabric_floor_ps": fabric_floor, "fabric_ceiling_ps": fabric_ceiling,
@@ -458,7 +457,7 @@ def results_markdown(report):
               "![Ranked critical-path shares](figures/ranked_shares.png)", "",
               "## Physical interpretation", "",
               "The GPU must fetch bytes and execute arithmetic before releasing the next communication phase. Prefill reuses weights across many tokens and its arithmetic work binds the ideal roof. Decode reuses them less and memory bandwidth binds it. The record compares declared arithmetic intensity with the device ridge point; it does not infer the measured cause of a slow kernel. All named serving cells have absent-by-design measured fractions because no matching measured kernel/config cell is supplied.", "",
-              "The packet floors use payload bytes divided by link rate and propagation per dependent ring hop. The expert floor uses bytes received from all remote peers. The ideal ceilings serialize the declared packet slots conservatively. Each row retains the limits computed before execution. All observations lie inside their bounds, and the four published breakdown component tuples agree exactly.", "",
+              "The packet floors use payload bytes divided by link rate and propagation per dependent ring hop. The expert floor uses bytes received from all remote peers. The ideal ceilings serialize the declared packet slots conservatively. Each row retains the limits computed before execution. All observations lie inside their bounds, and the four published breakdown component tuples agree exactly. The fixed 100-microsecond width compute interval exceeds its declared-work roofline floors: 9.250770 microseconds for rings, 27.066368 for width-8 expert work and 40.568240 for width-64 expert work.", "",
               "The core5 chain is two 4096-byte handoffs plus 20000 ps kernel, 8000 ps collective and 1000 ps control. Its service is 356680 ps at 200G and 192840 ps at 400G. Adding 1000000000 ps of declared admission shifts only TTFT by that amount; it makes batching queue the first class without changing service or TPOT.", "",
               "Flow completion time (FCT) tail share is `(maximum FCT - minimum FCT) / maximum FCT` within each selected fabric artifact. It is a spread diagnostic, not a sum of flow waits and not a switch queue measurement. Full packet rows remain in bulk. Replay retains actual witness rows for extrema and counts, not the full FCT distribution.", "",
               "The m4 source uses distinct prefill and decode request identities. This replay declares all arrivals at zero, so the decode requests correctly attribute the preceding prefill to batching delay in their TTFT. The m4 fabric-first prediction concerns each executed step. Request rankings conserve the declared request history independently; they do not copy the step winner.", "",

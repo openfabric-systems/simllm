@@ -3527,7 +3527,7 @@
             "compute_floor_ps": 100000000,
             "fabric_ceiling_ps": 214412800,
             "fabric_floor_ps": 202800640,
-            "physical_kernel_floor_ps": 0,
+            "physical_kernel_floor_ps": 9250770,
             "step_ceiling_ps": 314412800,
             "step_floor_ps": 302800640
           },
@@ -3591,7 +3591,7 @@
             "compute_floor_ps": 100000000,
             "fabric_ceiling_ps": 135206400,
             "fabric_floor_ps": 129400320,
-            "physical_kernel_floor_ps": 0,
+            "physical_kernel_floor_ps": 9250770,
             "step_ceiling_ps": 235206400,
             "step_floor_ps": 229400320
           },
@@ -3655,7 +3655,7 @@
             "compute_floor_ps": 100000000,
             "fabric_ceiling_ps": 755596800,
             "fabric_floor_ps": 669150720,
-            "physical_kernel_floor_ps": 0,
+            "physical_kernel_floor_ps": 9250770,
             "step_ceiling_ps": 855596800,
             "step_floor_ps": 769150720
           },
@@ -3719,7 +3719,7 @@
             "compute_floor_ps": 100000000,
             "fabric_ceiling_ps": 629798400,
             "fabric_floor_ps": 586575360,
-            "physical_kernel_floor_ps": 0,
+            "physical_kernel_floor_ps": 9250770,
             "step_ceiling_ps": 729798400,
             "step_floor_ps": 686575360
           },
@@ -3783,7 +3783,7 @@
             "compute_floor_ps": 100000000,
             "fabric_ceiling_ps": 302521600,
             "fabric_floor_ps": 40700160,
-            "physical_kernel_floor_ps": 0,
+            "physical_kernel_floor_ps": 27066368,
             "step_ceiling_ps": 402521600,
             "step_floor_ps": 140700160
           },
@@ -3847,7 +3847,7 @@
             "compute_floor_ps": 100000000,
             "fabric_ceiling_ps": 153260800,
             "fabric_floor_ps": 22350080,
-            "physical_kernel_floor_ps": 0,
+            "physical_kernel_floor_ps": 27066368,
             "step_ceiling_ps": 253260800,
             "step_floor_ps": 122350080
           },
@@ -3911,7 +3911,7 @@
             "compute_floor_ps": 100000000,
             "fabric_ceiling_ps": 19088416000,
             "fabric_floor_ps": 297601280,
-            "physical_kernel_floor_ps": 0,
+            "physical_kernel_floor_ps": 40568240,
             "step_ceiling_ps": 19188416000,
             "step_floor_ps": 397601280
           },
@@ -3975,7 +3975,7 @@
             "compute_floor_ps": 100000000,
             "fabric_ceiling_ps": 9546208000,
             "fabric_floor_ps": 150800640,
-            "physical_kernel_floor_ps": 0,
+            "physical_kernel_floor_ps": 40568240,
             "step_ceiling_ps": 9646208000,
             "step_floor_ps": 250800640
           },
