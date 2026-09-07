@@ -201,18 +201,28 @@ can report a physical step fraction without a second timing authority.
 
 ![Phase makespans, the per-flow tail, ideal step shares and the physical-over-ideal ratio](figures/collective_tail.png)
 
-The figure shows diagnostic measurements from a void study. Top row: the
-ring and all-to-all phase makespans against width for both profiles and both
-link rates, with the frozen phase floors as gray lines (the ideal profile
-sits on its floor; the missing physical width-64 all-to-all points are the
-fatal control-loss exits), then the per-flow completion-time tail at 400G:
-p50 and p99 for both profiles above the payload floor. Bottom row: the
-supported ideal step shares for the two-ring and expert steps, then the
-physical-over-ideal phase makespan ratio against the 2x comparator target;
-the ring stays between 3x and 6.6x above the ideal at every width, the
-all-to-all between 2x and 2.5x. PNG and vector PDF are generated from
-`results.json`; only the analysis-script hash in that record changes when
-the figure code changes.
+The figure shows diagnostic measurements from a void study. Blue denotes
+rnic-nn (NN), the ideal endpoint model; red denotes rnic-cn (CN), the physical
+Clos. Panels (a), (b), (d), (e) and (f) use solid lines for 400 Gbit/s and
+dashed lines for 200 Gbit/s. Panels (a) and (b) show phase makespans above the
+gray ideal-profile phase floors, including 293.287680 µs for the ring and
+75.400320 µs for all-to-all at width 64 and 400 Gbit/s. Physical-profile phase
+floors are not drawn. Panel (c) shows within-configuration flow completion
+times at 400 Gbit/s: solid circles denote the median (p50), dotted open
+triangles the 99th percentile (p99), and gray the 1.310720 µs payload floor.
+The physical p99 exceeds its median at every completed width. Panels (d) and
+(e) show fabric service divided by step latency, equal here to time to first
+token (TTFT), with fixed 100 µs compute service. At width 64 and 400 Gbit/s,
+the ideal two-ring and single-engine expert shares reach 85.892% and 60.515%.
+These are whole fabric shares, not excess-tail attribution; physical step
+shares remain unavailable under BACK-38. Panel (f) uses circles for the ring
+and squares for all-to-all: physical-to-ideal phase ratios span 2.96x to 6.60x
+for the ring, all above the 2x comparator reference, and 1.96x to 2.50x for
+all-to-all. This phase reference is distinct from the frozen aligned-flow
+acceptance checks. Missing physical width-64 all-to-all points in (b), (c)
+and (f) reflect fatal control-loss exits at both rates, not zero latency.
+PNG and vector PDF are generated from `results.json`; only the analysis-script
+hash in that record changes when the figure code changes.
 
 ## Reproduction and residual work
 
