@@ -142,3 +142,32 @@ def test_version_pin_accepts_only_the_exact_supplied_cpu_build():
                                  ("0.27.1+cpu", "0.27.2")):
         with pytest.raises(RuntimeError, match="pin mismatch"):
             study.require_versions(distribution, module)
+
+
+def test_scheduler_observer_preserves_native_throttle_argument():
+    output = SimpleNamespace(num_scheduled_tokens={"r0": 1})
+    seen = []
+
+    def schedule(throttle_prefills=False):
+        seen.append(throttle_prefills)
+        return output
+
+    manager = SimpleNamespace(allocate_slots=lambda: None, free=lambda: None)
+    scheduler = SimpleNamespace(running=["r0"], schedule=schedule, kv_cache_manager=manager,
+                                update_from_output=lambda: None)
+    executor = SimpleNamespace(execute_model=lambda: None, sample_tokens=lambda: None)
+    core = SimpleNamespace(scheduler=scheduler, model_executor=executor)
+    engine = SimpleNamespace(engine_core=SimpleNamespace(engine_core=core),
+                             output_processor=SimpleNamespace(process_outputs=lambda: None),
+                             add_request=lambda: None,
+                             step=lambda: scheduler.schedule(False))
+    driver = SimpleNamespace(_observe_outputs=lambda: None)
+    llm = SimpleNamespace(llm_engine=engine)
+    timers = study.Timers()
+    with ExitStack() as stack:
+        study.install_timers(timers, stack, driver, llm, None)
+        assert engine.step() is output
+    assert seen == [False]
+    assert scheduler.schedule is schedule
+    event = next(e for e in timers.events if e["phase"] == "scheduler")
+    assert event["running_before"] == event["scheduled"] == 1

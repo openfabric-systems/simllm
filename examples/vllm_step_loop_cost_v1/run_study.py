@@ -118,7 +118,7 @@ def install_timers(timers, stack, oracle, llm, worker):
         timers.step += 1
         return {}
 
-    def schedule_before():
+    def schedule_before(throttle_prefills=False):
         return {"running_before": len(scheduler.running)}
 
     def schedule_after(output):
