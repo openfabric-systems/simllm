@@ -1367,6 +1367,23 @@ created" statement stands and refers to different, never-registered work.
   cut (3 to 39 ms after congestion) and the recovery to 95 percent (447 plus
   or minus 10 ms after the last cut) against the campaign values.
 
+- BACK-68 (Precision; P0; M): resolve the aligned-baseline refutation the
+  [collective width tail
+  study](../../examples/collective_width_tail_v1/RESULTS.md) recorded: at
+  expert-parallel fan-in 32, 47 physical `rnic-cn` flows at 400 Gbit/s and 75
+  at 200 Gbit/s complete below the `rnic-nn` ideal per-flow bound, minimum
+  ratio 0.575342, which the metrics convention calls a modeling bug by
+  definition for aligned-start flows. Either the ideal profile's instant
+  central max-min allocation is not a per-flow lower bound under the physical
+  packet scheduler (a fair allocation can finish some flows later while the
+  phase finishes earlier), in which case the convention is restated as
+  phase-makespan normalization above the fan-in where the two schedulers
+  diverge and the per-flow ratio is reported as diagnostic only, or the
+  physical path credits a flow twice. Acceptance: a controlled two-flow and
+  one many-to-one experiment that proves which, a corrected convention or
+  backend fix, and the study rerun with the fatal guard restated before the
+  run.
+
 ### Completeness
 
 - BACK-9 (Completeness; P1; L): replace the timing-neutral WQE ledger with
@@ -1866,6 +1883,20 @@ created" statement stands and refers to different, never-registered work.
   are exported through the C facade and the DPI shim, with a test that walks
   one registered region's accesses and reproduces the stage sequence.
 
+- BACK-69 (Completeness; P1; M): make the packet-level sinks emit the
+  runtime's `CriticalPathBreakdown` and per-visit queue waits. `HtsimStepSink`
+  and the persistent sink report collective shares through
+  `HtsimRequestMetricReducer.attribute_step_detail`, but they supply no
+  `CompletionEvent` segments, no per-visit `eligible_at` and `started_at`, and
+  no conserved launch-queue, device-queue, service and delivery split, so a
+  physical run cannot feed the CORE-67 bottleneck report and a physical tail
+  cannot be split between control, switch queues and endpoint work.
+  Acceptance: every completed packet step conserves its elapsed time into the
+  same five segments the coarse runtime emits, the shares the reducer already
+  reports are reproduced exactly from those segments, and the disabled path
+  leaves every accepted artifact byte-identical. The width-64 ideal steps of
+  the collective width tail study are the first cells.
+
 ## Backend-repo follow-ups (tracked here, executed in their repos)
 
 Scope note for the ConnectX-5 calibration (BACK-54): the DCQCN comparator
@@ -2065,3 +2096,14 @@ model the two flows as separate nodes and say so.
   it also looks for a directory named `HTSIM`, which no case-sensitive
   checkout of this layout provides. None of this affects SimLLM runs, which
   invoke the simulators directly rather than through the launcher.
+
+- HTSIM-40 (Completeness; P1; M): survive control-message loss under wide
+  incast. The physical width-64 all-to-all of the collective width tail study
+  exits with `fabric dropped control lifecycle` at both 400 and 200 Gbit/s
+  with the default 1,048,576-byte buffer, because the manifest declares fatal
+  control loss without recovery. Add a control-message retry or recovery
+  policy behind an explicit selection, with the fatal no-recovery behavior
+  retained as the identity off path, and a declared buffer sizing rule that
+  names the fan-in it admits. Acceptance: the width-64 all-to-all completes on
+  `rnic-cn` at both rates with a recorded control-retry count and
+  byte-identical results for every cell that completed before.
