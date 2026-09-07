@@ -410,14 +410,21 @@ def plot(report, destination):
     fig, ax = plt.subplots(figsize=(9, 8))
     for index, (_, cs) in enumerate(rows):
         left = 0
-        for c in cs:
+        for position, c in enumerate(cs):
             ax.barh(index, c["share_percent"], left=left, color=colors[c["class"]], height=.7)
+            if position == 0 and c["share_percent"] >= 12:
+                ax.text(left + c["share_percent"] / 2, index, f'{c["share_percent"]:.1f}%',
+                        ha="center", va="center", fontsize=8, color="white")
             left += c["share_percent"]
+    groups = [name.split("-")[0] for name, _ in rows]
+    for index in range(1, len(rows)):
+        if groups[index] != groups[index - 1]:
+            ax.axhline(index - .5, color="0.75", linewidth=.8)
     ax.set_yticks(range(len(rows)), [name for name, _ in rows], fontsize=9)
     ax.invert_yaxis()
     ax.set_xlim(0, 100)
     ax.set_xlabel("Selected critical-path latency share (%)")
-    ax.set_title("Bottleneck classes, largest contribution first")
+    ax.set_title("Bottleneck classes per cell, largest contribution first (leading share labeled)")
     from matplotlib.patches import Patch
     ax.legend(handles=[Patch(color=colors[c], label=c) for c in classes],
               loc="upper center", bbox_to_anchor=(.5, -.09), ncol=3, frameon=False, fontsize=9)
