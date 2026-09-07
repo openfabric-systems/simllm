@@ -75,14 +75,23 @@ def identity(row: dict) -> tuple:
 
 
 def digest(path: Path) -> str:
-    """SHA-256 of a tracked text input with line endings normalized to LF.
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
-    Windows checkouts may materialize CRLF line endings; the frozen digests
-    were taken over LF content, so the working-tree check normalizes first.
-    The committed-blob check in `chronology_findings` reads git's own bytes
-    and needs no normalization.
+
+def digest_matches(path: Path, expected: str) -> bool:
+    """Accept the frozen digest over the raw bytes or over LF-normalized bytes.
+
+    Windows checkouts may materialize CRLF line endings for text inputs; the
+    frozen digests were taken over the committed bytes, so a text input is
+    also accepted when its CRLF-normalized content matches. An input whose
+    committed bytes legitimately contain CR sequences still matches raw. The
+    committed-blob check in `chronology_findings` reads git's own bytes and
+    needs neither form.
     """
-    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+    data = path.read_bytes()
+    if hashlib.sha256(data).hexdigest() == expected:
+        return True
+    return hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest() == expected
 
 
 def frozen_findings(frozen: dict) -> list[str]:
@@ -90,7 +99,7 @@ def frozen_findings(frozen: dict) -> list[str]:
              for name, value in FROZEN_DIGESTS.items()}
     paths.update(frozen["pinned_inputs"])
     return [f"input digest: {name}" for name, value in paths.items()
-            if not (ROOT / name).is_file() or digest(ROOT / name) != value]
+            if not (ROOT / name).is_file() or not digest_matches(ROOT / name, value)]
 
 
 def chronology_findings() -> list[str]:
