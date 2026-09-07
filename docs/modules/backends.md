@@ -2103,3 +2103,6 @@ model the two flows as separate nodes and say so.
   names the fan-in it admits. Acceptance: the width-64 all-to-all completes on
   `rnic-cn` at both rates with a recorded control-retry count and
   byte-identical results for every cell that completed before.
+  Second consumer (2026-09-07): the [pipeline rail contention
+  study](../../examples/pp_rail_contention_v1/RESULTS.md) loses its six 4:1
+  cells at expert-parallel width 32 to the same exit.
