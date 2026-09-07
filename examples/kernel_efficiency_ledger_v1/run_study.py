@@ -424,7 +424,7 @@ FAMILY_GROUPS = (
     ("GEMM", ("gemm", "G1:", "G2:", "G3:", "G4:", "G5:")),
     ("MoE and routing", ("expert_down", "expert_gate_up", "fused_moe", "topk_gating", "gemvx")),
     ("elementwise and norm", ("elem_add", "elem_scale", "elem_rmsnorm")),
-    ("HBM copy, read, write", ("hbm_copy", "hbm_read", "hbm_write", "hbm_triad")),
+    ("HBM streaming", ("hbm_copy", "hbm_read", "hbm_write", "hbm_triad")),
 )
 GROUP_COLORS = ("#d62728", "#ff7f0e", "#1f77b4", "#9467bd", "#2ca02c", "#7f7f7f")
 
@@ -468,40 +468,50 @@ def render(rows: list[dict], output: Path) -> None:
     def style(row: dict) -> dict:
         void = row["source_void"] or row["cell_void"]
         color = colors[family_group(row["family"])]
-        return {"marker": device_markers[row["device"]], "s": 22,
-                "facecolors": "none" if void else color, "edgecolors": color, "linewidths": 0.9}
+        return {"marker": device_markers[row["device"]], "s": 13,
+                "facecolors": "none" if void else color, "edgecolors": color, "linewidths": 0.7}
 
-    fig, axes = plt.subplots(1, 3, figsize=(15, 4.6), layout="constrained")
+    fig = plt.figure(figsize=(7, 7.4))
+    grid = fig.add_gridspec(2, 2, height_ratios=(1, 0.8), left=0.10, right=0.98,
+                            bottom=0.265, top=0.89, hspace=0.52, wspace=0.35)
+    axes = [fig.add_subplot(grid[0, 0]), fig.add_subplot(grid[0, 1]),
+            fig.add_subplot(grid[1, :])]
 
     # Panel A: A100 roofline for cells with declared arithmetic.
     ax = axes[0]
     peak, bandwidth = device_roof("a100")
-    xs = [2.0 ** k for k in range(-4, 15)]
-    ax.plot(xs, [min(peak, bandwidth * x) for x in xs], color="black", linewidth=1.0,
-            label="A100 roof: measured HBM envelope, clock-derived peak")
-    ax.axvline(peak / bandwidth, color="gray", linewidth=0.6, linestyle="--")
+    ridge = peak / bandwidth
+    xs = [0.5, ridge, 1e4]
+    ax.plot(xs, [min(peak, bandwidth * x) / 1e12 for x in xs], color="black", linewidth=1.0)
+    ax.vlines(ridge, 0.01, peak / 1e12, color="gray", linewidth=0.6, linestyle="--", zorder=0)
     for row in ranked_rows:
         if row["device"] != "a100" or row["flops_declared"] <= 0:
             continue
         view = row["views"]["measured"]
-        ax.scatter([view["intensity_flops_byte"]], [view["flops_s"]], **style(row))
-    ax.set(xscale="log", yscale="log", xlabel="Arithmetic intensity (FLOP per byte, declared)",
-           ylabel="Achieved FLOP/s (declared work over measured time)",
-           title="A: A100 roofline, cells with arithmetic")
-    ax.text(peak / bandwidth * 1.15, peak * 0.03, "ridge", fontsize=8, color="gray")
+        ax.scatter([view["intensity_flops_byte"]], [view["flops_s"] / 1e12], **style(row))
+    ax.set(xscale="log", yscale="log", xlim=(0.5, 1e4), ylim=(0.01, 1200),
+           xlabel="Arithmetic intensity (FLOP/byte)", ylabel="Achieved rate (TFLOP/s)")
+    ax.set_title("A: A100 arithmetic roofline", fontsize=9, loc="left")
+    ax.text(0.03, 0.95, f"Clock ceiling: {peak / 1e12:.3f} TFLOP/s",
+            transform=ax.transAxes, fontsize=7.5, va="top")
+    ax.text(ridge * 1.18, 0.075, f"Ridge\n{ridge:.3f}\nFLOP/byte",
+            fontsize=7.5, color="0.35")
 
     # Panel B: memory side on both devices.
     ax = axes[1]
     for device, line_style in (("a100", "-"), ("gh200", "--")):
         _, dev_bandwidth = device_roof(device)
-        ax.axhline(dev_bandwidth, color="black", linewidth=1.0, linestyle=line_style,
-                   label=f"{device.upper()} measured HBM envelope, {dev_bandwidth / 1e9:.0f} GB/s")
+        ax.axhline(dev_bandwidth / 1e9, color="black", linewidth=1.0, linestyle=line_style,
+                   zorder=0)
+        ax.text(0.02, dev_bandwidth / 1e9 * 1.10,
+                f"{device.upper()}: {dev_bandwidth / 1e9:.3f}",
+                transform=ax.get_yaxis_transform(), fontsize=7.5, va="bottom")
     for row in ranked_rows:
         view = row["views"]["measured"]
-        ax.scatter([row["bytes_declared"]], [view["bytes_s"]], **style(row))
-    ax.set(xscale="log", yscale="log", xlabel="Declared bytes moved per kernel",
-           ylabel="Achieved bytes/s (declared bytes over measured time)",
-           title="B: memory side, both devices")
+        ax.scatter([row["bytes_declared"]], [view["bytes_s"] / 1e9], **style(row))
+    ax.set(xscale="log", yscale="log", xlim=(2e5, 1.5e10), ylim=(7, 8000),
+           xlabel="Declared traffic per kernel (bytes)", ylabel="Achieved rate (GB/s)")
+    ax.set_title("B: Memory rates, both devices", fontsize=9, loc="left")
 
     # Panel C: ranked fractions with breaches.
     ax = axes[2]
@@ -512,28 +522,41 @@ def render(rows: list[dict], output: Path) -> None:
                 linewidth=1.0, label=f"{source} envelope")
     bad = [i for i, r in enumerate(order) if r["cell_void"]]
     ax.scatter([x[i] for i in bad], [order[i]["views"]["measured"]["fraction"] for i in bad],
-               marker="x", color="#d62728", label="cell envelope breach", zorder=3)
+               marker="x", s=20, linewidths=1.0, color="#d62728",
+               label="cell envelope breach", zorder=3)
     for threshold in THRESHOLDS:
         ax.axhline(threshold, color="gray", linewidth=0.6, linestyle="--")
     ax.axhline(1, color="black", linewidth=0.7)
     ax.set(xlabel="Rank by measured-envelope fraction (1 = lowest)",
-           ylabel="Fraction of binding roofline (dimensionless)",
-           title=f"C: all {len(order)} declared-work cells")
-    ax.legend(fontsize=8, loc="upper left")
+           ylabel="Binding roofline fraction (unitless)", xlim=(0, len(order) + 12),
+           yticks=[0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75])
+    ax.set_title(f"C: All {len(order)} declared-work cells, including void cells", fontsize=9, loc="left")
+    ax.legend(fontsize=7.5, loc="upper left", frameon=False)
+    for ax in axes:
+        ax.tick_params(axis="both", labelsize=8)
+        ax.xaxis.label.set_size(8)
+        ax.yaxis.label.set_size(8)
+        ax.spines[["top", "right"]].set_visible(False)
 
-    handles = [Line2D([], [], color=colors[label], marker="o", linestyle="", markersize=6, label=label)
+    handles = [Line2D([], [], color=colors[label], linewidth=3, label=label)
                for label, _ in FAMILY_GROUPS]
-    handles += [Line2D([], [], color="black", marker="o", linestyle="", markersize=6, label="A100, nonvoid"),
-                Line2D([], [], color="black", marker="o", linestyle="", markersize=6,
-                       markerfacecolor="none", label="void source or cell (hollow)"),
-                Line2D([], [], color="black", marker="^", linestyle="", markersize=6, label="GH200")]
-    for ax in axes[:2]:
-        ax.legend(handles=[h for h in ax.get_legend_handles_labels()[0]], fontsize=7, loc="lower right")
-    fig.legend(handles=handles, fontsize=8, loc="outside lower center", ncol=5)
-    fig.suptitle("Kernel efficiency ledger: 264 source-void cells carried as void; "
-                 "5 missing-work kernels unranked", fontsize=10)
+    fig.legend(handles=handles, fontsize=8, title="Kernel family (panels A and B)", title_fontsize=8,
+               loc="lower center", bbox_to_anchor=(0.54, 0.105), ncol=3, frameon=False,
+               handlelength=1.1, columnspacing=1.5)
+    handles = [Line2D([], [], color="black", marker=marker, linestyle="", markersize=4,
+                      markerfacecolor="none", label=f"Shape: {device.upper()}")
+               for device, marker in device_markers.items()]
+    handles += [Line2D([], [], color="black", marker="o", linestyle="", markersize=4,
+                       label="Filled: nonvoid source and cell"),
+                Line2D([], [], color="black", marker="o", linestyle="", markersize=4,
+                       markerfacecolor="none", label="Hollow: void source or cell")]
+    fig.legend(handles=handles, fontsize=8, loc="lower center", bbox_to_anchor=(0.54, 0.03),
+               ncol=2, frameon=False, handlelength=1.1, columnspacing=2)
+    fig.suptitle("Kernel efficiency ledger", fontsize=11, y=0.985)
+    fig.text(0.5, 0.945, "264 source-void cells retained; 5 missing-work kernels unranked",
+             ha="center", fontsize=8)
     output.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output / "ledger.png", dpi=160)
+    fig.savefig(output / "ledger.png", dpi=300)
     fig.savefig(output / "ledger.pdf", metadata={"CreationDate": None, "ModDate": None})
     plt.close(fig)
 

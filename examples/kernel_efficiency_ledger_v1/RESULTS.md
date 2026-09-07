@@ -58,17 +58,27 @@ counts, not independent experiments or passes.
 
 ![Roofline, memory side and ranked fractions](figures/ledger.png)
 
-The [PDF figure](figures/ledger.pdf) has the same content. Panel A places every
-A100 cell with declared arithmetic on the roofline: achieved FLOP/s against
-arithmetic intensity, under the measured HBM envelope and the clock-derived
-arithmetic ceiling. Panel B is the memory side for both devices: achieved
-bytes per second against declared bytes, with each device's measured
-envelope as a horizontal line, so the decode-attention cells sit visibly one
-to two decades below the roof while the copies sit on it. Panel C is the
-ranked fraction curve; red crosses identify per-cell envelope breaches.
-Hollow markers are cells whose source study or own guard is void, filled
-markers are nonvoid, triangles are GH200 cells; the inherited source-void
-rows are included everywhere and disclosed in the title.
+The [PDF figure](figures/ledger.pdf) has the same content at a seven-inch
+print width. Rates divide declared work by measured elapsed time; TFLOP/s
+means trillions of floating-point operations per second, and GB/s means
+billions of bytes per second. Panel A shows every A100 cell with declared
+arithmetic against the reference roof `min(1791.289e9 * intensity, 311.869e12)`
+in FLOP/s. The clock-derived ceiling is theoretical, and the exact corner is
+at 174.103 FLOP/byte. Panel B shows declared memory traffic rates for both
+devices. Solid and dashed horizontal lines mark the measured A100 and GH200
+HBM envelopes, respectively. Decode-attention cells lie roughly one to two
+orders of magnitude below the A100 envelope, with extremes just outside that
+range; large copies approach their device's envelope, while small transfers
+can fall well below it. Colors denote kernel families in A and B: GEMM means
+general matrix multiplication, MoE means mixture of experts, and HBM streaming
+includes copy, read, write and triad operations. Circles denote A100, triangles
+GH200; hollow markers flag a void source or cell guard, and filled markers
+have neither flag. Fill does not establish calibration acceptance. Panel C
+uses the same measured-fraction rank for both curves, so the dotted datasheet
+curve need not rise monotonically; red crosses mark per-cell envelope breaches,
+not kernel families. Gray dashed lines mark fractions 0.25, 0.50 and 0.75, and
+the black horizontal line marks one. All 264 inherited source-void cells remain
+in the applicable panels; the five missing-work kernels are unranked and unplotted.
 
 ## What the fractions mean
 
