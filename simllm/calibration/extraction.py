@@ -27,6 +27,7 @@ from .graph_identity import (
     unbound_execution_graph_record,
 )
 from .model_inventory import (
+    ATTENTION_PAIR_SHAPE_SCHEMA,
     AbsentPhysicalIdentity,
     FrameworkIdentity,
     ImplementationIdentityEnvelope,
@@ -1817,6 +1818,43 @@ def _validate_deepseek_stack_contract(
     return projected
 
 
+def _with_attention_pairs(
+    inventory: ModelKernelInventory, records: tuple[StepRecord, ...],
+) -> ModelKernelInventory:
+    """Publish v2 shapes from the sole step_shape authority, retaining v1 work."""
+    pairs = tuple(step_shape(record)[2] for record in records)
+    old_id = _SHAPE_SCHEMA_IDS["attn_score"]
+    if not any(family.family_id == "attn_score" for family in inventory.kernel_families):
+        raise ModelExtractionError("attention shape v2 requires an attn_score family")
+    schemas = tuple(
+        replace(
+            schema,
+            shape_schema_id=ATTENTION_PAIR_SHAPE_SCHEMA,
+            axes=(*schema.axes, ShapeAxis(
+                axis_id="attention_pairs", unit="pairs",
+                minimum=min(pairs), maximum=max(pairs),
+            )),
+        ) if schema.shape_schema_id == old_id else schema
+        for schema in inventory.shape_schemas
+    )
+    definitions = tuple(
+        replace(family, shape_schema_id=ATTENTION_PAIR_SHAPE_SCHEMA)
+        if family.family_id == "attn_score" else family
+        for family in inventory.kernel_families
+    )
+    cases = tuple(
+        replace(case, kernel_projections=tuple(
+            replace(projection, shape_vector=ShapeVector(
+                shape_schema_id=ATTENTION_PAIR_SHAPE_SCHEMA,
+                values=(*projection.shape_vector.values, count),
+            )) if projection.family_id == "attn_score" else projection
+            for projection in case.kernel_projections
+        ))
+        for case, count in zip(inventory.cases, pairs, strict=True)
+    )
+    return replace(inventory, shape_schemas=schemas, kernel_families=definitions, cases=cases)
+
+
 def extract_model_inventory(
     *,
     suite_raw: bytes,
@@ -1825,9 +1863,16 @@ def extract_model_inventory(
     framework_dims: ModelDims,
     step_records_path: Path,
     framework_projection: FrameworkConfigurationProjection | None = None,
+    attention_shape_version: int = 1,
 ) -> ModelKernelInventory:
-    """Build one total inventory after every identity and projection check."""
+    """Build a checked inventory; v1 preserves historical extraction identities.
 
+    Select ``attention_shape_version=2`` for a phase-independent pair axis.
+    Both versions project the same live step work and conserve fused totals.
+    """
+
+    if type(attention_shape_version) is not int or attention_shape_version not in (1, 2):
+        raise ModelExtractionError("attention shape version must be 1 or 2")
     suite, model = load_extraction_suite(suite_raw)
     _validate_framework_declaration(suite, framework, framework_projection)
     reference_model = suite["reference_model"]
@@ -1990,6 +2035,8 @@ def extract_model_inventory(
             join_tasks=tuple(sorted(("COMP-6", join_task))),
         ),
     )
+    if attention_shape_version == 2:
+        inventory = _with_attention_pairs(inventory, records)
     ModelKernelInventory.from_obj(inventory.to_obj())
     return inventory
 
