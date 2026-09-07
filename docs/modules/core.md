@@ -1665,21 +1665,3 @@ capture exists.
   and must remain byte-identical. If the integration host cannot retain all 56
   engines, keep this task open and report the measured stopping point rather
   than extrapolating a pass. Depends on VLLM-35 and PLACE-5.
-
-- CORE-67 (Completeness; P1; M): emit a bottleneck classification for every
-  reported TTFT and TPOT from the critical-path breakdown.
-  `CriticalPathBreakdown` already conserves an operation's latency into launch
-  queue, device queue,
-  service, completion delivery and external dependency, and `LatencyAttribution`
-  names the owner, but no record says which physical resource bound the
-  request: an HBM-bound or compute-bound kernel (the achieved fraction of the
-  binding roofline from the COMP-90 kernel efficiency ledger), an intra-node
-  collective wait by participant width, a cross-node collective or fabric
-  queueing wait (the per-flow FCT tail share), host launch, or the batching
-  queue. Add a strict versioned `simllm-bottleneck-report-v1` record beside
-  `StepResult` that ranks those classes per request and per step from the
-  selected critical path only, never from additive visit sums; its absence
-  preserves every accepted artifact byte for byte. Acceptance: on the m4,
-  breakdown and collective width tail studies the report names the class the
-  study identified, the ranked shares conserve the request's critical-path
-  latency exactly, and the disabled path is byte-identical.

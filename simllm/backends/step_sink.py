@@ -102,7 +102,7 @@ from __future__ import annotations
 import copy
 import hashlib
 from collections import deque
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -226,6 +226,8 @@ class HtsimStepSinkConfig:
     host_model: HostInitiationModel = field(default_factory=HostInitiationModel.ideal)
     #: read-only runtime visits and conserved breakdown; absent by default
     emit_packet_breakdown: bool = field(default=False, kw_only=True)
+    emit_bottleneck_report: bool = field(default=False, kw_only=True)
+    bottleneck_kernel_cells: Mapping | None = field(default=None, kw_only=True)
     #: first GOAL tag; each allreduce takes a disjoint 2(W-1)-tag block
     base_tag: int = 1000
     #: explicit GOAL rank count for topology padding; None keeps inferred sizing
@@ -299,6 +301,8 @@ class HtsimStepSinkConfig:
     )
 
     def __post_init__(self) -> None:
+        if type(self.emit_bottleneck_report) is not bool:
+            raise TypeError("emit_bottleneck_report must be a boolean")
         if type(self.emit_packet_breakdown) is not bool:
             raise TypeError("emit_packet_breakdown must be a boolean")
         if self.profile not in RNIC_PROFILES:
@@ -1108,6 +1112,8 @@ class _PlannedStep:
     collective_registration: CollectiveRegistrationModel | None
     registration_events: tuple[CollectiveRegistrationEvent, ...]
     emit_packet_breakdown: bool
+    bottleneck_kernel: object = None
+    bottleneck_widths: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -1122,6 +1128,7 @@ class _SimulatedStep:
     dependency_cross_check_report: DependencyCrossCheckReport | None
     collective_registration_outcome: StepCollectiveRegistrationOutcome | None = None
     packet_breakdown: PacketStepBreakdown | None = None
+    bottleneck_report: object = None
 
 
 @dataclass(frozen=True)
@@ -1160,6 +1167,7 @@ class HtsimStepSink:
         self.locality_outcomes: list[StepLocalityOutcome] = []
         #: selected visits, events and runtime reports; published only on consumption
         self.packet_breakdowns: list[PacketStepBreakdown] = []
+        self.bottleneck_reports = []
         #: calibrated decompositions; deliberately empty on the legacy/off path
         self.collective_timing_outcomes: list[StepCollectiveTimingOutcome] = []
         #: aggregate floor projections; deliberately empty on the exact off path
@@ -1635,6 +1643,20 @@ class HtsimStepSink:
                 goal_sha256=hashlib.sha256(cross_check_payload).hexdigest(),
                 tolerance_ps=cfg.dependency_cross_check_tolerance_ps,
             )
+        bottleneck_kernel = None
+        bottleneck_widths = ()
+        if cfg.emit_bottleneck_report:
+            from simllm.compute import step_kernel
+            from simllm.core.bottleneck import KernelEvidence, join_kernel_cell
+            kernel = step_kernel(cfg.dims, record, num_sampled=timing.num_sampled)
+            bottleneck_kernel = KernelEvidence.from_kernel(kernel, cfg.gpu)
+            bottleneck_kernel = join_kernel_cell(bottleneck_kernel, cfg.bottleneck_kernel_cells)
+            work_by_id = {op.operation_id: op.work for op in graph.operations}
+            bottleneck_widths = tuple(
+                len(work_by_id[a.collective_operation_id].ranks)
+                if a.collective_operation_id is not None else 1
+                for a in planned_artifacts
+            )
         return _PlannedStep(
             step_index=record.step_index,
             virtual_time_ps=record.virtual_time_ps,
@@ -1702,7 +1724,9 @@ class HtsimStepSink:
             ),
             collective_registration=cfg.resolved_collective_registration,
             registration_events=registration_events,
-            emit_packet_breakdown=cfg.emit_packet_breakdown,
+            emit_packet_breakdown=cfg.emit_packet_breakdown or cfg.emit_bottleneck_report,
+            bottleneck_kernel=bottleneck_kernel,
+            bottleneck_widths=bottleneck_widths,
         )
 
     def _run_goal(
@@ -1743,6 +1767,7 @@ class HtsimStepSink:
                 "state-preserving artifact execution"
             )
 
+        flow_tails = {}
         fabric_starts = []
         fabric_finishes = []
         fabric_services = []
@@ -1787,6 +1812,13 @@ class HtsimStepSink:
                         for flow in run.flows
                     ):
                         raise ValueError("packet breakdown received invalid completion timestamps")
+                    if plan.bottleneck_kernel is not None:
+                        from simllm.core.bottleneck import FlowTail
+                        flow_tails[artifact.artifact_id] = FlowTail(
+                            plan.locality.graph_execution_id, artifact.artifact_id,
+                            len(run.flows), min(f.fct_ps for f in run.flows),
+                            max(f.fct_ps for f in run.flows),
+                        )
                     first_start_ps = min(flow.start_time_ps for flow in run.flows)
                     last_finish_ps = max(flow.completion_time_ps for flow in run.flows)
                 if plan.dependency_cross_check is not None:
@@ -2043,6 +2075,18 @@ class HtsimStepSink:
                 plan, fabric_services, fabric_starts, fabric_finishes,
             )
             packet_breakdown.validate_result(result)
+        bottleneck_report = None
+        if plan.bottleneck_kernel is not None:
+            from simllm.core.bottleneck import BottleneckReport, classify_segment, combine
+            rankings = []
+            for segment, width in zip(packet_breakdown.segments, plan.bottleneck_widths, strict=True):
+                visits = tuple(v for v in packet_breakdown.visits if v.operation_id == segment.operation_id)
+                rankings.append(classify_segment(
+                    segment, visits, kernel=plan.bottleneck_kernel, width=width,
+                    flow_tail=flow_tails.get(segment.operation_id),
+                ))
+            bottleneck_report = BottleneckReport(plan.step_index, combine(*rankings))
+            bottleneck_report.validate_result(result)
         return _SimulatedStep(
             result=result,
             outcome=outcome,
@@ -2052,6 +2096,7 @@ class HtsimStepSink:
             dependency_cross_check_report=cross_check_report,
             collective_registration_outcome=registration_outcome,
             packet_breakdown=packet_breakdown,
+            bottleneck_report=bottleneck_report,
         )
 
     def _simulate_step(self, record: StepRecord) -> _SimulatedStep:
@@ -2068,6 +2113,8 @@ class HtsimStepSink:
         return self._execute_plan(plan)
 
     def _publish(self, simulation: _SimulatedStep) -> StepResult | None:
+        if simulation.bottleneck_report is not None:
+            self.bottleneck_reports.append(simulation.bottleneck_report)
         if simulation.packet_breakdown is not None:
             self.packet_breakdowns.append(simulation.packet_breakdown)
         if simulation.outcome is not None:

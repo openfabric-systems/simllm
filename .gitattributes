@@ -535,6 +535,13 @@ examples/packet_breakdown_v1/*.py text eol=lf
 examples/packet_breakdown_v1/*.json text eol=lf
 simllm/backends/packet_breakdown.py text eol=lf
 tests/test_packet_breakdown.py text eol=lf
+
+# Optional selected-path bottleneck records
+examples/bottleneck_report_v1/*.md text eol=lf
+examples/bottleneck_report_v1/*.py text eol=lf
+examples/bottleneck_report_v1/*.json text eol=lf
+simllm/core/bottleneck.py text eol=lf
+tests/test_bottleneck.py text eol=lf
 examples/control_recovery_v1/*.md text eol=lf
 examples/control_recovery_v1/*.py text eol=lf
 examples/control_recovery_v1/*.json text eol=lf

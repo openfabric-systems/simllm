@@ -640,6 +640,10 @@ class HtsimRequestMetricReducer:
         self._requests: dict[str, _RequestState] = {}
         self._consumed_step_indices: set[int] = set()
         self._breakdown_enabled: bool | None = None
+        from simllm.core.bottleneck import BottleneckHistory
+        self._bottleneck_history = BottleneckHistory()
+        self._bottleneck_enabled = None
+        self.bottleneck_reports = self._bottleneck_history.reports
 
     @property
     def latest_request_metrics(self) -> tuple[RequestMetric, ...]:
@@ -696,6 +700,7 @@ class HtsimRequestMetricReducer:
         locality: StepLocalityOutcome | None,
         *,
         packet_breakdown: PacketStepBreakdown | None = None,
+        bottleneck_report=None,
     ) -> tuple[RequestMetric, ...]:
         """Reduce one executed step and commit its request-metric history."""
 
@@ -710,6 +715,11 @@ class HtsimRequestMetricReducer:
         released_at_ps = record.virtual_time_ps
         if result.completed_at_ps != released_at_ps + result.step_latency_ps:
             raise ValueError("StepResult completion disagrees with its own makespan")
+        bottleneck_enabled = bottleneck_report is not None
+        if self._bottleneck_enabled is not None and self._bottleneck_enabled != bottleneck_enabled:
+            raise ValueError("request history cannot mix enabled and absent bottleneck reports")
+        if bottleneck_report is not None:
+            bottleneck_report.validate_result(result)
         enabled = packet_breakdown is not None
         if self._breakdown_enabled is not None and enabled != self._breakdown_enabled:
             raise ValueError("request history cannot mix enabled and absent packet breakdowns")
@@ -816,6 +826,12 @@ class HtsimRequestMetricReducer:
             state.pending_breakdown = sum_breakdowns()
             metrics.append(metric)
 
+        if bottleneck_report is not None:
+            self._bottleneck_history.consume(
+                record, replace(result, request_metrics=tuple(metrics)), bottleneck_report.step,
+                {s.request_id: bottleneck_report.step for s in record.scheduled}, self._arrivals,
+            )
+        self._bottleneck_enabled = bottleneck_enabled
         self._breakdown_enabled = enabled
         self._requests = states
         self._consumed_step_indices.add(record.step_index)

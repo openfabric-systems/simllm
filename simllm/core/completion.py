@@ -208,6 +208,7 @@ class CompletionReducer:
         *,
         bookkeeping: BookkeepingLedger | None = None,
         lifetimes: RequestLifetimeRegistry | None = None,
+        emit_bottleneck_report: bool = False,
     ) -> None:
         if not isinstance(clock, VirtualClock):
             raise TypeError("clock must be a VirtualClock")
@@ -217,6 +218,11 @@ class CompletionReducer:
             lifetimes, RequestLifetimeRegistry
         ):
             raise TypeError("lifetimes must be a RequestLifetimeRegistry or None")
+        if type(emit_bottleneck_report) is not bool:
+            raise TypeError("emit_bottleneck_report must be boolean")
+        from simllm.core.bottleneck import BottleneckHistory
+        self._bottleneck_history = BottleneckHistory() if emit_bottleneck_report else None
+        self.bottleneck_reports = [] if self._bottleneck_history is None else self._bottleneck_history.reports
         self.clock = clock
         self.lifetimes = lifetimes
         self._request_arrivals = (
@@ -513,6 +519,8 @@ class CompletionReducer:
         graph: ExecutionGraph,
         result: ExecutionResult,
         report: RuntimeReport,
+        *,
+        bottleneck_segments=None,
     ) -> StepResult:
         """Return one scheduler result and atomically commit metric history."""
 
@@ -530,6 +538,10 @@ class CompletionReducer:
             report,
             self.clock,
         )
+        if (bottleneck_segments is not None) != (self._bottleneck_history is not None):
+            raise ValueError("bottleneck selection requires complete segment rankings")
+        bottleneck_intervals = {}
+        bottleneck_origins = {}
         sampled_ids = self._sampled_request_ids(record)
         operation_index = {
             operation.operation_id: index
@@ -578,7 +590,7 @@ class CompletionReducer:
                     operation_index[operation_id],
                 ),
             )
-            _, graph_attribution = self._critical_chain(
+            chain, graph_attribution = self._critical_chain(
                 endpoint_id,
                 by_id,
                 critical_segments,
@@ -601,6 +613,10 @@ class CompletionReducer:
                 raise ValueError(
                     f"request {scheduled.request_id!r} would move backward in time"
                 )
+            if bottleneck_segments is not None:
+                from simllm.core.bottleneck import combine
+                bottleneck_intervals[scheduled.request_id] = combine(*(bottleneck_segments[k] for k in chain))
+                bottleneck_origins[scheduled.request_id] = state.first_observed_at_ps
             scheduler_gap_ps = graph.released_at_ps - state.accounted_through_ps
             interval_attribution = (
                 state.pending_attribution
@@ -663,8 +679,17 @@ class CompletionReducer:
             request_metrics=tuple(metrics),
             additive_visit_totals=_visit_totals(report.visits),
         )
+        bottleneck_projection = None
+        if self._bottleneck_history is not None:
+            from simllm.core.bottleneck import combine
+            step_ranking = combine(*(bottleneck_segments[k] for k in report.realized_critical_path_segments))
+            bottleneck_projection = self._bottleneck_history.project(
+                record, step_result, step_ranking, bottleneck_intervals, bottleneck_origins,
+            )
         if self.lifetimes is not None:
             self.lifetimes.consume_step(record, graph, result)
+        if bottleneck_projection is not None:
+            self._bottleneck_history.commit(bottleneck_projection)
         self.clock.advance_to(result.completed_at_ps)
         self._requests = states
         self._consumed_execution_ids.add(graph.execution_id)

@@ -1162,8 +1162,14 @@ class CoarseDeviceRuntime:
         self._pending_kv: _PendingKvAccounting | None = None
         self._state = _RuntimeState()
         self.last_report: RuntimeReport | None = None
+        self._selected_critical_visits: dict[tuple[str, int], tuple[QueueVisit, ...]] = {}
         #: read-only projection of the KV authority after the last execution
         self.last_kv_report: KvAccountingReport | None = None
+
+    @property
+    def selected_critical_visits(self) -> dict[tuple[str, int], tuple[QueueVisit, ...]]:
+        """Copy the last authority-selected paths without changing legacy reports."""
+        return dict(self._selected_critical_visits)
 
     @property
     def kv_ledger(self) -> KvLifecycleLedger | None:
@@ -1385,6 +1391,11 @@ class CoarseDeviceRuntime:
                 self._kv_ledger = self._pending_kv.ledger
                 self.last_kv_report = self._kv_ledger.report(self._pending_kv.demands)
             self.last_report = report
+            self._selected_critical_visits = {
+                (operation_id, rank): tuple(path)
+                for operation_id, outcome in scheduled.items()
+                for rank, path in outcome.participant_paths.items()
+            }
         except BaseException:
             if native_transaction is not None and not native_committed:
                 native_transaction.abort()

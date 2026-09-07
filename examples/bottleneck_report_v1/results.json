@@ -1,0 +1,4348 @@
+{
+  "behavioral_relations": [
+    {
+      "evidence": "m4-w8-200g",
+      "held": true,
+      "relation": "m4-fabric-first"
+    },
+    {
+      "evidence": "m4-w8-400g",
+      "held": true,
+      "relation": "m4-fabric-first"
+    },
+    {
+      "evidence": "breakdown-w2-100g",
+      "held": true,
+      "relation": "breakdown-kernel-regimes"
+    },
+    {
+      "evidence": "breakdown-w2-400g",
+      "held": true,
+      "relation": "breakdown-kernel-regimes"
+    },
+    {
+      "evidence": "breakdown-w8-100g",
+      "held": true,
+      "relation": "breakdown-kernel-regimes"
+    },
+    {
+      "evidence": "breakdown-w8-400g",
+      "held": true,
+      "relation": "breakdown-kernel-regimes"
+    },
+    {
+      "evidence": {
+        "pattern": "ring",
+        "rate": 200,
+        "shares": [
+          74.55797259780404,
+          95.2560955424274
+        ],
+        "study": "m4"
+      },
+      "held": true,
+      "relation": "fabric-share-rises-with-width"
+    },
+    {
+      "evidence": {
+        "pattern": "ring",
+        "rate": 400,
+        "shares": [
+          59.8522015423072,
+          91.45676030606823
+        ],
+        "study": "m4"
+      },
+      "held": true,
+      "relation": "fabric-share-rises-with-width"
+    },
+    {
+      "evidence": {
+        "pattern": "ring",
+        "shares": [
+          74.55797259780404,
+          59.8522015423072
+        ],
+        "study": "m4",
+        "width": 2
+      },
+      "held": true,
+      "relation": "fabric-share-rises-at-lower-rate"
+    },
+    {
+      "evidence": {
+        "pattern": "ring",
+        "shares": [
+          95.2560955424274,
+          91.45676030606823
+        ],
+        "study": "m4",
+        "width": 8
+      },
+      "held": true,
+      "relation": "fabric-share-rises-at-lower-rate"
+    },
+    {
+      "evidence": {
+        "pattern": "ring",
+        "rate": 100,
+        "shares": [
+          80.05330985166825,
+          96.2237009676736
+        ],
+        "study": "breakdown"
+      },
+      "held": true,
+      "relation": "fabric-share-rises-with-width"
+    },
+    {
+      "evidence": {
+        "pattern": "ring",
+        "rate": 400,
+        "shares": [
+          51.76540822849547,
+          88.9244835344025
+        ],
+        "study": "breakdown"
+      },
+      "held": true,
+      "relation": "fabric-share-rises-with-width"
+    },
+    {
+      "evidence": {
+        "pattern": "ring",
+        "shares": [
+          80.05330985166825,
+          51.76540822849547
+        ],
+        "study": "breakdown",
+        "width": 2
+      },
+      "held": true,
+      "relation": "fabric-share-rises-at-lower-rate"
+    },
+    {
+      "evidence": {
+        "pattern": "ring",
+        "shares": [
+          96.2237009676736,
+          88.9244835344025
+        ],
+        "study": "breakdown",
+        "width": 8
+      },
+      "held": true,
+      "relation": "fabric-share-rises-at-lower-rate"
+    },
+    {
+      "evidence": {
+        "pattern": "all-to-all",
+        "rate": 200,
+        "shares": [
+          29.38172285998373,
+          75.15661271345438
+        ],
+        "study": "width"
+      },
+      "held": true,
+      "relation": "fabric-share-rises-with-width"
+    },
+    {
+      "evidence": {
+        "pattern": "all-to-all",
+        "rate": 400,
+        "shares": [
+          18.568897227433812,
+          60.515010613565146
+        ],
+        "study": "width"
+      },
+      "held": true,
+      "relation": "fabric-share-rises-with-width"
+    },
+    {
+      "evidence": {
+        "pattern": "all-to-all",
+        "shares": [
+          29.38172285998373,
+          18.568897227433812
+        ],
+        "study": "width",
+        "width": 8
+      },
+      "held": true,
+      "relation": "fabric-share-rises-at-lower-rate"
+    },
+    {
+      "evidence": {
+        "pattern": "all-to-all",
+        "shares": [
+          75.15661271345438,
+          60.515010613565146
+        ],
+        "study": "width",
+        "width": 64
+      },
+      "held": true,
+      "relation": "fabric-share-rises-at-lower-rate"
+    },
+    {
+      "evidence": {
+        "pattern": "ring",
+        "rate": 200,
+        "shares": [
+          67.71627512965144,
+          87.70991465764739
+        ],
+        "study": "width"
+      },
+      "held": true,
+      "relation": "fabric-share-rises-with-width"
+    },
+    {
+      "evidence": {
+        "pattern": "ring",
+        "rate": 400,
+        "shares": [
+          57.05883969549564,
+          85.8922847726965
+        ],
+        "study": "width"
+      },
+      "held": true,
+      "relation": "fabric-share-rises-with-width"
+    },
+    {
+      "evidence": {
+        "pattern": "ring",
+        "shares": [
+          67.71627512965144,
+          57.05883969549564
+        ],
+        "study": "width",
+        "width": 8
+      },
+      "held": true,
+      "relation": "fabric-share-rises-at-lower-rate"
+    },
+    {
+      "evidence": {
+        "pattern": "ring",
+        "shares": [
+          87.70991465764739,
+          85.8922847726965
+        ],
+        "study": "width",
+        "width": 64
+      },
+      "held": true,
+      "relation": "fabric-share-rises-at-lower-rate"
+    },
+    {
+      "evidence": {
+        "errors_ps": [
+          0,
+          0,
+          0
+        ],
+        "factor": 2,
+        "study": "m4",
+        "width": 2
+      },
+      "held": true,
+      "relation": "serialization-rate-scaling"
+    },
+    {
+      "evidence": {
+        "errors_ps": [
+          0,
+          0,
+          0
+        ],
+        "factor": 2,
+        "study": "m4",
+        "width": 8
+      },
+      "held": true,
+      "relation": "serialization-rate-scaling"
+    },
+    {
+      "evidence": {
+        "errors_ps": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "factor": 4,
+        "study": "breakdown",
+        "width": 2
+      },
+      "held": true,
+      "relation": "serialization-rate-scaling"
+    },
+    {
+      "evidence": {
+        "errors_ps": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "factor": 4,
+        "study": "breakdown",
+        "width": 8
+      },
+      "held": true,
+      "relation": "serialization-rate-scaling"
+    },
+    {
+      "evidence": {
+        "errors_ps": [
+          0
+        ],
+        "factor": 2,
+        "study": "width",
+        "width": 8
+      },
+      "held": true,
+      "relation": "serialization-rate-scaling"
+    },
+    {
+      "evidence": {
+        "errors_ps": [
+          0
+        ],
+        "factor": 2,
+        "study": "width",
+        "width": 64
+      },
+      "held": true,
+      "relation": "serialization-rate-scaling"
+    },
+    {
+      "evidence": {
+        "expected_percent": 85.892,
+        "observed_percent": 85.8922847726965,
+        "pattern": "ring"
+      },
+      "held": true,
+      "relation": "width64-rounded-anchor"
+    },
+    {
+      "evidence": {
+        "expected_percent": 60.515,
+        "observed_percent": 60.515010613565146,
+        "pattern": "all-to-all"
+      },
+      "held": true,
+      "relation": "width64-rounded-anchor"
+    },
+    {
+      "evidence": {
+        "gap_ps": 1000000000,
+        "rate": 200
+      },
+      "held": true,
+      "relation": "coarse-batching-first"
+    },
+    {
+      "evidence": {
+        "gap_ps": 1000000000,
+        "rate": 400
+      },
+      "held": true,
+      "relation": "coarse-batching-first"
+    }
+  ],
+  "coarse_cells": [
+    {
+      "gap_ps": 0,
+      "identity_ps": 0,
+      "rate": 200,
+      "steps": [
+        {
+          "latency_ps": 356680,
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 91.5890994729169,
+              "span_ps": 326680,
+              "width": 1
+            },
+            {
+              "class": "unclassified-kernel",
+              "share_percent": 5.6072670180554,
+              "span_ps": 20000,
+              "width": null
+            },
+            {
+              "class": "intra-node-collective",
+              "share_percent": 2.24290680722216,
+              "span_ps": 8000,
+              "width": 2
+            },
+            {
+              "class": "control",
+              "share_percent": 0.56072670180554,
+              "span_ps": 2000,
+              "width": null
+            }
+          ],
+          "requests": [
+            {
+              "request_id": "request-0",
+              "tpot_ps": null,
+              "ttft_ps": 356680,
+              "ttft_ranked": [
+                {
+                  "class": "fabric",
+                  "share_percent": 91.5890994729169,
+                  "span_ps": 326680,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 5.6072670180554,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 2.24290680722216,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 0.56072670180554,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            },
+            {
+              "request_id": "request-1",
+              "tpot_ps": null,
+              "ttft_ps": 356680,
+              "ttft_ranked": [
+                {
+                  "class": "fabric",
+                  "share_percent": 91.5890994729169,
+                  "span_ps": 326680,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 5.6072670180554,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 2.24290680722216,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 0.56072670180554,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            }
+          ],
+          "step_index": 0
+        },
+        {
+          "latency_ps": 356680,
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 91.5890994729169,
+              "span_ps": 326680,
+              "width": 1
+            },
+            {
+              "class": "unclassified-kernel",
+              "share_percent": 5.6072670180554,
+              "span_ps": 20000,
+              "width": null
+            },
+            {
+              "class": "intra-node-collective",
+              "share_percent": 2.24290680722216,
+              "span_ps": 8000,
+              "width": 2
+            },
+            {
+              "class": "control",
+              "share_percent": 0.56072670180554,
+              "span_ps": 2000,
+              "width": null
+            }
+          ],
+          "requests": [
+            {
+              "request_id": "request-0",
+              "tpot_ps": [
+                356680,
+                1
+              ],
+              "ttft_ps": 356680,
+              "ttft_ranked": [
+                {
+                  "class": "fabric",
+                  "share_percent": 91.5890994729169,
+                  "span_ps": 326680,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 5.6072670180554,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 2.24290680722216,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 0.56072670180554,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            },
+            {
+              "request_id": "request-1",
+              "tpot_ps": [
+                356680,
+                1
+              ],
+              "ttft_ps": 356680,
+              "ttft_ranked": [
+                {
+                  "class": "fabric",
+                  "share_percent": 91.5890994729169,
+                  "span_ps": 326680,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 5.6072670180554,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 2.24290680722216,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 0.56072670180554,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            }
+          ],
+          "step_index": 1
+        },
+        {
+          "latency_ps": 356680,
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 91.5890994729169,
+              "span_ps": 326680,
+              "width": 1
+            },
+            {
+              "class": "unclassified-kernel",
+              "share_percent": 5.6072670180554,
+              "span_ps": 20000,
+              "width": null
+            },
+            {
+              "class": "intra-node-collective",
+              "share_percent": 2.24290680722216,
+              "span_ps": 8000,
+              "width": 2
+            },
+            {
+              "class": "control",
+              "share_percent": 0.56072670180554,
+              "span_ps": 2000,
+              "width": null
+            }
+          ],
+          "requests": [
+            {
+              "request_id": "request-0",
+              "tpot_ps": [
+                356680,
+                1
+              ],
+              "ttft_ps": 356680,
+              "ttft_ranked": [
+                {
+                  "class": "fabric",
+                  "share_percent": 91.5890994729169,
+                  "span_ps": 326680,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 5.6072670180554,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 2.24290680722216,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 0.56072670180554,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            },
+            {
+              "request_id": "request-1",
+              "tpot_ps": [
+                356680,
+                1
+              ],
+              "ttft_ps": 356680,
+              "ttft_ranked": [
+                {
+                  "class": "fabric",
+                  "share_percent": 91.5890994729169,
+                  "span_ps": 326680,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 5.6072670180554,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 2.24290680722216,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 0.56072670180554,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            }
+          ],
+          "step_index": 2
+        }
+      ]
+    },
+    {
+      "gap_ps": 1000000000,
+      "identity_ps": 0,
+      "rate": 200,
+      "steps": [
+        {
+          "latency_ps": 356680,
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 91.5890994729169,
+              "span_ps": 326680,
+              "width": 1
+            },
+            {
+              "class": "unclassified-kernel",
+              "share_percent": 5.6072670180554,
+              "span_ps": 20000,
+              "width": null
+            },
+            {
+              "class": "intra-node-collective",
+              "share_percent": 2.24290680722216,
+              "span_ps": 8000,
+              "width": 2
+            },
+            {
+              "class": "control",
+              "share_percent": 0.56072670180554,
+              "span_ps": 2000,
+              "width": null
+            }
+          ],
+          "requests": [
+            {
+              "request_id": "request-0",
+              "tpot_ps": null,
+              "ttft_ps": 1000356680,
+              "ttft_ranked": [
+                {
+                  "class": "batching-queue",
+                  "share_percent": 99.96434471752615,
+                  "span_ps": 1000000000,
+                  "width": null
+                },
+                {
+                  "class": "fabric",
+                  "share_percent": 0.032656352132321445,
+                  "span_ps": 326680,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 0.001999286894350523,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 0.0007997147577402092,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 0.0001999286894350523,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            },
+            {
+              "request_id": "request-1",
+              "tpot_ps": null,
+              "ttft_ps": 1000356680,
+              "ttft_ranked": [
+                {
+                  "class": "batching-queue",
+                  "share_percent": 99.96434471752615,
+                  "span_ps": 1000000000,
+                  "width": null
+                },
+                {
+                  "class": "fabric",
+                  "share_percent": 0.032656352132321445,
+                  "span_ps": 326680,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 0.001999286894350523,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 0.0007997147577402092,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 0.0001999286894350523,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            }
+          ],
+          "step_index": 0
+        },
+        {
+          "latency_ps": 356680,
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 91.5890994729169,
+              "span_ps": 326680,
+              "width": 1
+            },
+            {
+              "class": "unclassified-kernel",
+              "share_percent": 5.6072670180554,
+              "span_ps": 20000,
+              "width": null
+            },
+            {
+              "class": "intra-node-collective",
+              "share_percent": 2.24290680722216,
+              "span_ps": 8000,
+              "width": 2
+            },
+            {
+              "class": "control",
+              "share_percent": 0.56072670180554,
+              "span_ps": 2000,
+              "width": null
+            }
+          ],
+          "requests": [
+            {
+              "request_id": "request-0",
+              "tpot_ps": [
+                356680,
+                1
+              ],
+              "ttft_ps": 1000356680,
+              "ttft_ranked": [
+                {
+                  "class": "batching-queue",
+                  "share_percent": 99.96434471752615,
+                  "span_ps": 1000000000,
+                  "width": null
+                },
+                {
+                  "class": "fabric",
+                  "share_percent": 0.032656352132321445,
+                  "span_ps": 326680,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 0.001999286894350523,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 0.0007997147577402092,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 0.0001999286894350523,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            },
+            {
+              "request_id": "request-1",
+              "tpot_ps": [
+                356680,
+                1
+              ],
+              "ttft_ps": 1000356680,
+              "ttft_ranked": [
+                {
+                  "class": "batching-queue",
+                  "share_percent": 99.96434471752615,
+                  "span_ps": 1000000000,
+                  "width": null
+                },
+                {
+                  "class": "fabric",
+                  "share_percent": 0.032656352132321445,
+                  "span_ps": 326680,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 0.001999286894350523,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 0.0007997147577402092,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 0.0001999286894350523,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            }
+          ],
+          "step_index": 1
+        },
+        {
+          "latency_ps": 356680,
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 91.5890994729169,
+              "span_ps": 326680,
+              "width": 1
+            },
+            {
+              "class": "unclassified-kernel",
+              "share_percent": 5.6072670180554,
+              "span_ps": 20000,
+              "width": null
+            },
+            {
+              "class": "intra-node-collective",
+              "share_percent": 2.24290680722216,
+              "span_ps": 8000,
+              "width": 2
+            },
+            {
+              "class": "control",
+              "share_percent": 0.56072670180554,
+              "span_ps": 2000,
+              "width": null
+            }
+          ],
+          "requests": [
+            {
+              "request_id": "request-0",
+              "tpot_ps": [
+                356680,
+                1
+              ],
+              "ttft_ps": 1000356680,
+              "ttft_ranked": [
+                {
+                  "class": "batching-queue",
+                  "share_percent": 99.96434471752615,
+                  "span_ps": 1000000000,
+                  "width": null
+                },
+                {
+                  "class": "fabric",
+                  "share_percent": 0.032656352132321445,
+                  "span_ps": 326680,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 0.001999286894350523,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 0.0007997147577402092,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 0.0001999286894350523,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            },
+            {
+              "request_id": "request-1",
+              "tpot_ps": [
+                356680,
+                1
+              ],
+              "ttft_ps": 1000356680,
+              "ttft_ranked": [
+                {
+                  "class": "batching-queue",
+                  "share_percent": 99.96434471752615,
+                  "span_ps": 1000000000,
+                  "width": null
+                },
+                {
+                  "class": "fabric",
+                  "share_percent": 0.032656352132321445,
+                  "span_ps": 326680,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 0.001999286894350523,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 0.0007997147577402092,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 0.0001999286894350523,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            }
+          ],
+          "step_index": 2
+        }
+      ]
+    },
+    {
+      "gap_ps": 0,
+      "identity_ps": 0,
+      "rate": 400,
+      "steps": [
+        {
+          "latency_ps": 192840,
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 84.44306160547605,
+              "span_ps": 162840,
+              "width": 1
+            },
+            {
+              "class": "unclassified-kernel",
+              "share_percent": 10.371292263015972,
+              "span_ps": 20000,
+              "width": null
+            },
+            {
+              "class": "intra-node-collective",
+              "share_percent": 4.148516905206389,
+              "span_ps": 8000,
+              "width": 2
+            },
+            {
+              "class": "control",
+              "share_percent": 1.0371292263015972,
+              "span_ps": 2000,
+              "width": null
+            }
+          ],
+          "requests": [
+            {
+              "request_id": "request-0",
+              "tpot_ps": null,
+              "ttft_ps": 192840,
+              "ttft_ranked": [
+                {
+                  "class": "fabric",
+                  "share_percent": 84.44306160547605,
+                  "span_ps": 162840,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 10.371292263015972,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 4.148516905206389,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 1.0371292263015972,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            },
+            {
+              "request_id": "request-1",
+              "tpot_ps": null,
+              "ttft_ps": 192840,
+              "ttft_ranked": [
+                {
+                  "class": "fabric",
+                  "share_percent": 84.44306160547605,
+                  "span_ps": 162840,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 10.371292263015972,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 4.148516905206389,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 1.0371292263015972,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            }
+          ],
+          "step_index": 0
+        },
+        {
+          "latency_ps": 192840,
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 84.44306160547605,
+              "span_ps": 162840,
+              "width": 1
+            },
+            {
+              "class": "unclassified-kernel",
+              "share_percent": 10.371292263015972,
+              "span_ps": 20000,
+              "width": null
+            },
+            {
+              "class": "intra-node-collective",
+              "share_percent": 4.148516905206389,
+              "span_ps": 8000,
+              "width": 2
+            },
+            {
+              "class": "control",
+              "share_percent": 1.0371292263015972,
+              "span_ps": 2000,
+              "width": null
+            }
+          ],
+          "requests": [
+            {
+              "request_id": "request-0",
+              "tpot_ps": [
+                192840,
+                1
+              ],
+              "ttft_ps": 192840,
+              "ttft_ranked": [
+                {
+                  "class": "fabric",
+                  "share_percent": 84.44306160547605,
+                  "span_ps": 162840,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 10.371292263015972,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 4.148516905206389,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 1.0371292263015972,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            },
+            {
+              "request_id": "request-1",
+              "tpot_ps": [
+                192840,
+                1
+              ],
+              "ttft_ps": 192840,
+              "ttft_ranked": [
+                {
+                  "class": "fabric",
+                  "share_percent": 84.44306160547605,
+                  "span_ps": 162840,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 10.371292263015972,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 4.148516905206389,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 1.0371292263015972,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            }
+          ],
+          "step_index": 1
+        },
+        {
+          "latency_ps": 192840,
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 84.44306160547605,
+              "span_ps": 162840,
+              "width": 1
+            },
+            {
+              "class": "unclassified-kernel",
+              "share_percent": 10.371292263015972,
+              "span_ps": 20000,
+              "width": null
+            },
+            {
+              "class": "intra-node-collective",
+              "share_percent": 4.148516905206389,
+              "span_ps": 8000,
+              "width": 2
+            },
+            {
+              "class": "control",
+              "share_percent": 1.0371292263015972,
+              "span_ps": 2000,
+              "width": null
+            }
+          ],
+          "requests": [
+            {
+              "request_id": "request-0",
+              "tpot_ps": [
+                192840,
+                1
+              ],
+              "ttft_ps": 192840,
+              "ttft_ranked": [
+                {
+                  "class": "fabric",
+                  "share_percent": 84.44306160547605,
+                  "span_ps": 162840,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 10.371292263015972,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 4.148516905206389,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 1.0371292263015972,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            },
+            {
+              "request_id": "request-1",
+              "tpot_ps": [
+                192840,
+                1
+              ],
+              "ttft_ps": 192840,
+              "ttft_ranked": [
+                {
+                  "class": "fabric",
+                  "share_percent": 84.44306160547605,
+                  "span_ps": 162840,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 10.371292263015972,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 4.148516905206389,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 1.0371292263015972,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            }
+          ],
+          "step_index": 2
+        }
+      ]
+    },
+    {
+      "gap_ps": 1000000000,
+      "identity_ps": 0,
+      "rate": 400,
+      "steps": [
+        {
+          "latency_ps": 192840,
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 84.44306160547605,
+              "span_ps": 162840,
+              "width": 1
+            },
+            {
+              "class": "unclassified-kernel",
+              "share_percent": 10.371292263015972,
+              "span_ps": 20000,
+              "width": null
+            },
+            {
+              "class": "intra-node-collective",
+              "share_percent": 4.148516905206389,
+              "span_ps": 8000,
+              "width": 2
+            },
+            {
+              "class": "control",
+              "share_percent": 1.0371292263015972,
+              "span_ps": 2000,
+              "width": null
+            }
+          ],
+          "requests": [
+            {
+              "request_id": "request-0",
+              "tpot_ps": null,
+              "ttft_ps": 1000192840,
+              "ttft_ranked": [
+                {
+                  "class": "batching-queue",
+                  "share_percent": 99.98071971800958,
+                  "span_ps": 1000000000,
+                  "width": null
+                },
+                {
+                  "class": "fabric",
+                  "share_percent": 0.01628086039888068,
+                  "span_ps": 162840,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 0.0019996143943601915,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 0.0007998457577440767,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 0.00019996143943601917,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            },
+            {
+              "request_id": "request-1",
+              "tpot_ps": null,
+              "ttft_ps": 1000192840,
+              "ttft_ranked": [
+                {
+                  "class": "batching-queue",
+                  "share_percent": 99.98071971800958,
+                  "span_ps": 1000000000,
+                  "width": null
+                },
+                {
+                  "class": "fabric",
+                  "share_percent": 0.01628086039888068,
+                  "span_ps": 162840,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 0.0019996143943601915,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 0.0007998457577440767,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 0.00019996143943601917,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            }
+          ],
+          "step_index": 0
+        },
+        {
+          "latency_ps": 192840,
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 84.44306160547605,
+              "span_ps": 162840,
+              "width": 1
+            },
+            {
+              "class": "unclassified-kernel",
+              "share_percent": 10.371292263015972,
+              "span_ps": 20000,
+              "width": null
+            },
+            {
+              "class": "intra-node-collective",
+              "share_percent": 4.148516905206389,
+              "span_ps": 8000,
+              "width": 2
+            },
+            {
+              "class": "control",
+              "share_percent": 1.0371292263015972,
+              "span_ps": 2000,
+              "width": null
+            }
+          ],
+          "requests": [
+            {
+              "request_id": "request-0",
+              "tpot_ps": [
+                192840,
+                1
+              ],
+              "ttft_ps": 1000192840,
+              "ttft_ranked": [
+                {
+                  "class": "batching-queue",
+                  "share_percent": 99.98071971800958,
+                  "span_ps": 1000000000,
+                  "width": null
+                },
+                {
+                  "class": "fabric",
+                  "share_percent": 0.01628086039888068,
+                  "span_ps": 162840,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 0.0019996143943601915,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 0.0007998457577440767,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 0.00019996143943601917,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            },
+            {
+              "request_id": "request-1",
+              "tpot_ps": [
+                192840,
+                1
+              ],
+              "ttft_ps": 1000192840,
+              "ttft_ranked": [
+                {
+                  "class": "batching-queue",
+                  "share_percent": 99.98071971800958,
+                  "span_ps": 1000000000,
+                  "width": null
+                },
+                {
+                  "class": "fabric",
+                  "share_percent": 0.01628086039888068,
+                  "span_ps": 162840,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 0.0019996143943601915,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 0.0007998457577440767,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 0.00019996143943601917,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            }
+          ],
+          "step_index": 1
+        },
+        {
+          "latency_ps": 192840,
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 84.44306160547605,
+              "span_ps": 162840,
+              "width": 1
+            },
+            {
+              "class": "unclassified-kernel",
+              "share_percent": 10.371292263015972,
+              "span_ps": 20000,
+              "width": null
+            },
+            {
+              "class": "intra-node-collective",
+              "share_percent": 4.148516905206389,
+              "span_ps": 8000,
+              "width": 2
+            },
+            {
+              "class": "control",
+              "share_percent": 1.0371292263015972,
+              "span_ps": 2000,
+              "width": null
+            }
+          ],
+          "requests": [
+            {
+              "request_id": "request-0",
+              "tpot_ps": [
+                192840,
+                1
+              ],
+              "ttft_ps": 1000192840,
+              "ttft_ranked": [
+                {
+                  "class": "batching-queue",
+                  "share_percent": 99.98071971800958,
+                  "span_ps": 1000000000,
+                  "width": null
+                },
+                {
+                  "class": "fabric",
+                  "share_percent": 0.01628086039888068,
+                  "span_ps": 162840,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 0.0019996143943601915,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 0.0007998457577440767,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 0.00019996143943601917,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            },
+            {
+              "request_id": "request-1",
+              "tpot_ps": [
+                192840,
+                1
+              ],
+              "ttft_ps": 1000192840,
+              "ttft_ranked": [
+                {
+                  "class": "batching-queue",
+                  "share_percent": 99.98071971800958,
+                  "span_ps": 1000000000,
+                  "width": null
+                },
+                {
+                  "class": "fabric",
+                  "share_percent": 0.01628086039888068,
+                  "span_ps": 162840,
+                  "width": 1
+                },
+                {
+                  "class": "unclassified-kernel",
+                  "share_percent": 0.0019996143943601915,
+                  "span_ps": 20000,
+                  "width": null
+                },
+                {
+                  "class": "intra-node-collective",
+                  "share_percent": 0.0007998457577440767,
+                  "span_ps": 8000,
+                  "width": 2
+                },
+                {
+                  "class": "control",
+                  "share_percent": 0.00019996143943601917,
+                  "span_ps": 2000,
+                  "width": null
+                }
+              ]
+            }
+          ],
+          "step_index": 2
+        }
+      ]
+    }
+  ],
+  "exact_oracles": [
+    {
+      "cell": "breakdown-w2-100g",
+      "expected": [
+        11781312000,
+        10205472000,
+        88240947200,
+        110227731200
+      ],
+      "held": true,
+      "observed": [
+        11781312000,
+        10205472000,
+        88240947200,
+        110227731200
+      ]
+    },
+    {
+      "cell": "breakdown-w2-400g",
+      "expected": [
+        11781312000,
+        10205472000,
+        23596236800,
+        45583020800
+      ],
+      "held": true,
+      "observed": [
+        11781312000,
+        10205472000,
+        23596236800,
+        45583020800
+      ]
+    },
+    {
+      "cell": "breakdown-w8-100g",
+      "expected": [
+        2945952000,
+        3536288000,
+        165173657600,
+        171655897600
+      ],
+      "held": true,
+      "observed": [
+        2945952000,
+        3536288000,
+        165173657600,
+        171655897600
+      ]
+    },
+    {
+      "cell": "breakdown-w8-400g",
+      "expected": [
+        2945952000,
+        3536288000,
+        52045414400,
+        58527654400
+      ],
+      "held": true,
+      "observed": [
+        2945952000,
+        3536288000,
+        52045414400,
+        58527654400
+      ]
+    }
+  ],
+  "expectations_commit": "525b74e",
+  "fatal_guards": "held",
+  "packet_cells": [
+    {
+      "case": {
+        "kind": "m4",
+        "name": "m4-w2-200g",
+        "pattern": "ring",
+        "profile": "rnic-nn-fluid",
+        "rate": 200,
+        "width": 2
+      },
+      "fatal_guards": "held",
+      "identity_ps": 0,
+      "ranked": [
+        {
+          "class": "fabric",
+          "share_percent": 74.55797259780404,
+          "span_ps": 44053217280,
+          "width": 2
+        },
+        {
+          "class": "compute-bound",
+          "share_percent": 19.939309578212487,
+          "span_ps": 11781312000,
+          "width": null
+        },
+        {
+          "class": "hbm-bound",
+          "share_percent": 5.502717823983479,
+          "span_ps": 3251328000,
+          "width": null
+        }
+      ],
+      "snapshot_sha256": "d9c9f92b75e7e3203c2c7361d56395f64699e7dc1af809cbf1efbfa9faeaefe1",
+      "steps": [
+        {
+          "bounds": {
+            "compute_ceiling_ps": 11781312000,
+            "compute_floor_ps": 11781312000,
+            "fabric_ceiling_ps": 43205672960,
+            "fabric_floor_ps": 43205672960,
+            "physical_kernel_floor_ps": 8246920915,
+            "step_ceiling_ps": 54986984960,
+            "step_floor_ps": 54986984960
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "compute-bound"
+          ],
+          "latency_ps": 54986984960,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "prefill",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 78.57436262677385,
+              "span_ps": 43205672960,
+              "width": 2
+            },
+            {
+              "class": "compute-bound",
+              "share_percent": 21.425637373226145,
+              "span_ps": 11781312000,
+              "width": null
+            }
+          ],
+          "step_index": 0
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 1625664000,
+            "compute_floor_ps": 1625664000,
+            "fabric_ceiling_ps": 423772160,
+            "fabric_floor_ps": 423772160,
+            "physical_kernel_floor_ps": 1137967104,
+            "step_ceiling_ps": 2049436160,
+            "step_floor_ps": 2049436160
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2049436160,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 79.32250009680712,
+              "span_ps": 1625664000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 20.677499903192885,
+              "span_ps": 423772160,
+              "width": 2
+            }
+          ],
+          "step_index": 1
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 1625664000,
+            "compute_floor_ps": 1625664000,
+            "fabric_ceiling_ps": 423772160,
+            "fabric_floor_ps": 423772160,
+            "physical_kernel_floor_ps": 1137967104,
+            "step_ceiling_ps": 2049436160,
+            "step_floor_ps": 2049436160
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2049436160,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 79.32250009680712,
+              "span_ps": 1625664000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 20.677499903192885,
+              "span_ps": 423772160,
+              "width": 2
+            }
+          ],
+          "step_index": 2
+        }
+      ],
+      "total_ps": 59085857280
+    },
+    {
+      "case": {
+        "kind": "m4",
+        "name": "m4-w2-400g",
+        "pattern": "ring",
+        "profile": "rnic-nn-fluid",
+        "rate": 400,
+        "width": 2
+      },
+      "fatal_guards": "held",
+      "identity_ps": 0,
+      "ranked": [
+        {
+          "class": "fabric",
+          "share_percent": 59.8522015423072,
+          "span_ps": 22410608640,
+          "width": 2
+        },
+        {
+          "class": "compute-bound",
+          "share_percent": 31.464449341113582,
+          "span_ps": 11781312000,
+          "width": null
+        },
+        {
+          "class": "hbm-bound",
+          "share_percent": 8.683349116579217,
+          "span_ps": 3251328000,
+          "width": null
+        }
+      ],
+      "snapshot_sha256": "f832feff99d6f018251c502dbc07b5013de60024db92be4be05938bc20ab8aab",
+      "steps": [
+        {
+          "bounds": {
+            "compute_ceiling_ps": 11781312000,
+            "compute_floor_ps": 11781312000,
+            "fabric_ceiling_ps": 21730836480,
+            "fabric_floor_ps": 21730836480,
+            "physical_kernel_floor_ps": 8246920915,
+            "step_ceiling_ps": 33512148480,
+            "step_floor_ps": 33512148480
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "compute-bound"
+          ],
+          "latency_ps": 33512148480,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "prefill",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 64.84465325453225,
+              "span_ps": 21730836480,
+              "width": 2
+            },
+            {
+              "class": "compute-bound",
+              "share_percent": 35.15534674546775,
+              "span_ps": 11781312000,
+              "width": null
+            }
+          ],
+          "step_index": 0
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 1625664000,
+            "compute_floor_ps": 1625664000,
+            "fabric_ceiling_ps": 339886080,
+            "fabric_floor_ps": 339886080,
+            "physical_kernel_floor_ps": 1137967104,
+            "step_ceiling_ps": 1965550080,
+            "step_floor_ps": 1965550080
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 1965550080,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 82.70783922229039,
+              "span_ps": 1625664000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 17.29216077770962,
+              "span_ps": 339886080,
+              "width": 2
+            }
+          ],
+          "step_index": 1
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 1625664000,
+            "compute_floor_ps": 1625664000,
+            "fabric_ceiling_ps": 339886080,
+            "fabric_floor_ps": 339886080,
+            "physical_kernel_floor_ps": 1137967104,
+            "step_ceiling_ps": 1965550080,
+            "step_floor_ps": 1965550080
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 1965550080,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 82.70783922229039,
+              "span_ps": 1625664000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 17.29216077770962,
+              "span_ps": 339886080,
+              "width": 2
+            }
+          ],
+          "step_index": 2
+        }
+      ],
+      "total_ps": 37443248640
+    },
+    {
+      "case": {
+        "kind": "m4",
+        "name": "m4-w8-200g",
+        "pattern": "ring",
+        "profile": "rnic-nn-fluid",
+        "rate": 200,
+        "width": 8
+      },
+      "fatal_guards": "held",
+      "identity_ps": 0,
+      "ranked": [
+        {
+          "class": "fabric",
+          "share_percent": 95.2560955424274,
+          "span_ps": 81125130240,
+          "width": 8
+        },
+        {
+          "class": "compute-bound",
+          "share_percent": 3.4590993486879005,
+          "span_ps": 2945952000,
+          "width": null
+        },
+        {
+          "class": "hbm-bound",
+          "share_percent": 1.2848051088846968,
+          "span_ps": 1094208000,
+          "width": null
+        }
+      ],
+      "snapshot_sha256": "bad777e7a65190caa6ac5161433b684a0d681f2455cdc228ad29729c00071b58",
+      "steps": [
+        {
+          "bounds": {
+            "compute_ceiling_ps": 2945952000,
+            "compute_floor_ps": 2945952000,
+            "fabric_ceiling_ps": 76953927680,
+            "fabric_floor_ps": 76953927680,
+            "physical_kernel_floor_ps": 2062168009,
+            "step_ceiling_ps": 79899879680,
+            "step_floor_ps": 79899879680
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "compute-bound"
+          ],
+          "latency_ps": 79899879680,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "prefill",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 96.31294563671614,
+              "span_ps": 76953927680,
+              "width": 8
+            },
+            {
+              "class": "compute-bound",
+              "share_percent": 3.6870543632838673,
+              "span_ps": 2945952000,
+              "width": null
+            }
+          ],
+          "step_index": 0
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 547104000,
+            "compute_floor_ps": 547104000,
+            "fabric_ceiling_ps": 2085601280,
+            "fabric_floor_ps": 2085601280,
+            "physical_kernel_floor_ps": 382992384,
+            "step_ceiling_ps": 2632705280,
+            "step_floor_ps": 2632705280
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2632705280,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 79.21894242564059,
+              "span_ps": 2085601280,
+              "width": 8
+            },
+            {
+              "class": "hbm-bound",
+              "share_percent": 20.781057574359405,
+              "span_ps": 547104000,
+              "width": null
+            }
+          ],
+          "step_index": 1
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 547104000,
+            "compute_floor_ps": 547104000,
+            "fabric_ceiling_ps": 2085601280,
+            "fabric_floor_ps": 2085601280,
+            "physical_kernel_floor_ps": 382992384,
+            "step_ceiling_ps": 2632705280,
+            "step_floor_ps": 2632705280
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2632705280,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 79.21894242564059,
+              "span_ps": 2085601280,
+              "width": 8
+            },
+            {
+              "class": "hbm-bound",
+              "share_percent": 20.781057574359405,
+              "span_ps": 547104000,
+              "width": null
+            }
+          ],
+          "step_index": 2
+        }
+      ],
+      "total_ps": 85165290240
+    },
+    {
+      "case": {
+        "kind": "m4",
+        "name": "m4-w8-400g",
+        "pattern": "ring",
+        "profile": "rnic-nn-fluid",
+        "rate": 400,
+        "width": 8
+      },
+      "fatal_guards": "held",
+      "identity_ps": 0,
+      "ranked": [
+        {
+          "class": "fabric",
+          "share_percent": 91.45676030606823,
+          "span_ps": 43250565120,
+          "width": 8
+        },
+        {
+          "class": "compute-bound",
+          "share_percent": 6.229449839317668,
+          "span_ps": 2945952000,
+          "width": null
+        },
+        {
+          "class": "hbm-bound",
+          "share_percent": 2.3137898546140963,
+          "span_ps": 1094208000,
+          "width": null
+        }
+      ],
+      "snapshot_sha256": "5c81fa8d1e827ff95bceffa029996f0b98ea418f4ca42926443a3ca4c69f1fa5",
+      "steps": [
+        {
+          "bounds": {
+            "compute_ceiling_ps": 2945952000,
+            "compute_floor_ps": 2945952000,
+            "fabric_ceiling_ps": 39372963840,
+            "fabric_floor_ps": 39372963840,
+            "physical_kernel_floor_ps": 2062168009,
+            "step_ceiling_ps": 42318915840,
+            "step_floor_ps": 42318915840
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "compute-bound"
+          ],
+          "latency_ps": 42318915840,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "prefill",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 93.03868744856769,
+              "span_ps": 39372963840,
+              "width": 8
+            },
+            {
+              "class": "compute-bound",
+              "share_percent": 6.96131255143232,
+              "span_ps": 2945952000,
+              "width": null
+            }
+          ],
+          "step_index": 0
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 547104000,
+            "compute_floor_ps": 547104000,
+            "fabric_ceiling_ps": 1938800640,
+            "fabric_floor_ps": 1938800640,
+            "physical_kernel_floor_ps": 382992384,
+            "step_ceiling_ps": 2485904640,
+            "step_floor_ps": 2485904640
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2485904640,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 77.99175434179165,
+              "span_ps": 1938800640,
+              "width": 8
+            },
+            {
+              "class": "hbm-bound",
+              "share_percent": 22.008245658208352,
+              "span_ps": 547104000,
+              "width": null
+            }
+          ],
+          "step_index": 1
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 547104000,
+            "compute_floor_ps": 547104000,
+            "fabric_ceiling_ps": 1938800640,
+            "fabric_floor_ps": 1938800640,
+            "physical_kernel_floor_ps": 382992384,
+            "step_ceiling_ps": 2485904640,
+            "step_floor_ps": 2485904640
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2485904640,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 77.99175434179165,
+              "span_ps": 1938800640,
+              "width": 8
+            },
+            {
+              "class": "hbm-bound",
+              "share_percent": 22.008245658208352,
+              "span_ps": 547104000,
+              "width": null
+            }
+          ],
+          "step_index": 2
+        }
+      ],
+      "total_ps": 47290725120
+    },
+    {
+      "case": {
+        "kind": "breakdown",
+        "name": "breakdown-w2-100g",
+        "pattern": "ring",
+        "profile": "rnic-nn-fluid",
+        "rate": 100,
+        "width": 2
+      },
+      "fatal_guards": "held",
+      "identity_ps": 0,
+      "ranked": [
+        {
+          "class": "fabric",
+          "share_percent": 80.05330985166825,
+          "span_ps": 88240947200,
+          "width": 2
+        },
+        {
+          "class": "compute-bound",
+          "share_percent": 10.6881561216421,
+          "span_ps": 11781312000,
+          "width": null
+        },
+        {
+          "class": "hbm-bound",
+          "share_percent": 9.258534026689647,
+          "span_ps": 10205472000,
+          "width": null
+        }
+      ],
+      "snapshot_sha256": "a40e33bcc0ee0bbe2c8a51385d40d5b91038bfc07873f561dd4901a972b11473",
+      "steps": [
+        {
+          "bounds": {
+            "compute_ceiling_ps": 11781312000,
+            "compute_floor_ps": 11781312000,
+            "fabric_ceiling_ps": 86155345920,
+            "fabric_floor_ps": 86155345920,
+            "physical_kernel_floor_ps": 8246920915,
+            "step_ceiling_ps": 97936657920,
+            "step_floor_ps": 97936657920
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "compute-bound"
+          ],
+          "latency_ps": 97936657920,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "prefill",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 87.97047780655981,
+              "span_ps": 86155345920,
+              "width": 2
+            },
+            {
+              "class": "compute-bound",
+              "share_percent": 12.02952219344019,
+              "span_ps": 11781312000,
+              "width": null
+            }
+          ],
+          "step_index": 0
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 1457888000,
+            "compute_floor_ps": 1457888000,
+            "fabric_ceiling_ps": 297943040,
+            "fabric_floor_ps": 297943040,
+            "physical_kernel_floor_ps": 1020534783,
+            "step_ceiling_ps": 1755831040,
+            "step_floor_ps": 1755831040
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 1755831040,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 83.03122377879822,
+              "span_ps": 1457888000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 16.968776221201786,
+              "span_ps": 297943040,
+              "width": 2
+            }
+          ],
+          "step_index": 1
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 1457888000,
+            "compute_floor_ps": 1457888000,
+            "fabric_ceiling_ps": 297943040,
+            "fabric_floor_ps": 297943040,
+            "physical_kernel_floor_ps": 1020542975,
+            "step_ceiling_ps": 1755831040,
+            "step_floor_ps": 1755831040
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 1755831040,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 83.03122377879822,
+              "span_ps": 1457888000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 16.968776221201786,
+              "span_ps": 297943040,
+              "width": 2
+            }
+          ],
+          "step_index": 2
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 1457920000,
+            "compute_floor_ps": 1457920000,
+            "fabric_ceiling_ps": 297943040,
+            "fabric_floor_ps": 297943040,
+            "physical_kernel_floor_ps": 1020551168,
+            "step_ceiling_ps": 1755863040,
+            "step_floor_ps": 1755863040
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 1755863040,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 83.03153302890868,
+              "span_ps": 1457920000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 16.96846697109132,
+              "span_ps": 297943040,
+              "width": 2
+            }
+          ],
+          "step_index": 3
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 1457920000,
+            "compute_floor_ps": 1457920000,
+            "fabric_ceiling_ps": 297943040,
+            "fabric_floor_ps": 297943040,
+            "physical_kernel_floor_ps": 1020559360,
+            "step_ceiling_ps": 1755863040,
+            "step_floor_ps": 1755863040
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 1755863040,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 83.03153302890868,
+              "span_ps": 1457920000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 16.96846697109132,
+              "span_ps": 297943040,
+              "width": 2
+            }
+          ],
+          "step_index": 4
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 1457952000,
+            "compute_floor_ps": 1457952000,
+            "fabric_ceiling_ps": 297943040,
+            "fabric_floor_ps": 297943040,
+            "physical_kernel_floor_ps": 1020567552,
+            "step_ceiling_ps": 1755895040,
+            "step_floor_ps": 1755895040
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 1755895040,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 83.0318422677474,
+              "span_ps": 1457952000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 16.968157732252607,
+              "span_ps": 297943040,
+              "width": 2
+            }
+          ],
+          "step_index": 5
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 1457952000,
+            "compute_floor_ps": 1457952000,
+            "fabric_ceiling_ps": 297943040,
+            "fabric_floor_ps": 297943040,
+            "physical_kernel_floor_ps": 1020575744,
+            "step_ceiling_ps": 1755895040,
+            "step_floor_ps": 1755895040
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 1755895040,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 83.0318422677474,
+              "span_ps": 1457952000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 16.968157732252607,
+              "span_ps": 297943040,
+              "width": 2
+            }
+          ],
+          "step_index": 6
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 1457952000,
+            "compute_floor_ps": 1457952000,
+            "fabric_ceiling_ps": 297943040,
+            "fabric_floor_ps": 297943040,
+            "physical_kernel_floor_ps": 1020583936,
+            "step_ceiling_ps": 1755895040,
+            "step_floor_ps": 1755895040
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 1755895040,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 83.0318422677474,
+              "span_ps": 1457952000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 16.968157732252607,
+              "span_ps": 297943040,
+              "width": 2
+            }
+          ],
+          "step_index": 7
+        }
+      ],
+      "total_ps": 110227731200
+    },
+    {
+      "case": {
+        "kind": "breakdown",
+        "name": "breakdown-w2-400g",
+        "pattern": "ring",
+        "profile": "rnic-nn-fluid",
+        "rate": 400,
+        "width": 2
+      },
+      "fatal_guards": "held",
+      "identity_ps": 0,
+      "ranked": [
+        {
+          "class": "fabric",
+          "share_percent": 51.76540822849547,
+          "span_ps": 23596236800,
+          "width": 2
+        },
+        {
+          "class": "compute-bound",
+          "share_percent": 25.845834245368838,
+          "span_ps": 11781312000,
+          "width": null
+        },
+        {
+          "class": "hbm-bound",
+          "share_percent": 22.388757526135695,
+          "span_ps": 10205472000,
+          "width": null
+        }
+      ],
+      "snapshot_sha256": "3971d186c39c87a229fba526043831212132e3d84ccc5d92f44a1455177c8451",
+      "steps": [
+        {
+          "bounds": {
+            "compute_ceiling_ps": 11781312000,
+            "compute_floor_ps": 11781312000,
+            "fabric_ceiling_ps": 21730836480,
+            "fabric_floor_ps": 21730836480,
+            "physical_kernel_floor_ps": 8246920915,
+            "step_ceiling_ps": 33512148480,
+            "step_floor_ps": 33512148480
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "compute-bound"
+          ],
+          "latency_ps": 33512148480,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "prefill",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 64.84465325453225,
+              "span_ps": 21730836480,
+              "width": 2
+            },
+            {
+              "class": "compute-bound",
+              "share_percent": 35.15534674546775,
+              "span_ps": 11781312000,
+              "width": null
+            }
+          ],
+          "step_index": 0
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 1457888000,
+            "compute_floor_ps": 1457888000,
+            "fabric_ceiling_ps": 266485760,
+            "fabric_floor_ps": 266485760,
+            "physical_kernel_floor_ps": 1020534783,
+            "step_ceiling_ps": 1724373760,
+            "step_floor_ps": 1724373760
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 1724373760,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 84.54593973872579,
+              "span_ps": 1457888000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 15.454060261274215,
+              "span_ps": 266485760,
+              "width": 2
+            }
+          ],
+          "step_index": 1
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 1457888000,
+            "compute_floor_ps": 1457888000,
+            "fabric_ceiling_ps": 266485760,
+            "fabric_floor_ps": 266485760,
+            "physical_kernel_floor_ps": 1020542975,
+            "step_ceiling_ps": 1724373760,
+            "step_floor_ps": 1724373760
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 1724373760,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 84.54593973872579,
+              "span_ps": 1457888000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 15.454060261274215,
+              "span_ps": 266485760,
+              "width": 2
+            }
+          ],
+          "step_index": 2
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 1457920000,
+            "compute_floor_ps": 1457920000,
+            "fabric_ceiling_ps": 266485760,
+            "fabric_floor_ps": 266485760,
+            "physical_kernel_floor_ps": 1020551168,
+            "step_ceiling_ps": 1724405760,
+            "step_floor_ps": 1724405760
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 1724405760,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 84.54622652153516,
+              "span_ps": 1457920000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 15.453773478464836,
+              "span_ps": 266485760,
+              "width": 2
+            }
+          ],
+          "step_index": 3
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 1457920000,
+            "compute_floor_ps": 1457920000,
+            "fabric_ceiling_ps": 266485760,
+            "fabric_floor_ps": 266485760,
+            "physical_kernel_floor_ps": 1020559360,
+            "step_ceiling_ps": 1724405760,
+            "step_floor_ps": 1724405760
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 1724405760,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 84.54622652153516,
+              "span_ps": 1457920000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 15.453773478464836,
+              "span_ps": 266485760,
+              "width": 2
+            }
+          ],
+          "step_index": 4
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 1457952000,
+            "compute_floor_ps": 1457952000,
+            "fabric_ceiling_ps": 266485760,
+            "fabric_floor_ps": 266485760,
+            "physical_kernel_floor_ps": 1020567552,
+            "step_ceiling_ps": 1724437760,
+            "step_floor_ps": 1724437760
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 1724437760,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 84.54651329370101,
+              "span_ps": 1457952000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 15.453486706298985,
+              "span_ps": 266485760,
+              "width": 2
+            }
+          ],
+          "step_index": 5
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 1457952000,
+            "compute_floor_ps": 1457952000,
+            "fabric_ceiling_ps": 266485760,
+            "fabric_floor_ps": 266485760,
+            "physical_kernel_floor_ps": 1020575744,
+            "step_ceiling_ps": 1724437760,
+            "step_floor_ps": 1724437760
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 1724437760,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 84.54651329370101,
+              "span_ps": 1457952000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 15.453486706298985,
+              "span_ps": 266485760,
+              "width": 2
+            }
+          ],
+          "step_index": 6
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 1457952000,
+            "compute_floor_ps": 1457952000,
+            "fabric_ceiling_ps": 266485760,
+            "fabric_floor_ps": 266485760,
+            "physical_kernel_floor_ps": 1020583936,
+            "step_ceiling_ps": 1724437760,
+            "step_floor_ps": 1724437760
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 1724437760,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 84.54651329370101,
+              "span_ps": 1457952000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 15.453486706298985,
+              "span_ps": 266485760,
+              "width": 2
+            }
+          ],
+          "step_index": 7
+        }
+      ],
+      "total_ps": 45583020800
+    },
+    {
+      "case": {
+        "kind": "breakdown",
+        "name": "breakdown-w8-100g",
+        "pattern": "ring",
+        "profile": "rnic-nn-fluid",
+        "rate": 100,
+        "width": 8
+      },
+      "fatal_guards": "held",
+      "identity_ps": 0,
+      "ranked": [
+        {
+          "class": "fabric",
+          "share_percent": 96.2237009676736,
+          "span_ps": 165173657600,
+          "width": 8
+        },
+        {
+          "class": "hbm-bound",
+          "share_percent": 2.0601028274836275,
+          "span_ps": 3536288000,
+          "width": null
+        },
+        {
+          "class": "compute-bound",
+          "share_percent": 1.716196204842775,
+          "span_ps": 2945952000,
+          "width": null
+        }
+      ],
+      "snapshot_sha256": "2aa9515b507946ec872390cb579c6ae0299957c9bdf1ad4b08fd3db104e694da",
+      "steps": [
+        {
+          "bounds": {
+            "compute_ceiling_ps": 2945952000,
+            "compute_floor_ps": 2945952000,
+            "fabric_ceiling_ps": 152115855360,
+            "fabric_floor_ps": 152115855360,
+            "physical_kernel_floor_ps": 2062168009,
+            "step_ceiling_ps": 155061807360,
+            "step_floor_ps": 155061807360
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "compute-bound"
+          ],
+          "latency_ps": 155061807360,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "prefill",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 98.10014338788112,
+              "span_ps": 152115855360,
+              "width": 8
+            },
+            {
+              "class": "compute-bound",
+              "share_percent": 1.89985661211888,
+              "span_ps": 2945952000,
+              "width": null
+            }
+          ],
+          "step_index": 0
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 505184000,
+            "compute_floor_ps": 505184000,
+            "fabric_ceiling_ps": 1865400320,
+            "fabric_floor_ps": 1865400320,
+            "physical_kernel_floor_ps": 353634304,
+            "step_ceiling_ps": 2370584320,
+            "step_floor_ps": 2370584320
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2370584320,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 78.68947348812296,
+              "span_ps": 1865400320,
+              "width": 8
+            },
+            {
+              "class": "hbm-bound",
+              "share_percent": 21.31052651187704,
+              "span_ps": 505184000,
+              "width": null
+            }
+          ],
+          "step_index": 1
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 505184000,
+            "compute_floor_ps": 505184000,
+            "fabric_ceiling_ps": 1865400320,
+            "fabric_floor_ps": 1865400320,
+            "physical_kernel_floor_ps": 353636352,
+            "step_ceiling_ps": 2370584320,
+            "step_floor_ps": 2370584320
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2370584320,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 78.68947348812296,
+              "span_ps": 1865400320,
+              "width": 8
+            },
+            {
+              "class": "hbm-bound",
+              "share_percent": 21.31052651187704,
+              "span_ps": 505184000,
+              "width": null
+            }
+          ],
+          "step_index": 2
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 505184000,
+            "compute_floor_ps": 505184000,
+            "fabric_ceiling_ps": 1865400320,
+            "fabric_floor_ps": 1865400320,
+            "physical_kernel_floor_ps": 353638400,
+            "step_ceiling_ps": 2370584320,
+            "step_floor_ps": 2370584320
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2370584320,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 78.68947348812296,
+              "span_ps": 1865400320,
+              "width": 8
+            },
+            {
+              "class": "hbm-bound",
+              "share_percent": 21.31052651187704,
+              "span_ps": 505184000,
+              "width": null
+            }
+          ],
+          "step_index": 3
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 505184000,
+            "compute_floor_ps": 505184000,
+            "fabric_ceiling_ps": 1865400320,
+            "fabric_floor_ps": 1865400320,
+            "physical_kernel_floor_ps": 353640448,
+            "step_ceiling_ps": 2370584320,
+            "step_floor_ps": 2370584320
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2370584320,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 78.68947348812296,
+              "span_ps": 1865400320,
+              "width": 8
+            },
+            {
+              "class": "hbm-bound",
+              "share_percent": 21.31052651187704,
+              "span_ps": 505184000,
+              "width": null
+            }
+          ],
+          "step_index": 4
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 505184000,
+            "compute_floor_ps": 505184000,
+            "fabric_ceiling_ps": 1865400320,
+            "fabric_floor_ps": 1865400320,
+            "physical_kernel_floor_ps": 353642496,
+            "step_ceiling_ps": 2370584320,
+            "step_floor_ps": 2370584320
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2370584320,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 78.68947348812296,
+              "span_ps": 1865400320,
+              "width": 8
+            },
+            {
+              "class": "hbm-bound",
+              "share_percent": 21.31052651187704,
+              "span_ps": 505184000,
+              "width": null
+            }
+          ],
+          "step_index": 5
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 505184000,
+            "compute_floor_ps": 505184000,
+            "fabric_ceiling_ps": 1865400320,
+            "fabric_floor_ps": 1865400320,
+            "physical_kernel_floor_ps": 353644544,
+            "step_ceiling_ps": 2370584320,
+            "step_floor_ps": 2370584320
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2370584320,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 78.68947348812296,
+              "span_ps": 1865400320,
+              "width": 8
+            },
+            {
+              "class": "hbm-bound",
+              "share_percent": 21.31052651187704,
+              "span_ps": 505184000,
+              "width": null
+            }
+          ],
+          "step_index": 6
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 505184000,
+            "compute_floor_ps": 505184000,
+            "fabric_ceiling_ps": 1865400320,
+            "fabric_floor_ps": 1865400320,
+            "physical_kernel_floor_ps": 353646592,
+            "step_ceiling_ps": 2370584320,
+            "step_floor_ps": 2370584320
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2370584320,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 78.68947348812296,
+              "span_ps": 1865400320,
+              "width": 8
+            },
+            {
+              "class": "hbm-bound",
+              "share_percent": 21.31052651187704,
+              "span_ps": 505184000,
+              "width": null
+            }
+          ],
+          "step_index": 7
+        }
+      ],
+      "total_ps": 171655897600
+    },
+    {
+      "case": {
+        "kind": "breakdown",
+        "name": "breakdown-w8-400g",
+        "pattern": "ring",
+        "profile": "rnic-nn-fluid",
+        "rate": 400,
+        "width": 8
+      },
+      "fatal_guards": "held",
+      "identity_ps": 0,
+      "ranked": [
+        {
+          "class": "fabric",
+          "share_percent": 88.9244835344025,
+          "span_ps": 52045414400,
+          "width": 8
+        },
+        {
+          "class": "hbm-bound",
+          "share_percent": 6.042080510918272,
+          "span_ps": 3536288000,
+          "width": null
+        },
+        {
+          "class": "compute-bound",
+          "share_percent": 5.03343595467923,
+          "span_ps": 2945952000,
+          "width": null
+        }
+      ],
+      "snapshot_sha256": "5b18dd0893a1c180e0bb41b3d306b0b552eb1f9e651563838aee431d7f658bdc",
+      "steps": [
+        {
+          "bounds": {
+            "compute_ceiling_ps": 2945952000,
+            "compute_floor_ps": 2945952000,
+            "fabric_ceiling_ps": 39372963840,
+            "fabric_floor_ps": 39372963840,
+            "physical_kernel_floor_ps": 2062168009,
+            "step_ceiling_ps": 42318915840,
+            "step_floor_ps": 42318915840
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "compute-bound"
+          ],
+          "latency_ps": 42318915840,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "prefill",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 93.03868744856769,
+              "span_ps": 39372963840,
+              "width": 8
+            },
+            {
+              "class": "compute-bound",
+              "share_percent": 6.96131255143232,
+              "span_ps": 2945952000,
+              "width": null
+            }
+          ],
+          "step_index": 0
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 505184000,
+            "compute_floor_ps": 505184000,
+            "fabric_ceiling_ps": 1810350080,
+            "fabric_floor_ps": 1810350080,
+            "physical_kernel_floor_ps": 353634304,
+            "step_ceiling_ps": 2315534080,
+            "step_floor_ps": 2315534080
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2315534080,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 78.18283028682524,
+              "span_ps": 1810350080,
+              "width": 8
+            },
+            {
+              "class": "hbm-bound",
+              "share_percent": 21.817169713174767,
+              "span_ps": 505184000,
+              "width": null
+            }
+          ],
+          "step_index": 1
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 505184000,
+            "compute_floor_ps": 505184000,
+            "fabric_ceiling_ps": 1810350080,
+            "fabric_floor_ps": 1810350080,
+            "physical_kernel_floor_ps": 353636352,
+            "step_ceiling_ps": 2315534080,
+            "step_floor_ps": 2315534080
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2315534080,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 78.18283028682524,
+              "span_ps": 1810350080,
+              "width": 8
+            },
+            {
+              "class": "hbm-bound",
+              "share_percent": 21.817169713174767,
+              "span_ps": 505184000,
+              "width": null
+            }
+          ],
+          "step_index": 2
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 505184000,
+            "compute_floor_ps": 505184000,
+            "fabric_ceiling_ps": 1810350080,
+            "fabric_floor_ps": 1810350080,
+            "physical_kernel_floor_ps": 353638400,
+            "step_ceiling_ps": 2315534080,
+            "step_floor_ps": 2315534080
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2315534080,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 78.18283028682524,
+              "span_ps": 1810350080,
+              "width": 8
+            },
+            {
+              "class": "hbm-bound",
+              "share_percent": 21.817169713174767,
+              "span_ps": 505184000,
+              "width": null
+            }
+          ],
+          "step_index": 3
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 505184000,
+            "compute_floor_ps": 505184000,
+            "fabric_ceiling_ps": 1810350080,
+            "fabric_floor_ps": 1810350080,
+            "physical_kernel_floor_ps": 353640448,
+            "step_ceiling_ps": 2315534080,
+            "step_floor_ps": 2315534080
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2315534080,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 78.18283028682524,
+              "span_ps": 1810350080,
+              "width": 8
+            },
+            {
+              "class": "hbm-bound",
+              "share_percent": 21.817169713174767,
+              "span_ps": 505184000,
+              "width": null
+            }
+          ],
+          "step_index": 4
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 505184000,
+            "compute_floor_ps": 505184000,
+            "fabric_ceiling_ps": 1810350080,
+            "fabric_floor_ps": 1810350080,
+            "physical_kernel_floor_ps": 353642496,
+            "step_ceiling_ps": 2315534080,
+            "step_floor_ps": 2315534080
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2315534080,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 78.18283028682524,
+              "span_ps": 1810350080,
+              "width": 8
+            },
+            {
+              "class": "hbm-bound",
+              "share_percent": 21.817169713174767,
+              "span_ps": 505184000,
+              "width": null
+            }
+          ],
+          "step_index": 5
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 505184000,
+            "compute_floor_ps": 505184000,
+            "fabric_ceiling_ps": 1810350080,
+            "fabric_floor_ps": 1810350080,
+            "physical_kernel_floor_ps": 353644544,
+            "step_ceiling_ps": 2315534080,
+            "step_floor_ps": 2315534080
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2315534080,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 78.18283028682524,
+              "span_ps": 1810350080,
+              "width": 8
+            },
+            {
+              "class": "hbm-bound",
+              "share_percent": 21.817169713174767,
+              "span_ps": 505184000,
+              "width": null
+            }
+          ],
+          "step_index": 6
+        },
+        {
+          "bounds": {
+            "compute_ceiling_ps": 505184000,
+            "compute_floor_ps": 505184000,
+            "fabric_ceiling_ps": 1810350080,
+            "fabric_floor_ps": 1810350080,
+            "physical_kernel_floor_ps": 353646592,
+            "step_ceiling_ps": 2315534080,
+            "step_floor_ps": 2315534080
+          },
+          "flow_artifacts": 64,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 2315534080,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "decode",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 78.18283028682524,
+              "span_ps": 1810350080,
+              "width": 8
+            },
+            {
+              "class": "hbm-bound",
+              "share_percent": 21.817169713174767,
+              "span_ps": 505184000,
+              "width": null
+            }
+          ],
+          "step_index": 7
+        }
+      ],
+      "total_ps": 58527654400
+    },
+    {
+      "case": {
+        "kind": "width",
+        "name": "width-ring-w8-200g",
+        "pattern": "ring",
+        "profile": "rnic-nn",
+        "rate": 200,
+        "width": 8
+      },
+      "fatal_guards": "held",
+      "identity_ps": 0,
+      "ranked": [
+        {
+          "class": "fabric",
+          "share_percent": 67.71627512965144,
+          "span_ps": 209753600,
+          "width": 8
+        },
+        {
+          "class": "compute-bound",
+          "share_percent": 32.283724870348564,
+          "span_ps": 100000000,
+          "width": null
+        }
+      ],
+      "snapshot_sha256": "7f473a14366989180aeaccd92c0cda629b4add6c6496a02e3ca2366ecc69fe97",
+      "steps": [
+        {
+          "bounds": {
+            "compute_ceiling_ps": 100000000,
+            "compute_floor_ps": 100000000,
+            "fabric_ceiling_ps": 214412800,
+            "fabric_floor_ps": 202800640,
+            "physical_kernel_floor_ps": 9250770,
+            "step_ceiling_ps": 314412800,
+            "step_floor_ps": 302800640
+          },
+          "flow_artifacts": 2,
+          "kernel_bound_classes": [
+            "compute-bound"
+          ],
+          "latency_ps": 309753600,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "prefill",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 67.71627512965144,
+              "span_ps": 209753600,
+              "width": 8
+            },
+            {
+              "class": "compute-bound",
+              "share_percent": 32.283724870348564,
+              "span_ps": 100000000,
+              "width": null
+            }
+          ],
+          "step_index": 0
+        }
+      ],
+      "total_ps": 309753600
+    },
+    {
+      "case": {
+        "kind": "width",
+        "name": "width-ring-w8-400g",
+        "pattern": "ring",
+        "profile": "rnic-nn",
+        "rate": 400,
+        "width": 8
+      },
+      "fatal_guards": "held",
+      "identity_ps": 0,
+      "ranked": [
+        {
+          "class": "fabric",
+          "share_percent": 57.05883969549564,
+          "span_ps": 132876800,
+          "width": 8
+        },
+        {
+          "class": "compute-bound",
+          "share_percent": 42.94116030450436,
+          "span_ps": 100000000,
+          "width": null
+        }
+      ],
+      "snapshot_sha256": "59321948258ed09ae8de56ac6b5f2b11e7a1344b0a22fc4e65931801bfe8ab8b",
+      "steps": [
+        {
+          "bounds": {
+            "compute_ceiling_ps": 100000000,
+            "compute_floor_ps": 100000000,
+            "fabric_ceiling_ps": 135206400,
+            "fabric_floor_ps": 129400320,
+            "physical_kernel_floor_ps": 9250770,
+            "step_ceiling_ps": 235206400,
+            "step_floor_ps": 229400320
+          },
+          "flow_artifacts": 2,
+          "kernel_bound_classes": [
+            "compute-bound"
+          ],
+          "latency_ps": 232876800,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "prefill",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 57.05883969549564,
+              "span_ps": 132876800,
+              "width": 8
+            },
+            {
+              "class": "compute-bound",
+              "share_percent": 42.94116030450436,
+              "span_ps": 100000000,
+              "width": null
+            }
+          ],
+          "step_index": 0
+        }
+      ],
+      "total_ps": 232876800
+    },
+    {
+      "case": {
+        "kind": "width",
+        "name": "width-ring-w64-200g",
+        "pattern": "ring",
+        "profile": "rnic-nn",
+        "rate": 200,
+        "width": 64
+      },
+      "fatal_guards": "held",
+      "identity_ps": 0,
+      "ranked": [
+        {
+          "class": "fabric",
+          "share_percent": 87.70991465764739,
+          "span_ps": 713664000,
+          "width": 64
+        },
+        {
+          "class": "compute-bound",
+          "share_percent": 12.290085342352617,
+          "span_ps": 100000000,
+          "width": null
+        }
+      ],
+      "snapshot_sha256": "a5ca3a55f9aa215d1b3b7610695ad624003210d121279cb2a2606a00a6f6d048",
+      "steps": [
+        {
+          "bounds": {
+            "compute_ceiling_ps": 100000000,
+            "compute_floor_ps": 100000000,
+            "fabric_ceiling_ps": 755596800,
+            "fabric_floor_ps": 669150720,
+            "physical_kernel_floor_ps": 9250770,
+            "step_ceiling_ps": 855596800,
+            "step_floor_ps": 769150720
+          },
+          "flow_artifacts": 2,
+          "kernel_bound_classes": [
+            "compute-bound"
+          ],
+          "latency_ps": 813664000,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "prefill",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 87.70991465764739,
+              "span_ps": 713664000,
+              "width": 64
+            },
+            {
+              "class": "compute-bound",
+              "share_percent": 12.290085342352617,
+              "span_ps": 100000000,
+              "width": null
+            }
+          ],
+          "step_index": 0
+        }
+      ],
+      "total_ps": 813664000
+    },
+    {
+      "case": {
+        "kind": "width",
+        "name": "width-ring-w64-400g",
+        "pattern": "ring",
+        "profile": "rnic-nn",
+        "rate": 400,
+        "width": 64
+      },
+      "fatal_guards": "held",
+      "identity_ps": 0,
+      "ranked": [
+        {
+          "class": "fabric",
+          "share_percent": 85.8922847726965,
+          "span_ps": 608832000,
+          "width": 64
+        },
+        {
+          "class": "compute-bound",
+          "share_percent": 14.107715227303508,
+          "span_ps": 100000000,
+          "width": null
+        }
+      ],
+      "snapshot_sha256": "469a0c5eb16392897ae6024da7e9eeade43314e1ab12e18f14d1901a090a80a2",
+      "steps": [
+        {
+          "bounds": {
+            "compute_ceiling_ps": 100000000,
+            "compute_floor_ps": 100000000,
+            "fabric_ceiling_ps": 629798400,
+            "fabric_floor_ps": 586575360,
+            "physical_kernel_floor_ps": 9250770,
+            "step_ceiling_ps": 729798400,
+            "step_floor_ps": 686575360
+          },
+          "flow_artifacts": 2,
+          "kernel_bound_classes": [
+            "compute-bound"
+          ],
+          "latency_ps": 708832000,
+          "max_fct_tail_share": 0.0,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "prefill",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 85.8922847726965,
+              "span_ps": 608832000,
+              "width": 64
+            },
+            {
+              "class": "compute-bound",
+              "share_percent": 14.107715227303508,
+              "span_ps": 100000000,
+              "width": null
+            }
+          ],
+          "step_index": 0
+        }
+      ],
+      "total_ps": 708832000
+    },
+    {
+      "case": {
+        "kind": "width",
+        "name": "width-all-to-all-w8-200g",
+        "pattern": "all-to-all",
+        "profile": "rnic-nn",
+        "rate": 200,
+        "width": 8
+      },
+      "fatal_guards": "held",
+      "identity_ps": 0,
+      "ranked": [
+        {
+          "class": "hbm-bound",
+          "share_percent": 70.61827714001627,
+          "span_ps": 100000000,
+          "width": null
+        },
+        {
+          "class": "fabric",
+          "share_percent": 29.38172285998373,
+          "span_ps": 41606400,
+          "width": 8
+        }
+      ],
+      "snapshot_sha256": "38ded444ec2de68b22fc8d57407843cad1a2200b769052629cca4fcdda0af257",
+      "steps": [
+        {
+          "bounds": {
+            "compute_ceiling_ps": 100000000,
+            "compute_floor_ps": 100000000,
+            "fabric_ceiling_ps": 302521600,
+            "fabric_floor_ps": 40700160,
+            "physical_kernel_floor_ps": 27066368,
+            "step_ceiling_ps": 402521600,
+            "step_floor_ps": 140700160
+          },
+          "flow_artifacts": 2,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 141606400,
+          "max_fct_tail_share": 0.047992616520535304,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "prefill",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 70.61827714001627,
+              "span_ps": 100000000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 29.38172285998373,
+              "span_ps": 41606400,
+              "width": 8
+            }
+          ],
+          "step_index": 0
+        }
+      ],
+      "total_ps": 141606400
+    },
+    {
+      "case": {
+        "kind": "width",
+        "name": "width-all-to-all-w8-400g",
+        "pattern": "all-to-all",
+        "profile": "rnic-nn",
+        "rate": 400,
+        "width": 8
+      },
+      "fatal_guards": "held",
+      "identity_ps": 0,
+      "ranked": [
+        {
+          "class": "hbm-bound",
+          "share_percent": 81.43110277256619,
+          "span_ps": 100000000,
+          "width": null
+        },
+        {
+          "class": "fabric",
+          "share_percent": 18.568897227433812,
+          "span_ps": 22803200,
+          "width": 8
+        }
+      ],
+      "snapshot_sha256": "ef8247bf65fe3675b3fb2ecc537900de5947ca4d93e2c984259580a081e800d4",
+      "steps": [
+        {
+          "bounds": {
+            "compute_ceiling_ps": 100000000,
+            "compute_floor_ps": 100000000,
+            "fabric_ceiling_ps": 153260800,
+            "fabric_floor_ps": 22350080,
+            "physical_kernel_floor_ps": 27066368,
+            "step_ceiling_ps": 253260800,
+            "step_floor_ps": 122350080
+          },
+          "flow_artifacts": 2,
+          "kernel_bound_classes": [
+            "hbm-bound"
+          ],
+          "latency_ps": 122803200,
+          "max_fct_tail_share": 0.04378332865562728,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "prefill",
+          "ranked": [
+            {
+              "class": "hbm-bound",
+              "share_percent": 81.43110277256619,
+              "span_ps": 100000000,
+              "width": null
+            },
+            {
+              "class": "fabric",
+              "share_percent": 18.568897227433812,
+              "span_ps": 22803200,
+              "width": 8
+            }
+          ],
+          "step_index": 0
+        }
+      ],
+      "total_ps": 122803200
+    },
+    {
+      "case": {
+        "kind": "width",
+        "name": "width-all-to-all-w64-200g",
+        "pattern": "all-to-all",
+        "profile": "rnic-nn",
+        "rate": 200,
+        "width": 64
+      },
+      "fatal_guards": "held",
+      "identity_ps": 0,
+      "ranked": [
+        {
+          "class": "fabric",
+          "share_percent": 75.15661271345438,
+          "span_ps": 302521600,
+          "width": 64
+        },
+        {
+          "class": "compute-bound",
+          "share_percent": 24.843387286545617,
+          "span_ps": 100000000,
+          "width": null
+        }
+      ],
+      "snapshot_sha256": "4890931e32e75673065d0d71949ff27e5263fc788ed8f0c344323ca57c0dfd19",
+      "steps": [
+        {
+          "bounds": {
+            "compute_ceiling_ps": 100000000,
+            "compute_floor_ps": 100000000,
+            "fabric_ceiling_ps": 19088416000,
+            "fabric_floor_ps": 297601280,
+            "physical_kernel_floor_ps": 40568240,
+            "step_ceiling_ps": 19188416000,
+            "step_floor_ps": 397601280
+          },
+          "flow_artifacts": 2,
+          "kernel_bound_classes": [
+            "compute-bound"
+          ],
+          "latency_ps": 402521600,
+          "max_fct_tail_share": 0.06050477056844867,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "prefill",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 75.15661271345438,
+              "span_ps": 302521600,
+              "width": 64
+            },
+            {
+              "class": "compute-bound",
+              "share_percent": 24.843387286545617,
+              "span_ps": 100000000,
+              "width": null
+            }
+          ],
+          "step_index": 0
+        }
+      ],
+      "total_ps": 402521600
+    },
+    {
+      "case": {
+        "kind": "width",
+        "name": "width-all-to-all-w64-400g",
+        "pattern": "all-to-all",
+        "profile": "rnic-nn",
+        "rate": 400,
+        "width": 64
+      },
+      "fatal_guards": "held",
+      "identity_ps": 0,
+      "ranked": [
+        {
+          "class": "fabric",
+          "share_percent": 60.515010613565146,
+          "span_ps": 153260800,
+          "width": 64
+        },
+        {
+          "class": "compute-bound",
+          "share_percent": 39.484989386434854,
+          "span_ps": 100000000,
+          "width": null
+        }
+      ],
+      "snapshot_sha256": "127bed2f54dd41390dccd7bd0c7212093192449c1d88374f95ef211ae326b0b5",
+      "steps": [
+        {
+          "bounds": {
+            "compute_ceiling_ps": 100000000,
+            "compute_floor_ps": 100000000,
+            "fabric_ceiling_ps": 9546208000,
+            "fabric_floor_ps": 150800640,
+            "physical_kernel_floor_ps": 40568240,
+            "step_ceiling_ps": 9646208000,
+            "step_floor_ps": 250800640
+          },
+          "flow_artifacts": 2,
+          "kernel_bound_classes": [
+            "compute-bound"
+          ],
+          "latency_ps": 253260800,
+          "max_fct_tail_share": 0.059715204409738175,
+          "measured_fraction_state": "absent-by-design",
+          "phase": "prefill",
+          "ranked": [
+            {
+              "class": "fabric",
+              "share_percent": 60.515010613565146,
+              "span_ps": 153260800,
+              "width": 64
+            },
+            {
+              "class": "compute-bound",
+              "share_percent": 39.484989386434854,
+              "span_ps": 100000000,
+              "width": null
+            }
+          ],
+          "step_index": 0
+        }
+      ],
+      "total_ps": 253260800
+    }
+  ],
+  "record_example": {
+    "requests": [
+      {
+        "request_id": "request-0",
+        "tpot": {
+          "classes": [
+            {
+              "class_name": "fabric",
+              "participant_width": 1,
+              "share": {
+                "denominator": 1607,
+                "numerator": 1357
+              },
+              "span_ps": 325680
+            },
+            {
+              "class_name": "unclassified-kernel",
+              "participant_width": null,
+              "share": {
+                "denominator": 4821,
+                "numerator": 500
+              },
+              "span_ps": 40000
+            },
+            {
+              "class_name": "intra-node-collective",
+              "participant_width": 2,
+              "share": {
+                "denominator": 4821,
+                "numerator": 200
+              },
+              "span_ps": 16000
+            },
+            {
+              "class_name": "control",
+              "participant_width": null,
+              "share": {
+                "denominator": 4821,
+                "numerator": 50
+              },
+              "span_ps": 4000
+            }
+          ],
+          "divisor": 2,
+          "flow_tails": [],
+          "kernels": [
+            {
+              "achieved_fraction": null,
+              "bound_class": "unclassified-kernel",
+              "bytes_moved": 0,
+              "config": [],
+              "evidence_class": "absent-by-design",
+              "flops": 0,
+              "gpu_name": "b100",
+              "hbm_bytes_s": 8000000000000.0,
+              "kernel_id": "kernel",
+              "ledger_cell_id": null,
+              "measured_time_ps": null,
+              "peak_flops_s": 1800000000000000.0,
+              "source_state": "absent-by-design"
+            }
+          ],
+          "span_ps": 385680
+        },
+        "ttft": {
+          "classes": [
+            {
+              "class_name": "batching-queue",
+              "participant_width": null,
+              "share": {
+                "denominator": 25004821,
+                "numerator": 25000000
+              },
+              "span_ps": 1000000000
+            },
+            {
+              "class_name": "fabric",
+              "participant_width": 1,
+              "share": {
+                "denominator": 25004821,
+                "numerator": 4071
+              },
+              "span_ps": 162840
+            },
+            {
+              "class_name": "unclassified-kernel",
+              "participant_width": null,
+              "share": {
+                "denominator": 25004821,
+                "numerator": 500
+              },
+              "span_ps": 20000
+            },
+            {
+              "class_name": "intra-node-collective",
+              "participant_width": 2,
+              "share": {
+                "denominator": 25004821,
+                "numerator": 200
+              },
+              "span_ps": 8000
+            },
+            {
+              "class_name": "control",
+              "participant_width": null,
+              "share": {
+                "denominator": 25004821,
+                "numerator": 50
+              },
+              "span_ps": 2000
+            }
+          ],
+          "divisor": 1,
+          "flow_tails": [],
+          "kernels": [
+            {
+              "achieved_fraction": null,
+              "bound_class": "unclassified-kernel",
+              "bytes_moved": 0,
+              "config": [],
+              "evidence_class": "absent-by-design",
+              "flops": 0,
+              "gpu_name": "b100",
+              "hbm_bytes_s": 8000000000000.0,
+              "kernel_id": "kernel",
+              "ledger_cell_id": null,
+              "measured_time_ps": null,
+              "peak_flops_s": 1800000000000000.0,
+              "source_state": "absent-by-design"
+            }
+          ],
+          "span_ps": 1000192840
+        }
+      },
+      {
+        "request_id": "request-1",
+        "tpot": {
+          "classes": [
+            {
+              "class_name": "fabric",
+              "participant_width": 1,
+              "share": {
+                "denominator": 1607,
+                "numerator": 1357
+              },
+              "span_ps": 325680
+            },
+            {
+              "class_name": "unclassified-kernel",
+              "participant_width": null,
+              "share": {
+                "denominator": 4821,
+                "numerator": 500
+              },
+              "span_ps": 40000
+            },
+            {
+              "class_name": "intra-node-collective",
+              "participant_width": 2,
+              "share": {
+                "denominator": 4821,
+                "numerator": 200
+              },
+              "span_ps": 16000
+            },
+            {
+              "class_name": "control",
+              "participant_width": null,
+              "share": {
+                "denominator": 4821,
+                "numerator": 50
+              },
+              "span_ps": 4000
+            }
+          ],
+          "divisor": 2,
+          "flow_tails": [],
+          "kernels": [
+            {
+              "achieved_fraction": null,
+              "bound_class": "unclassified-kernel",
+              "bytes_moved": 0,
+              "config": [],
+              "evidence_class": "absent-by-design",
+              "flops": 0,
+              "gpu_name": "b100",
+              "hbm_bytes_s": 8000000000000.0,
+              "kernel_id": "kernel",
+              "ledger_cell_id": null,
+              "measured_time_ps": null,
+              "peak_flops_s": 1800000000000000.0,
+              "source_state": "absent-by-design"
+            }
+          ],
+          "span_ps": 385680
+        },
+        "ttft": {
+          "classes": [
+            {
+              "class_name": "batching-queue",
+              "participant_width": null,
+              "share": {
+                "denominator": 25004821,
+                "numerator": 25000000
+              },
+              "span_ps": 1000000000
+            },
+            {
+              "class_name": "fabric",
+              "participant_width": 1,
+              "share": {
+                "denominator": 25004821,
+                "numerator": 4071
+              },
+              "span_ps": 162840
+            },
+            {
+              "class_name": "unclassified-kernel",
+              "participant_width": null,
+              "share": {
+                "denominator": 25004821,
+                "numerator": 500
+              },
+              "span_ps": 20000
+            },
+            {
+              "class_name": "intra-node-collective",
+              "participant_width": 2,
+              "share": {
+                "denominator": 25004821,
+                "numerator": 200
+              },
+              "span_ps": 8000
+            },
+            {
+              "class_name": "control",
+              "participant_width": null,
+              "share": {
+                "denominator": 25004821,
+                "numerator": 50
+              },
+              "span_ps": 2000
+            }
+          ],
+          "divisor": 1,
+          "flow_tails": [],
+          "kernels": [
+            {
+              "achieved_fraction": null,
+              "bound_class": "unclassified-kernel",
+              "bytes_moved": 0,
+              "config": [],
+              "evidence_class": "absent-by-design",
+              "flops": 0,
+              "gpu_name": "b100",
+              "hbm_bytes_s": 8000000000000.0,
+              "kernel_id": "kernel",
+              "ledger_cell_id": null,
+              "measured_time_ps": null,
+              "peak_flops_s": 1800000000000000.0,
+              "source_state": "absent-by-design"
+            }
+          ],
+          "span_ps": 1000192840
+        }
+      }
+    ],
+    "schema": "simllm-bottleneck-report-v1",
+    "step": {
+      "classes": [
+        {
+          "class_name": "fabric",
+          "participant_width": 1,
+          "share": {
+            "denominator": 1607,
+            "numerator": 1357
+          },
+          "span_ps": 162840
+        },
+        {
+          "class_name": "unclassified-kernel",
+          "participant_width": null,
+          "share": {
+            "denominator": 4821,
+            "numerator": 500
+          },
+          "span_ps": 20000
+        },
+        {
+          "class_name": "intra-node-collective",
+          "participant_width": 2,
+          "share": {
+            "denominator": 4821,
+            "numerator": 200
+          },
+          "span_ps": 8000
+        },
+        {
+          "class_name": "control",
+          "participant_width": null,
+          "share": {
+            "denominator": 4821,
+            "numerator": 50
+          },
+          "span_ps": 2000
+        }
+      ],
+      "divisor": 1,
+      "flow_tails": [],
+      "kernels": [
+        {
+          "achieved_fraction": null,
+          "bound_class": "unclassified-kernel",
+          "bytes_moved": 0,
+          "config": [],
+          "evidence_class": "absent-by-design",
+          "flops": 0,
+          "gpu_name": "b100",
+          "hbm_bytes_s": 8000000000000.0,
+          "kernel_id": "kernel",
+          "ledger_cell_id": null,
+          "measured_time_ps": null,
+          "peak_flops_s": 1800000000000000.0,
+          "source_state": "absent-by-design"
+        }
+      ],
+      "span_ps": 192840
+    },
+    "step_index": 2
+  },
+  "schema": "simllm-bottleneck-study-v1",
+  "source_sha256": {
+    "examples/breakdown/run_breakdown.py": "7dd7c551b2ddbf36c4fde6af9128ba57999a7cbf6a791896a56e6755eb9094ea",
+    "examples/collective_width_tail_v1/run_study.py": "93715ade0fd3079438d732001e983cfe65b2dbc45b0431e5ada6d4e70a692fa3",
+    "examples/core5_reduction/run_study.py": "8e77f70c85d65ae3050080fec6cd4c5acecad7496e901711404e8ca7fa794b56",
+    "examples/m4/run_m4.py": "e68fbf3cf2db895e80daaba36b3c4cdfcddf7c2b95b6edf904d581aba7ad4d80"
+  },
+  "state": "held"
+}
