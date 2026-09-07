@@ -407,30 +407,32 @@ def plot(report, destination):
         rows.append((f'core5-{row["rate"]}g-gap{row["gap_ps"] // 10**6}us', row["steps"][0]["requests"][0]["ttft_ranked"]))
     classes = sorted({c["class"] for _, cs in rows for c in cs})
     colors = {name: plt.get_cmap("tab10")(i % 10) for i, name in enumerate(classes)}
-    fig, ax = plt.subplots(figsize=(9, 8))
+    fig, ax = plt.subplots(figsize=(7, 7.4))
     for index, (_, cs) in enumerate(rows):
         left = 0
         for position, c in enumerate(cs):
             ax.barh(index, c["share_percent"], left=left, color=colors[c["class"]], height=.7)
             if position == 0 and c["share_percent"] >= 12:
                 ax.text(left + c["share_percent"] / 2, index, f'{c["share_percent"]:.1f}%',
-                        ha="center", va="center", fontsize=8, color="white")
+                        ha="center", va="center", fontsize=8.5, color="white")
             left += c["share_percent"]
     groups = [name.split("-")[0] for name, _ in rows]
     for index in range(1, len(rows)):
         if groups[index] != groups[index - 1]:
-            ax.axhline(index - .5, color="0.75", linewidth=.8)
-    ax.set_yticks(range(len(rows)), [name for name, _ in rows], fontsize=9)
+            ax.axhline(index - .5, color="0.6", linewidth=.8)
+    ax.set_yticks(range(len(rows)), [name for name, _ in rows], fontsize=8.5)
     ax.invert_yaxis()
     ax.set_xlim(0, 100)
-    ax.set_xlabel("Selected critical-path latency share (%)")
-    ax.set_title("Bottleneck classes per cell, largest contribution first (leading share labeled)")
+    ax.set_xlabel("Selected critical-path latency share (%)", fontsize=9)
+    ax.tick_params(axis="x", labelsize=9)
+    ax.spines[["top", "right"]].set_visible(False)
+    ax.set_title("Ranked bottleneck shares by cell", fontsize=11, pad=8)
     from matplotlib.patches import Patch
-    ax.legend(handles=[Patch(color=colors[c], label=c) for c in classes],
-              loc="upper center", bbox_to_anchor=(.5, -.09), ncol=3, frameon=False, fontsize=9)
-    fig.tight_layout()
+    fig.legend(handles=[Patch(color=colors[c], label=c) for c in classes],
+               loc="lower center", bbox_to_anchor=(.5, .015), ncol=3, frameon=False, fontsize=8.5)
+    fig.subplots_adjust(left=.27, right=.965, top=.935, bottom=.16)
     destination.mkdir(parents=True, exist_ok=True)
-    fig.savefig(destination / "ranked_shares.png", dpi=150)
+    fig.savefig(destination / "ranked_shares.png", dpi=200)
     fig.savefig(destination / "ranked_shares.pdf", metadata={"CreationDate": None, "ModDate": None})
     plt.close(fig)
 
@@ -460,7 +462,7 @@ def results_markdown(report):
         req = row["steps"][0]["requests"][0]
         first = req["ttft_ranked"][0]
         lines.append(f'| core5 {row["rate"]}G gap {row["gap_ps"]} ps | {first["class"]} | {first["share_percent"]:.6f} | {req["ttft_ps"]} |')
-    lines += ["", "Packet table totals sum the disjoint steps of each declared cell. The coarse rows show the first request's TTFT. Each underlying step and sampled request has its own strict report in the bulk run. The figure orders contributions within each row by descending share.", "",
+    lines += ["", "Packet table totals sum the disjoint steps of each declared cell. The coarse rows show the first request's TTFT. Each underlying step and sampled request has its own strict report in the bulk run. The figure orders contributions within each row by descending share and labels the largest to one decimal place. Colors identify the same seven classes throughout; horizontal rules separate m4, breakdown, width-tail and core5 cells. Row names encode width (w), link rate in Gbit/s (g), and admission gap in microseconds (us). The two 100.0% batching-queue labels are rounded: their shares are 99.964345% and 99.980720%, with small nonzero service contributions.", "",
               "![Ranked critical-path shares](figures/ranked_shares.png)", "",
               "## Physical interpretation", "",
               "The GPU must fetch bytes and execute arithmetic before releasing the next communication phase. Prefill reuses weights across many tokens and its arithmetic work binds the ideal roof. Decode reuses them less and memory bandwidth binds it. The record compares declared arithmetic intensity with the device ridge point; it does not infer the measured cause of a slow kernel. All named serving cells have absent-by-design measured fractions because no matching measured kernel/config cell is supplied.", "",

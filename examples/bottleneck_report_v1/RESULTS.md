@@ -47,7 +47,7 @@ These counts are separate evidence classes, never a combined score. A fatal guar
 | core5 400G gap 0 ps | fabric | 84.443062 | 192840 |
 | core5 400G gap 1000000000 ps | batching-queue | 99.980720 | 1000192840 |
 
-Packet table totals sum the disjoint steps of each declared cell. The coarse rows show the first request's TTFT. Each underlying step and sampled request has its own strict report in the bulk run. The figure orders contributions within each row by descending share.
+Packet table totals sum the disjoint steps of each declared cell. The coarse rows show the first request's TTFT. Each underlying step and sampled request has its own strict report in the bulk run. The figure orders contributions within each row by descending share and labels the largest to one decimal place. Colors identify the same seven classes throughout; horizontal rules separate m4, breakdown, width-tail and core5 cells. Row names encode width (w), link rate in Gbit/s (g), and admission gap in microseconds (us). The two 100.0% batching-queue labels are rounded: their shares are 99.964345% and 99.980720%, with small nonzero service contributions.
 
 ![Ranked critical-path shares](figures/ranked_shares.png)
 
