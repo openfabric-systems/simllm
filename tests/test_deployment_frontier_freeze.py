@@ -107,7 +107,9 @@ def test_all_frozen_sources_and_43_preservation_entries_match():
                 "protected_candidate_before_sha256"
             ] == expected
             path = PRE_TRAF70_NVLINK_PROFILE
-        elif relative == "simllm/backends/htsim_nvlink.py":
+        elif relative in {"simllm/backends/htsim_nvlink.py", "simllm/backends/htsim_rnic.py"}:
+            # Keep this study's original source record after opt-in backend
+            # extensions; their own freezes check current default behavior.
             frozen_source = subprocess.run(
                 ["git", "show", f"{EXPECTATIONS_COMMIT}:{relative}"],
                 cwd=ROOT,
