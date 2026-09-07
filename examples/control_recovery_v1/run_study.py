@@ -391,7 +391,8 @@ def plot(result, output):
     import matplotlib.pyplot as plt
 
     output.mkdir(parents=True, exist_ok=True)
-    fig, axes = plt.subplots(1, 2, figsize=(9, 3.8), constrained_layout=True)
+    fig, axes = plt.subplots(1, 2, figsize=(7, 4.8))
+    fig.subplots_adjust(left=.09, right=.98, bottom=.22, top=.78, wspace=.29)
     main = [r for r in result["cells"] if r["arm"] == "candidate" and r["source"] == "collective"
             and r["pattern"] == "all-to-all"]
     for rate, color in ((200, "tab:orange"), (400, "tab:blue")):
@@ -403,51 +404,63 @@ def plot(result, output):
                                       (axes[1], "cn_nn_phase_ratio", 1)):
                 values = [float("nan") if r[field] is None else r[field] / scale for r in rows]
                 ax.plot(widths, values, marker=marker, linestyle=linestyle, color=color,
-                        label=f"{rate} Gbit/s, {mode}")
+                        label=f"{rate} Gbit/s, {mode}", linewidth=1.3,
+                        markersize=(7 if rate == 200 else 5.5) if mode == "headroom" else 4,
+                        markerfacecolor="none", markeredgewidth=1.1)
             if mode == "headroom":
                 for row in rows:
                     if row["phase_makespan_ps"] is not None:
                         count = row["control_recovery"].get("headroom_admissions", 0)
                         axes[0].annotate(str(count), (row["width"], row["phase_makespan_ps"] / 1e6),
-                                         xytext=(0, -16 if row["width"] == 64 and rate == 200 else 6),
-                                         textcoords="offset points", ha="center", fontsize=8)
+                                         xytext=(0, (-16 if rate == 200 else 7) if row["width"] == 64
+                                                 else (-9 if rate == 400 else 7)),
+                                         textcoords="offset points", ha="center", fontsize=8, color=color)
     ideal = sorted(((r["width"], r["phase_makespan_ps"] / r["cn_nn_phase_ratio"] / 1e6)
                     for r in main if r["mode"] == "headroom" and r["rate_gbps"] == 400
                     and r["phase_makespan_ps"] is not None and r["cn_nn_phase_ratio"]),
                    key=lambda item: item[0])
     axes[0].plot([w for w, _ in ideal], [v for _, v in ideal], color="gray", linestyle="--",
-                 linewidth=.9, label="ideal rnic-nn, 400 Gbit/s")
+                 linewidth=.9, label="Ideal rnic-nn\n400 Gbit/s")
     axes[0].axhline(50_000, color="black", linewidth=.8, linestyle="-.")
-    axes[0].annotate("50 ms data retransmission timeout:\nthe width-64 phase ends one RTO\n"
-                     "after a tail loss, not on fabric time",
-                     (16, 50_000), xytext=(0, -34), textcoords="offset points", fontsize=7.5,
-                     ha="left", va="top")
+    axes[0].text(.03, .94, "50 ms data retransmission timeout", transform=axes[0].transAxes,
+                 fontsize=8, va="top")
+    axes[0].text(.03, .78, "Width-64 phases are consistent\nwith the 50 ms timeout tail.",
+                 transform=axes[0].transAxes, fontsize=8, va="top")
+    axes[0].legend(handles=[axes[0].lines[-2]], loc="center left",
+                   bbox_to_anchor=(0, .58), frameon=False, fontsize=8,
+                   handlelength=2, borderpad=0)
     for row in main:
         if row["mode"] == "headroom" and row["width"] == 64 and row["cn_nn_phase_ratio"]:
             axes[1].annotate(f"{row['cn_nn_phase_ratio']:.0f}x",
                              (64, row["cn_nn_phase_ratio"]),
-                             xytext=(-8, 0), textcoords="offset points", ha="right",
-                             va="center", fontsize=8)
-    axes[0].set_ylabel("Physical phase makespan (µs)")
-    axes[1].set_ylabel("Physical / ideal phase makespan")
-    axes[1].axhline(1, color="gray", linewidth=.8, label="Physical phase floor")
-    axes[0].legend(fontsize=7.5, loc="center left", bbox_to_anchor=(0.02, 0.5))
+                             xytext=(7, 0), textcoords="offset points", ha="left",
+                             va="center", fontsize=8,
+                             color="tab:blue" if row["rate_gbps"] == 400 else "tab:orange")
+    axes[0].set_ylabel("Physical phase makespan (µs)", fontsize=9)
+    axes[1].set_ylabel("Physical / ideal phase (ratio)", fontsize=9)
+    axes[1].axhline(1, color="gray", linewidth=.8)
+    axes[1].text(8, 1.12, "Physical phase floor = 1", fontsize=8, color="dimgray")
+    axes[0].set_ylim(2.5, 200_000)
+    axes[1].set_ylim(.3, 1600)
     for ax in axes:
         ax.set_yscale("log")
-        ax.plot([64], [.03], marker="x", color="black", transform=ax.get_xaxis_transform())
-    if result["verdict"] == "void":
-        fig.suptitle("All-to-all on the physical Clos with control headroom: "
-                     "void study, diagnostic values", fontsize=11)
-    for ax in axes:
-        ax.set_xlabel("All-to-all width (ranks)")
+        ax.plot([64], [.03], marker="x", color="black", linestyle="none",
+                markersize=6, transform=ax.get_xaxis_transform())
+        ax.set_xlabel("All-to-all width (ranks)", fontsize=9)
         ax.set_xticks([8, 16, 32, 64])
-        ax.margins(x=.08, y=.18)
-    fig.supxlabel("Numbers: headroom admissions per cell (0 below width 64). "
-                  "Bottom crosses: width-64 with recovery none exits on control loss (no valid latency).",
-                  fontsize=8)
+        ax.tick_params(labelsize=9)
+        ax.set_xlim(3.5, 75)
+        ax.spines[["top", "right"]].set_visible(False)
+    if result["verdict"] == "void":
+        fig.suptitle("All-to-all on the physical Clos: void study, diagnostic values", fontsize=10,
+                     y=.98)
     handles, labels = axes[1].get_legend_handles_labels()
-    order = [2, 3, 0, 1, 4]
-    axes[1].legend([handles[i] for i in order], [labels[i] for i in order], loc="upper left", fontsize=8)
+    fig.legend(handles, labels, loc="upper center", bbox_to_anchor=(.53, .925),
+               ncol=2, frameon=False, fontsize=9, columnspacing=2)
+    fig.text(.5, .09, "Numbers: headroom admissions. Selections coincide at widths 8, 16 and 32.",
+             ha="center", fontsize=8)
+    fig.text(.5, .035, "Bottom ×: width-64 none exits at both rates; no valid latency or ratio.",
+             ha="center", fontsize=8)
     fig.savefig(output / "control_recovery.png", dpi=160)
     fig.savefig(output / "control_recovery.pdf", metadata={"CreationDate": None, "ModDate": None})
     plt.close(fig)

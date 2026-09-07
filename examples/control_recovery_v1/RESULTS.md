@@ -176,9 +176,18 @@ predictive band was relaxed.
 
 ![Physical phase time and physical-to-ideal ratio, with control admissions](figures/control_recovery.png)
 
-Both vertical axes are logarithmic so the roughly 50-ms tail and the smaller
-completed phases remain visible. Bottom crosses identify missing `none`
-latencies at width 64; they are not points below a physical floor. The figure
+Both vertical axes are logarithmic; the left shows phase makespan in
+microseconds and the right shows the dimensionless physical-to-ideal ratio
+at the same link rate. Blue denotes 400 Gbit/s and orange 200 Gbit/s. Open
+circles and solid lines denote headroom; crosses and dotted lines denote
+`none`. The two selections coincide at widths 8, 16 and 32. Color-matched
+numbers count headroom admissions, including 78 and 253 at width 64. The
+gray dashed left-panel curve is the ideal rnic-nn reference at 400 Gbit/s;
+the gray right-panel line marks the ratio floor of 1. The black dash-dot
+line marks the 50 ms data retransmission timeout, consistent with the
+width-64 tail; the corresponding ratios round to 653 and 331. Bottom black
+crosses mark width-64 `none` control-loss exits at both rates, with no valid
+latency or ratio; their vertical positions are not data values. The figure
 is a diagnostic projection of a void study. A vector PDF accompanies the PNG.
 
 ## Reproduction
