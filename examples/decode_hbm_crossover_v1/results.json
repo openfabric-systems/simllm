@@ -1,0 +1,974 @@
+{
+  "behavioral_families": {
+    "B1-bandwidth": {
+      "instances": 429,
+      "passed": 429
+    },
+    "B2-memory-affine": {
+      "instances": 541,
+      "passed": 541
+    },
+    "B3-compute-linear": {
+      "instances": 27,
+      "passed": 27
+    },
+    "B4-frontier": {
+      "instances": 600,
+      "passed": 600
+    },
+    "B5-crossover": {
+      "instances": 75,
+      "passed": 75
+    },
+    "B6-context": {
+      "instances": 270,
+      "passed": 270
+    }
+  },
+  "capacity_status": "unchecked",
+  "configurations": {
+    "external": 1,
+    "knee": 105,
+    "sweep": 675
+  },
+  "crossovers": [
+    {
+      "context": 1,
+      "crossover_batch": "4465968000/14554123",
+      "device": "a100",
+      "flops_per_token": 15009316864,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 131072,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 14722233314
+    },
+    {
+      "context": 1,
+      "crossover_batch": "2232984000/14573623",
+      "device": "a100",
+      "flops_per_token": 15009316864,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 131072,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 7361116657
+    },
+    {
+      "context": 1,
+      "crossover_batch": "1116492000/14583373",
+      "device": "a100",
+      "flops_per_token": 15009316864,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 131072,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 3680558328
+    },
+    {
+      "context": 1,
+      "crossover_batch": "1133096240/1908181",
+      "device": "h100",
+      "flops_per_token": 15009316864,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 131072,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 8960786187
+    },
+    {
+      "context": 1,
+      "crossover_batch": "1133096240/3826257",
+      "device": "h100",
+      "flops_per_token": 15009316864,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 131072,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 4480393093
+    },
+    {
+      "context": 1,
+      "crossover_batch": "1133096240/7662409",
+      "device": "h100",
+      "flops_per_token": 15009316864,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 131072,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 2240196546
+    },
+    {
+      "context": 1,
+      "crossover_batch": "1133096240/2738393",
+      "device": "h200",
+      "flops_per_token": 15009316864,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 131072,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 6253882026
+    },
+    {
+      "context": 1,
+      "crossover_batch": "1133096240/5486681",
+      "device": "h200",
+      "flops_per_token": 15009316864,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 131072,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 3126941013
+    },
+    {
+      "context": 1,
+      "crossover_batch": "1133096240/10983257",
+      "device": "h200",
+      "flops_per_token": 15009316864,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 131072,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 1563470506
+    },
+    {
+      "context": 1,
+      "crossover_batch": "25765200/57031",
+      "device": "b100",
+      "flops_per_token": 15009316864,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 131072,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 3752329216
+    },
+    {
+      "context": 1,
+      "crossover_batch": "25765200/114287",
+      "device": "b100",
+      "flops_per_token": 15009316864,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 131072,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 1876164608
+    },
+    {
+      "context": 1,
+      "crossover_batch": "25765200/228799",
+      "device": "b100",
+      "flops_per_token": 15009316864,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 131072,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 938082304
+    },
+    {
+      "context": 1,
+      "crossover_batch": "128826000/227899",
+      "device": "b200",
+      "flops_per_token": 15009316864,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 131072,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 3752329216
+    },
+    {
+      "context": 1,
+      "crossover_batch": "128826000/456923",
+      "device": "b200",
+      "flops_per_token": 15009316864,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 131072,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 1876164608
+    },
+    {
+      "context": 1,
+      "crossover_batch": "128826000/914971",
+      "device": "b200",
+      "flops_per_token": 15009316864,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 131072,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 938082304
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "a100",
+      "flops_per_token": 16082534400,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 268435456,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 14722233314
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "a100",
+      "flops_per_token": 16082534400,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 268435456,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 7361116657
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "a100",
+      "flops_per_token": 16082534400,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 268435456,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 3680558328
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "h100",
+      "flops_per_token": 16082534400,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 268435456,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 8960786187
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "h100",
+      "flops_per_token": 16082534400,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 268435456,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 4480393093
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "h100",
+      "flops_per_token": 16082534400,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 268435456,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 2240196546
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "h200",
+      "flops_per_token": 16082534400,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 268435456,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 6253882026
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "h200",
+      "flops_per_token": 16082534400,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 268435456,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 3126941013
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "h200",
+      "flops_per_token": 16082534400,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 268435456,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 1563470506
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "b100",
+      "flops_per_token": 16082534400,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 268435456,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 3752329216
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "b100",
+      "flops_per_token": 16082534400,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 268435456,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 1876164608
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "b100",
+      "flops_per_token": 16082534400,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 268435456,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 938082304
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "b200",
+      "flops_per_token": 16082534400,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 268435456,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 3752329216
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "b200",
+      "flops_per_token": 16082534400,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 268435456,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 1876164608
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "b200",
+      "flops_per_token": 16082534400,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 268435456,
+      "model": "dense7b-tp1",
+      "weight_bytes": 15009316864,
+      "weight_floor_ps": 938082304
+    },
+    {
+      "context": 1,
+      "crossover_batch": "3811392000/12446087",
+      "device": "a100",
+      "flops_per_token": 19214106624,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 40960,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 18846597963
+    },
+    {
+      "context": 1,
+      "crossover_batch": "3811392000/24900299",
+      "device": "a100",
+      "flops_per_token": 19214106624,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 40960,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 9423298981
+    },
+    {
+      "context": 1,
+      "crossover_batch": "3811392000/49808723",
+      "device": "a100",
+      "flops_per_token": 19214106624,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 40960,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 4711649490
+    },
+    {
+      "context": 1,
+      "crossover_batch": "23208445440/39237181",
+      "device": "h100",
+      "flops_per_token": 19214106624,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 40960,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 11471108432
+    },
+    {
+      "context": 1,
+      "crossover_batch": "23208445440/78523837",
+      "device": "h100",
+      "flops_per_token": 19214106624,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 40960,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 5735554216
+    },
+    {
+      "context": 1,
+      "crossover_batch": "23208445440/157097149",
+      "device": "h100",
+      "flops_per_token": 19214106624,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 40960,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 2867777108
+    },
+    {
+      "context": 1,
+      "crossover_batch": "23208445440/56241853",
+      "device": "h200",
+      "flops_per_token": 19214106624,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 40960,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 8005877760
+    },
+    {
+      "context": 1,
+      "crossover_batch": "23208445440/112533181",
+      "device": "h200",
+      "flops_per_token": 19214106624,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 40960,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 4002938880
+    },
+    {
+      "context": 1,
+      "crossover_batch": "23208445440/225115837",
+      "device": "h200",
+      "flops_per_token": 19214106624,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 40960,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 2001469440
+    },
+    {
+      "context": 1,
+      "crossover_batch": "19545600/43393",
+      "device": "b100",
+      "flops_per_token": 19214106624,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 40960,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 4803526656
+    },
+    {
+      "context": 1,
+      "crossover_batch": "58636800/260483",
+      "device": "b100",
+      "flops_per_token": 19214106624,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 40960,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 2401763328
+    },
+    {
+      "context": 1,
+      "crossover_batch": "6515200/57899",
+      "device": "b100",
+      "flops_per_token": 19214106624,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 40960,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 1200881664
+    },
+    {
+      "context": 1,
+      "crossover_batch": "293184000/520591",
+      "device": "b200",
+      "flops_per_token": 19214106624,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 40960,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 4803526656
+    },
+    {
+      "context": 1,
+      "crossover_batch": "97728000/347269",
+      "device": "b200",
+      "flops_per_token": 19214106624,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 40960,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 2401763328
+    },
+    {
+      "context": 1,
+      "crossover_batch": "293184000/2084239",
+      "device": "b200",
+      "flops_per_token": 19214106624,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 40960,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 1200881664
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "a100",
+      "flops_per_token": 19884867584,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 83886080,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 18846597963
+    },
+    {
+      "context": 2048,
+      "crossover_batch": "91473408000/219311341",
+      "device": "a100",
+      "flops_per_token": 19884867584,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 83886080,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 9423298981
+    },
+    {
+      "context": 2048,
+      "crossover_batch": "45736704000/418991341",
+      "device": "a100",
+      "flops_per_token": 19884867584,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 83886080,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 4711649490
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "h100",
+      "flops_per_token": 19884867584,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 83886080,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 11471108432
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "h100",
+      "flops_per_token": 19884867584,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 83886080,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 5735554216
+    },
+    {
+      "context": 2048,
+      "crossover_batch": "322339520/851497",
+      "device": "h100",
+      "flops_per_token": 19884867584,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 83886080,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 2867777108
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "h200",
+      "flops_per_token": 19884867584,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 83886080,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 8005877760
+    },
+    {
+      "context": 2048,
+      "crossover_batch": "181315980/118657",
+      "device": "h200",
+      "flops_per_token": 19884867584,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 83886080,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 4002938880
+    },
+    {
+      "context": 2048,
+      "crossover_batch": "90657990/514457",
+      "device": "h200",
+      "flops_per_token": 19884867584,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 83886080,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 2001469440
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "b100",
+      "flops_per_token": 19884867584,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 83886080,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 4803526656
+    },
+    {
+      "context": 2048,
+      "crossover_batch": "65966400/15419",
+      "device": "b100",
+      "flops_per_token": 19884867584,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 83886080,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 2401763328
+    },
+    {
+      "context": 2048,
+      "crossover_batch": "32983200/159419",
+      "device": "b100",
+      "flops_per_token": 19884867584,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 83886080,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 1200881664
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "b200",
+      "flops_per_token": 19884867584,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 83886080,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 4803526656
+    },
+    {
+      "context": 2048,
+      "crossover_batch": null,
+      "device": "b200",
+      "flops_per_token": 19884867584,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 83886080,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 2401763328
+    },
+    {
+      "context": 2048,
+      "crossover_batch": "41229000/123419",
+      "device": "b200",
+      "flops_per_token": 19884867584,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 83886080,
+      "model": "dense70b-tp8",
+      "weight_bytes": 19214106624,
+      "weight_floor_ps": 1200881664
+    },
+    {
+      "context": 2000,
+      "crossover_batch": "8563352628480000/70663390992557",
+      "device": "a100",
+      "flops_per_token": 112322823926,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 140544000,
+      "model": "deepseek-v3-ep72",
+      "weight_bytes": 27446643040,
+      "weight_floor_ps": 26921670465
+    },
+    {
+      "context": 2000,
+      "crossover_batch": "4281676314240000/92588254992557",
+      "device": "a100",
+      "flops_per_token": 112322823926,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 140544000,
+      "model": "deepseek-v3-ep72",
+      "weight_bytes": 27446643040,
+      "weight_floor_ps": 13460835232
+    },
+    {
+      "context": 2000,
+      "crossover_batch": "112675692480000/5450036157503",
+      "device": "a100",
+      "flops_per_token": 112322823926,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 140544000,
+      "model": "deepseek-v3-ep72",
+      "weight_bytes": 27446643040,
+      "weight_floor_ps": 6730417616
+    },
+    {
+      "context": 2000,
+      "crossover_batch": "543169065761600/981448841521",
+      "device": "h100",
+      "flops_per_token": 112322823926,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 140544000,
+      "model": "deepseek-v3-ep72",
+      "weight_bytes": 27446643040,
+      "weight_floor_ps": 16386055546
+    },
+    {
+      "context": 2000,
+      "crossover_batch": "271584532880800/2372131721521",
+      "device": "h100",
+      "flops_per_token": 112322823926,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 140544000,
+      "model": "deepseek-v3-ep72",
+      "weight_bytes": 27446643040,
+      "weight_floor_ps": 8193027773
+    },
+    {
+      "context": 2000,
+      "crossover_batch": "135792266440400/3067473161521",
+      "device": "h100",
+      "flops_per_token": 112322823926,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 140544000,
+      "model": "deepseek-v3-ep72",
+      "weight_bytes": 27446643040,
+      "weight_floor_ps": 4096513886
+    },
+    {
+      "context": 2000,
+      "crossover_batch": "16974033305050/81566555889",
+      "device": "h200",
+      "flops_per_token": 112322823926,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 140544000,
+      "model": "deepseek-v3-ep72",
+      "weight_bytes": 27446643040,
+      "weight_floor_ps": 11436101266
+    },
+    {
+      "context": 2000,
+      "crossover_batch": "8487016652525/125025395889",
+      "device": "h200",
+      "flops_per_token": 112322823926,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 140544000,
+      "model": "deepseek-v3-ep72",
+      "weight_bytes": 27446643040,
+      "weight_floor_ps": 5718050633
+    },
+    {
+      "context": 2000,
+      "crossover_batch": "8487016652525/293509631778",
+      "device": "h200",
+      "flops_per_token": 112322823926,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 140544000,
+      "model": "deepseek-v3-ep72",
+      "weight_bytes": 27446643040,
+      "weight_floor_ps": 2859025316
+    },
+    {
+      "context": 2000,
+      "crossover_batch": "6175494684000/24539011963",
+      "device": "b100",
+      "flops_per_token": 112322823926,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 140544000,
+      "model": "deepseek-v3-ep72",
+      "weight_bytes": 27446643040,
+      "weight_floor_ps": 6861660760
+    },
+    {
+      "context": 2000,
+      "crossover_batch": "3087747342000/40350211963",
+      "device": "b100",
+      "flops_per_token": 112322823926,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 140544000,
+      "model": "deepseek-v3-ep72",
+      "weight_bytes": 27446643040,
+      "weight_floor_ps": 3430830380
+    },
+    {
+      "context": 2000,
+      "crossover_batch": "81256509000/2539779577",
+      "device": "b100",
+      "flops_per_token": 112322823926,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 140544000,
+      "model": "deepseek-v3-ep72",
+      "weight_bytes": 27446643040,
+      "weight_floor_ps": 1715415190
+    },
+    {
+      "context": 2000,
+      "crossover_batch": "7719368355000/16633411963",
+      "device": "b200",
+      "flops_per_token": 112322823926,
+      "hbm_scale": "0.5",
+      "kv_bytes_per_request": 140544000,
+      "model": "deepseek-v3-ep72",
+      "weight_bytes": 27446643040,
+      "weight_floor_ps": 6861660760
+    },
+    {
+      "context": 2000,
+      "crossover_batch": "3859684177500/36397411963",
+      "device": "b200",
+      "flops_per_token": 112322823926,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 140544000,
+      "model": "deepseek-v3-ep72",
+      "weight_bytes": 27446643040,
+      "weight_floor_ps": 3430830380
+    },
+    {
+      "context": 2000,
+      "crossover_batch": "1929842088750/46279411963",
+      "device": "b200",
+      "flops_per_token": 112322823926,
+      "hbm_scale": "2",
+      "kv_bytes_per_request": 140544000,
+      "model": "deepseek-v3-ep72",
+      "weight_bytes": 27446643040,
+      "weight_floor_ps": 1715415190
+    },
+    {
+      "context": 4250,
+      "crossover_batch": null,
+      "device": "h200",
+      "flops_per_token": 18218903040,
+      "hbm_scale": "1",
+      "kv_bytes_per_request": 278528000,
+      "model": "qwen3-32b-fp8-tp4",
+      "weight_bytes": 7995883520,
+      "weight_floor_ps": 1665809066
+    }
+  ],
+  "exact_oracle": {
+    "matched": 781,
+    "max_tpot_residual_ps": 0,
+    "mismatches": [],
+    "rows": 781
+  },
+  "expectations_commit": "5d353fb89695c7fb72e4af39e269495a9cd2fa43",
+  "external_comparison_unscored": {
+    "external_evidence": "offline performance-database estimate, not live serving",
+    "external_tpot_ps": 9179000000,
+    "floor_over_external": "5379515733/9179000000",
+    "roofline_below_external": true,
+    "roofline_tpot_ps": 5379515733,
+    "row": 4,
+    "source": "examples/frontier_comparison_v1/results.json"
+  },
+  "fatal_findings": [],
+  "inactive_bandwidth_identities_unscored": 21,
+  "input_digests": {
+    "examples/deployment_frontier_v1/expectations.json": "54295c81cebe36ee32d12b8ab1432c9fc060094ddf98403152b0d619cc37438f",
+    "examples/frontier_comparison_v1/results.json": "c33154071d5e0275bd15d25813102b629a25eca702f98b527949b53b37728017",
+    "expectations.json": "867571b71f585df51620d79914e9af6482858fac811a81e873768574db20a1df",
+    "expectations.md": "1522b28ba525d9895b2a9479848a53fa8af37b8bf7ce395d640a98af222a2ec6",
+    "expected_cells.csv": "663ba8f4dcb16405fb6d7253c7b9c68deef9349eb255eec4a0b541c4a3deae84",
+    "offline/calibration/deployment-projections/ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2.json": "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2",
+    "simllm/compute/provider.py": "37d4cbf8f0139686788cbef6745b48ac2e4a6a628123023358e6a45c77d46d3f",
+    "simllm/compute/transformer.py": "9bf8f98e3a34e5c60ecaa287c5f08daf60d8a4da951abeb57a7037faee389091",
+    "simllm/deploy/estimator.py": "e0cc9540b72090d490b3babcd71dbd4c5f946e16407aa1e52c233a93ac3678b2",
+    "simllm/deploy/frontier.py": "31e827288d8adcd4a48978b2f8d1295824e8497bc560c2e0a6a50680b853ef5e"
+  },
+  "nonvoid": true,
+  "owning_tasks": [
+    "DEPLOY-4",
+    "DEPLOY-5"
+  ],
+  "pricing_subprocess_attempts": 0,
+  "production_changed": false,
+  "rational_floor_differences_unscored": [
+    {
+      "cell": [
+        "deepseek-v3-ep72",
+        2000,
+        "b100",
+        "0.5",
+        32
+      ],
+      "delta_ps": -1
+    },
+    {
+      "cell": [
+        "deepseek-v3-ep72",
+        2000,
+        "b100",
+        "1",
+        32
+      ],
+      "delta_ps": -1
+    },
+    {
+      "cell": [
+        "deepseek-v3-ep72",
+        2000,
+        "b100",
+        "2",
+        31
+      ],
+      "delta_ps": -1
+    },
+    {
+      "cell": [
+        "deepseek-v3-ep72",
+        2000,
+        "b200",
+        "0.5",
+        32
+      ],
+      "delta_ps": -1
+    },
+    {
+      "cell": [
+        "deepseek-v3-ep72",
+        2000,
+        "b200",
+        "1",
+        32
+      ],
+      "delta_ps": -1
+    },
+    {
+      "cell": [
+        "deepseek-v3-ep72",
+        2000,
+        "b200",
+        "2",
+        32
+      ],
+      "delta_ps": -1
+    }
+  ],
+  "schema": "simllm-decode-hbm-result-v1",
+  "tasks_closed": [],
+  "verdict": "PASS"
+}

@@ -1,0 +1,967 @@
+{
+  "schema": "simllm-decode-hbm-expectations-v1",
+  "base_commit": "195141dd1cd073e60172e7078d80006aa810b5b8",
+  "efficiency": 1,
+  "batches": [
+    1,
+    2,
+    4,
+    8,
+    16,
+    32,
+    64,
+    128,
+    256
+  ],
+  "hbm_scales": [
+    "0.5",
+    "1",
+    "2"
+  ],
+  "devices": {
+    "a100": [
+      312000000000000,
+      2039000000000
+    ],
+    "h100": [
+      989500000000000,
+      3350000000000
+    ],
+    "h200": [
+      989500000000000,
+      4800000000000
+    ],
+    "b100": [
+      1800000000000000,
+      8000000000000
+    ],
+    "b200": [
+      2250000000000000,
+      8000000000000
+    ]
+  },
+  "models": [
+    {
+      "id": "dense7b-tp1",
+      "label": "7B-class dense, TP1",
+      "kind": "dense",
+      "tp": 1,
+      "ep": 1,
+      "contexts": [
+        1,
+        2048
+      ],
+      "dims": {
+        "num_layers": 32,
+        "hidden_size": 4096,
+        "intermediate_size": 14336,
+        "num_heads": 32,
+        "num_kv_heads": 8,
+        "head_size": 128,
+        "vocab_size": 128256,
+        "dtype_bytes": 2
+      }
+    },
+    {
+      "id": "dense70b-tp8",
+      "label": "70B-class dense, TP8",
+      "kind": "dense",
+      "tp": 8,
+      "ep": 1,
+      "contexts": [
+        1,
+        2048
+      ],
+      "dims": {
+        "num_layers": 80,
+        "hidden_size": 8192,
+        "intermediate_size": 3584,
+        "num_heads": 8,
+        "num_kv_heads": 1,
+        "head_size": 128,
+        "vocab_size": 128256,
+        "dtype_bytes": 2
+      }
+    },
+    {
+      "id": "deepseek-v3-ep72",
+      "label": "DeepSeek-V3, EP72 rank class 0",
+      "kind": "inventory",
+      "tp": 1,
+      "ep": 72,
+      "contexts": [
+        2000
+      ],
+      "weight_bytes": 27446643040,
+      "flops_per_token": 112322823926,
+      "kv_bytes_per_request": 140544000
+    }
+  ],
+  "external": {
+    "id": "qwen3-32b-fp8-tp4",
+    "label": "External Qwen3-32B FP8 match, TP4",
+    "kind": "inventory",
+    "tp": 4,
+    "ep": 1,
+    "contexts": [
+      4250
+    ],
+    "weight_bytes": 7995883520,
+    "flops_per_token": 18218903040,
+    "kv_bytes_per_request": 278528000,
+    "peak_scale": 2,
+    "device": "h200",
+    "batch": 64,
+    "external_row": 4,
+    "external_tpot_ps": 9179000000,
+    "source": "examples/frontier_comparison_v1/results.json",
+    "published_tool": "https://github.com/ai-dynamo/aiconfigurator"
+  },
+  "pinned_inputs": {
+    "simllm/compute/transformer.py": "9bf8f98e3a34e5c60ecaa287c5f08daf60d8a4da951abeb57a7037faee389091",
+    "simllm/compute/provider.py": "37d4cbf8f0139686788cbef6745b48ac2e4a6a628123023358e6a45c77d46d3f",
+    "simllm/deploy/estimator.py": "e0cc9540b72090d490b3babcd71dbd4c5f946e16407aa1e52c233a93ac3678b2",
+    "simllm/deploy/frontier.py": "31e827288d8adcd4a48978b2f8d1295824e8497bc560c2e0a6a50680b853ef5e",
+    "examples/deployment_frontier_v1/expectations.json": "54295c81cebe36ee32d12b8ab1432c9fc060094ddf98403152b0d619cc37438f",
+    "offline/calibration/deployment-projections/ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2.json": "ee154ed5f07c104269df9cf60d8730b8c6dced0ccf619fb7ff7146ec2ddfd5a2",
+    "examples/frontier_comparison_v1/results.json": "c33154071d5e0275bd15d25813102b629a25eca702f98b527949b53b37728017"
+  },
+  "crossovers": [
+    {
+      "model": "dense7b-tp1",
+      "context": 1,
+      "device": "a100",
+      "hbm_scale": "0.5",
+      "crossover_batch": "4465968000/14554123",
+      "weight_floor_ps": 14722233314,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 15009316864,
+      "kv_bytes_per_request": 131072
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 1,
+      "device": "a100",
+      "hbm_scale": "1",
+      "crossover_batch": "2232984000/14573623",
+      "weight_floor_ps": 7361116657,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 15009316864,
+      "kv_bytes_per_request": 131072
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 1,
+      "device": "a100",
+      "hbm_scale": "2",
+      "crossover_batch": "1116492000/14583373",
+      "weight_floor_ps": 3680558328,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 15009316864,
+      "kv_bytes_per_request": 131072
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 1,
+      "device": "h100",
+      "hbm_scale": "0.5",
+      "crossover_batch": "1133096240/1908181",
+      "weight_floor_ps": 8960786187,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 15009316864,
+      "kv_bytes_per_request": 131072
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 1,
+      "device": "h100",
+      "hbm_scale": "1",
+      "crossover_batch": "1133096240/3826257",
+      "weight_floor_ps": 4480393093,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 15009316864,
+      "kv_bytes_per_request": 131072
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 1,
+      "device": "h100",
+      "hbm_scale": "2",
+      "crossover_batch": "1133096240/7662409",
+      "weight_floor_ps": 2240196546,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 15009316864,
+      "kv_bytes_per_request": 131072
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 1,
+      "device": "h200",
+      "hbm_scale": "0.5",
+      "crossover_batch": "1133096240/2738393",
+      "weight_floor_ps": 6253882026,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 15009316864,
+      "kv_bytes_per_request": 131072
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 1,
+      "device": "h200",
+      "hbm_scale": "1",
+      "crossover_batch": "1133096240/5486681",
+      "weight_floor_ps": 3126941013,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 15009316864,
+      "kv_bytes_per_request": 131072
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 1,
+      "device": "h200",
+      "hbm_scale": "2",
+      "crossover_batch": "1133096240/10983257",
+      "weight_floor_ps": 1563470506,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 15009316864,
+      "kv_bytes_per_request": 131072
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 1,
+      "device": "b100",
+      "hbm_scale": "0.5",
+      "crossover_batch": "25765200/57031",
+      "weight_floor_ps": 3752329216,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 15009316864,
+      "kv_bytes_per_request": 131072
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 1,
+      "device": "b100",
+      "hbm_scale": "1",
+      "crossover_batch": "25765200/114287",
+      "weight_floor_ps": 1876164608,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 15009316864,
+      "kv_bytes_per_request": 131072
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 1,
+      "device": "b100",
+      "hbm_scale": "2",
+      "crossover_batch": "25765200/228799",
+      "weight_floor_ps": 938082304,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 15009316864,
+      "kv_bytes_per_request": 131072
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 1,
+      "device": "b200",
+      "hbm_scale": "0.5",
+      "crossover_batch": "128826000/227899",
+      "weight_floor_ps": 3752329216,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 15009316864,
+      "kv_bytes_per_request": 131072
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 1,
+      "device": "b200",
+      "hbm_scale": "1",
+      "crossover_batch": "128826000/456923",
+      "weight_floor_ps": 1876164608,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 15009316864,
+      "kv_bytes_per_request": 131072
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 1,
+      "device": "b200",
+      "hbm_scale": "2",
+      "crossover_batch": "128826000/914971",
+      "weight_floor_ps": 938082304,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 15009316864,
+      "kv_bytes_per_request": 131072
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 2048,
+      "device": "a100",
+      "hbm_scale": "0.5",
+      "crossover_batch": null,
+      "weight_floor_ps": 14722233314,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 16082534400,
+      "kv_bytes_per_request": 268435456
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 2048,
+      "device": "a100",
+      "hbm_scale": "1",
+      "crossover_batch": null,
+      "weight_floor_ps": 7361116657,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 16082534400,
+      "kv_bytes_per_request": 268435456
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 2048,
+      "device": "a100",
+      "hbm_scale": "2",
+      "crossover_batch": null,
+      "weight_floor_ps": 3680558328,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 16082534400,
+      "kv_bytes_per_request": 268435456
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 2048,
+      "device": "h100",
+      "hbm_scale": "0.5",
+      "crossover_batch": null,
+      "weight_floor_ps": 8960786187,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 16082534400,
+      "kv_bytes_per_request": 268435456
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 2048,
+      "device": "h100",
+      "hbm_scale": "1",
+      "crossover_batch": null,
+      "weight_floor_ps": 4480393093,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 16082534400,
+      "kv_bytes_per_request": 268435456
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 2048,
+      "device": "h100",
+      "hbm_scale": "2",
+      "crossover_batch": null,
+      "weight_floor_ps": 2240196546,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 16082534400,
+      "kv_bytes_per_request": 268435456
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 2048,
+      "device": "h200",
+      "hbm_scale": "0.5",
+      "crossover_batch": null,
+      "weight_floor_ps": 6253882026,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 16082534400,
+      "kv_bytes_per_request": 268435456
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 2048,
+      "device": "h200",
+      "hbm_scale": "1",
+      "crossover_batch": null,
+      "weight_floor_ps": 3126941013,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 16082534400,
+      "kv_bytes_per_request": 268435456
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 2048,
+      "device": "h200",
+      "hbm_scale": "2",
+      "crossover_batch": null,
+      "weight_floor_ps": 1563470506,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 16082534400,
+      "kv_bytes_per_request": 268435456
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 2048,
+      "device": "b100",
+      "hbm_scale": "0.5",
+      "crossover_batch": null,
+      "weight_floor_ps": 3752329216,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 16082534400,
+      "kv_bytes_per_request": 268435456
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 2048,
+      "device": "b100",
+      "hbm_scale": "1",
+      "crossover_batch": null,
+      "weight_floor_ps": 1876164608,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 16082534400,
+      "kv_bytes_per_request": 268435456
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 2048,
+      "device": "b100",
+      "hbm_scale": "2",
+      "crossover_batch": null,
+      "weight_floor_ps": 938082304,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 16082534400,
+      "kv_bytes_per_request": 268435456
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 2048,
+      "device": "b200",
+      "hbm_scale": "0.5",
+      "crossover_batch": null,
+      "weight_floor_ps": 3752329216,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 16082534400,
+      "kv_bytes_per_request": 268435456
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 2048,
+      "device": "b200",
+      "hbm_scale": "1",
+      "crossover_batch": null,
+      "weight_floor_ps": 1876164608,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 16082534400,
+      "kv_bytes_per_request": 268435456
+    },
+    {
+      "model": "dense7b-tp1",
+      "context": 2048,
+      "device": "b200",
+      "hbm_scale": "2",
+      "crossover_batch": null,
+      "weight_floor_ps": 938082304,
+      "weight_bytes": 15009316864,
+      "flops_per_token": 16082534400,
+      "kv_bytes_per_request": 268435456
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 1,
+      "device": "a100",
+      "hbm_scale": "0.5",
+      "crossover_batch": "3811392000/12446087",
+      "weight_floor_ps": 18846597963,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19214106624,
+      "kv_bytes_per_request": 40960
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 1,
+      "device": "a100",
+      "hbm_scale": "1",
+      "crossover_batch": "3811392000/24900299",
+      "weight_floor_ps": 9423298981,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19214106624,
+      "kv_bytes_per_request": 40960
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 1,
+      "device": "a100",
+      "hbm_scale": "2",
+      "crossover_batch": "3811392000/49808723",
+      "weight_floor_ps": 4711649490,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19214106624,
+      "kv_bytes_per_request": 40960
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 1,
+      "device": "h100",
+      "hbm_scale": "0.5",
+      "crossover_batch": "23208445440/39237181",
+      "weight_floor_ps": 11471108432,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19214106624,
+      "kv_bytes_per_request": 40960
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 1,
+      "device": "h100",
+      "hbm_scale": "1",
+      "crossover_batch": "23208445440/78523837",
+      "weight_floor_ps": 5735554216,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19214106624,
+      "kv_bytes_per_request": 40960
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 1,
+      "device": "h100",
+      "hbm_scale": "2",
+      "crossover_batch": "23208445440/157097149",
+      "weight_floor_ps": 2867777108,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19214106624,
+      "kv_bytes_per_request": 40960
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 1,
+      "device": "h200",
+      "hbm_scale": "0.5",
+      "crossover_batch": "23208445440/56241853",
+      "weight_floor_ps": 8005877760,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19214106624,
+      "kv_bytes_per_request": 40960
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 1,
+      "device": "h200",
+      "hbm_scale": "1",
+      "crossover_batch": "23208445440/112533181",
+      "weight_floor_ps": 4002938880,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19214106624,
+      "kv_bytes_per_request": 40960
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 1,
+      "device": "h200",
+      "hbm_scale": "2",
+      "crossover_batch": "23208445440/225115837",
+      "weight_floor_ps": 2001469440,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19214106624,
+      "kv_bytes_per_request": 40960
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 1,
+      "device": "b100",
+      "hbm_scale": "0.5",
+      "crossover_batch": "19545600/43393",
+      "weight_floor_ps": 4803526656,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19214106624,
+      "kv_bytes_per_request": 40960
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 1,
+      "device": "b100",
+      "hbm_scale": "1",
+      "crossover_batch": "58636800/260483",
+      "weight_floor_ps": 2401763328,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19214106624,
+      "kv_bytes_per_request": 40960
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 1,
+      "device": "b100",
+      "hbm_scale": "2",
+      "crossover_batch": "6515200/57899",
+      "weight_floor_ps": 1200881664,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19214106624,
+      "kv_bytes_per_request": 40960
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 1,
+      "device": "b200",
+      "hbm_scale": "0.5",
+      "crossover_batch": "293184000/520591",
+      "weight_floor_ps": 4803526656,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19214106624,
+      "kv_bytes_per_request": 40960
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 1,
+      "device": "b200",
+      "hbm_scale": "1",
+      "crossover_batch": "97728000/347269",
+      "weight_floor_ps": 2401763328,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19214106624,
+      "kv_bytes_per_request": 40960
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 1,
+      "device": "b200",
+      "hbm_scale": "2",
+      "crossover_batch": "293184000/2084239",
+      "weight_floor_ps": 1200881664,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19214106624,
+      "kv_bytes_per_request": 40960
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 2048,
+      "device": "a100",
+      "hbm_scale": "0.5",
+      "crossover_batch": null,
+      "weight_floor_ps": 18846597963,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19884867584,
+      "kv_bytes_per_request": 83886080
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 2048,
+      "device": "a100",
+      "hbm_scale": "1",
+      "crossover_batch": "91473408000/219311341",
+      "weight_floor_ps": 9423298981,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19884867584,
+      "kv_bytes_per_request": 83886080
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 2048,
+      "device": "a100",
+      "hbm_scale": "2",
+      "crossover_batch": "45736704000/418991341",
+      "weight_floor_ps": 4711649490,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19884867584,
+      "kv_bytes_per_request": 83886080
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 2048,
+      "device": "h100",
+      "hbm_scale": "0.5",
+      "crossover_batch": null,
+      "weight_floor_ps": 11471108432,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19884867584,
+      "kv_bytes_per_request": 83886080
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 2048,
+      "device": "h100",
+      "hbm_scale": "1",
+      "crossover_batch": null,
+      "weight_floor_ps": 5735554216,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19884867584,
+      "kv_bytes_per_request": 83886080
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 2048,
+      "device": "h100",
+      "hbm_scale": "2",
+      "crossover_batch": "322339520/851497",
+      "weight_floor_ps": 2867777108,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19884867584,
+      "kv_bytes_per_request": 83886080
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 2048,
+      "device": "h200",
+      "hbm_scale": "0.5",
+      "crossover_batch": null,
+      "weight_floor_ps": 8005877760,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19884867584,
+      "kv_bytes_per_request": 83886080
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 2048,
+      "device": "h200",
+      "hbm_scale": "1",
+      "crossover_batch": "181315980/118657",
+      "weight_floor_ps": 4002938880,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19884867584,
+      "kv_bytes_per_request": 83886080
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 2048,
+      "device": "h200",
+      "hbm_scale": "2",
+      "crossover_batch": "90657990/514457",
+      "weight_floor_ps": 2001469440,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19884867584,
+      "kv_bytes_per_request": 83886080
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 2048,
+      "device": "b100",
+      "hbm_scale": "0.5",
+      "crossover_batch": null,
+      "weight_floor_ps": 4803526656,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19884867584,
+      "kv_bytes_per_request": 83886080
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 2048,
+      "device": "b100",
+      "hbm_scale": "1",
+      "crossover_batch": "65966400/15419",
+      "weight_floor_ps": 2401763328,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19884867584,
+      "kv_bytes_per_request": 83886080
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 2048,
+      "device": "b100",
+      "hbm_scale": "2",
+      "crossover_batch": "32983200/159419",
+      "weight_floor_ps": 1200881664,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19884867584,
+      "kv_bytes_per_request": 83886080
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 2048,
+      "device": "b200",
+      "hbm_scale": "0.5",
+      "crossover_batch": null,
+      "weight_floor_ps": 4803526656,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19884867584,
+      "kv_bytes_per_request": 83886080
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 2048,
+      "device": "b200",
+      "hbm_scale": "1",
+      "crossover_batch": null,
+      "weight_floor_ps": 2401763328,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19884867584,
+      "kv_bytes_per_request": 83886080
+    },
+    {
+      "model": "dense70b-tp8",
+      "context": 2048,
+      "device": "b200",
+      "hbm_scale": "2",
+      "crossover_batch": "41229000/123419",
+      "weight_floor_ps": 1200881664,
+      "weight_bytes": 19214106624,
+      "flops_per_token": 19884867584,
+      "kv_bytes_per_request": 83886080
+    },
+    {
+      "model": "deepseek-v3-ep72",
+      "context": 2000,
+      "device": "a100",
+      "hbm_scale": "0.5",
+      "crossover_batch": "8563352628480000/70663390992557",
+      "weight_floor_ps": 26921670465,
+      "weight_bytes": 27446643040,
+      "flops_per_token": 112322823926,
+      "kv_bytes_per_request": 140544000
+    },
+    {
+      "model": "deepseek-v3-ep72",
+      "context": 2000,
+      "device": "a100",
+      "hbm_scale": "1",
+      "crossover_batch": "4281676314240000/92588254992557",
+      "weight_floor_ps": 13460835232,
+      "weight_bytes": 27446643040,
+      "flops_per_token": 112322823926,
+      "kv_bytes_per_request": 140544000
+    },
+    {
+      "model": "deepseek-v3-ep72",
+      "context": 2000,
+      "device": "a100",
+      "hbm_scale": "2",
+      "crossover_batch": "112675692480000/5450036157503",
+      "weight_floor_ps": 6730417616,
+      "weight_bytes": 27446643040,
+      "flops_per_token": 112322823926,
+      "kv_bytes_per_request": 140544000
+    },
+    {
+      "model": "deepseek-v3-ep72",
+      "context": 2000,
+      "device": "h100",
+      "hbm_scale": "0.5",
+      "crossover_batch": "543169065761600/981448841521",
+      "weight_floor_ps": 16386055546,
+      "weight_bytes": 27446643040,
+      "flops_per_token": 112322823926,
+      "kv_bytes_per_request": 140544000
+    },
+    {
+      "model": "deepseek-v3-ep72",
+      "context": 2000,
+      "device": "h100",
+      "hbm_scale": "1",
+      "crossover_batch": "271584532880800/2372131721521",
+      "weight_floor_ps": 8193027773,
+      "weight_bytes": 27446643040,
+      "flops_per_token": 112322823926,
+      "kv_bytes_per_request": 140544000
+    },
+    {
+      "model": "deepseek-v3-ep72",
+      "context": 2000,
+      "device": "h100",
+      "hbm_scale": "2",
+      "crossover_batch": "135792266440400/3067473161521",
+      "weight_floor_ps": 4096513886,
+      "weight_bytes": 27446643040,
+      "flops_per_token": 112322823926,
+      "kv_bytes_per_request": 140544000
+    },
+    {
+      "model": "deepseek-v3-ep72",
+      "context": 2000,
+      "device": "h200",
+      "hbm_scale": "0.5",
+      "crossover_batch": "16974033305050/81566555889",
+      "weight_floor_ps": 11436101266,
+      "weight_bytes": 27446643040,
+      "flops_per_token": 112322823926,
+      "kv_bytes_per_request": 140544000
+    },
+    {
+      "model": "deepseek-v3-ep72",
+      "context": 2000,
+      "device": "h200",
+      "hbm_scale": "1",
+      "crossover_batch": "8487016652525/125025395889",
+      "weight_floor_ps": 5718050633,
+      "weight_bytes": 27446643040,
+      "flops_per_token": 112322823926,
+      "kv_bytes_per_request": 140544000
+    },
+    {
+      "model": "deepseek-v3-ep72",
+      "context": 2000,
+      "device": "h200",
+      "hbm_scale": "2",
+      "crossover_batch": "8487016652525/293509631778",
+      "weight_floor_ps": 2859025316,
+      "weight_bytes": 27446643040,
+      "flops_per_token": 112322823926,
+      "kv_bytes_per_request": 140544000
+    },
+    {
+      "model": "deepseek-v3-ep72",
+      "context": 2000,
+      "device": "b100",
+      "hbm_scale": "0.5",
+      "crossover_batch": "6175494684000/24539011963",
+      "weight_floor_ps": 6861660760,
+      "weight_bytes": 27446643040,
+      "flops_per_token": 112322823926,
+      "kv_bytes_per_request": 140544000
+    },
+    {
+      "model": "deepseek-v3-ep72",
+      "context": 2000,
+      "device": "b100",
+      "hbm_scale": "1",
+      "crossover_batch": "3087747342000/40350211963",
+      "weight_floor_ps": 3430830380,
+      "weight_bytes": 27446643040,
+      "flops_per_token": 112322823926,
+      "kv_bytes_per_request": 140544000
+    },
+    {
+      "model": "deepseek-v3-ep72",
+      "context": 2000,
+      "device": "b100",
+      "hbm_scale": "2",
+      "crossover_batch": "81256509000/2539779577",
+      "weight_floor_ps": 1715415190,
+      "weight_bytes": 27446643040,
+      "flops_per_token": 112322823926,
+      "kv_bytes_per_request": 140544000
+    },
+    {
+      "model": "deepseek-v3-ep72",
+      "context": 2000,
+      "device": "b200",
+      "hbm_scale": "0.5",
+      "crossover_batch": "7719368355000/16633411963",
+      "weight_floor_ps": 6861660760,
+      "weight_bytes": 27446643040,
+      "flops_per_token": 112322823926,
+      "kv_bytes_per_request": 140544000
+    },
+    {
+      "model": "deepseek-v3-ep72",
+      "context": 2000,
+      "device": "b200",
+      "hbm_scale": "1",
+      "crossover_batch": "3859684177500/36397411963",
+      "weight_floor_ps": 3430830380,
+      "weight_bytes": 27446643040,
+      "flops_per_token": 112322823926,
+      "kv_bytes_per_request": 140544000
+    },
+    {
+      "model": "deepseek-v3-ep72",
+      "context": 2000,
+      "device": "b200",
+      "hbm_scale": "2",
+      "crossover_batch": "1929842088750/46279411963",
+      "weight_floor_ps": 1715415190,
+      "weight_bytes": 27446643040,
+      "flops_per_token": 112322823926,
+      "kv_bytes_per_request": 140544000
+    },
+    {
+      "model": "qwen3-32b-fp8-tp4",
+      "context": 4250,
+      "device": "h200",
+      "hbm_scale": "1",
+      "crossover_batch": null,
+      "weight_floor_ps": 1665809066,
+      "weight_bytes": 7995883520,
+      "flops_per_token": 18218903040,
+      "kv_bytes_per_request": 278528000
+    }
+  ]
+}
