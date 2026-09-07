@@ -726,6 +726,11 @@ is scoped to this scheduler pin and must be re-earned after every pin bump.
 
 ## Open tasks
 
+Folded 2026-09-07 (maintainer triage): VLLM-21 into VLLM-48. The in-situ
+communicator wall-service seam measures the same Python dispatch, custom-op
+indirection and synchronization stalls VLLM-21 named, and VLLM-49 runs it on
+A100.
+
 ### Precision
 
 - VLLM-4 (Precision; P1; L) (remaining half): a paced-mode run whose TTFT/TPOT
@@ -773,13 +778,6 @@ is scoped to this scheduler pin and must be re-earned after every pin bump.
   Acceptance requires exact semantic operation identity for every enabled call
   while the compatibility off path remains byte-for-byte and timestamp-for-
   timestamp identical to this slice.
-- VLLM-21 (Precision; P1; L): calibrate real coordinator dispatch cost after
-  VLLM-19 makes it metric-live. The current surrogate is exactly zero dispatch
-  time. Measure pinned-vLLM Python dispatch, custom-op indirection, and
-  synchronization stalls over a frozen payload, group-size, and call-mode
-  matrix. Hold out at least one model and group size; require modeled median
-  and p95 call cost within a pre-registered relative or additive band, then
-  verify the signed TTFT/TPOT effect and the exact zero-cost bypass baseline.
 - VLLM-44 (Precision; P1; M): add framework-native correlation and capacity
   decision identity beyond the sidecar's row ordinal. The first slice gives
   each projected operation a deterministic source-row ID, leaves
@@ -855,6 +853,11 @@ is scoped to this scheduler pin and must be re-earned after every pin bump.
   refutation leaves this task open. Closing the kind family requires successor
   expectations committed before another pair of fresh runs; no observed run
   may be relabeled as closure.
+  VLLM-21's calibration clause folded here 2026-09-07: hold out at least one
+  model and group size, require the modeled median and p95 call cost within a
+  pre-registered relative or additive band over a frozen payload, group-size
+  and call-mode matrix, then verify the signed TTFT/TPOT effect and the exact
+  zero-cost bypass baseline; VLLM-49 carries the A100 lane.
 - VLLM-49 (Precision; P1; L): run the VLLM-48 in-situ seam on the A100
   multi-GPU lane and score real collective service against an aggregate-floor
   calibration from the same A100 environment. The standard tensor-parallel
@@ -870,6 +873,21 @@ is scoped to this scheduler pin and must be re-earned after every pin bump.
   task. Carry the accepted service comparison into at least one signed time to
   first token or time per output token consequence while the capture-disabled
   baseline remains byte-identical.
+
+- VLLM-51 (Precision; P1; M): attribute the live vLLM 0.27.1 CPU engine-loop
+  cost to its phases. The surrogate conformance study measured a 139,552,358 ns
+  median steady step on the frozen 128-request workload against the surrogate's
+  58,711,515 ns, and DEPLOY-21 owns the surrogate side; nothing yet says which
+  scheduler, KV-cache manager, model-runner stub or output-processing function
+  owns the live cost, so a framework inefficiency cannot be told apart from
+  inherent scheduling work. Identifying observables: per-phase monotonic host
+  timers and one function-level profile over the identical workload at 32, 64
+  and 128 running requests. Acceptance: the attributed phases sum to the
+  measured loop within 5 percent, the per-request scheduler cost and the
+  per-block KV-manager cost are reported with their scaling direction, the
+  repeated-run median is stable within 10 percent as a fatal guard, and the
+  record names the dominant function.
+
 ### Completeness
 
 - VLLM-45 (Completeness; P2; L): normalize stock vLLM offload connector swap
@@ -986,30 +1004,35 @@ is scoped to this scheduler pin and must be re-earned after every pin bump.
   rebinding and request completion while preserving those explicit refusals,
   the implemented Granite schedule and the producer-disabled serial path
   exactly.
-### Uncategorized
 
-- VLLM-3: sim-native metrics export via a `vllm.stat_logger_plugins` stat
-  logger for virtual-time runs.
-- VLLM-5: CI harness with transcribed stand-ins for the vLLM types
-  (`Executor`, `ModelRunnerOutput`, `FullAttentionSpec`, `CompilationTimes`)
-  so the init-RPC sequence and the step loop run end to end without a GPU
-  stack installed.
-- VLLM-7 (placement half closed with M4): the placement-side builder
-  exists, `simllm.placement.declared_manifest` computes a
-  `source="declared"` manifest from tp/pp/dp in the DP x PP x TP layout
-  order, and the M4 closed-loop runs drive the sink off it. Remaining
-  half: `SimExecutor` deriving that declared manifest from its own
-  `ParallelConfig` automatically (today the caller constructs it by hand
-  and must keep the sizes in sync with the vLLM flags).
-- VLLM-8: generate-only today. Speculative decoding and structured output
-  are refused with explicit errors (fabricated tokens would silently model
-  0% draft acceptance or first-token grammar deaths); pooling models
-  (`pooler_output`) and encoder/multimodal inputs are serviced with empty
-  or `None` answers rather than fabricated outputs.
-- VLLM-9: render the accumulated `step_records` into a
+- VLLM-3 (Completeness; P2; S): sim-native metrics export via a
+  `vllm.stat_logger_plugins` stat logger for virtual-time runs.
+
+- VLLM-5 (Completeness; P2; M): CI harness with transcribed stand-ins for the
+  vLLM types (`Executor`, `ModelRunnerOutput`, `FullAttentionSpec`,
+  `CompilationTimes`) so the init-RPC sequence and the step loop run end to
+  end without a GPU stack installed.
+
+- VLLM-7 (Completeness; P2; S): the placement-side builder exists,
+  `simllm.placement.declared_manifest` computes a `source="declared"` manifest
+  from tp/pp/dp in the DP x PP x TP layout order, and the M4 closed-loop runs
+  drive the sink off it. Remaining half: `SimExecutor` deriving that declared
+  manifest from its own `ParallelConfig` automatically (today the caller
+  constructs it by hand and must keep the sizes in sync with the vLLM flags).
+
+- VLLM-8 (Completeness; P2; L): generate-only today. Speculative decoding and
+  structured output are refused with explicit errors (fabricated tokens would
+  silently model 0% draft acceptance or first-token grammar deaths); pooling
+  models (`pooler_output`) and encoder/multimodal inputs are serviced with
+  empty or `None` answers rather than fabricated outputs.
+
+- VLLM-9 (Completeness; P2; M): render the accumulated `step_records` into a
   `simllm.core.GoalTrace` (the offline open-loop mode's second half; the
   records already carry phases, token counts and completions).
-- VLLM-10: pipeline parallelism. Needs a pending-output FIFO so the
-  batch-queue loop's interleaved `execute_model`/`sample_tokens` pairs map
-  to the right steps, plus per-stage step accounting; until then
+
+- VLLM-10 (Completeness; P1; L): pipeline parallelism. Needs a pending-output
+  FIFO so the batch-queue loop's interleaved `execute_model`/`sample_tokens`
+  pairs map to the right steps, plus per-stage step accounting; until then
   `supports_pp` stays False and vLLM rejects PP > 1 up front.
+  P1 since 2026-09-07: the pipeline-parallel traffic slice (TRAF-8) and
+  TRAF-88 need a framework producer of pipeline stage attribution.

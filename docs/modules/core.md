@@ -1178,28 +1178,12 @@ broader exact SGLang EP72 capture and communication remainder.
 
 ## Open tasks
 
+Folded 2026-09-07 (maintainer triage): CORE-64 and CORE-65 into CORE-66. All
+three were slices of one gap, the -57.164268 percent standard-decode
+undercorrection against the 22,282 tokens/s/node anchor; CORE-66 carries both
+conclusions and the feasible path.
+
 ### Precision
-
-- CORE-64 (Precision; P0; M): resolve the exact -57.164268 percent
-  standard-decode undercorrection that remains after the architecture-only
-  expert-residency scale, now unconditionally promoted by the clean CORE-63
-  repetition. Identify component-backed EP72 residency-shape physics without
-  fitting a calibration constant, preserve attention, MLA and shared-expert
-  locality explicitly, and publish the signed movement from 9,544.657796
-  tokens/s/node against the 22,282 calibration anchor. Decode-side overlap
-  remains out of scope until a real decode communication service term exists.
-
-- CORE-65 (Precision; P0; L): resolve the exact remaining -12,737.342204
-  tokens/s/node, or -57.164268 percent, standard-decode physical attribution
-  gap after CORE-64 proves that every disclosed EP72 per-rank request, KV,
-  MLA, shared-expert, dense, router and output shape matches the TP1 capture.
-  Bind the retained kernel stream totally to SGLang's EP72 physical operation
-  identities or obtain a matching EP72 per-rank capture, then derive any
-  component-specific service movement without fitting a calibration constant.
-  Preserve the inherited routed `1/9` scale, the 489 ps fixed term, every
-  prior artifact and the explicit family-locality ledger. The held-out MTP
-  value and fifth scored run remain out of scope, and decode-side overlap
-  remains deferred until a real decode communication service term exists.
 
 - CORE-66 (Precision; P0; L): obtain the exact SGLang EP72 physical capture
   that CORE-65 proves is missing. Run the pinned DeepSeek-V3 standard-decode
@@ -1256,6 +1240,19 @@ broader exact SGLang EP72 capture and communication remainder.
   communication. CORE-66 therefore stays open on the exact SGLang EP72
   dispatch/combine service and physical identity remainder; the vLLM ladder
   does not substitute a zero communication price for that missing evidence.
+  Feasible path under current cluster policy (maintainer triage 2026-09-07):
+  the registered EP72 cell needs nine eight-GPU nodes that the `gpu_general`
+  association cannot allocate, so the task proceeds through (a) a runnable
+  cu129, CPython 3.11, aarch64 pinned SGLang plus DeepEP dependency set, (b)
+  EP4 captures inside the four-GPU policy that bind the DeepEP dispatch and
+  combine launches and their payloads, and (c) a declared, content-addressed
+  EP4-to-EP72 extrapolation candidate that is labeled candidate evidence and
+  never a measured closure. CORE-64 and CORE-65 folded here on 2026-09-07:
+  CORE-64 established that architecture-only residency-shape physics does not
+  close the -57.164268 percent standard-decode gap without a fitted constant,
+  and CORE-65 that every disclosed EP72 per-rank request, KV, MLA,
+  shared-expert, dense, router and output shape matches the TP1 capture, so
+  the EP72 physical capture is the missing evidence.
 
 - CORE-53 (Precision; P1; M): replace the first disaggregated session slice's
   roofline bootstrap with the accepted COMP-64 kernel-cycle lookup record.
@@ -1650,3 +1647,21 @@ broader exact SGLang EP72 capture and communication remainder.
   and must remain byte-identical. If the integration host cannot retain all 56
   engines, keep this task open and report the measured stopping point rather
   than extrapolating a pass. Depends on VLLM-35 and PLACE-5.
+
+- CORE-67 (Completeness; P1; M): emit a bottleneck classification for every
+  reported TTFT and TPOT from the critical-path breakdown.
+  `CriticalPathBreakdown` already conserves an operation's latency into launch
+  queue, device queue,
+  service, completion delivery and external dependency, and `LatencyAttribution`
+  names the owner, but no record says which physical resource bound the
+  request: an HBM-bound or compute-bound kernel (the achieved fraction of the
+  binding roofline from the COMP-90 kernel efficiency ledger), an intra-node
+  collective wait by participant width, a cross-node collective or fabric
+  queueing wait (the per-flow FCT tail share), host launch, or the batching
+  queue. Add a strict versioned `simllm-bottleneck-report-v1` record beside
+  `StepResult` that ranks those classes per request and per step from the
+  selected critical path only, never from additive visit sums; its absence
+  preserves every accepted artifact byte for byte. Acceptance: on the m4,
+  breakdown and collective width tail studies the report names the class the
+  study identified, the ranked shares conserve the request's critical-path
+  latency exactly, and the disabled path is byte-identical.

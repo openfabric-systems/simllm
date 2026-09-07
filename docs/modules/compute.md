@@ -1871,6 +1871,11 @@ study-local declaration to that installed surface.
 
 ## Open tasks
 
+Folded 2026-09-07 (maintainer triage): COMP-48 into COMP-44 (the launch-mode
+residual cannot be identified until the additive host term exists, so the
+campaign and its bar live with the operator) and COMP-78 into COMP-72 (one
+Hopper campaign, one remainder record).
+
 ### Precision
 
 - COMP-81 (Precision; P0; M): reconcile the Qwen3-32B-FP8 `attn_score`
@@ -2361,39 +2366,6 @@ study-local declaration to that installed surface.
   retained evidence: 1,629,633 ps per eager launch over an empirical 1,625,986
   to 1,927,260 ps, and 1,647,674 ps per graph replay independent of chain
   length. Installing them from the void run is refused on purpose.
-- COMP-48 (Precision; P1; M): identify the launch-mode residual as host
-  initiation. The standing kernel-time
-  determinism ruling rejects the service-time reading: CUDA-graph versus eager
-  mode never changes kernel service, so no launch-class field may reach a
-  kernel-service key. The
-  [A100 graph launch study](../../examples/a100_graph_launch_v1/RESULTS.md)
-  measured a device-side per-kernel cost that is 1.415 to 1.506 microseconds
-  larger in eager mode than under CUDA-graph replay, roughly constant across
-  kernels whose own periods span 8.9 to 89.6 microseconds, of which a null
-  kernel accounts for 1.080 microseconds. The identifying observable is
-  activity timing across graph replay and eager execution with host submission
-  measured separately. The existing driver cannot record an event during
-  stream capture, so the new protocol must use a non-perturbing source such as
-  profiler activity rows and must distinguish unchanged service from host
-  launch visibility rather than subtracting two compound periods. No
-  device-front-end service stage exists. Freeze null and real-kernel families,
-  eager and graph modes, at
-  least two chain lengths and an immutable train/validation/test split. Fit no
-  value from test. Acceptance requires measured host initiation to predict the
-  observed launch-mode delta within the larger of two GPU cycles or 10 percent
-  in every supported cell. Also require no double charge with COMP-43's kernel floor or COMP-47's
-  host profiles, and byte-identical kernel service and off-path results.
-  That bar is unreachable under today's calibrated composition and this task
-  is blocked on COMP-44 until it is not. The
-  [host launch composition study](../../examples/host_launch_composition_v1/RESULTS.md)
-  is nonvoid and refutes the reachability: `max(C, N * g)` returns a
-  launch-mode delta of exactly zero for every per-kernel service at or above
-  the eager per-launch constant, so its error against the measured 1.415 to
-  1.506 microseconds is exactly 1.0 and roughly 2,000 GPU cycles, and the
-  study's `R7` shows the zero holds for any per-launch constants rather than
-  only the installed ones. A measurement campaign run before COMP-44 supplies
-  a non-overlappable term would therefore fail this bar by construction and
-  could close nothing.
 - COMP-69 (Precision; P1; L): replace the deployment projection's uniform
   per-unique-expert dispatch with the observed physical assignment across the
   256 logical experts and 32 redundant slots. The current surrogate preserves
@@ -2426,6 +2398,29 @@ study-local declaration to that installed surface.
   DeepSeek shapes. Acceptance requires category conservation inside the frozen
   uncertainty, exact route-load conservation, no service-duration change and
   byte-identical candidate selection when the enriched path is disabled.
+
+- COMP-8 (Precision; P1; S): the fused-vs-family sum invariant test compares
+  in float; above 2 to the 53rd flops (a 32k-token prefill chunk on a
+  100B-class dense rank) ULP effects could mask a real mismatch even though
+  the integer identity is exact. Assert the sums in the integer domain when
+  such shapes enter scope (audit note, examples/m5/RESULTS.md).
+
+- COMP-90 (Precision; P1; M): carry a kernel efficiency ledger beside every
+  measured kernel cell: achieved bytes per second and flop per second from the
+  cell's declared shape and measured time, the binding class (HBM, compute or
+  launch) from its arithmetic intensity against the device ridge point, and the
+  achieved fraction of the measured envelope, with the datasheet peak reported
+  second. The surrogate being replaced is the absence of any efficiency signal:
+  `RooflineProvider` prices a kernel at its bound and `ProfileTableProvider` at
+  its measured mean, so a kernel that reaches 10 percent of the HBM roof is
+  indistinguishable from one at 90 percent. The identifying observables are the
+  retained A100 kernel constant cells (void on their guards and carried as
+  void), the Granite kernel-cycle lookup record and the A100 and GH200
+  envelopes. Acceptance: the kernel efficiency ledger study's ranking is stable
+  across envelope source and threshold, no cell exceeds 1.0 of its measured
+  envelope, the evidence class and void state of every source cell survive into
+  the ledger, and the ledger joins CORE-67's bottleneck report by the same kernel
+  identity the calibration uses.
 
 ### Completeness
 
@@ -2531,11 +2526,13 @@ study-local declaration to that installed surface.
   accepted legacy artifact stays byte-identical. Until the new records land,
   concurrent demo CSVs are reviewed evidence but are not calibration-bundle
   records.
-- COMP-14 (Completeness; P2; L): add optional NCCL algorithm builders for
+- COMP-14 (Completeness; P1; L): add optional NCCL algorithm builders for
   tree all-reduce, all-to-all, reduce-scatter and all-gather behind an
   explicit algorithm selection. The ring builder remains the identity
   baseline: selecting or omitting the default ring path must preserve every
   accepted ring timestamp, counter and task order exactly.
+  P1 since 2026-09-07: the collective width tail study, VLLM-20 and SGL-14
+  wait on the all-gather, reduce-scatter and all-to-all builders.
 - COMP-15 (Completeness; P1; L): model the NCCL software stack with the real
   stack's functional names and interfaces, trimmed to the main path. The
   audited zero-time first slice is landed: communicator and ring setup,
@@ -2633,7 +2630,7 @@ study-local declaration to that installed surface.
   timestamp, counter and artifact byte exactly. This is P1 because TRAF-65's
   accepted live metric closure consumes the events through TRAF-45 and TRAF-54;
   the hardware-only capture may precede this task, but cannot close TRAF-65.
-- COMP-44 (Completeness; P2; S): let a calibrated host profile carry a fixed
+- COMP-44 (Completeness; P1; M): let a calibrated host profile carry a fixed
   per-invocation cost beside its per-launch constant. `HostInitiationModel`'s
   calibrated form has exactly one term, `point_ps_per_launch`, composed as
   `max(C, N * g)`, which is the right shape for eager launching and the wrong
@@ -2662,10 +2659,17 @@ study-local declaration to that installed surface.
   independent of provider service, the exact `ideal` zero
   profile and both Turing profiles reproduce every accepted artifact and
   timestamp byte for byte, and a graph profile built from a fixed term is
-  independent of the launch count it is asked about. This is P2 while no study
-  selects an A100 host profile and becomes P1 when COMP-47 installs one or when
-  COMP-48 opens its measurement campaign, whichever comes first, because
-  COMP-48's acceptance cannot be met without it.
+  independent of the launch count it is asked about. P1 since
+  2026-09-07, because the folded COMP-48 campaign cannot be met without it.
+  COMP-48 folded here 2026-09-07 with its bar: measured host initiation must
+  predict the observed launch-mode delta (1.415 to 1.506 microseconds per
+  kernel in eager mode over CUDA-graph replay, of which a null kernel accounts
+  for 1.080) within the larger of two GPU cycles or 10 percent in every
+  supported cell, from profiler activity rows rather than event subtraction,
+  over frozen null and real-kernel families, both launch modes, at least two
+  chain lengths and an immutable train/validation/test split, with no double
+  charge against COMP-43's kernel floor or COMP-47's host profiles and
+  byte-identical kernel service on the off path.
 - COMP-46 (Completeness; P2; M): supply a production-grade decode attention
   microbenchmark. The decode lane of the
   [A100 kernel constants study](../../examples/a100_kernel_constants_v1/RESULTS.md)
@@ -2926,6 +2930,13 @@ study-local declaration to that installed surface.
   remainder. The later CORE-61 retry satisfies that depth sub-arm with base
   job `200137` and exact decode job `200138`; COMP-72 now stays open on the
   still-empty Granite prefix and final successor work, not on depth linearity.
+  COMP-78 folded here 2026-09-07: its execution record
+  (`examples/hopper_kernel_cycle_candidate_v1/COMP78_RESULTS.md`, base job
+  `200120`, decode attempts `200123` and `200128`, both failed before the
+  scored boundary) and its acceptance are carried unchanged: the complete
+  1,212-cell Granite prefix, both digest-complete CORE-61 outputs, all
+  retained source and output digests, and a final content-addressed successor
+  with `ff46f6d8...`, `d868a4f3...` and `58d16986...` immutable.
 - COMP-73 (Completeness; P1; L): produce the key-compatible target record that
   makes the CORE-53 frozen disaggregated session grid total. The accepted
   retained fixture is A100, vLLM 0.26, tensor parallel one and partial decode
@@ -2951,49 +2962,6 @@ study-local declaration to that installed surface.
   separately tests the 61-layer extrapolation; COMP-72 separately owns MTP;
   the closed COMP-74 artifact separately owns repeat-derived distribution
   intervals.
-- COMP-78 (Completeness; P1; L): finish the literal COMP-72 campaign remainder
-  without amending the scored freeze or overwriting any completed or failed
-  attempt. Stage pinned real vLLM and SGLang target executables on Merlin for
-  `SIMLLM_VLLM_KERNEL_CAPTURE_TARGET` and
-  `SIMLLM_SGLANG_KERNEL_CAPTURE_TARGET`. Resume the canonical
-  `19a6d6fb...` Granite plan at its first cell without a digest-complete
-  directory, currently
-  `sglang-decode-cuda-graph-te1-pi1-da1-ex1-b1-kv1311-deliberately-fragmented`,
-  and complete all 1,212 cells while preserving the current empty completed
-  prefix byte for byte. After `2026-08-28T06:30` in `Europe/Zurich`, submit
-  the exact registered CORE-61 depth-8 base then decode jobs, compare the
-  measured decode step against 3,751,359,511 ps, and retain the signed
-  residual. Queue politely on hourly partitions, pace short submissions, and
-  stop cleanly on SSH loss. Recompile a final content-addressed successor
-  through the landed pipeline while keeping both `ff46f6d8...` and
-  `d868a4f3...` immutable. Acceptance requires the complete Granite prefix,
-  both digest-complete CORE-61 outputs, the signed depth residual, all retained
-  source and output digests, and only then literal COMP-72 closure.
-  The [COMP-78 execution record](../../examples/hopper_kernel_cycle_candidate_v1/COMP78_RESULTS.md)
-  retains exact CORE-61 base job `200120` and decode attempts `200123` and
-  `200128` without overwriting an attempt or changing a registered command.
-  Both decode attempts failed before the scored boundary in the same
-  65,536-token startup profile. The pinned logs refine their final allocations:
-  job `200123` requested 896 MiB for a BF16 hidden-state output, while warm
-  retry `200128` requested 3 GiB for a BF16 FlashInfer DeepGEMM output. The
-  measured service, signed residual and linearity verdict remain absent. Pinned
-  real vLLM and SGLang target executables are
-  staged, but the landed cell driver cannot prove fragmented KV placement or
-  emit the required routing, two-clean-harvest and digest-completion outputs.
-  The Granite prefix therefore remains 0 of 1,212, byte-identical to the empty
-  prefix, at the same first incomplete cell. Candidate successor
-  `58d169865109a5eaca3e69978a48080c25a6bb48ee6607d32e82ed8487d17fdd`
-  retains that partial evidence while `ff46f6d8...` and `d868a4f3...` remain
-  immutable. That execution did not meet literal acceptance at the time.
-  COMP-79 is already allocated below and was not reassigned. The later
-  pre-scoring-amended
-  [CORE-61 retry](../../examples/deployment_curve_v1/core61_depth_retry_result.md)
-  retains base job `200137` and exact decode job `200138`. The measured decode
-  service is 3,629,568,000 ps and the signed residual is -121,791,511 ps, or
-  -3.355537 percent, so the five-percent depth rule passes and CORE-61 closes.
-  Both task-owned attempt trees are digest complete. COMP-72 and COMP-78 remain
-  open on the 0-of-1,212 Granite prefix and final successor only. CORE-63 is
-  not registered, and COMP-79 remains unchanged.
 - COMP-79 (Completeness; P1; M): extend key-local repeat-derived distribution
   propagation to DeepSeek candidate keys that still have only one independent
   seed, beginning with the separately measured EP72 simulated-MTP mode. Freeze
@@ -3012,10 +2980,3 @@ study-local declaration to that installed surface.
   every priced Granite key selected by a flagship consumer, nonzero intervals
   where observations vary, unchanged candidate or validated status, and exact
   distribution-OFF reproduction.
-### Uncategorized
-
-- COMP-8: the fused-vs-family sum invariant test compares in float; above
-  2 to the 53rd flops (a 32k-token prefill chunk on a 100B-class dense
-  rank) ULP effects could mask a real mismatch even though the integer
-  identity is exact. Assert the sums in the integer domain when such
-  shapes enter scope (audit note, examples/m5/RESULTS.md).
