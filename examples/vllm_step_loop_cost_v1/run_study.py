@@ -541,11 +541,23 @@ def _median(value):
     return value
 
 
-def plot(result, output):
-    """Draw exclusive loop costs and inclusive all-decode scheduler scaling.
+def _arm_drift(loops):
+    """Frozen R4 statistic: the largest separation among the first-three,
+    last-three and seven-run medians, divided by the seven-run median."""
+    first = statistics.median(loops[:3])
+    last = statistics.median(loops[-3:])
+    whole = statistics.median(loops)
+    return max(abs(first - whole), abs(last - whole), abs(first - last)) / whole
 
-    The upper axis divides complete-loop phase medians by the engine step
-    count. Retained values from a void run are diagnostic only.
+
+def plot(result, output):
+    """Draw exclusive loop costs, scheduler scaling and the repeated-loop drift.
+
+    The upper axis of panel A divides complete-loop phase medians by the
+    engine step count. Panel C shows the seven measured whole-workload loops
+    of the arm with the largest frozen drift statistic next to the reference
+    plain arm, so the reason for a void status is visible in the figure.
+    Retained values from a void run are diagnostic only.
     """
     import matplotlib
     matplotlib.use("Agg")
@@ -555,9 +567,10 @@ def plot(result, output):
     steps = reference["step_count"]
     phases = sorted(reference["phase_medians_ns"].items(), key=lambda kv: kv[1])
     total = sum(ns for _, ns in phases)
-    fig = plt.figure(figsize=(7, 8))
-    left = fig.add_axes((0.38, 0.53, 0.60, 0.32))
-    right = fig.add_axes((0.12, 0.14, 0.86, 0.28))
+    fig = plt.figure(figsize=(7, 11.2))
+    left = fig.add_axes((0.38, 0.685, 0.60, 0.225))
+    right = fig.add_axes((0.12, 0.395, 0.86, 0.195))
+    bottom = fig.add_axes((0.12, 0.115, 0.86, 0.17))
     labels = [PHASE_LABELS.get(name, name.replace("_", " ")) for name, _ in phases]
     values = [ns / 1e6 for _, ns in phases]
     bars = left.barh(labels, values, color="#1f77b4")
@@ -570,7 +583,7 @@ def plot(result, output):
                                                    lambda us: us * steps / 1e3))
     upper.set_xlabel("Amortized time per engine step (µs)", fontsize=9)
     upper.tick_params(labelsize=8.5)
-    fig.text(0.04, 0.935, f"A  Ranked exclusive phases: cap {reference['cap']}, "
+    fig.text(0.04, 0.955, f"A  Ranked exclusive phases: cap {reference['cap']}, "
              f"token budget {reference['budget']}", fontsize=10, weight="bold")
     left.tick_params(labelsize=8.5)
     left.set_ylim(-0.5, len(phases) - 0.5)
@@ -606,17 +619,65 @@ def plot(result, output):
     handles, legend_labels = right.get_legend_handles_labels()
     order = sorted(range(len(budgets)), key=lambda i: (budgets[i] != 512, budgets[i]))
     order.append(len(budgets))
-    fig.legend([handles[i] for i in order], [legend_labels[i] for i in order],
-               fontsize=8.5, loc="lower center", bbox_to_anchor=(0.5, 0.015),
-               ncol=2, frameon=False)
-    fig.text(0.04, 0.445, "B  Scheduler cost grows with running requests", fontsize=10,
+    right.legend([handles[i] for i in order], [legend_labels[i] for i in order],
+                 fontsize=8, loc="upper left", ncol=2, frameon=False)
+    fig.text(0.04, 0.615, "B  Scheduler cost grows with running requests", fontsize=10,
              weight="bold")
     right.tick_params(labelsize=8.5)
     right.grid(True, which="major", alpha=0.25)
     right.spines[["top", "right"]].set_visible(False)
+
+    arms = []
+    for cell in result["cells"]:
+        for arm, key in (("plain", "plain_ns"), ("instrumented", "timed_ns")):
+            loops = [ns / 1e6 for ns in cell.get(key, ())]
+            if len(loops) >= 7:
+                arms.append((_arm_drift(loops), cell, arm, loops))
+    if arms:
+        worst = max(arms, key=lambda item: item[0])
+        drift, cell, arm, loops = worst
+        ref_loops = [ns / 1e6 for ns in reference["plain_ns"]]
+        index = list(range(1, len(loops) + 1))
+        median = statistics.median(loops)
+        bottom.axhspan(0.9 * median, 1.1 * median, color="#d62728", alpha=0.10,
+                       zorder=1, label="Frozen 10% band around the seven-run median")
+        bottom.axhline(median, color="#d62728", linewidth=0.8, linestyle=":", zorder=2)
+        bottom.plot(index, loops, marker="o", color="#d62728", linewidth=1.4,
+                    markersize=6, markerfacecolor="white", markeredgewidth=1.2, zorder=3,
+                    label=f"Worst arm: {cell['cap']} requests, budget {cell['budget']}, "
+                          f"{arm} ({100 * drift:.2f}% drift)")
+        bottom.plot(index[:len(ref_loops)], ref_loops, marker="s", color="#1f77b4",
+                    linewidth=1.2, markersize=5, markerfacecolor="white",
+                    markeredgewidth=1.1, zorder=3,
+                    label=f"Reference arm: cap {reference['cap']}, budget "
+                          f"{reference['budget']}, plain "
+                          f"({100 * _arm_drift(ref_loops):.2f}% drift)")
+        first = statistics.median(loops[:3])
+        last = statistics.median(loops[-3:])
+        bottom.annotate(f"first three: median {first:.1f} ms",
+                        xy=(2, first), xytext=(3.4, first + 0.12 * median), fontsize=8,
+                        color="#d62728", arrowprops={"arrowstyle": "-", "color": "#d62728",
+                                    "linewidth": 0.7})
+        bottom.annotate(f"last three: median {last:.1f} ms",
+                        xy=(6, last), xytext=(4.2, last - 0.2 * median), fontsize=8,
+                        color="#d62728", arrowprops={"arrowstyle": "-", "color": "#d62728",
+                                    "linewidth": 0.7})
+        bottom.set_xticks(index)
+        bottom.set_xlabel("Measured whole-workload loop, in execution order", fontsize=9)
+        bottom.set_ylabel("Loop wall time (ms)", fontsize=9)
+        low = min(loops + ref_loops)
+        high = max(loops + ref_loops)
+        bottom.set_ylim(0.72 * low, 1.14 * high)
+        bottom.legend(fontsize=8, loc="upper center", bbox_to_anchor=(0.5, -0.2),
+                      ncol=1, frameon=False)
+        bottom.tick_params(labelsize=8.5)
+        bottom.grid(True, which="major", alpha=0.25)
+        bottom.spines[["top", "right"]].set_visible(False)
+    fig.text(0.04, 0.305, "C  Repeated-loop drift on the worst arm against the fatal guard",
+             fontsize=10, weight="bold")
     fig.suptitle("vLLM 0.27.1 CPU engine loop: 128-request workload\n"
                  f"Run status {result['status'].upper()}: diagnostic timings", fontsize=11,
-                 y=0.99)
+                 y=0.992)
     output.mkdir(parents=True, exist_ok=True)
     for extension in ("png", "pdf"):
         fig.savefig(output / f"phase_cost.{extension}", dpi=220)
