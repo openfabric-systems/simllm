@@ -187,17 +187,27 @@ Neither rounding observation adds to a behavioral score.
 
 ![Decode throughput against TPOT with analytical crossovers](figures/decode-hbm-crossover.png)
 
-[Vector PDF](figures/decode-hbm-crossover.pdf). The left column is the
-frontier per geometry at nominal bandwidth, with every device's weight-only
-TPOT floor drawn as a thin vertical line and listed in the panel title; the
-right column is the frozen bandwidth axis on H200, TPOT against batch at
-half, nominal and double HBM bandwidth, where the factor-two shift below
-the crossover and the convergence onto the arithmetic line above it are
-visible directly. Circles mark the nine swept
-batches; diamonds mark exact analytical crossovers, including short-context
-knees slightly beyond batch 256. Lines include those analytical knees so a
-coarse batch interval does not hide the bend. Large-context crossovers beyond
-the displayed sweep are listed in the table above. Coincident B100/B200
-memory curves and H100/H200 arithmetic plateaus are expected. The figure
-shows conditional roofline operating curves, not a capacity-screened or
-calibrated deployment frontier. Both axes are logarithmic.
+[Vector PDF](figures/decode-hbm-crossover.pdf). The left column shows output
+rate per graphics processing unit (GPU) against time per output token (TPOT)
+at nominal high-bandwidth memory (HBM) bandwidth. Thin vertical lines mark
+each device's weight-only floor, listed in milliseconds in the panel titles;
+B100 and B200 share a floor. The short-context memory segments are nearly
+vertical here, corresponding to nearly flat TPOT against batch on the right.
+Cache reads make these segments rise slightly above the weight-only floor.
+The right column holds the device at H200: downward triangles, circles and
+upward triangles denote half, nominal and double bandwidth. At a fixed batch,
+doubling bandwidth halves TPOT while both arms remain memory-bound. Arms
+converge only when both become arithmetic-bound: all three DeepSeek arms
+meet by batch 256, whereas the dense short-context half-bandwidth arm has
+not yet crossed, and the 7B-class long-context arms remain separated.
+Device colors in the bottom legend apply only to the left column. Solid
+lines mean context C=1 for dense models and C=2000 for DeepSeek; dashed
+lines mean C=2048. Circles on the left and bandwidth-specific markers on
+the right mark the nine swept batches. Hollow diamonds mark analytical
+crossovers, and lines pass through those exact knees. Left panels also
+include short-context knees slightly beyond batch 256; right panels stop
+at batch 256. Large-context knees beyond the sweep are listed above.
+Coincident B100/B200 memory curves and H100/H200 arithmetic plateaus are
+expected. Both axes in every panel are logarithmic; k denotes thousands.
+These are conditional model curves, not capacity-screened or calibrated
+deployment predictions.
