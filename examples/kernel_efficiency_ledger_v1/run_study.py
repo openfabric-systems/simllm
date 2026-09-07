@@ -381,7 +381,7 @@ def evaluate(root: Path = ROOT) -> tuple[list[dict], dict]:
                 "threshold changed rank order")
     summary = {
         "schema": "simllm-kernel-efficiency-study-v1", "expectation_commit": EXPECTATION_COMMIT,
-        "freeze_sha256": {name: hashlib.sha256((HERE / name).read_bytes()).hexdigest()
+        "freeze_sha256": {name: source_digest(HERE / name)
                           for name in ("expectations.md", "expectations.json")},
         "source_sha256": freeze["source_sha256"], "analysis_state": "complete",
         "run_state": "void-for-calibration-with-findings", "behavioral_score": None,
