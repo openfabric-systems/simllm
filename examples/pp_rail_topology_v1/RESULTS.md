@@ -131,9 +131,17 @@ projections remain in the small result table.
 
 ![PP FCT and serial-chain share](figures/pp_rail.png)
 
-The [PDF figure](figures/pp_rail.pdf) is the same plain matplotlib rendering.
-Colors identify P and line styles identify attachment layout. Coincident
-curves are labeled. Both plots use simulator measurements and projections.
+The [PDF figure](figures/pp_rail.pdf) has the same content. Panel A is the
+physical PP hop p99 against pipeline depth on both fabrics with the pre-run
+data-arrival floors (3.31 us through one leaf, 5.31 us through the spine) and
+the topology-free null-network value as reference lines: the 21.8 percent
+node-local penalty is the extra two links, and both fabrics sit about 7 us
+above their data floors because sender-visible completion includes in-band
+control. Panel B is the same p99 against concurrent EP participants at every
+depth, the load axis whose frozen growth hypothesis this run refuted: every
+line is flat to 0 ps. Panel C is physical step completion against depth with
+the declared compute plus data-floor chain. Panel D is the background EP
+all-to-all phase itself on both fabrics and both profiles.
 
 ## Frozen relations and evidence classes
 

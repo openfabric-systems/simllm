@@ -327,50 +327,90 @@ def digest(path: Path) -> str:
 
 
 def draw(summary: dict, directory: Path) -> None:
+    """Four views: hop FCT against depth and against load, the step chain, the EP phase.
+
+    Panel A: physical PP hop p99 against pipeline width on both fabrics, with
+    the pre-run data-arrival floors (one leaf, two links; spine, four links)
+    and the topology-free null-network value as reference lines. Panel B: the
+    same p99 against concurrent EP participants at every width, the load axis
+    whose frozen growth hypothesis the run refuted. Panel C: physical step
+    completion against width with the declared compute plus data-floor chain.
+    Panel D: the background EP phase makespan itself on both fabrics.
+    """
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    from matplotlib.lines import Line2D
 
-    figure, axes = plt.subplots(2, 2, figsize=(7, 5.5), sharex=True)
-    for column, profile in enumerate(PROFILES):
-        for variant, style in (("node-local", "-"), ("rail", "--")):
-            for width in WIDTHS:
-                color = f"C{WIDTHS.index(width)}"
-                cells = sorted((row for row in summary["configurations"]
-                                if row["variant"] == variant and row["pp_width"] == width
-                                and row["profile"] == profile and "pp_fct_p99_ps" in row),
-                               key=lambda row: row["ep_width"])
-                if not cells:
-                    continue
-                label = f"{variant}, P={width}"
-                axes[0, column].plot([r["ep_width"] for r in cells],
-                                     [r["pp_fct_p99_ps"] / 1e6 for r in cells],
-                                     style, color=color, marker="o", label=label)
-                axes[1, column].plot([r["ep_width"] for r in cells],
-                                     [100 * r["pp_communication_projection_share"] for r in cells],
-                                     style, color=color, marker="o", label=label)
-        axes[0, column].set_title(profile + (" (topology-free)" if column == 0 else " (Clos)"))
-        axes[0, column].set_ylabel("PP hop p99 FCT (us)")
-        axes[1, column].set_ylabel("PP communication projection (%)")
-        axes[1, column].set_xlabel("EP participants")
-        axes[1, column].set_xticks(EP_WIDTHS)
-        axes[0, column].margins(y=0.15)
-        axes[1, column].margins(y=0.15)
-    handles = [Line2D([], [], color=f"C{WIDTHS.index(width)}", marker="o", label=f"P={width}")
-               for width in reversed(WIDTHS)]
-    handles += [Line2D([], [], color="black", linestyle=style, label=variant)
-                for variant, style in (("node-local", "-"), ("rail", "--"))]
-    figure.legend(handles=handles, loc="lower center", ncol=5, fontsize=8)
-    axes[0, 0].text(0.5, 0.06, "All P and both fabrics overlap", transform=axes[0, 0].transAxes,
-                    ha="center", fontsize=8)
-    axes[0, 1].text(0.5, 0.98, "Node-local P=4,8 overlap", transform=axes[0, 1].transAxes,
-                    ha="center", va="top", fontsize=8)
-    figure.tight_layout(rect=(0, 0.12, 1, 1))
+    rows = [row for row in summary["configurations"] if "pp_fct_p99_ps" in row]
+    colors = {"rail": "#1f77b4", "node-local": "#d62728"}
+
+    def pick(profile, variant, **fixed):
+        return sorted((r for r in rows if r["profile"] == profile and r["variant"] == variant
+                       and all(r[k] == v for k, v in fixed.items())),
+                      key=lambda r: (r["pp_width"], r["ep_width"]))
+
+    figure, axes = plt.subplots(2, 2, figsize=(12.5, 7.6), layout="constrained")
+    ax = axes[0, 0]
+    for variant in ("rail", "node-local"):
+        cells = pick("rnic-cn", variant, ep_width=0)
+        ax.plot([r["pp_width"] for r in cells], [r["pp_fct_p99_ps"] / 1e6 for r in cells],
+                marker="o", color=colors[variant], label=f"rnic-cn, {variant}, no EP load")
+        floor = cells[0]["bounds"]["data_arrival_floor_ps"] / 1e6
+        ax.axhline(floor, color=colors[variant], linewidth=0.8, linestyle=":",
+                   label=f"{variant} data-arrival floor {floor:.2f} us")
+    null = pick("rnic-nn", "rail", ep_width=0)
+    ax.axhline(null[0]["pp_fct_p99_ps"] / 1e6, color="gray", linewidth=0.8, linestyle="--",
+               label=f"rnic-nn topology-free {null[0]['pp_fct_p99_ps'] / 1e6:.2f} us")
+    ax.set(title="A: PP hop p99 FCT against pipeline depth, physical, 400G",
+           xlabel="Pipeline stages P", ylabel="PP hop p99 FCT (us)", xticks=WIDTHS, ylim=(0, 14))
+    ax.legend(fontsize=7, loc="lower right")
+
+    ax = axes[0, 1]
+    for variant in ("rail", "node-local"):
+        for width, marker in zip(WIDTHS, ("o", "s", "^")):
+            cells = pick("rnic-cn", variant, pp_width=width)
+            ax.plot([r["ep_width"] for r in cells], [r["pp_fct_p99_ps"] / 1e6 for r in cells],
+                    marker=marker, color=colors[variant], linewidth=1,
+                    label=f"{variant}, P={width}")
+    ax.set(title="B: PP hop p99 against concurrent EP load (physical), 0 ps change",
+           xlabel="EP participants in the background all-to-all", ylabel="PP hop p99 FCT (us)",
+           xticks=EP_WIDTHS, ylim=(9.5, 13.5))
+    ax.legend(fontsize=7, loc="center right", ncols=2)
+
+    ax = axes[1, 0]
+    for variant in ("rail", "node-local"):
+        cells = pick("rnic-cn", variant, ep_width=0)
+        ax.plot([r["pp_width"] for r in cells], [r["pp_final_stage_projection_ps"] / 1e6 for r in cells],
+                marker="o", color=colors[variant], label=f"rnic-cn, {variant}, step completion")
+        ax.plot([r["pp_width"] for r in cells],
+                [(r["pp_width"] * 1_000_000 + (r["pp_width"] - 1) * r["bounds"]["data_arrival_floor_ps"]) / 1e6
+                 for r in cells], linestyle=":", color=colors[variant],
+                label=f"{variant}: P x 1 us compute + (P-1) data floors")
+    ax.set(title="C: step completion against depth, 1 us declared stage compute",
+           xlabel="Pipeline stages P", ylabel="Step completion (us)", xticks=WIDTHS)
+    ax.legend(fontsize=7, loc="upper left")
+
+    ax = axes[1, 1]
+    for variant in ("rail", "node-local"):
+        cells = [r for r in pick("rnic-cn", variant, pp_width=8) if r["ep_width"] > 0]
+        ax.plot([r["ep_width"] for r in cells], [r["ep_phase_makespan_ps"] / 1e6 for r in cells],
+                marker="o", color=colors[variant], label=f"rnic-cn, {variant}, P=8")
+        cells = [r for r in pick("rnic-nn", variant, pp_width=8) if r["ep_width"] > 0]
+        ax.plot([r["ep_width"] for r in cells], [r["ep_phase_makespan_ps"] / 1e6 for r in cells],
+                marker="x", linestyle="--", color=colors[variant], label=f"rnic-nn, {variant}, P=8")
+    ax.set(title="D: background EP all-to-all phase makespan, 1 MiB per remote pair",
+           xlabel="EP participants", ylabel="EP phase makespan (us)", xticks=(8, 32), yscale="log")
+    ax.legend(fontsize=7, loc="upper left")
+    for ax in axes.flat:
+        ax.tick_params(labelsize=8)
+        ax.grid(True, which="major", alpha=0.25)
+        ax.title.set_fontsize(9)
+    figure.suptitle("Pipeline activations on the rail-optimized and node-local Clos variants "
+                    "(64 endpoints, 400G, 64 KiB per hop)", fontsize=10)
     directory.mkdir(parents=True, exist_ok=True)
     figure.savefig(directory / "pp_rail.png", dpi=160)
-    figure.savefig(directory / "pp_rail.pdf")
+    figure.savefig(directory / "pp_rail.pdf", metadata={"CreationDate": None})
     plt.close(figure)
 
 
