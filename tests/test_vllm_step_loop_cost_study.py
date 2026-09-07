@@ -134,3 +134,11 @@ def test_profile_names_are_portable():
         "vllm/v1/engine/core.py:584:step")
     assert study.portable_function("<frozen importlib._bootstrap>", 1, "load") == "builtin:load"
     assert study.portable_function("python3.10/threading.py", 1, "wait") == "threading.py:1:wait"
+
+
+def test_version_pin_accepts_only_the_exact_supplied_cpu_build():
+    study.require_versions("0.27.1+cpu", "0.27.1")
+    for distribution, module in (("0.27.1", "0.27.1"), ("0.27.2+cpu", "0.27.1"),
+                                 ("0.27.1+cpu", "0.27.2")):
+        with pytest.raises(RuntimeError, match="pin mismatch"):
+            study.require_versions(distribution, module)

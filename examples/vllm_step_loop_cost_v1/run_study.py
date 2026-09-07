@@ -24,6 +24,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[2]
 STUDY = Path(__file__).resolve().parent
 FREEZE = "3c7d2a090bfa12f747087c66e22612ebe4e4e8ca"
+AMENDMENT = "c7a0da5fad517135f0e40f500ad32db2b3b34c17"
 PHASES = (
     "scheduler", "kv_allocate", "kv_free", "executor", "scheduler_output",
     "frontend_output", "engine_residual", "admission", "output_collection",
@@ -337,9 +338,15 @@ def evaluate_relations(rows):
     return relations
 
 
+def require_versions(distribution, module):
+    if (distribution, module) != ("0.27.1+cpu", "0.27.1"):
+        raise RuntimeError(f"vLLM pin mismatch: distribution={distribution}, module={module}")
+
+
 def preflight(oracle, config, model):
     import importlib.metadata
 
+    import vllm
     from vllm.v1.core.sched import scheduler
 
     def sha(path):
@@ -352,16 +359,18 @@ def preflight(oracle, config, model):
         if (ROOT / name).read_bytes() != frozen:
             raise RuntimeError(f"frozen source changed: {name}")
     subprocess.run(["git", "merge-base", "--is-ancestor", FREEZE, "HEAD"], cwd=ROOT, check=True)
+    subprocess.run(["git", "merge-base", "--is-ancestor", AMENDMENT, "HEAD"], cwd=ROOT, check=True)
     actual = sha(Path(scheduler.__file__))
     if actual != config["oracle"]["scheduler_sha256"]:
         raise RuntimeError("scheduler source hash mismatch")
-    if importlib.metadata.version("vllm") != "0.27.1":
-        raise RuntimeError("vLLM version mismatch")
+    distribution = importlib.metadata.version("vllm")
+    require_versions(distribution, vllm.__version__)
     if sha(model / "config.json") != config["oracle"]["model_config_sha256"]:
         raise RuntimeError("model configuration hash mismatch")
     if model.name != config["oracle"]["model_revision"]:
         raise RuntimeError("select the exact pinned model revision snapshot")
-    return {"scheduler_sha256": actual, "source_sha256": {n: sha(ROOT / n) for n in files},
+    return {"distribution_version": distribution, "module_version": vllm.__version__,
+            "scheduler_sha256": actual, "source_sha256": {n: sha(ROOT / n) for n in files},
             "workload_sha256": digest([vars(r) for r in oracle.wall_cell(config).requests]),
             "model_revision": model.name, "model_config_sha256": sha(model / "config.json")}
 
@@ -405,7 +414,8 @@ def run(args):
     cpu_model = next((line.split(":", 1)[1].strip() for line in
                       Path("/proc/cpuinfo").read_text().splitlines()
                       if line.startswith("model name")), "undisclosed")
-    result = {"schema": "simllm-vllm-step-loop-cost-v1", "expectation_commit": FREEZE,
+    result = {"schema": "simllm-vllm-step-loop-cost-v1", "expectation_commit": AMENDMENT,
+              "original_expectation_commit": FREEZE,
               "attempt": args.attempt, "provenance": provenance,
               "status": "void" if violations else "nonvoid",
               "fatal_violations": violations, "attribute_floor": floor,
