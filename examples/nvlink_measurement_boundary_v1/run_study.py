@@ -166,12 +166,12 @@ def historical_audit(frozen):
 
 
 def run_study(output_root):
-    own_path = str(Path(__file__).resolve().relative_to(ROOT))
+    own_path = Path(__file__).resolve().relative_to(ROOT).as_posix()
     if Path(__file__).read_bytes() != git("show", f"HEAD:{own_path}"):
         raise ValueError("commit the audit runner before executing the study")
     git("merge-base", "--is-ancestor", FREEZE, "HEAD")
     for name in ("expectations.md", "expectations.json"):
-        relative = str((HERE / name).relative_to(ROOT))
+        relative = (HERE / name).relative_to(ROOT).as_posix()
         if (HERE / name).read_bytes() != git("show", f"{FREEZE}:{relative}"):
             raise ValueError("audit expectations changed after the freeze")
     frozen = json.loads((HERE / "expectations.json").read_bytes())
