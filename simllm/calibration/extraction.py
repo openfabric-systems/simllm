@@ -42,6 +42,7 @@ from .model_inventory import (
 )
 
 SUPPORTED_SUITE_SCHEMA = "simllm-transformer-dag-suite-v1"
+MXFP4_GROUP32_QUANTIZATION = "mxfp4-e2m1-group32-e8m0"
 ORDERED_FAMILIES = (
     "attn_gemm",
     "attn_score",
@@ -546,6 +547,17 @@ def _validate_metadata_weight_identity(value: Mapping[str, Any]) -> None:
     if canonical_sha256(shards) != value["weight_sha256"]:
         raise ModelExtractionError("API weight shard manifest hash does not match the suite")
     quantization = value["quantization"]
+    if quantization == MXFP4_GROUP32_QUANTIZATION:
+        # Count weight values separately from their additional block scales.
+        # Tensor boundaries, padding and higher-precision exceptions can only
+        # increase this whole-model lower bound.
+        packed_value_bytes = (parameter_count + 1) // 2
+        minimum_scale_bytes = (parameter_count + 31) // 32
+        if packed_value_bytes + minimum_scale_bytes > total_bytes:
+            raise ModelExtractionError(
+                "API packed parameter and scale payload exceeds shard bytes"
+            )
+        return
     if quantization == "none" and 2 * parameter_count > total_bytes:
         raise ModelExtractionError("API BF16 parameter payload exceeds physical shard bytes")
     if quantization != "none" and parameter_count > total_bytes:
