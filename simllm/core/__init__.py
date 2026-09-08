@@ -161,6 +161,7 @@ from simllm.core.runtime import (
     NativeRnicSession,
     NativeRnicTransaction,
     QueueVisit,
+    ReceiverIngressWqeProjection,
     RnicAuthorityMode,
     RuntimeCriticalSegment,
     RuntimeOperationRecord,
@@ -169,6 +170,7 @@ from simllm.core.runtime import (
     StrictPriorityArbitrationPolicy,
     WeightedRoundRobinArbitrationPolicy,
     WqeLifecycleProjection,
+    WqePortReservation,
     collective_goal_tags,
 )
 from simllm.core.step import (
@@ -292,6 +294,7 @@ __all__ = [
     "PrecisionConfig",
     "ProcessingStage",
     "QueueVisit",
+    "ReceiverIngressWqeProjection",
     "RequestBookkeeper",
     "RequestLifecycleError",
     "RequestLifecycleState",
@@ -323,6 +326,7 @@ __all__ = [
     "WorkPayload",
     "WorkloadLevel",
     "WqeLifecycleProjection",
+    "WqePortReservation",
     "bookkeeping_ledger_from_json",
     "bookkeeping_ledger_to_json",
     "check_bookkeeping_projection",

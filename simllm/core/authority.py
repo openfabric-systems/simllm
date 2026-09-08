@@ -161,8 +161,47 @@ def _visit_event_keys(report: RuntimeReport) -> Counter[_EventKey]:
 def _wqe_event_keys(report: RuntimeReport) -> Counter[_EventKey]:
     """Return the lifecycle events every WQE projection projects."""
 
+    from simllm.core.runtime import ReceiverIngressWqeProjection
+
     expected: Counter[_EventKey] = Counter()
     for wqe in report.wqes:
+        if isinstance(wqe, ReceiverIngressWqeProjection):
+            for resource, eligible, started, finished, byte_count in (
+                (
+                    ResourceRef(ResourceKind.NIC_SEND_QUEUE, wqe.sq_id),
+                    wqe.eligible_at_ps,
+                    wqe.source_ready_at_ps,
+                    wqe.source_ready_at_ps,
+                    0,
+                ),
+                (
+                    ResourceRef(ResourceKind.NIC_RECEIVE_QUEUE, wqe.rq_id),
+                    wqe.source_ready_at_ps,
+                    wqe.started_at_ps,
+                    wqe.finished_at_ps,
+                    wqe.payload_bytes,
+                ),
+            ):
+                for phase, timestamp, progress_bytes in (
+                    (EventPhase.SUBMITTED, wqe.submitted_at_ps, None),
+                    (EventPhase.QUEUED, eligible, None),
+                    (EventPhase.STARTED, started, None),
+                    (EventPhase.PROGRESS, finished, byte_count),
+                ):
+                    expected[
+                        (wqe.operation_id, wqe.wqe_id, phase, resource, timestamp, progress_bytes)
+                    ] += 1
+            expected[
+                (
+                    wqe.operation_id,
+                    wqe.wqe_id,
+                    EventPhase.COMPLETED,
+                    ResourceRef(ResourceKind.COMPLETION_QUEUE, wqe.cq_id),
+                    wqe.completed_at_ps,
+                    wqe.payload_bytes,
+                )
+            ] += 1
+            continue
         queued_at_ps = (
             wqe.network_eligible_at_ps
             if wqe.network_eligible_at_ps is not None
@@ -197,6 +236,66 @@ def _wqe_event_keys(report: RuntimeReport) -> Counter[_EventKey]:
                 (wqe.operation_id, wqe.wqe_id, phase, resource, timestamp_ps, byte_count)
             ] += 1
     return expected
+
+
+def _check_receiver_visits(report: RuntimeReport) -> None:
+    """Join both coarse admission stages to their one WQE reservation."""
+
+    from simllm.core.runtime import QueueVisit, ReceiverIngressWqeProjection
+
+    expected: Counter[QueueVisit] = Counter()
+    ingress_ids: set[str] = set()
+    for wqe in report.wqes:
+        if not isinstance(wqe, ReceiverIngressWqeProjection):
+            continue
+        if wqe.wqe_id in ingress_ids:
+            raise ValueError("duplicate receiver ingress WQE identity")
+        ingress_ids.add(wqe.wqe_id)
+        for kind, resource_id, stage, eligible, started, finished, completed, size in (
+            (
+                ResourceKind.NIC_SEND_QUEUE,
+                wqe.sq_id,
+                "coarse_source_admission",
+                wqe.eligible_at_ps,
+                wqe.source_ready_at_ps,
+                wqe.source_ready_at_ps,
+                wqe.source_ready_at_ps,
+                0,
+            ),
+            (
+                ResourceKind.NIC_RECEIVE_QUEUE,
+                wqe.rq_id,
+                "coarse_receiver_service",
+                wqe.source_ready_at_ps,
+                wqe.started_at_ps,
+                wqe.finished_at_ps,
+                wqe.completed_at_ps,
+                wqe.payload_bytes,
+            ),
+        ):
+            expected[
+                QueueVisit(
+                    execution_id=wqe.execution_id,
+                    operation_id=wqe.operation_id,
+                    resource=ResourceRef(kind, resource_id),
+                    submitted_at_ps=wqe.submitted_at_ps,
+                    eligible_at_ps=eligible,
+                    started_at_ps=started,
+                    finished_at_ps=finished,
+                    completed_at_ps=completed,
+                    service_bytes=size,
+                    subject_object_id=wqe.wqe_id,
+                    stage=stage,
+                )
+            ] += 1
+    actual = Counter(
+        visit
+        for visit in report.visits
+        if visit.subject_object_id in ingress_ids
+        or visit.stage in {"coarse_source_admission", "coarse_receiver_service"}
+    )
+    if actual != expected:
+        raise ValueError("receiver ingress visits disagree with their WQE authority")
 
 
 def _logical_completion_keys(
@@ -319,6 +418,7 @@ def check_completion_event_projection(
                 f"WQE {wqe.wqe_id!r} names execution {wqe.execution_id!r}, "
                 f"not {graph.execution_id!r}"
             )
+    _check_receiver_visits(report)
     subject_ids = {
         visit.subject_object_id
         for visit in report.visits
