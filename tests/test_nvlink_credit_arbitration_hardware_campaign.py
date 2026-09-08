@@ -121,6 +121,36 @@ def test_archive_stage_uses_the_frozen_blob_without_remote_git(
     assert frozen["study"]["status"] == "EXPECTATIONS_ONLY"
 
 
+def test_campaign_rejects_an_incorrect_historical_source_digest(runner, frozen):
+    changed = json.loads(json.dumps(frozen))
+    changed["aligned_authority"]["module_base_blob_sha256"] = "0" * 64
+    with pytest.raises(RuntimeError, match="source digest disagrees"):
+        runner.verify_frozen_authority(changed)
+
+
+def test_archive_requires_actual_frozen_module_bytes(runner, frozen, tmp_path, monkeypatch):
+    authority = frozen["aligned_authority"]
+    for relative in (
+        authority["module_path"],
+        authority["candidate_profile"]["path"],
+        frozen["producer_contract"]["source"]["path"],
+    ):
+        target = tmp_path / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / relative, target)
+    historical = subprocess.run(
+        ("git", "show", f"{runner.EXPECTATIONS_COMMIT}:{authority['module_path']}"),
+        cwd=ROOT,
+        capture_output=True,
+        check=True,
+    ).stdout
+    monkeypatch.setattr(runner, "ROOT", tmp_path)
+    with pytest.raises(RuntimeError, match="source digest disagrees"):
+        runner.verify_frozen_authority(frozen)
+    (tmp_path / authority["module_path"]).write_bytes(historical)
+    runner.verify_frozen_authority(frozen)
+
+
 def test_h1_expands_all_pairs_and_the_seeded_31_size_order(runner, frozen):
     points = runner.h1_points(frozen)
     assert len(points) == 372
