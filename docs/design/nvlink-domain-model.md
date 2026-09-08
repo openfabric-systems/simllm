@@ -2,7 +2,7 @@
 
 The NVLink domain decomposes one directed peer transfer into three services:
 TX, switch and RX. It exposes two mutually exclusive authorities. The v1
-compatibility authority preserves every merged consumer byte. The v2 aligned
+compatibility authority preserves every merged consumer byte. The v3 causal
 authority models generation-scoped flits, link acknowledgement and replay,
 explicit traffic classes and virtual channels, receiver-owned credit release,
 ordered visibility, and NVSwitch input ports, virtual output queues and
@@ -30,7 +30,7 @@ selected A100 mode is an identity operation rather than an omitted box.
 
 ## Authorities and scope
 
-Three merged surfaces are authoritative for this domain:
+Four surfaces define the domain and its evidence:
 
 - `simllm/backends/htsim_nvlink.py` defines the TX, switch and RX contracts,
   their composition, the timestamps and the analytic bypass.
@@ -40,6 +40,9 @@ Three merged surfaces are authoritative for this domain:
 - `examples/nvlink_mechanism_alignment_v1/expectations.json` freezes the
   aligned physical oracles, consumer pins and void rules before the v2
   implementation and first run.
+- `examples/nvlink_causal_service_v1/expectations.json` freezes independent
+  causal-service oracles, finite ownership and compatibility controls before
+  the v3 implementation and first run.
 
 The profile schema is `simllm-htsim-nvlink-candidate-profile-v1`. The scored
 profile carries parameter-specific TRAF-70 evidence: the two endpoint rates
@@ -82,10 +85,13 @@ separation keeps the merged ledger byte-identical while making the physical
 contention policy visible at every new call site.
 
 `serve_aligned`, or `serve` with `NvlinkMechanismAuthority.ALIGNED`, selects
-the v2 authority. A run cannot select both. The compatibility ledger remains
-the sole mutable authority when v2 is disabled; the receiver-buffer, link,
-ordering and switch ledgers are the sole mutable authorities when v2 is
-enabled.
+`aligned_v3`, implemented by `NvlinkCausalEngine` behind the same domain
+interface. A run cannot select both authorities. One event calendar owns all
+link, buffer, ordering and switch transitions; result ledgers are read-only
+projections of that calendar. The compatibility ledger is the sole mutable
+authority when the causal path is disabled. The former aligned v2 fixed-point
+engine remains reproducible from its historical Git source and artifacts; it
+is not a second enabled scheduler.
 
 The module timestamps are htsim-style local evidence, not core `QueueVisit`
 records. Their mapping is:
@@ -93,6 +99,8 @@ records. Their mapping is:
 | Boundary | Representation | Meaning |
 |---|---|---|
 | Logical release | `released_at_ps` | The extent, and then each packet, may enter TX |
+| Causal eligibility | `tx_eligible_at_ps` | Logical release and, for a response, target request visibility are satisfied |
+| Buffer reservation | `NvlinkBufferVisit.reserved_at_ps` | The upstream grant owns finite downstream space before putting bytes on the link |
 | TX grant | `tx_started_at_ps` | Destination credit, selected link and endpoint egress are all available |
 | TX release | `tx_finished_at_ps` | Wire serialization on the selected bonded link completes |
 | Link acknowledgement | `acknowledged_at_ps` | The final error-free transmission is acknowledged and its replay buffer entry can release |
@@ -102,8 +110,8 @@ records. Their mapping is:
 | Credit availability | `credit_available_at_ps` | The receiver release plus the declared return transport reaches the sender |
 | Ordered visibility | `visible_at_ps` | The packet and all required prior sequence members are consumer-visible |
 
-There is no separate `eligible_at` field and no emitted core `QueueVisit` in
-this candidate module. Downstream work must map these boundaries to the shared
+The packet exposes TX eligibility separately from its grant. The candidate
+module does not itself emit a core `QueueVisit`. Downstream work must map these boundaries to the shared
 queue-visit contract before using them in an additive critical-path metric.
 
 ## TX module
@@ -167,11 +175,18 @@ None claims the physical A100 virtual-channel count or wire-credit encoding.
 The v1 compatibility abstraction keeps its original timer so inherited study
 bytes do not move. The aligned authority never frees sender capacity from TX.
 It records RX buffer admission and release, then makes the corresponding
-credit sender-visible only after the declared return transport. The coupled
-solver advances until TX choices and receiver releases reach a fixed point.
+credit sender-visible only after the declared return transport. A monotonically advancing event calendar admits only currently eligible
+packets. It reserves finite downstream byte capacity and per-link credits at
+the upstream grant, then returns capacity after the owning receiver releases
+it. A future transfer reserves nothing before its release. Read responses
+become eligible only after their request is visible at the target; additional
+target processing service is explicitly zero, a lower-envelope assumption.
 Error-free link acknowledgement adds zero bytes and time. Explicit injected
 errors retain the packet in the replay buffer and add nonnegative retransmit
-bytes and delay. The acknowledgement encoding, timer and replay-buffer depth
+bytes and delay. The declared replay policy blocks the selected link and total
+source egress through the complete retry train. Each attempt rounds its own
+serialization independently. This conservative resource-holding policy does
+not claim the product's attempt arbitration or independent replay-buffer port. The acknowledgement encoding, timer and replay-buffer depth
 remain unidentified product parameters.
 
 These values and the one-modeled-virtual-channel scope are not hardware
@@ -180,6 +195,30 @@ bytes or 262,144 payload bytes. One link takes 2,785,280 ps to serialize its
 256 packets, which is longer than the declared 200,000 ps return. The candidate
 therefore predicts no nominal credit stall. A hardware sweep that sees no knee
 leaves the unit, window and return unidentifiable rather than confirming them.
+
+## Causal capacity and deployment boundary
+
+A direct transfer reserves the destination-and-virtual-channel byte pool
+before TX. The reservation owns both in-flight and resident bytes; the
+receiver releases it after ingress service and advertises the freed capacity
+after the declared return latency. A queued route reserves its input,
+virtual-channel and destination switch buffer before TX. The switch releases
+that first-hop credit after crossbar service. Its grant separately reserves
+the destination receive pool, which owns the second hop. Every buffer visit
+joins packet identity, capacity, bytes, upstream grant, arrival, physical
+release and advertised return.
+
+The queued probe composes declared per-peer link bundles with an input/output
+crossbar. It does not identify physical GPU-to-NVSwitch attachments. Deployment
+integration under TRAF-45 binds explicit physical ports and shared attachment
+calendars before selecting a switched model; a per-peer probe cannot stand in
+for an eight-GPU NVSwitch system. Direct-mesh bypass remains an identity.
+
+`completion_time_ps` is final consumer visibility. `physical_drain_time_ps`
+includes outstanding acknowledgement and credit returns. Their difference is
+physical cleanup and is not added to an already completed request. The former
+`fixed_point_iterations` diagnostic is zero; `event_count` records calendar
+work and is not a performance or validation score.
 
 ## Physical contention and arbitration
 
@@ -226,10 +265,13 @@ effective window, pool scope and arbitration policy on the actual node.
 
 Each directed peer pair has four link cursors, each at a declared 25 GB/s.
 For every packet, TX chooses the link with the earliest cursor; a tie chooses
-the lowest link index. The start time is the maximum of logical release, that
-link cursor, the source endpoint cursor and the selected credit-slot return.
-The link cursor advances by wire serialization at 25 GB/s, while the endpoint
-cursor advances by serialization at 300 GB/s.
+the lowest link index. A grant requires logical and causal eligibility, an available
+link and source endpoint, returned link credits, and reserved downstream
+capacity. Source feed and link serialization overlap, but the final byte
+cannot leave before either completes: an error-free packet holds the link for
+the larger of its source-feed and link serialization durations. The source
+endpoint advances by its own service duration. A blocking replay retains both
+resources until the retry train finishes.
 
 This is earliest-available packet striping. It is not round-robin striping,
 and the four physical links are scoped per directed peer pair rather than

@@ -1212,6 +1212,18 @@ TRAF-80 mechanism and evidence deliverable. TRAF-73 remains open and owns every
 unidentified A100 credit, buffer, virtual-channel, return-encoding, striping
 and arbiter value.
 
+The [causal service study](../../examples/nvlink_causal_service_v1/RESULTS.md)
+closes TRAF-90 with 84 model configurations, 36 independent exact completion
+oracles at zero residual and 22 nonzero timing relations in five families.
+All fatal guards hold; four compatibility controls preserve their complete
+canonical results and the absent-profile path preserves object identity. One
+calendar owns causal eligibility, finite downstream reservations, link and
+source grants, receiver visibility and hop-specific credit return. A future
+submission cannot reserve past service and a read response cannot bypass its
+request. Logical completion and physical drain are separate observables. This
+is component correctness; TRAF-45 owns live request latency and physical switched
+attachment, while TRAF-73 and TRAF-86 own hardware identification.
+
 ## Open tasks
 
 Folded 2026-09-07 (maintainer triage): TRAF-3 into TRAF-61 (the disaggregated
@@ -2344,7 +2356,10 @@ shipped collectives.
   destination-side arrival and no per-link routing, so an NVLink or xGMI segment
   cannot be observed the way a wire segment can. Land the packet path over the
   COMP-34 GPU ports using the BACK-48 port-kind-independent vocabulary, and keep
-  the analytic split as a byte-identical off path. The packetized leg must
+  the analytic split as a byte-identical off path. Queued deployment routes
+  bind actual physical ports and shared attachment calendars; the component
+  probe's per-peer incoming links do not establish an NVSwitch attachment.
+  The packetized leg must
   charge destination ingress explicitly at the receiving port instead of
   inheriting the analytic `max(egress_bytes, ingress_bytes)` endpoint-load
   surrogate that CORE-41 installed. The completed CORE-48 supplies opt-in coarse

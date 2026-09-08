@@ -28,7 +28,7 @@ from typing import Generic, TypeVar
 
 NVLINK_CANDIDATE_PROFILE_SCHEMA = "simllm-htsim-nvlink-candidate-profile-v1"
 NVLINK_CANDIDATE_PROFILE_IMPLEMENTATION = "simllm-htsim-nvlink-domain-v1"
-NVLINK_ALIGNED_PROFILE_IMPLEMENTATION = "simllm-htsim-nvlink-domain-v2"
+NVLINK_ALIGNED_PROFILE_IMPLEMENTATION = "simllm-htsim-nvlink-domain-v3"
 NVLINK_CANDIDATE_EVIDENCE_CLASS = "declared_candidate_not_hardware_measurement"
 NVLINK_PUBLIC_MECHANISM_EVIDENCE_CLASS = "public_document_generation_scoped_mechanism"
 NVLINK_SCORED_PROFILE_STATUS = "scored_mixed_parameter_evidence"
@@ -60,7 +60,7 @@ class NvlinkMechanismAuthority(str, Enum):
     """Select the one packet and timing authority for a domain run."""
 
     COMPATIBILITY = "compatibility_v1"
-    ALIGNED = "aligned_v2"
+    ALIGNED = "aligned_v3"
 
 
 class NvlinkTrafficClass(str, Enum):
@@ -701,6 +701,7 @@ class NvlinkFlitPacket:
     link_index: int | None = None
     input_port: int | None = None
     output_port: int | None = None
+    tx_eligible_at_ps: int | None = None
     tx_started_at_ps: int | None = None
     tx_finished_at_ps: int | None = None
     acknowledged_at_ps: int | None = None
@@ -730,6 +731,7 @@ class NvlinkFlitPacket:
         _require_nonnegative_int("sequence", self.sequence)
         _require_nonnegative_int("source", self.source)
         _require_nonnegative_int("destination", self.destination)
+        _require_nonnegative_int("released_at_ps", self.released_at_ps)
         if self.source == self.destination:
             raise ValueError("NVLink packet source and destination must differ")
         _require_enum("direction", self.direction, NvlinkPacketDirection)
@@ -768,6 +770,7 @@ class NvlinkFlitPacket:
             "link_index",
             "input_port",
             "output_port",
+            "tx_eligible_at_ps",
             "tx_started_at_ps",
             "tx_finished_at_ps",
             "acknowledged_at_ps",
@@ -784,6 +787,12 @@ class NvlinkFlitPacket:
             value = getattr(self, name)
             if value is not None:
                 _require_nonnegative_int(name, value)
+        if self.tx_eligible_at_ps is not None:
+            if self.tx_eligible_at_ps < self.released_at_ps:
+                raise ValueError("TX eligibility cannot precede packet release")
+            if (self.tx_started_at_ps is not None
+                    and self.tx_started_at_ps < self.tx_eligible_at_ps):
+                raise ValueError("TX grant cannot precede packet eligibility")
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -798,10 +807,13 @@ class NvlinkCreditRelease:
     credit_units: int
     buffer_released_at_ps: int
     credit_available_at_ps: int
+    buffer_id: str | None = None
 
     def __post_init__(self) -> None:
         _require_text("packet_id", self.packet_id)
         _require_text("virtual_channel", self.virtual_channel)
+        if self.buffer_id is not None:
+            _require_text("buffer_id", self.buffer_id)
         for name in ("source", "destination", "link_index"):
             _require_nonnegative_int(name, getattr(self, name))
         _require_positive_int("credit_units", self.credit_units)
@@ -853,6 +865,36 @@ class NvlinkVisibilityEvent:
 
 
 @dataclass(frozen=True, kw_only=True)
+class NvlinkBufferVisit:
+    """Finite downstream capacity owned from reservation through credit return."""
+
+    packet_id: str
+    buffer_id: str
+    capacity_bytes: int
+    wire_bytes: int
+    reserved_at_ps: int
+    arrived_at_ps: int
+    released_at_ps: int
+    credit_available_at_ps: int
+
+    def __post_init__(self) -> None:
+        for name in ("packet_id", "buffer_id"):
+            _require_text(name, getattr(self, name))
+        for name in ("capacity_bytes", "wire_bytes"):
+            _require_positive_int(name, getattr(self, name))
+        times = (
+            self.reserved_at_ps, self.arrived_at_ps,
+            self.released_at_ps, self.credit_available_at_ps,
+        )
+        for value in times:
+            _require_nonnegative_int("buffer visit time", value)
+        if tuple(sorted(times)) != times:
+            raise ValueError("NVLink buffer ownership timestamps must be ordered")
+        if self.wire_bytes > self.capacity_bytes:
+            raise ValueError("NVLink reservation exceeds its buffer capacity")
+
+
+@dataclass(frozen=True, kw_only=True)
 class NvlinkAlignedDomainResult:
     """Aligned-domain result with exact conservation and authority ledgers."""
 
@@ -877,6 +919,9 @@ class NvlinkAlignedDomainResult:
     max_rx_buffer_occupancy_bytes: int
     random_draw_count: int
     fixed_point_iterations: int
+    buffer_visits: tuple[NvlinkBufferVisit, ...] = ()
+    event_count: int = 0
+    physical_drain_time_ps: int = 0
 
     def canonical_json_bytes(self) -> bytes:
         """Return the stable aligned conformance representation."""
@@ -2069,271 +2114,14 @@ class NvlinkRx:
         return scheduled, max_occupancy
 
 
-class _NvlinkAlignedEngine:
-    """Couple link credits to receiver-owned releases until timing is stable."""
-
-    def __init__(
-        self,
-        profile: NvlinkCandidateProfile,
-        options: NvlinkAlignedOptions,
-    ) -> None:
-        if not isinstance(profile, NvlinkCandidateProfile):
-            raise TypeError("profile must be an NvlinkCandidateProfile")
-        if not isinstance(options, NvlinkAlignedOptions):
-            raise TypeError("options must be an NvlinkAlignedOptions")
-        self.profile = profile
-        self.options = options
-        self.flow_control = options.flow_control or NvlinkFlowControlConfig.from_candidate_profile(
-            profile
-        )
-
-    def serve(
-        self,
-        transfers: Sequence[NvlinkTransfer],
-        *,
-        include_switch: bool,
-    ) -> NvlinkAlignedDomainResult:
-        tx = NvlinkTx(self.profile.tx)
-        packetized = tuple(
-            packet
-            for transfer in transfers
-            for packet in tx.packetize_flits(
-                transfer,
-                packet_format=self.options.packet_format,
-                flow_control=self.flow_control,
-            )
-        )
-        if not packetized:
-            raise ValueError("aligned NVLink service requires at least one packet")
-        if len({packet.packet_id for packet in packetized}) != len(packetized):
-            raise ValueError("aligned NVLink packet identities must be globally unique")
-
-        release_by_packet: dict[str, int] = {}
-        previous_signature: tuple[tuple[object, ...], ...] | None = None
-        delivered: tuple[NvlinkFlitPacket, ...] = ()
-        credit_releases: tuple[NvlinkCreditRelease, ...] = ()
-        switch_grants: tuple[NvlinkSwitchGrant, ...] = ()
-        visibility_events: tuple[NvlinkVisibilityEvent, ...] = ()
-        max_occupancy = 0
-        fixed_point_iterations = 0
-        for iteration in range(1, len(packetized) + 3):
-            transmitted = self._transmit(
-                packetized,
-                credit_release_by_packet=release_by_packet,
-            )
-            if include_switch:
-                forwarded, switch_grants = NvlinkSwitch(
-                    self.profile.switch
-                ).forward_flits(
-                    transmitted,
-                    policy=self._switch_policy(),
-                )
-            else:
-                forwarded = transmitted
-                switch_grants = ()
-            (
-                delivered,
-                max_occupancy,
-                credit_releases,
-                visibility_events,
-            ) = NvlinkRx(self.profile.rx).receive_flits(
-                forwarded,
-                flow_control=self.flow_control,
-            )
-            signature = self._timing_signature(delivered)
-            fixed_point_iterations = iteration
-            if signature == previous_signature:
-                break
-            previous_signature = signature
-            release_by_packet = {
-                release.packet_id: release.credit_available_at_ps
-                for release in credit_releases
-            }
-        else:
-            raise RuntimeError("NVLink receiver-owned credit timing did not converge")
-
-        return self._result(
-            transfers=transfers,
-            delivered=delivered,
-            credit_releases=credit_releases,
-            switch_grants=switch_grants,
-            visibility_events=visibility_events,
-            max_occupancy=max_occupancy,
-            fixed_point_iterations=fixed_point_iterations,
-        )
-
-    def _switch_policy(self) -> NvlinkSwitchPolicy:
-        if self.options.switch_arbitration is NvlinkSwitchArbitration.IDENTITY:
-            return NvlinkIdentitySwitchPolicy()
-        return NvlinkRoundRobinSwitchPolicy()
-
-    def _transmit(
-        self,
-        packets: tuple[NvlinkFlitPacket, ...],
-        *,
-        credit_release_by_packet: Mapping[str, int],
-    ) -> tuple[NvlinkFlitPacket, ...]:
-        link_cursors: dict[tuple[int, int, int], int] = {}
-        endpoint_cursors: dict[int, int] = {}
-        credit_slots: dict[tuple[int, int, int, str], list[int]] = {}
-        credit_visits: dict[tuple[int, int, int, str], int] = {}
-        replay_counts = dict(self.options.replay_counts)
-        scheduled = []
-        for packet in packets:
-            pair = (packet.source, packet.destination)
-            link_ready: list[tuple[int, tuple[int, ...]]] = []
-            for link_index in range(self.profile.tx.links_per_peer):
-                credit_key = (*pair, link_index, packet.virtual_channel)
-                slots = credit_slots.setdefault(
-                    credit_key,
-                    [0] * self.flow_control.credits_per_pool,
-                )
-                visit = credit_visits.get(credit_key, 0)
-                slot_indices = tuple(
-                    (visit + offset) % self.flow_control.credits_per_pool
-                    for offset in range(packet.credit_units)
-                )
-                if len(set(slot_indices)) != packet.credit_units:
-                    raise ValueError("packet requires more credits than the declared pool")
-                ready_at_ps = max(
-                    link_cursors.get((*pair, link_index), 0),
-                    *(slots[index] for index in slot_indices),
-                )
-                link_ready.append((ready_at_ps, slot_indices))
-            link_index = min(
-                range(len(link_ready)),
-                key=lambda candidate: (link_ready[candidate][0], candidate),
-            )
-            ready_at_ps, slot_indices = link_ready[link_index]
-            credit_key = (*pair, link_index, packet.virtual_channel)
-            credit_visits[credit_key] = (
-                credit_visits.get(credit_key, 0) + packet.credit_units
-            )
-            started_at_ps = max(
-                packet.released_at_ps,
-                ready_at_ps,
-                endpoint_cursors.get(packet.source, 0),
-            )
-            replay_count = replay_counts.get(packet.packet_id, 0)
-            total_link_bytes = packet.wire_bytes * (1 + replay_count)
-            link_duration_ps = _serialize_ps(
-                total_link_bytes,
-                self.profile.tx.per_link_rate_bytes_per_second,
-            ) + replay_count * self.options.replay_timeout_ps
-            base_link_duration_ps = _serialize_ps(
-                packet.wire_bytes,
-                self.profile.tx.per_link_rate_bytes_per_second,
-            )
-            endpoint_duration_ps = _serialize_ps(
-                total_link_bytes,
-                self.profile.tx.endpoint_egress_rate_bytes_per_second,
-            )
-            finished_at_ps = started_at_ps + link_duration_ps
-            acknowledged_at_ps = (
-                finished_at_ps + self.options.acknowledgement_latency_ps
-            )
-            link_cursors[(*pair, link_index)] = finished_at_ps
-            endpoint_cursors[packet.source] = started_at_ps + endpoint_duration_ps
-            packet_credit_available = credit_release_by_packet.get(packet.packet_id, 0)
-            slots = credit_slots[credit_key]
-            for slot_index in slot_indices:
-                slots[slot_index] = packet_credit_available
-            scheduled.append(
-                replace(
-                    packet,
-                    link_index=link_index,
-                    tx_started_at_ps=started_at_ps,
-                    tx_finished_at_ps=finished_at_ps,
-                    acknowledged_at_ps=acknowledged_at_ps,
-                    replay_buffer_released_at_ps=acknowledged_at_ps,
-                    replay_count=replay_count,
-                    replay_wire_bytes=replay_count * packet.wire_bytes,
-                    replay_time_ps=link_duration_ps - base_link_duration_ps,
-                )
-            )
-        return tuple(scheduled)
-
-    @staticmethod
-    def _timing_signature(
-        packets: tuple[NvlinkFlitPacket, ...],
-    ) -> tuple[tuple[object, ...], ...]:
-        return tuple(
-            (
-                packet.packet_id,
-                packet.link_index,
-                packet.tx_started_at_ps,
-                packet.tx_finished_at_ps,
-                packet.switch_started_at_ps,
-                packet.switch_finished_at_ps,
-                packet.rx_buffer_accepted_at_ps,
-                packet.rx_started_at_ps,
-                packet.rx_finished_at_ps,
-                packet.rx_buffer_released_at_ps,
-                packet.credit_available_at_ps,
-                packet.visible_at_ps,
-            )
-            for packet in packets
-        )
-
-    def _result(
-        self,
-        *,
-        transfers: Sequence[NvlinkTransfer],
-        delivered: tuple[NvlinkFlitPacket, ...],
-        credit_releases: tuple[NvlinkCreditRelease, ...],
-        switch_grants: tuple[NvlinkSwitchGrant, ...],
-        visibility_events: tuple[NvlinkVisibilityEvent, ...],
-        max_occupancy: int,
-        fixed_point_iterations: int,
-    ) -> NvlinkAlignedDomainResult:
-        request_packets = tuple(
-            packet
-            for packet in delivered
-            if packet.direction is NvlinkPacketDirection.REQUEST
-        )
-        response_packets = tuple(
-            packet
-            for packet in delivered
-            if packet.direction is NvlinkPacketDirection.RESPONSE
-        )
-        request_wire_bytes = sum(packet.wire_bytes for packet in request_packets)
-        response_wire_bytes = sum(packet.wire_bytes for packet in response_packets)
-        replay_wire_bytes = sum(packet.replay_wire_bytes for packet in delivered)
-        return NvlinkAlignedDomainResult(
-            implementation=NVLINK_ALIGNED_PROFILE_IMPLEMENTATION,
-            profile_id=self.profile.profile_id,
-            authority=NvlinkMechanismAuthority.ALIGNED,
-            packets=delivered,
-            credit_releases=credit_releases,
-            switch_grants=switch_grants,
-            visibility_events=visibility_events,
-            logical_bytes=sum(transfer.payload_bytes for transfer in transfers),
-            request_payload_bytes=sum(packet.payload_bytes for packet in request_packets),
-            response_payload_bytes=sum(packet.payload_bytes for packet in response_packets),
-            request_wire_bytes=request_wire_bytes,
-            response_wire_bytes=response_wire_bytes,
-            replay_wire_bytes=replay_wire_bytes,
-            total_wire_bytes=request_wire_bytes + response_wire_bytes + replay_wire_bytes,
-            acknowledgement_count=len(delivered),
-            replayed_packet_count=sum(packet.replay_count > 0 for packet in delivered),
-            replay_time_ps=sum(packet.replay_time_ps for packet in delivered),
-            completion_time_ps=max(
-                (packet.visible_at_ps or 0 for packet in delivered),
-                default=0,
-            ),
-            max_rx_buffer_occupancy_bytes=max_occupancy,
-            random_draw_count=sum(packet.random_draw_count for packet in delivered),
-            fixed_point_iterations=fixed_point_iterations,
-        )
-
-
 class NvlinkDomainService(Generic[_AnalyticResult]):
     """Compose TX, switch, and RX, or preserve the analytical bypass exactly.
 
     ``serve`` retains the merged pre-TRAF-73 flow-policy behavior so preserved
     studies keep their exact bytes under the explicit compatibility authority.
-    The aligned authority deepens the same three modules with flits, link
-    reliability, receiver-owned credits, ordering and crossbar state.
+    The causal aligned authority composes the same three modules with flits,
+    link reliability, finite receiver-owned capacity, ordering and crossbar
+    state under one event calendar.
     ``serve_arbitrated`` remains the compatibility contention entry point.
     """
 
@@ -2366,7 +2154,9 @@ class NvlinkDomainService(Generic[_AnalyticResult]):
                     "aligned authority does not accept a compatibility flow policy"
                 )
             options = aligned_options or NvlinkAlignedOptions()
-            return _NvlinkAlignedEngine(self.profile, options).serve(
+            from .nvlink_runtime import NvlinkCausalEngine
+
+            return NvlinkCausalEngine(self.profile, options).serve(
                 transfers,
                 include_switch=include_switch,
             )
