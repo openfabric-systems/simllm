@@ -10,6 +10,7 @@ import sys
 from collections import Counter, defaultdict
 from dataclasses import asdict, replace
 from enum import Enum
+from fractions import Fraction
 from itertools import pairwise, product
 from pathlib import Path
 
@@ -32,6 +33,7 @@ from simllm.compute import ComputeProvider, DurationEstimate, ModelDims
 from simllm.compute.gpu_packet_port import GpuPeerPacketSession
 from simllm.core import RequestPhase, ScheduledRequest, StepRecord
 from simllm.core.execution_io import execution_graph_to_json, execution_result_to_json
+from simllm.core.step import step_record_to_json, step_result_to_json
 from simllm.placement import (
     FabricLink,
     FabricNodePlacement,
@@ -58,6 +60,8 @@ def canonical(value):
             return row.value
         if isinstance(row, Path):
             return str(row)
+        if isinstance(row, Fraction):
+            return {"numerator": row.numerator, "denominator": row.denominator}
         raise TypeError(f"unsupported study evidence type: {type(row).__name__}")
     return (json.dumps(value, indent=2, sort_keys=True, default=encode) + "\n").encode()
 
@@ -150,7 +154,7 @@ def run_request(config):
                             scheduled=[ScheduledRequest("peer-star", RequestPhase.PREFILL if index == 0 else RequestPhase.DECODE,
                                                         1, context_length=index + 1)])
         result = sink(record)
-        steps.append({"record": asdict(record), "result": asdict(result),
+        steps.append({"record": step_record_to_json(record), "result": step_result_to_json(result),
                       "locality": asdict(sink.locality_outcomes[-1]), "outcome": asdict(sink.outcomes[-1]),
                       "graph": execution_graph_to_json(sink.peer_evidence[-1].graph) if sink.peer_evidence else None,
                       "execution_result": execution_result_to_json(sink.peer_evidence[-1].execution_result) if sink.peer_evidence else None,
