@@ -241,12 +241,25 @@ def manifest_findings(row):
             findings.append(f"data recovery manifest disagrees with config: {key}")
     if row["status"] != "complete":
         return findings
-    for field in ("tail_probes", "late_retry_admissions", "initial_window_holds",
-                  "initial_grants_dispatched"):
+    for field in ("tail_probes", "tail_probe_wire_bytes", "late_retry_admissions",
+                  "initial_window_holds", "initial_grants_dispatched",
+                  "deterministic_retransmissions", "deterministic_retransmission_wire_bytes"):
         if field not in data:
             findings.append(f"missing final data recovery counter: {field}")
+    for name, packets, wire in (
+            ("probe", "tail_probes", "tail_probe_wire_bytes"),
+            ("retransmission", "deterministic_retransmissions",
+             "deterministic_retransmission_wire_bytes")):
+        if packets in data and wire in data and not (
+                data[packets] <= data[wire] <= data[packets] * MAX_WIRE_BYTES):
+            findings.append(f"physical {name} packet and wire-byte counts disagree")
+    for probes, retries in (("tail_probes", "deterministic_retransmissions"),
+                            ("tail_probe_wire_bytes", "deterministic_retransmission_wire_bytes")):
+        if probes in data and retries in data and data[probes] > data[retries]:
+            findings.append(f"physical probe counter exceeds all retransmissions: {probes}")
     if expected["data_recovery"] == "none" and any(
-            data.get(key, 0) != 0 for key in ("tail_probes", "late_retry_admissions")):
+            data.get(key, 0) != 0 for key in (
+                "tail_probes", "tail_probe_wire_bytes", "late_retry_admissions")):
         findings.append("disabled recovery used probes or late retry admission")
     if not bounded and any(data.get(key, 0) != 0 for key in (
             "initial_window_holds", "initial_grants_dispatched")):
@@ -450,7 +463,7 @@ def summarize(rows, provenance, expected_jobs=None):
         identical = (off["status"] == enabled["status"] == "complete" and
                      off["completion_sha256"] == enabled["completion_sha256"])
         inactive = all(enabled.get("data_recovery", {}).get(key) == 0
-                       for key in ("tail_probes", "late_retry_admissions"))
+                       for key in ("tail_probes", "tail_probe_wire_bytes", "late_retry_admissions"))
         dormant.append({"cell": name, "family": "dormant_recovery_csv",
                         "byte_identical": identical, "mechanism_inactive": inactive})
         if not identical or not inactive:

@@ -221,7 +221,9 @@ def parse_data_recovery_manifest(manifest: list[str]) -> dict[str, str | int]:
                 "rnic_cn_probe_")
     text_fields = {"data_recovery", "initial_window", "initial_sizing", "recovery_release",
                    "probe_epoch"}
-    counters = {"rnic_cn_tail_probes", "rnic_cn_late_retry_admissions"}
+    counters = {"rnic_cn_tail_probes", "rnic_cn_tail_probe_wire_bytes",
+                "rnic_cn_late_retry_admissions", "rnic_cn_deterministic_retransmissions",
+                "rnic_cn_deterministic_retransmission_wire_bytes"}
     record: dict[str, str | int] = {}
     for line in manifest:
         for token in line.split():

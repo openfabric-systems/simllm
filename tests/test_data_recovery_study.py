@@ -53,6 +53,8 @@ def manifest(arm, bounds):
             "rnic_cn_initial_buffer_bytes=1048576 rnic_cn_initial_sizing=F-times-U-at-most-B "
             "rnic_cn_probe_epoch=physical-retry-serialization-end "
             "rnic_cn_recovery_release=actual-arrival-tick rnic_cn_tail_probes=0 "
+            "rnic_cn_tail_probe_wire_bytes=0 rnic_cn_deterministic_retransmissions=0 "
+            "rnic_cn_deterministic_retransmission_wire_bytes=0 "
             "rnic_cn_late_retry_admissions=0 rnic_cn_initial_window_holds=0 "
             "rnic_cn_initial_grants_dispatched=0")
     return (f"[RNIC manifest] rnic_cn_control_recovery={selected['control_recovery']} "
@@ -173,7 +175,8 @@ def test_complete_outside_engineering_budget_is_behavioral_finding(tmp_path):
     assert study.summarize([row], {})["verdict"] == "outside-budget"
 
 
-def test_dormant_recovery_requires_exact_csv_and_inactive_counters(tmp_path):
+@pytest.mark.parametrize("counter", ["tail_probes", "tail_probe_wire_bytes"])
+def test_dormant_recovery_requires_exact_csv_and_inactive_counters(tmp_path, counter):
     cell, bounds = fixture_cell(tmp_path)
     rows = []
     for arm in ("disabled", "recovery-only"):
@@ -182,8 +185,45 @@ def test_dormant_recovery_requires_exact_csv_and_inactive_counters(tmp_path):
     result = study.summarize(rows, {})
     assert result["verdict"] == "consumer-valid"
     assert result["exact_oracles"]["dormant_recovery_csv"][0]["byte_identical"]
-    rows[1]["data_recovery"]["tail_probes"] = 1
+    rows[1]["data_recovery"][counter] = 1
     assert study.summarize(rows, {})["verdict"] == "void"
+
+
+@pytest.mark.parametrize("probes,probe_bytes,retries,retry_bytes,finding", [
+    (1, 4160, 2, 8320, None),
+    (1, 164, 2, 4324, None),
+    (0, 4160, 2, 8320, "packet and wire-byte counts disagree"),
+    (1, 0, 2, 8320, "packet and wire-byte counts disagree"),
+    (2, 8321, 3, 12480, "packet and wire-byte counts disagree"),
+    (3, 6000, 2, 8320, "probe counter exceeds all retransmissions: tail_probes"),
+    (2, 8320, 3, 4324, "probe counter exceeds all retransmissions: tail_probe_wire_bytes"),
+])
+def test_probe_accounting_counts_physical_packets_and_subset_wire_bytes(
+        tmp_path, probes, probe_bytes, retries, retry_bytes, finding):
+    cell, bounds = fixture_cell(tmp_path)
+    stdout = manifest("combined", bounds)
+    for field, value in (("tail_probes", probes), ("tail_probe_wire_bytes", probe_bytes),
+                         ("deterministic_retransmissions", retries),
+                         ("deterministic_retransmission_wire_bytes", retry_bytes)):
+        stdout = stdout.replace(f"rnic_cn_{field}=0", f"rnic_cn_{field}={value}")
+    row = study.observe(cell, cell.reference, stdout, 0, "combined", bounds)
+    findings = study.manifest_findings(row)
+    if finding is None:
+        assert findings == []
+    else:
+        assert any(finding in value for value in findings)
+
+
+def test_completed_probe_bytes_required_and_disabled_bytes_remain_zero(tmp_path):
+    cell, bounds = fixture_cell(tmp_path)
+    stdout = manifest("disabled", bounds)
+    row = study.observe(cell, cell.reference, stdout.replace("rnic_cn_tail_probe_wire_bytes=0 ", ""),
+                        0, "disabled", bounds)
+    assert "missing final data recovery counter: tail_probe_wire_bytes" in study.manifest_findings(row)
+    row = study.observe(cell, cell.reference,
+                        stdout.replace("rnic_cn_tail_probe_wire_bytes=0", "rnic_cn_tail_probe_wire_bytes=1"),
+                        0, "disabled", bounds)
+    assert "disabled recovery used probes or late retry admission" in study.manifest_findings(row)
 
 
 def test_raw_outcomes_are_written_before_identity_guards_and_resume_rejects_changes(tmp_path, monkeypatch):

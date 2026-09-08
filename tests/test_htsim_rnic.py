@@ -233,6 +233,9 @@ def test_data_manifest_preserves_legacy_absence_and_reaches_run_result(monkeypat
         "[RNIC manifest] rnic_cn_data_recovery=deadline rnic_cn_retry_probe_windows=4 "
         "rnic_cn_initial_window=bounded rnic_cn_initial_window_bytes=0 "
         "rnic_cn_initial_window_fan_in=64 rnic_cn_initial_buffer_bytes=1048576 "
+        "rnic_cn_tail_probes=1 rnic_cn_tail_probe_wire_bytes=4160 "
+        "rnic_cn_deterministic_retransmissions=2 "
+        "rnic_cn_deterministic_retransmission_wire_bytes=8320 "
         "rnic_cn_probe_epoch=physical-retry-serialization-end "
         "rnic_cn_recovery_release=actual-arrival-tick\n"
         "[RNIC manifest] physical_quiescence=verified\n")
@@ -243,6 +246,8 @@ def test_data_manifest_preserves_legacy_absence_and_reaches_run_result(monkeypat
     assert result.data_recovery["data_recovery"] == "deadline"
     assert result.data_recovery["initial_window_bytes"] == 0
     assert result.data_recovery["retry_probe_windows"] == 4
+    assert result.data_recovery["tail_probe_wire_bytes"] == 4160
+    assert result.data_recovery["deterministic_retransmission_wire_bytes"] == 8320
 
 
 @pytest.mark.parametrize("fields", [
@@ -251,6 +256,9 @@ def test_data_manifest_preserves_legacy_absence_and_reaches_run_result(monkeypat
     "rnic_cn_initial_window_bytes=1.0", "rnic_cn_initial_sizing=",
     "rnic_cn_initial_window_bytes=18446744073709551616",
     "rnic_cn_retry_probe_windows=2 rnic_cn_retry_probe_windows=4",
+    "rnic_cn_tail_probe_wire_bytes=-1",
+    "rnic_cn_tail_probe_wire_bytes=4160 rnic_cn_tail_probe_wire_bytes=0",
+    "rnic_cn_deterministic_retransmission_wire_bytes=1.5",
 ])
 def test_data_manifest_rejects_invalid_and_conflicting_fields(fields):
     with pytest.raises(ValueError):
