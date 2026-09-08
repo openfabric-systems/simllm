@@ -1391,17 +1391,20 @@ Four rules make the port layer safe to add under a byte-identical off path.
    the engine does not declare, an unknown engine, a `device_to_device` copy
    (which stays inside one GPU and crosses no port), an xGMI port (COMP-35 owns
    vendor instantiation), a transport-control capability such as ECN marking
-   (BACK-48 owns making the ABI v2 packet vocabulary reachable from a non-wire
-   port), and a single bidirectional port over two disagreeing mechanism
+   (peer packet ports explicitly reject unimplemented transport controls), and a single bidirectional port over two disagreeing mechanism
    ceilings are all rejected during configuration rather than at first use. The
    last of those is why the measured Grace C2C asymmetry, 419.93 GB/s inbound
    against 169.96 GB/s outbound, has to be declared as two ports instead of one
    averaged rate.
 
-The ports declare and negotiate; they do not emit packets. Carrying an extent
-and attempt identity in the ABI v2 vocabulary across a non-wire port is BACK-48
-with COMP-40 as its compute-side half, and attaching measured per-port ceilings
-to a shipped profile is COMP-41.
+`GpuPeerPacketSession` binds one bidirectional `peer_packet_service` port per
+GPU to its declared physical attachments. Extent and attempt tokens stay
+session-unique across graph phases and request steps. One common version 2
+ledger consumes both wire and peer observations; link grants, arrivals,
+visibility, acknowledgements and buffer ownership project the retained physical
+calendar. Packet mode selects this authority exclusively. Scalar and packet
+port service cannot both advance the same transfer. Host-port emission stays
+with COMP-40, and measured per-port profile ceilings stay with COMP-41.
 
 ## Status
 
@@ -1511,7 +1514,7 @@ through the composed device with default ports, locked by
 further identity-path cells are retained as an unscored baseline register, which
 is the correction the study's own correction section records against its first
 publication of 15 of 15. Its
-residuals are COMP-40 (the ports declare capabilities but emit no packet event)
+residuals are COMP-40 (host-port packet emission)
 and COMP-41 (no shipped profile carries a measured per-port ceiling). Finding F1
 of that study is a constraint on later registrations: halving the egress ceiling
 of the accepted ring cell added the full serialization delta with nothing hidden
@@ -2618,26 +2621,22 @@ semantic comparison remains DEPLOY-12's scope.
   behavior: every accepted artifact and every priced step must stay
   byte-identical, and the pinning test must be updated in the same change rather
   than deleted.
-- COMP-40 (Completeness; P1; M): the landed GPU ports declare capabilities but
-  emit no packet event, so an intra-node leg still cannot report an extent, an
-  attempt, a TX boundary or an arrival in the same language a wire port uses.
-  The three transport-control capabilities (ECN marking, priority flow control,
-  congestion notification) exist today only to be rejected by name, and the
-  rejection diagnostic points at BACK-48. Boundary against BACK-48: that task
-  owns making the ABI v2 vocabulary reachable from a non-wire port at all, while
-  this one owns binding the GPU host and peer ports to it, including which
-  capabilities a GPU port may then honestly advertise. TRAF-65 owns the
-  hardware calibration and determines which packet, credit and FIFO quantities
-  are observable on A100; this task owns emitting the corresponding modeled
-  events and must not label an effective fitted quantity as a literal hardware
-  field. Acceptance: an intra-node transfer emits session-unique extent and
-  attempt identity through a GPU port, carries enough timestamps and link
-  identity to replay TRAF-65's transaction scoreboard, makes loss, duplication
-  and double-charged bytes detectable, and leaves every exact but undocumented
-  hardware field absent. The no-emission path preserves every accepted
-  timestamp, counter and artifact byte exactly. This is P1 because TRAF-65's
-  accepted live metric closure consumes the events through TRAF-45 and TRAF-54;
-  the hardware-only capture may precede this task, but cannot close TRAF-65.
+- COMP-40 (Completeness; P2; M): bind GPU host ports to the common packet
+  vocabulary. The peer-port part is delivered by the
+  [live peer packet study](../../examples/local_peer_packet_runtime_v1/RESULTS.md):
+  modeled peer writes emit session-unique extent and attempt identities,
+  physical attachment grants and arrivals, logical visibility and separately
+  retained transport retirement. Host protocols have no such packet producer.
+  Bind a supported host protocol behind the existing typed port and memory
+  ownership interfaces, advertise only its implemented capabilities, and retain
+  explicit rejection for unsupported controls. Acceptance: one host transfer's
+  packet bytes, parent and attempt lifecycle, physical resource visits and
+  consumer visibility reconcile without a second scalar timing owner; rejected
+  admission leaves state unchanged; and the disabled host producer preserves
+  every accepted timestamp and artifact byte. This residual is P2 because the
+  accepted local collective path uses the delivered peer producer. COMP-41
+  retains measured ceilings, TRAF-65 retains hardware identification, and
+  TRAF-54 consumes the delivered peer events without waiting for host emission.
 - COMP-44 (Completeness; P1; M): let a calibrated host profile carry a fixed
   per-invocation cost beside its per-launch constant. `HostInitiationModel`'s
   calibrated form has exactly one term, `point_ps_per_launch`, composed as

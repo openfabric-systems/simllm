@@ -6,6 +6,14 @@ the flow-level work the GOAL emitter renders.
 
 ## Interface
 
+`HtsimStepSinkConfig.peer_packet` binds the checked locality segments to the
+fabric manifest's declared GPU attachments. The local phase executes through
+one retained packet calendar, with source feed, directed links, switch ports,
+finite buffer reservations, receiver ingress, credit returns and separate
+consumer visibility. The analytic endpoint ledger remains the byte authority
+for locality classification. Packet service supplies the selected timing
+projection without charging the analytic local duration again.
+
 - Collective trace (`simllm-collective-trace-v1`, JSONL): one record per
   communication op, i.e. `{step, layer, op, group_type, group_global_ranks,
   send_counts, element_bytes, hidden_size, placement_epoch,
@@ -403,12 +411,20 @@ constant.
 collective path over the GPU's own NVLink, xGMI and UALink ports, where a
 channel is bound to a port, a chunk becomes packets, and the registration
 handshake becomes port traffic instead of a declared constant. TRAF-54,
-TRAF-55 and TRAF-57 carry that work, above the packetized intra-node leg of
-TRAF-45 and on the port events of COMP-40 and the port-kind-independent
-vocabulary of BACK-48. When they land, the constant completion becomes an
+TRAF-55 and TRAF-57 carry that work, above the packetized intra-node leg established by TRAF-45 and the
+peer-port events and common vocabulary established by the live peer study. When they land, the constant completion becomes an
 emergent one and this section is replaced rather than amended.
 
 ## Status
+
+The [live peer packet study](../../examples/local_peer_packet_runtime_v1/RESULTS.md) closes TRAF-45 with converging routed
+expert traffic through one prefill and two decode steps. One or three donor
+GPUs, two receiver rates and direct or switched attachments produce exactly
+the frozen TTFT and TPOT changes. The complete accepted analytic locality and
+mixed-attribution artifacts remain byte-identical. Every extent has one logical
+completion while acknowledgements and credits retain their own physical drain.
+The study uses declared physical resources and a synthetic compute control;
+hardware identification remains owned by TRAF-65, TRAF-73 and TRAF-86.
 
 The declared forward pipeline publishes exact packet queue, receiver holding,
 recovery and request-completion evidence in the
@@ -1965,6 +1981,13 @@ shipped collectives.
   a measurement contaminated by throttling or another process. A fired guard
   voids the affected run rather than reducing a pass fraction.
 
+  The live physical binding represents reverse credit and acknowledgement
+  control as propagation plus explicitly declared processing. It does not
+  allocate reverse control packet bytes or link occupancy. Identify any such
+  occupancy from directional raw/data counter deltas and controlled contention
+  before adding it to the candidate. A zero-byte control observation is a
+  declared abstraction, never a measurement of an NVLink control encoding.
+
   Fit only what the observations identify: payload and overhead granularity,
   maximum packet payload, four directional serializers and their bond policy,
   an effective credit unit and window with return latency, per-link ingress
@@ -2353,38 +2376,6 @@ shipped collectives.
   inventing order between independent operations and retain every supported
   projection byte and timestamp exactly.
 
-- TRAF-45 (Completeness; P1; L): add a packetized intra-node leg with the
-  [frozen live peer runtime study](../../examples/local_peer_packet_runtime_v1/expectations.md).
-  The study couples the BACK-48 vocabulary and COMP-40 port binding to the
-  analytic locality path. `classify_step_locality` charges local segments from a
-  per-endpoint byte ledger at one declared flat rate, which is exact arithmetic
-  over a surrogate port: there is no packet, no attempt identity, no
-  destination-side arrival and no per-link routing, so an NVLink or xGMI segment
-  cannot be observed the way a wire segment can. Land the packet path over the
-  COMP-34 GPU ports using the BACK-48 port-kind-independent vocabulary, and keep
-  the analytic split as a byte-identical off path. Queued deployment routes
-  bind actual physical ports and shared attachment calendars; the component
-  probe's per-peer incoming links do not establish an NVSwitch attachment.
-  The packetized leg must
-  charge destination ingress explicitly at the receiving port instead of
-  inheriting the analytic `max(egress_bytes, ingress_bytes)` endpoint-load
-  surrogate that CORE-41 installed. The completed CORE-48 supplies opt-in coarse
-  cross-node ingress; TRAF-65 owns the A100 packet, bond, credit, FIFO and wire
-  calibration, and COMP-31 owns the remaining compute-side local mechanism and
-  cross-architecture generalization. Those local packet tasks remain open. The
-  implementation consumes TRAF-65's versioned `candidate` profile when selected
-  and never invents a measured constant from a study case name. The candidate
-  handoff does not require TRAF-65 to be closed. Acceptance: the off path
-  reproduces every accepted
-  `nvlink_locality_v1` and `mixed_attribution_v1` byte, timestamp and component
-  attribution exactly; the enabled path conserves bytes against the same
-  endpoint ledger, emits one terminal per extent with no double charge against
-  the semantic collective, and moves per-request TTFT and TPOT in the registered
-  direction; and a converging combine, where the analytic surrogate is weakest,
-  is the registered cell rather than a symmetric exchange. The design statement
-  is [the packet-device model](../design/packet-device-model.md). This is P1
-  because the accepted TRAF-65 study requires the packet path for live metric
-  closure; its exact analytic bypass remains supported throughout.
 - TRAF-54 (Completeness; P1; L): land the packetized NCCL and RCCL collective
   protocol layer over the GPU ports. TRAF-45 owns the leg below this one, which
   turns a directed intra-node segment into packets on a port; this task owns

@@ -2,28 +2,24 @@
 
 ## Status and scope boundary
 
-This document states the model SimLLM is being built toward: the GPU is modeled
-the same way the NIC already is, as a device with typed ports that carry
-packets, and the software stack above it is a packet producer rather than a
-bandwidth constant. The statement was architectural direction when it was
-written; the first implementation wave has since landed two slices of it: the
-GPU device composition entry point with typed ports under COMP-34, described in
-[compute](../modules/compute.md#gpu-device-composition-and-typed-ports) and
-validated by
-[gpu_device_ports_v1](../../examples/gpu_device_ports_v1/RESULTS.md), and the
-composition half of BACK-46, so a separately modeled GPU now attaches to the
-shared PCIe fabric as an endpoint in its own right.
+SimLLM models GPU peer traffic as packets over typed physical ports. One
+retained domain calendar owns link grants, switch input storage, receiver
+service, consumer visibility and later control retirement. The GPU port emits
+read-only observations through the same version 2 vocabulary as the network
+interface. The checked locality projection connects those observations to the
+original execution graph, step completion and request token timing. The
+[live peer packet study](../../examples/local_peer_packet_runtime_v1/RESULTS.md)
+closes BACK-48 and TRAF-45 with exact analytic and native-wire bypasses.
 
-No default changed. Every artifact, timestamp and reported number in the
-repository is unchanged by this document and by both first slices, each on a
-byte-identical off path: a port that declares no ceiling of its own hands back
-exactly the architecture it was given, and the accepted BACK-10, BACK-19 and
-BACK-20 artifacts still reproduce byte for byte. What this document adds is the
-vocabulary that later implementation waves are held to, and the numbered tasks
-that own the remaining gaps: COMP-35, COMP-40 and COMP-41 in
-[compute](../modules/compute.md), BACK-46, BACK-47 and BACK-48 in
-[backends](../modules/backends.md), and TRAF-45 in
-[traffic](../modules/traffic.md).
+The supported path selects declared NVLink direct or switched attachments and
+peer writes through the ordinary serial step sink. Geometry and resource
+capacities are explicit model inputs. This establishes a physical model
+boundary without claiming that a declared buffer, virtual channel or control
+processing delay is a literal hardware field. TRAF-65, TRAF-73 and TRAF-86 own
+hardware identification. TRAF-54 owns the collective protocol above the packet
+leg; COMP-40 retains host-port emission, COMP-35 vendor instantiation and
+COMP-41 measured profile ceilings. BACK-72 owns retained physical remote/local
+composition, and BACK-73 owns packet critical-path reporting.
 
 Evidence discipline follows the repository's usual split. A number called
 measured here is first-party, from a study in `examples/` with a frozen
@@ -434,12 +430,12 @@ Registered by this document, with the state each task is in now:
 |---|---|
 | COMP-34, closed | Landed the GPU device composition entry point with typed PCIe and NVLink ports over the existing copy-engine and NVLink-cursor mechanisms: protocol identity, role, direction, declared capabilities, ceiling and ceiling provenance behind one versioned configuration, with configuration-time rejection and a byte-identical off path. Validated by [gpu_device_ports_v1](../../examples/gpu_device_ports_v1/RESULTS.md). Residuals are COMP-40 and COMP-41. Peer topology, ingress service and reduction lanes stayed with COMP-31. |
 | COMP-35 | No vendor peer-port instantiation exists, so an AMD ROCm GPU and a UALink pod cannot be expressed at all, and neither an xGMI nor a UALink ceiling has a first-party or declared profile to fail closed against. Both protocols are now nameable and a port claiming either is rejected at configuration time with a diagnostic naming this task. |
-| COMP-40 | The landed GPU ports declare capabilities but emit no packet event, so an intra-node leg cannot report an extent, an attempt, a TX boundary or an arrival in the same language a wire port uses. Paired with BACK-48, which owns exposing that vocabulary to a non-wire port. |
+| COMP-40 | Peer packet emission is delivered. The residual binds GPU host protocols to the common packet vocabulary while preserving exact disabled behavior. |
 | COMP-41 | No shipped architecture profile carries a measured per-port ceiling. Every reachable ceiling is read out of a synthetic study calibration or declared by a study, so the measured cells in the port taxonomy above are not yet attached to a profile a run can select. |
 | BACK-46 | Composition landed on 2026-08-17: `GpuDevice` attaches to the shared fabric with its own endpoint identity and ordering domain, owns its regions, grants named peers read access, and has its transactions charged in a per-endpoint ledger, so a NIC payload read whose completer is a GPU-owned region is charged under the GPU's identity, and a foreign claim is refused with unchanged state ([study](../../examples/rnic_gpu_endpoint_v1/RESULTS.md): 10 of 10 published scored instances, no fatal guard violated, every accepted BACK-10, BACK-19 and BACK-20 artifact byte-identical). What remains is the metric clause: the relations are native WQE completion times rather than a projected TTFT or TPOT, so this entry stays open and BACK-49 carries the live chain. |
 | BACK-47 | The mirrored NCCL stack boundary is not named as the plugin ABI seam, and its packet-emission half toward the GPU is unregistered while the half toward the NIC stops at zero-time events. |
-| BACK-48 | The ABI v2 packet vocabulary is reachable only through a wire port, so a non-wire port cannot emit an attempt, a TX boundary or an arrival in the same language. |
-| TRAF-45 | The intra-node packet leg requires its own receiving-port service behind the analytic locality off path. CORE-48 supplies coarse cross-node ingress; COMP-31 owns the local mechanism. The coarse result does not qualify the local packet path. |
+| BACK-48, closed | A single capability-gated ledger consumes wire and GPU peer attempts. Native version 1 and version 2 observation bytes remain exact. |
+| TRAF-45, closed | Declared direct and switched peer attachments, finite shared buffers and destination ingress drive original-graph extent completion and request TTFT/TPOT. The analytic locality path stays exact. Hardware identification remains with TRAF-65/73/86. |
 
 Registered by the BACK-46 implementation, which found them rather than assumed
 them:

@@ -28,6 +28,14 @@ both.
   inventory, switch ports and physical links, validates one termination per
   NIC and port, proves endpoint connectivity and resolves structured GOAL
   messages to deterministic shortest paths.
+- The optional `peer_fabrics` inventory extends the same fabric schema with
+  `PeerFabric`, `PeerPortPlacement` and `PeerRoute`. Each GPU or switch port
+  terminates exactly one physical attachment. A directed rank pair resolves to
+  declared one-hop direct or two-hop switched paths; opposite full-duplex
+  directions have independent link resources. Shared attachments and finite
+  switch input storage remain shared across destinations and virtual channels.
+  A GPU belongs to one timing domain. `to_dict()` and `save()` omit an empty
+  peer inventory, preserving every accepted absent-peer serialized artifact.
 - `RankMapper`: rank to GOAL-rank assignment mirroring the htsim drivers'
   `-goal_rank_mapping` (`gpu-rank` implemented; `unique-nic` needs the
   fabric manifest), plus `is_intra_node`. Construction validates and snapshots
@@ -43,6 +51,12 @@ both.
   placement bytes and emits no physical graph.
 
 ## Status
+
+Explicit local attachments feed the [live peer packet study](../../examples/local_peer_packet_runtime_v1/RESULTS.md) through
+the existing manifest contract. The direct and switched route inventory agrees
+with semantic placement before packet admission. Legacy rail topology and
+arrival-study writers use the canonical manifest projection, retaining the
+accepted bytes when peer packet service is absent.
 
 Manifest round-trip and the gpu-rank mapper are implemented and tested
 (including the DP=2 x PP=2 x TP=4 worked example). The extraction path is
