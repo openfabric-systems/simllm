@@ -1414,8 +1414,9 @@ created" statement stands and refers to different, never-registered work.
 
 - BACK-72 (Completeness; P2; M): extend the optional physical step session to
   locality remapping, custom topology, calibrated collective surcharges,
-  registration, dependency cross-checks, packet/bottleneck reports and GOAL
-  start dependencies with explicit start evidence. Its first supported path
+  registration, dependency cross-checks, packet/bottleneck reports, empty
+  collectives and GOAL start dependencies with explicit start evidence. Add
+  repeated message envelopes only with explicit native matching order. Its first supported path
   uses generated all-remote topology and completion dependencies; unsupported
   compositions are rejected before opening a child. Add owned streaming on
   POSIX platforms without waitid/WNOWAIT while preserving descendant cleanup.

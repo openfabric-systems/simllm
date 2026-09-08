@@ -10,13 +10,16 @@ profile, and returns the simulated makespan as the step latency. Plugged into
 the network's completion time advances the virtual clock the frontend
 scheduler sees.
 
-Each GOAL artifact currently runs in an isolated backend process.
+The explicit ``flow_session`` option retains one native backend across a
+checked step's ordered GOAL artifacts and publishes its original graph events.
+Its absence runs each artifact in an isolated backend process.
 :class:`HtsimPersistentStepSink` accelerates a finite replay whose records are
 known before the scheduler consumes them by preparing complete step plans in a
-local worker pool, then serving their results in record order. It does not
-preserve simulator state between artifacts or steps. Multi-artifact
-``rnic-cn`` plans therefore fail closed until BACK-38 supplies state-preserving
-execution; the stateless ``rnic-nn`` profiles remain supported.
+local worker pool, then serving their results in record order. The default
+configuration isolates artifacts; ``flow_session`` retains state within each
+step. Multi-artifact
+``rnic-cn`` plans therefore require ``flow_session``; the stateless
+``rnic-nn`` profiles remain supported.
 
 A step with no collective work returns ``None``: the TP world has size 1
 (or the dims declare no experts, or no EP group is configured) and the
@@ -100,11 +103,12 @@ approximation.
 from __future__ import annotations
 
 import copy
+import csv
 import hashlib
 from collections import deque
 from collections.abc import Mapping, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor, wait
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from threading import Lock
 from typing import TYPE_CHECKING
@@ -115,9 +119,13 @@ from simllm.backends.dependency_cross_check import (
     complete_dependency_cross_check,
     plan_dependency_cross_check,
 )
+from simllm.backends.flow_session import FlowSession, FlowSessionConfig
 from simllm.backends.htsim_rnic import (
     RNIC_PROFILES,
+    FlowCompletion,
     HtsimRnicConfig,
+    RnicRunResult,
+    find_htsim_rnic,
     prepare_htsim_child_lifetime,
     run_htsim_rnic,
 )
@@ -175,7 +183,11 @@ from simllm.traffic import (
 )
 
 if TYPE_CHECKING:
+    from simllm.backends.goal_session import GoalTraceSnapshot
     from simllm.backends.packet_breakdown import PacketStepBreakdown
+    from simllm.backends.session_projection import SessionStepEvidence
+    from simllm.backends.step_attribution import HtsimRequestMetricReducer
+    from simllm.core import ExecutionGraph
 
 _STATEFUL_MULTI_ARTIFACT_PROFILES = frozenset({"rnic-cn"})
 DEPENDENCY_CROSS_CHECK_MODES = ("atlahs-goal",)
@@ -224,6 +236,8 @@ class HtsimStepSinkConfig:
     provider: ComputeProvider = field(default_factory=lambda: RooflineProvider(efficiency=0.7))
     gpu: GpuSpec = GPU_ENVELOPES["b100"]
     host_model: HostInitiationModel = field(default_factory=HostInitiationModel.ideal)
+    #: one physical authority per checked step; absent preserves the old path
+    flow_session: FlowSessionConfig | None = field(default=None, kw_only=True)
     #: read-only runtime visits and conserved breakdown; absent by default
     emit_packet_breakdown: bool = field(default=False, kw_only=True)
     emit_bottleneck_report: bool = field(default=False, kw_only=True)
@@ -301,6 +315,25 @@ class HtsimStepSinkConfig:
     )
 
     def __post_init__(self) -> None:
+        if self.flow_session is not None:
+            if not isinstance(self.flow_session, FlowSessionConfig):
+                raise TypeError("flow_session must be FlowSessionConfig or None")
+            if (self.flow_session.profile != self.profile
+                    or self.flow_session.link_rate_bps != self.linkspeed_bps):
+                raise ValueError("flow_session must match the sink profile and link rate")
+            if self.num_goal_ranks is not None and self.num_goal_ranks != self.flow_session.node_count:
+                raise ValueError("flow_session node count must match num_goal_ranks")
+            if (self.placement_manifest is not None or self.topology is not None
+                    or self.dependency_cross_check is not None
+                    or self.collective_floor_calibration is not None
+                    or self.collective_registration is not None
+                    or self.collective_latency_profile not in (None, "legacy")
+                    or self.collective_fixed_cost_arm != "off"
+                    or self.emit_packet_breakdown or self.emit_bottleneck_report):
+                raise ValueError("flow_session requires the generated all-remote composition; "
+                                 "optional composition support remains BACK-72")
+            if self.unsafe_disable_child_lifetime_binding:
+                raise ValueError("flow_session requires owned child lifetime binding")
         if type(self.emit_bottleneck_report) is not bool:
             raise TypeError("emit_bottleneck_report must be a boolean")
         if type(self.emit_packet_breakdown) is not bool:
@@ -975,6 +1008,7 @@ class _PlannedExecutionArtifact:
         CollectiveFloorEstimate | CollectiveCompletionEstimate | None
     ) = None
     registration_cost_ps: int = 0
+    goal_snapshot: GoalTraceSnapshot | None = None
 
 
 @dataclass(frozen=True)
@@ -1114,6 +1148,8 @@ class _PlannedStep:
     emit_packet_breakdown: bool
     bottleneck_kernel: object = None
     bottleneck_widths: tuple[int, ...] = ()
+    flow_session: FlowSessionConfig | None = None
+    session_graph: ExecutionGraph | None = None
 
 
 @dataclass(frozen=True)
@@ -1129,6 +1165,7 @@ class _SimulatedStep:
     collective_registration_outcome: StepCollectiveRegistrationOutcome | None = None
     packet_breakdown: PacketStepBreakdown | None = None
     bottleneck_report: object = None
+    session_evidence: SessionStepEvidence | None = None
 
 
 @dataclass(frozen=True)
@@ -1142,8 +1179,14 @@ class _PreparedStep:
 class HtsimStepSink:
     """Step sink that simulates each step's TP traffic on ``htsim_rnic``."""
 
-    def __init__(self, config: HtsimStepSinkConfig) -> None:
+    def __init__(self, config: HtsimStepSinkConfig, *,
+                 request_metric_reducer: HtsimRequestMetricReducer | None = None) -> None:
+        if request_metric_reducer is not None:
+            from simllm.backends.step_attribution import HtsimRequestMetricReducer
+            if not isinstance(request_metric_reducer, HtsimRequestMetricReducer):
+                raise TypeError("request_metric_reducer must be HtsimRequestMetricReducer or None")
         self.config = config
+        self._request_metric_reducer = request_metric_reducer
         placement = copy.deepcopy(config.placement_manifest)
         self._rank_mapper = RankMapper(placement) if placement is not None else None
         if self._rank_mapper is not None:
@@ -1168,6 +1211,7 @@ class HtsimStepSink:
         #: selected visits, events and runtime reports; published only on consumption
         self.packet_breakdowns: list[PacketStepBreakdown] = []
         self.bottleneck_reports = []
+        self.session_evidence: list[SessionStepEvidence] = []
         #: calibrated decompositions; deliberately empty on the legacy/off path
         self.collective_timing_outcomes: list[StepCollectiveTimingOutcome] = []
         #: aggregate floor projections; deliberately empty on the exact off path
@@ -1315,6 +1359,22 @@ class HtsimStepSink:
             num_goal_ranks=cfg.num_goal_ranks,
             base_tag=cfg.base_tag,
         )
+        session_snapshots = ()
+        if cfg.flow_session is not None:
+            from simllm.backends.goal_session import GoalTraceSnapshot
+            session_snapshots = tuple(GoalTraceSnapshot.from_trace(artifact.trace)
+                                      for artifact in projection.artifacts)
+            if any(snapshot.num_ranks != cfg.flow_session.node_count for snapshot in session_snapshots):
+                raise ValueError("planned GOAL rank count disagrees with the flow session")
+            for artifact, snapshot in zip(projection.artifacts, session_snapshots, strict=True):
+                owners = {op.operation_id for op in snapshot.operations if op.operation_id is not None}
+                if owners != set(artifact.operation_ids):
+                    raise ValueError("session snapshot lost its original graph operation inventory")
+                if not snapshot.messages and any(
+                    isinstance(operation.work, CollectiveWork)
+                    for operation in graph.operations if operation.operation_id in owners
+                ):
+                    raise ValueError("flow_session empty-collective composition remains BACK-72")
         name = f"step-{record.step_index:06d}"
         compatibility_fast_path = self._rank_mapper is None or (
             locality.nvlink_bytes == 0 and self._rank_mapper.mode == "gpu-rank"
@@ -1401,6 +1461,7 @@ class HtsimStepSink:
                             (max(duration, 1_000) for duration in durations),
                             default=0,
                         ),
+                        goal_snapshot=session_snapshots[artifact_index] if session_snapshots else None,
                     )
                 )
                 continue
@@ -1499,6 +1560,7 @@ class HtsimStepSink:
                         registration_cost_ps=registration_by_operation.get(
                             operation_id, 0
                         ),
+                        goal_snapshot=session_snapshots[artifact_index] if session_snapshots else None,
                     )
                 )
                 continue
@@ -1727,6 +1789,8 @@ class HtsimStepSink:
             emit_packet_breakdown=cfg.emit_packet_breakdown or cfg.emit_bottleneck_report,
             bottleneck_kernel=bottleneck_kernel,
             bottleneck_widths=bottleneck_widths,
+            flow_session=cfg.flow_session,
+            session_graph=graph if cfg.flow_session is not None else None,
         )
 
     def _run_goal(
@@ -1758,6 +1822,7 @@ class HtsimStepSink:
         if (
             plan.profile in _STATEFUL_MULTI_ARTIFACT_PROFILES
             and backend_artifact_count > 1
+            and plan.flow_session is None
         ):
             raise RuntimeError(
                 f"profile {plan.profile!r} cannot execute an ordered step with "
@@ -1766,6 +1831,10 @@ class HtsimStepSink:
                 "'rnic-nn' or 'rnic-nn-fluid', or complete BACK-38 "
                 "state-preserving artifact execution"
             )
+
+        session_runs, session_evidence = ({}, None)
+        if plan.flow_session is not None:
+            session_runs, session_evidence = self._run_session_artifacts(plan)
 
         flow_tails = {}
         fabric_starts = []
@@ -1796,11 +1865,8 @@ class HtsimStepSink:
                         hashlib.sha256(payload).hexdigest()
                     )
                     authority_artifact_bytes.append(len(payload))
-                run = self._run_goal(
-                    plan,
-                    artifact.goal_path,
-                    artifact.completion_csv,
-                )
+                run = (session_runs[artifact.artifact_id] if session_evidence is not None else
+                       self._run_goal(plan, artifact.goal_path, artifact.completion_csv))
                 fabric_service_ps = run.job_completion_time_ps()
                 if plan.emit_packet_breakdown:
                     if not run.quiescent or not run.flows:
@@ -1847,6 +1913,9 @@ class HtsimStepSink:
         composed_phase_service_ps = tuple(composed_services)
         represented_compute_ps = 0 if plan.compute_in_artifacts else plan.compute_service_ps
         makespan_ps = represented_compute_ps + sum(composed_services)
+        if session_evidence is not None:
+            backend_runs = 1
+            quiescent = True
         cross_check_report = None
         if plan.dependency_cross_check is not None:
             cross_check = plan.dependency_cross_check
@@ -2067,6 +2136,8 @@ class HtsimStepSink:
             step_latency_ps=makespan_ps,
             completed_at_ps=plan.virtual_time_ps + makespan_ps,
         )
+        if session_evidence is not None:
+            session_evidence.validate_result(result)
         packet_breakdown = None
         if plan.emit_packet_breakdown:
             from simllm.backends.packet_breakdown import build_packet_breakdown
@@ -2097,7 +2168,79 @@ class HtsimStepSink:
             collective_registration_outcome=registration_outcome,
             packet_breakdown=packet_breakdown,
             bottleneck_report=bottleneck_report,
+            session_evidence=session_evidence,
         )
+
+    def _run_session_artifacts(self, plan: _PlannedStep):
+        """Execute immutable action graphs without draining between artifacts."""
+
+        from simllm.backends.goal_session import GoalSessionExecutor
+        from simllm.backends.session_projection import build_session_evidence
+
+        if plan.flow_session is None or plan.session_graph is None:
+            raise ValueError("session execution requires its checked graph and configuration")
+        snapshots = tuple(artifact.goal_snapshot for artifact in plan.artifacts)
+        if any(snapshot is None for snapshot in snapshots):
+            raise ValueError("session artifact has no immutable GOAL snapshot")
+        for artifact, snapshot in zip(plan.artifacts, snapshots, strict=True):
+            if artifact.goal_path is not None:
+                if artifact.goal_path.read_bytes() != snapshot.rendered_bytes:
+                    raise ValueError("GOAL artifact changed after session planning")
+            elif snapshot.messages:
+                raise ValueError("analytic artifact contains unowned physical work")
+        binary = find_htsim_rnic()
+        if binary is None:
+            raise FileNotFoundError("set SIMLLM_HTSIM_RNIC to a native-session-enabled htsim_rnic")
+        session = FlowSession(plan.flow_session, (str(binary), "--flow-session"),
+                              session_id=f"htsim-step-{plan.step_index}",
+                              time_origin_ps=plan.virtual_time_ps)
+        actions, runs = [], {}
+        offset = 0
+        predecessors = ()
+        with session:
+            executor = GoalSessionExecutor(session, plan.session_graph.execution_id)
+            for artifact, snapshot in zip(plan.artifacts, snapshots, strict=True):
+                fixed = (artifact.registration_cost_ps + artifact.collective_base_latency_ps
+                         + artifact.aggregate_collective_floor_ps)
+                release = plan.virtual_time_ps + offset + fixed
+                action_result = executor.run(snapshot, artifact.artifact_id, release,
+                                             predecessor_sequences=predecessors)
+                actions.append(action_result)
+                predecessors = tuple(sorted(set(predecessors) | set(action_result.accepted_sequences)))
+                duration = action_result.completed_at_ps - release
+                if artifact.goal_path is None:
+                    if duration != artifact.local_service_ps:
+                        raise ValueError("analytic GOAL actions disagree with the planned compute service")
+                    service = artifact.local_service_ps
+                else:
+                    flows = []
+                    for row in action_result.completion_rows:
+                        fields = {name: row[name] for name in FlowCompletion.__dataclass_fields__
+                                  if name in row and name not in {"profile", "flow_id"}}
+                        fields["start_time_ps"] -= release
+                        fields["completion_time_ps"] -= release
+                        flows.append(FlowCompletion(plan.profile, row["native_flow_id"], **fields))
+                    run = RnicRunResult(flows, [], False, duration)
+                    runs[artifact.artifact_id] = run
+                    service = max(artifact.local_service_ps, run.job_completion_time_ps())
+                offset += fixed + service
+            drain = session.close()
+            evidence = build_session_evidence(plan.session_graph, snapshots, tuple(actions), session, drain)
+            if evidence.execution_result.completed_at_ps != plan.virtual_time_ps + offset:
+                raise ValueError("session graph completion disagrees with artifact composition")
+        for artifact in plan.artifacts:
+            if artifact.goal_path is None:
+                continue
+            if artifact.goal_path.read_bytes() != artifact.goal_snapshot.rendered_bytes:
+                raise ValueError("GOAL artifact changed during session execution")
+            run = runs[artifact.artifact_id]
+            run.quiescent = True
+            with artifact.completion_csv.open("w", encoding="utf-8", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=tuple(FlowCompletion.__dataclass_fields__),
+                                        lineterminator="\n")
+                writer.writeheader()
+                writer.writerows(asdict(flow) for flow in run.flows)
+        return runs, evidence
 
     def _simulate_step(self, record: StepRecord) -> _SimulatedStep:
         plan = self._plan_step(record)
@@ -2112,7 +2255,21 @@ class HtsimStepSink:
             )
         return self._execute_plan(plan)
 
-    def _publish(self, simulation: _SimulatedStep) -> StepResult | None:
+    def _publish(self, simulation: _SimulatedStep, record: StepRecord | None = None) -> StepResult | None:
+        result = simulation.result
+        if simulation.session_evidence is not None:
+            simulation.session_evidence.validate_result(result)
+        if result is not None and self._request_metric_reducer is not None:
+            if record is None:
+                raise ValueError("request metric reduction requires the consumed StepRecord")
+            metrics = self._request_metric_reducer.consume(
+                record, result, simulation.locality_outcome,
+                packet_breakdown=simulation.packet_breakdown,
+                bottleneck_report=simulation.bottleneck_report,
+            )
+            result = replace(result, request_metrics=metrics)
+        if simulation.session_evidence is not None:
+            self.session_evidence.append(simulation.session_evidence)
         if simulation.bottleneck_report is not None:
             self.bottleneck_reports.append(simulation.bottleneck_report)
         if simulation.packet_breakdown is not None:
@@ -2137,10 +2294,10 @@ class HtsimStepSink:
             self.collective_registration_outcomes.append(
                 simulation.collective_registration_outcome
             )
-        return simulation.result
+        return result
 
     def __call__(self, record: StepRecord) -> StepResult | None:
-        return self._publish(self._simulate_step(record))
+        return self._publish(self._simulate_step(record), record)
 
 
 class HtsimPersistentStepSink(HtsimStepSink):
@@ -2158,8 +2315,9 @@ class HtsimPersistentStepSink(HtsimStepSink):
     end-to-end boundary.
     """
 
-    def __init__(self, config: HtsimStepSinkConfig, *, max_workers: int) -> None:
-        super().__init__(config)
+    def __init__(self, config: HtsimStepSinkConfig, *, max_workers: int,
+                 request_metric_reducer: HtsimRequestMetricReducer | None = None) -> None:
+        super().__init__(config, request_metric_reducer=request_metric_reducer)
         if isinstance(max_workers, bool) or not isinstance(max_workers, int):
             raise TypeError("max_workers must be an integer")
         if max_workers <= 0:
@@ -2256,7 +2414,7 @@ class HtsimPersistentStepSink(HtsimStepSink):
                     f"{prepared.record.step_index}"
                 )
             self._prepared.popleft()
-            return self._publish(prepared.simulation)
+            return self._publish(prepared.simulation, record)
 
     def close(self) -> None:
         with self._state_lock:
