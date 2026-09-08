@@ -1869,6 +1869,16 @@ declared, source-attributed and joined to the imported operation slice through
 a content-addressed composition surface.** COMP-88 owns promotion from the
 study-local declaration to that installed surface.
 
+The [packed metadata admission study](../../examples/packed_weight_identity_v1/RESULTS.md)
+closes COMP-91. The explicitly declared group-32 MXFP4 format accounts for
+packed values and their scale bytes separately. A 512-value envelope has a
+272-byte payload floor, so its 320-byte synthetic container passes admission;
+one byte below the floor rejects. All five independent byte oracles have zero
+residual across 15 admission cases. Existing BF16 and FP8 identities preserve
+their canonical bytes, and generic compute rejects the packed format until
+COMP-54 supplies its complete structure. These are metadata constraints, not
+verified weight contents, memory-traffic measurements or physical kernel timing.
+
 ## Open tasks
 
 Folded 2026-09-07 (maintainer triage): COMP-48 into COMP-44 (the launch-mode
@@ -1885,18 +1895,6 @@ inventories and the v1 comparison remain immutable. Prefill e-star moves from
 semantic comparison remains DEPLOY-12's scope.
 
 ### Precision
-
-- COMP-91 (Precision; P0; S): repair the API-metadata weight validator's false
-  one-byte-per-parameter floor for an explicit MXFP4 E2M1, group-32, E8M0
-  declaration. Count packed value bytes and minimum scale bytes independently,
-  allowing higher-precision exceptions and file overhead to increase storage.
-  Acceptance checks exact and one-byte-under-floor envelopes at group boundaries
-  and two complete-group sizes, preserves all strict manifest and metadata-only
-  checks, and leaves accepted BF16/FP8 identities byte-identical. The generic
-  compute path still rejects the format until COMP-54 supplies the complete K3
-  structure; COMP-59 retains physical capture. See the
-  [frozen storage expectations](../../examples/packed_weight_identity_v1/expectations.md).
-
 
 - COMP-88 (Precision; P1; M): move the external serving-composition constants
   into a content-addressed artifact joined to the imported operation slice.

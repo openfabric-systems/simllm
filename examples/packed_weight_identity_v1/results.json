@@ -1,0 +1,300 @@
+{
+  "behavioral_family_count": 0,
+  "behavioral_instance_count": 0,
+  "behavioral_score": null,
+  "closure_scope": "COMP-91 packed metadata admission only",
+  "configuration_count": 15,
+  "configurations": [
+    {
+      "accepted": false,
+      "container_extra_bytes": -1,
+      "expected_acceptance": false,
+      "file_bytes": 16,
+      "floor_bytes": 17,
+      "parameters": 31,
+      "rejection": "API packed parameter and scale payload exceeds shard bytes",
+      "synthetic_input": true
+    },
+    {
+      "accepted": true,
+      "container_extra_bytes": 0,
+      "expected_acceptance": true,
+      "file_bytes": 17,
+      "floor_bytes": 17,
+      "generic_compute_rejected": true,
+      "identity_sha256": "042c0f4b66ccc6d148e405ea1b6a837ebe139e6f72115366c485ec87722f3202",
+      "parameters": 31,
+      "synthetic_input": true
+    },
+    {
+      "accepted": true,
+      "container_extra_bytes": 48,
+      "expected_acceptance": true,
+      "file_bytes": 65,
+      "floor_bytes": 17,
+      "generic_compute_rejected": true,
+      "identity_sha256": "8f166a9aa97074df4fab48b5a067c63e226a82fb71b2ef319e030fd2ebbefff8",
+      "parameters": 31,
+      "synthetic_input": true
+    },
+    {
+      "accepted": false,
+      "container_extra_bytes": -1,
+      "expected_acceptance": false,
+      "file_bytes": 16,
+      "floor_bytes": 17,
+      "parameters": 32,
+      "rejection": "API packed parameter and scale payload exceeds shard bytes",
+      "synthetic_input": true
+    },
+    {
+      "accepted": true,
+      "container_extra_bytes": 0,
+      "expected_acceptance": true,
+      "file_bytes": 17,
+      "floor_bytes": 17,
+      "generic_compute_rejected": true,
+      "identity_sha256": "042c0f4b66ccc6d148e405ea1b6a837ebe139e6f72115366c485ec87722f3202",
+      "parameters": 32,
+      "synthetic_input": true
+    },
+    {
+      "accepted": true,
+      "container_extra_bytes": 48,
+      "expected_acceptance": true,
+      "file_bytes": 65,
+      "floor_bytes": 17,
+      "generic_compute_rejected": true,
+      "identity_sha256": "8f166a9aa97074df4fab48b5a067c63e226a82fb71b2ef319e030fd2ebbefff8",
+      "parameters": 32,
+      "synthetic_input": true
+    },
+    {
+      "accepted": false,
+      "container_extra_bytes": -1,
+      "expected_acceptance": false,
+      "file_bytes": 18,
+      "floor_bytes": 19,
+      "parameters": 33,
+      "rejection": "API packed parameter and scale payload exceeds shard bytes",
+      "synthetic_input": true
+    },
+    {
+      "accepted": true,
+      "container_extra_bytes": 0,
+      "expected_acceptance": true,
+      "file_bytes": 19,
+      "floor_bytes": 19,
+      "generic_compute_rejected": true,
+      "identity_sha256": "2c98e4070978939d7ba83dfeaaad7b0f3f4b275b612dcabee46235889c925f74",
+      "parameters": 33,
+      "synthetic_input": true
+    },
+    {
+      "accepted": true,
+      "container_extra_bytes": 48,
+      "expected_acceptance": true,
+      "file_bytes": 67,
+      "floor_bytes": 19,
+      "generic_compute_rejected": true,
+      "identity_sha256": "448bcf8a182ce1103412aa1fd66cfd5104ea1532ceaf465e573ee2dcd694ab16",
+      "parameters": 33,
+      "synthetic_input": true
+    },
+    {
+      "accepted": false,
+      "container_extra_bytes": -1,
+      "expected_acceptance": false,
+      "file_bytes": 271,
+      "floor_bytes": 272,
+      "parameters": 512,
+      "rejection": "API packed parameter and scale payload exceeds shard bytes",
+      "synthetic_input": true
+    },
+    {
+      "accepted": true,
+      "container_extra_bytes": 0,
+      "expected_acceptance": true,
+      "file_bytes": 272,
+      "floor_bytes": 272,
+      "generic_compute_rejected": true,
+      "identity_sha256": "e9ef160e92dc778cd0b7858ebb4f81e368fde126063cb193e94433717c1552b1",
+      "parameters": 512,
+      "synthetic_input": true
+    },
+    {
+      "accepted": true,
+      "container_extra_bytes": 48,
+      "expected_acceptance": true,
+      "file_bytes": 320,
+      "floor_bytes": 272,
+      "generic_compute_rejected": true,
+      "identity_sha256": "16510a5baf35644c01d9273964daf0510e486dd514f256023d916fb4bbe46301",
+      "parameters": 512,
+      "synthetic_input": true
+    },
+    {
+      "accepted": false,
+      "container_extra_bytes": -1,
+      "expected_acceptance": false,
+      "file_bytes": 543,
+      "floor_bytes": 544,
+      "parameters": 1024,
+      "rejection": "API packed parameter and scale payload exceeds shard bytes",
+      "synthetic_input": true
+    },
+    {
+      "accepted": true,
+      "container_extra_bytes": 0,
+      "expected_acceptance": true,
+      "file_bytes": 544,
+      "floor_bytes": 544,
+      "generic_compute_rejected": true,
+      "identity_sha256": "f1902c5f94292186ed203d41b1015f62232c3070921181714ad1e58ff5b6dda4",
+      "parameters": 1024,
+      "synthetic_input": true
+    },
+    {
+      "accepted": true,
+      "container_extra_bytes": 48,
+      "expected_acceptance": true,
+      "file_bytes": 592,
+      "floor_bytes": 544,
+      "generic_compute_rejected": true,
+      "identity_sha256": "8eed07497f06db07dedf5e0e0164f6aa637b02260bb6b6fc50bdfc710eca00f8",
+      "parameters": 1024,
+      "synthetic_input": true
+    }
+  ],
+  "evidence_class": "synthetic_metadata_identity",
+  "evidence_classification": "Storage arithmetic, admission, rejection and identity controls are unscored; this study has no timing-behavior denominator.",
+  "exact_oracle_count": 5,
+  "exact_oracles": [
+    {
+      "floor_bytes": 17,
+      "parameters": 31,
+      "residual_bytes": 0,
+      "scale_bytes": 1,
+      "value_bytes": 16
+    },
+    {
+      "floor_bytes": 17,
+      "parameters": 32,
+      "residual_bytes": 0,
+      "scale_bytes": 1,
+      "value_bytes": 16
+    },
+    {
+      "floor_bytes": 19,
+      "parameters": 33,
+      "residual_bytes": 0,
+      "scale_bytes": 2,
+      "value_bytes": 17
+    },
+    {
+      "floor_bytes": 272,
+      "parameters": 512,
+      "residual_bytes": 0,
+      "scale_bytes": 16,
+      "value_bytes": 256
+    },
+    {
+      "floor_bytes": 544,
+      "parameters": 1024,
+      "residual_bytes": 0,
+      "scale_bytes": 32,
+      "value_bytes": 512
+    }
+  ],
+  "expectations_commit": "2bec2fd4c34bee2fbcbb9d2e2340b24e0ffb33f2",
+  "fatal_findings": [],
+  "hardware_measurement": false,
+  "implementation_commit": "c283dceb27a916bab6a8467c82a6b2c9ec2168eb",
+  "legacy_controls": [
+    {
+      "identity_sha256": "54ec0054fbf606ff2d4eb795a0de8e50f83f76bfe64824ce21a1773b6aeae289",
+      "suite": "offline/calibration/suites/deepseek-v3-text-v1-frameworks-2026-08-25/suite.json",
+      "unchanged": true
+    },
+    {
+      "identity_sha256": "2b308ee6449b649a57983c130e4481dba8e0e99fa997902c7503c0255e7c83cc",
+      "suite": "offline/calibration/suites/qwen3-32b-fp8-text-v1-frameworks-2026-08-28/suite.json",
+      "unchanged": true
+    },
+    {
+      "identity_sha256": "f148aa1f1fe5ca54434bf9707b60c247e504f9298a11e9e25d7ee8a51d2685b6",
+      "suite": "offline/calibration/suites/qwen3.8-27b-text-v1-frameworks-2026-08-25/suite.json",
+      "unchanged": true
+    },
+    {
+      "identity_sha256": "1d69e05d4ba156e78b881118741991aecc2931cde8d959eface375f7bb079d6e",
+      "suite": "offline/calibration/suites/transformer-dag-v1-frameworks-2026-08-24/suite.json",
+      "unchanged": true
+    }
+  ],
+  "raw_summary_sha256": "9b2dbae8ab0e218078387939fc2b38686ca859ec7093cda099cc566a0acf3e3f",
+  "remaining_tasks": [
+    "COMP-54",
+    "COMP-59"
+  ],
+  "schema": "simllm-packed-weight-identity-result-v1",
+  "source_sha256": {
+    "examples/packed_weight_identity_v1/run_study.py": "61047efd6562e16920526272566451bf8cf65c851759115706e1723e5b8fd471",
+    "simllm/calibration/extraction.py": "efceb74c7bcd9277d40e6e49774e4595d6644ac3ac548504635c7c8c2d899381"
+  },
+  "storage_relation_family_count": 2,
+  "storage_relation_instance_count": 7,
+  "storage_relations": [
+    {
+      "expected_bytes": 48,
+      "family": "container_overhead",
+      "observed_bytes": 48,
+      "parameters": 31,
+      "verdict": "PASS"
+    },
+    {
+      "expected_bytes": 48,
+      "family": "container_overhead",
+      "observed_bytes": 48,
+      "parameters": 32,
+      "verdict": "PASS"
+    },
+    {
+      "expected_bytes": 48,
+      "family": "container_overhead",
+      "observed_bytes": 48,
+      "parameters": 33,
+      "verdict": "PASS"
+    },
+    {
+      "expected_bytes": 48,
+      "family": "container_overhead",
+      "observed_bytes": 48,
+      "parameters": 512,
+      "verdict": "PASS"
+    },
+    {
+      "expected_bytes": 48,
+      "family": "container_overhead",
+      "observed_bytes": 48,
+      "parameters": 1024,
+      "verdict": "PASS"
+    },
+    {
+      "component": "value_bytes",
+      "expected_bytes": 512,
+      "family": "complete_group_scaling",
+      "observed_bytes": 512,
+      "verdict": "PASS"
+    },
+    {
+      "component": "scale_bytes",
+      "expected_bytes": 32,
+      "family": "complete_group_scaling",
+      "observed_bytes": 32,
+      "verdict": "PASS"
+    }
+  ],
+  "verdict": "PASS",
+  "weights_downloaded_or_verified": false
+}
