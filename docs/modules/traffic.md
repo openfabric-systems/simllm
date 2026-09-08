@@ -410,6 +410,17 @@ emergent one and this section is replaced rather than amended.
 
 ## Status
 
+The declared forward pipeline publishes exact packet queue, receiver holding,
+recovery and request-completion evidence in the
+[queue study](../../examples/pp_rail_contention_v2/RESULTS.md). Its 96 executions
+are valid and its 24 trace selections preserve every accepted timing and byte
+comparison. Expert traffic adds queue service at depths two, four and eight;
+the two-stage request absorbs that delay with unchanged time to first token,
+while the deeper requests gain about 2.54 milliseconds through shared-buffer
+loss, retry timers and ordered delivery. TRAF-88 owns the remaining physically
+scoped penalty qualification after this all-depth hypothesis is refuted;
+TRAF-8 owns captured stages, microbatches and general serving integration.
+
 Pattern expansion landed with M1 (`simllm.traffic.patterns`): scatter,
 gather, ring allreduce (reduce-scatter + allgather, 2(W-1) chained rounds),
 pairwise all-to-allv, and binomial-tree broadcast, all rendered as GOAL
@@ -543,8 +554,10 @@ families passed and no fatal guard was violated; the absent-plan arm keeps its
 559-byte v1 wire form and its exact runtime timing, including under a nonzero
 collective channel service. See
 [the collective plan results](../../examples/collective_plan_v1/RESULTS.md).
-CORE-48 owns the missing cross-node destination-ingress serializer that keeps a
-converging combine structural rather than physical evidence.
+CORE-48 supplies the opt-in coarse joint source and receiver reservation for
+cross-node ingress. Its [receiver study](../../examples/receiver_ingress_v1/RESULTS.md)
+qualifies that service through request metrics; the source-only compatibility
+path and the packet-backed results above retain their separate evidence.
 
 The 2026-08-13 TRAF-28 qualification then made that plan the lowering default
 and closed the task. `SerialStepLowererConfig.attach_collective_plan` and the
@@ -2099,6 +2112,35 @@ shipped collectives.
   Acceptance: a re-frozen oracle that names the join term matches all twelve
   rows at 0 ps, and no backend timing changes.
 
+- TRAF-88 (Precision; P1; L): qualify a physically scoped live pipeline
+  contention penalty after the all-depth hypothesis is refuted. The valid
+  [queue study](../../examples/pp_rail_contention_v2/RESULTS.md) completes all
+  96 executions, establishes independent expert DATA service ahead at depths
+  two, four and eight, and preserves 24 exact trace pairs plus 48 historical
+  completion controls. Its fixed receiver window removes the old unloaded
+  spine-count confound. The two-stage request gains 0 ps because later arrival
+  reduces holding exactly; four- and eight-stage requests gain 2540.681 and
+  2540.064 microseconds through shared-buffer loss, physical retries and ordered
+  delivery. The successful critical retries use fresh expected-arrival release,
+  so actual-arrival selection is not necessary for every network-induced
+  penalty. This mixed result does not satisfy the frozen all-instance bar.
+  HTSIM-40/41 recovery, complete phase evidence, read-only packet/queue traces
+  and receiver-window separation are completed prerequisites, not residual work.
+  The remaining qualification must prospectively identify its load, pipeline
+  arrival and recovery regime and its expected direction and quantitative band,
+  then connect observed source, receiver and ordering dependencies to positive
+  hop and request changes within that declared scope. Preserve the measured
+  two-stage absorption and deeper recovery cases as regressions; do not tune
+  their window or rescore them to manufacture an all-depth result. Exact ideal,
+  full-bisection, trace-disabled and phase/receiver byte-floor guards remain
+  mandatory. Per-visit queue-work sums and whole-phase cut bytes cannot supply
+  an additive request penalty. Source eligibility and recursively selected
+  competing switch dependencies remain outside the delivered trace's scope;
+  any attribution that needs them must add authoritative observations. The
+  original contention study remains void. TRAF-8 retains captured stages,
+  microbatches and general serving metrics, and BACK-38 retains persistent
+  physical execution.
+
 ### Completeness
 
 - TRAF-49 (Completeness; P2; M): let a profile that supports only the widths it
@@ -2292,10 +2334,10 @@ shipped collectives.
   the analytic split as a byte-identical off path. The packetized leg must
   charge destination ingress explicitly at the receiving port instead of
   inheriting the analytic `max(egress_bytes, ingress_bytes)` endpoint-load
-  surrogate that CORE-41 installed; CORE-48 keeps the cross-node
-  destination-ingress serializer, TRAF-65 owns the A100 packet, bond, credit,
-  FIFO and wire calibration, and COMP-31 owns the remaining compute-side local
-  mechanism and cross-architecture generalization. None is closed here. The
+  surrogate that CORE-41 installed. The completed CORE-48 supplies opt-in coarse
+  cross-node ingress; TRAF-65 owns the A100 packet, bond, credit, FIFO and wire
+  calibration, and COMP-31 owns the remaining compute-side local mechanism and
+  cross-architecture generalization. Those local packet tasks remain open. The
   implementation consumes TRAF-65's versioned `candidate` profile when selected
   and never invents a measured constant from a study case name. The candidate
   handoff does not require TRAF-65 to be closed. Acceptance: the off path
@@ -2457,31 +2499,3 @@ shipped collectives.
   P1 since 2026-09-07: TRAF-88 is the first consumer; the declared forward
   slice above landed with the pipeline rail topology study and the width-one
   identity path is tested.
-
-- TRAF-88 (Completeness; P1; L): establish a non-void, load-dependent
-  node-local PP contention penalty after resolving the pinned packet backend's
-  fatal control-lifecycle drops in all six 4:1, EP-width-32 physical cells of
-  the [contention study](../../examples/pp_rail_contention_v1/RESULTS.md).
-  The 72-cell freeze delivered 66 clear cells, exact unloaded null-profile
-  equality across all four fabrics, and byte-identical default manifests,
-  topology text and endpoint permutations. The opt-in manifest builder and
-  renderer now support two, four or eight spines and a separate uniform
-  uplink rate. All surviving physical PP tails and critical shares change by
-  0 from EP width zero to eight. Reducing the spine count instead adds
-  3,993,600 ps to PP p99 even on an unloaded rail; the reported ring window
-  grows by the same amount. Resolve that topology-dependent control effect
-  before attributing the difference to shared-uplink contention. The next
-  freeze must preserve the fatal loss guard, obtain valid EP-width-32 phase
-  and step evidence on both attachments, and independently establish bytes
-  queued ahead of the PP hop. Whole-phase leaf-cut bytes already provide
-  capacity and drain floors but do not justify a positive tagged-hop queue
-  floor. Retain exact ideal-profile equality and full-bisection identity as
-  regressions. The current build exposes no Clos flow-hash routing option;
-  TRAF-8 still owns captured stages, microbatches and general serving metrics.
-  Unblocked on 2026-09-08 by HTSIM-40 and HTSIM-41's
-  [DATA recovery study](../../examples/data_recovery_v1/RESULTS.md): all six
-  combined cells complete and physically quiesce within unchanged budgets,
-  with exact disabled compatibility. The next freeze still has to separate
-  the topology-dependent control window from tagged-hop contention and
-  establish independently which bytes were queued ahead of each pipeline hop.
-  Recovery completion alone does not establish a load-dependent PP penalty.
