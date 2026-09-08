@@ -769,6 +769,13 @@ The evidence classes, mlx5 hook and boundary-test matrix are recorded in
 
 ## Status
 
+The external congestion controller remains the sole rate authority when the
+native interface observes congestion notifications. BACK-71 restores the
+validated observation path without enabling another reaction point. Its
+[eight-configuration comparison](../../examples/completion_boundary_v1/CNP_RESULTS.md)
+preserves all 24 paired completion rows and their order at exactly zero
+picoseconds difference; the complete composed native gate passes.
+
 **Collective `rnic-cn` recovers wide-incast DATA loss through explicit initial
 budgets and physical tail probes.** The
 [DATA recovery study](../../examples/data_recovery_v1/RESULTS.md) supplies the
@@ -1273,15 +1280,6 @@ gives them the meanings below; the earlier record's "no residual entry is
 created" statement stands and refers to different, never-registered work.
 
 ### Precision
-
-- BACK-71 (Precision; P0; M): restore the external congestion controller's
-  validated notification path. Native transmit support intercepts every CNP
-  observation and rejects the composed external-controller fixture when no
-  native reaction point exists. Route only native-transmit notifications to
-  the native reaction point; retain external token, extent and capability
-  checks and the single-controller contract. Acceptance is the frozen
-  [ownership checks](../../examples/completion_boundary_v1/cnp_owner_checks.md),
-  exact observation-selection completion controls and the full composed gate.
 
 - BACK-13 (Precision; P1; L): build a versioned CX-7 observable-state model
   and capture schema. Inventory only public Linux mlx5, rdma-core, NVIDIA
