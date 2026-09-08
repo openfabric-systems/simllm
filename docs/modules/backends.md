@@ -1970,6 +1970,17 @@ model the two flows as separate nodes and say so.
   HTSIM-6 and BACK-9: policy lookahead removes the repeated declare cost,
   structural WQ backpressure limits how much work can be exposed, and the
   event-loop scaling needs its own look.
+- HTSIM-28 (Precision; P1; M): extend the persistent flow session with an
+  atomic completion boundary that permits a dependent injection at the exact
+  discovered timestamp, preserving pending equal-time events and every runtime
+  authority. The delivered inclusive `advance` and strictly later `inject`
+  cannot express that transition. The completion wait also yields before an
+  earlier local compute action, without polling past a native completion.
+  Preserve contiguous identities, validation before mutation and all existing
+  verb bytes. Acceptance demonstrates exact continuation, separate logical
+  completion and physical quiescence, and unchanged old-verb controls; see the
+  [successor freeze](../../examples/completion_boundary_v1/expectations.md) and
+  the [original protocol audit](../../examples/congestion_chain_v1/RESULTS.md).
 - HTSIM-34 (Precision; P1; M): finite outstanding work at the RoCE sender.
   `RoceSrc` is a rate-paced open-loop sender with no window, no send queue and
   no outstanding-bytes cap, so it approximates an infinitely deep pipeline and
