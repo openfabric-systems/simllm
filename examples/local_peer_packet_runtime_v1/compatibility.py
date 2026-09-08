@@ -45,7 +45,7 @@ def produce(args):
     os.environ.update(SIMLLM_HTSIM_RNIC=str(args.htsim.resolve()), SIMLLM_TXT2BIN=str(args.txt2bin.resolve()),
                       SIMLLM_MIXED_ATTRIBUTION_RUN_ROOT=str(output))
     locality = load_study(root, "nvlink_locality_v1")
-    locality.run(SimpleNamespace(out=output / "nvlink_locality_v1"))
+    locality.run_study(output / "nvlink_locality_v1")
     mixed = load_study(root, "mixed_attribution_v1")
     # Only this study module's host stopwatch is controlled. The simulator,
     # subprocess timeouts and all virtual time authorities retain real inputs.
