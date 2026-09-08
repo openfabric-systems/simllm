@@ -179,6 +179,12 @@ def projection_for(cell):
         declared_pipeline_placement(cell.width), variant=cell.variant, spine_count=cell.spines))
 
 
+def require_rendered_goal(raw, accepted):
+    accepted = [accepted] if isinstance(accepted, str) else accepted
+    if hashlib.sha256(raw).hexdigest() not in accepted:
+        raise ValueError("zero-offset rendered GOAL differs from the published reference")
+
+
 def prepare_cell(cell, root, references, locks, txt2bin):
     out = root / cell.name
     out.mkdir()
@@ -191,8 +197,7 @@ def prepare_cell(cell, root, references, locks, txt2bin):
     retained, lock = references / physical_name, locks[physical_name]
     baseline_trace = render_serial_execution_graph_goal(projection.project_graph(baseline_graph), num_goal_ranks=64)
     raw = baseline_trace.render().encode()
-    if hashlib.sha256(raw).hexdigest() != lock["goal_text_sha256"]:
-        raise ValueError("zero-offset rendered GOAL differs from the published reference")
+    require_rendered_goal(raw, lock["goal_text_sha256"])
     for name, field in (("step.goal", "goal_text_sha256"), ("step.bin", "goal_sha256"),
                         ("clos.topo", "topology_sha256")):
         require_digest(retained / name, lock[field])

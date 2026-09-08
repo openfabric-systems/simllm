@@ -434,3 +434,17 @@ def test_preparation_locks_unchanged_inputs_and_records_bounds_before_conversion
     inputs = out / cell.name
     study.verify_inputs(inputs, cell, study.digest(inputs / "inputs.json"))
     assert (inputs / "clos.topo").read_bytes() == (retained / "clos.topo").read_bytes()
+
+
+@pytest.mark.parametrize("variant", ("rail", "node-local"))
+def test_zero_offset_goal_matches_published_digest_list(variant):
+    cell = pick(population="physical", variant=variant, width=4, ep_width=0)
+    graph = study.build_graph(replace(cell, arrival_ps=0))
+    raw = render_serial_execution_graph_goal(
+        study.projection_for(cell).project_graph(graph), num_goal_ranks=64).render().encode()
+    accepted = study.predecessor.reference_locks()[cell.reference_name]["goal_text_sha256"]
+    assert isinstance(accepted, list) and accepted
+    study.require_rendered_goal(raw, accepted)
+    study.require_rendered_goal(raw, accepted[0])
+    with pytest.raises(ValueError, match="published reference"):
+        study.require_rendered_goal(raw + b"changed", accepted)
