@@ -1236,6 +1236,20 @@ shipped collectives.
 
 ### Precision
 
+- TRAF-91 (Precision; P0; M): audit the historical TRAF-74 timing boundary and
+  packetization attribution before using that capture to change a model
+  parameter. A fixed per-transfer overhead can satisfy the five-percentage-point
+  size rule without any packet mechanism; the reported launch-skew fraction
+  uses a declared budget rather than observed common-clock starts. Freeze new
+  synthetic counterexamples, preserve every original capture and score, and
+  separate local event durations, common phase timing, producer pacing and
+  memory service. Acceptance supersedes unsupported current validity and
+  attribution claims, records any fatal precondition as undecidable, and gives
+  TRAF-86 a discriminating four-card request with no invented measurements.
+  The [audit expectations](../../examples/nvlink_measurement_boundary_v1/expectations.md)
+  qualify the inference boundary, not the physical packet model.
+
+
 - TRAF-81 (Precision; P1; L): complete the blocked rank-16 cell in the
   [independent collective-floor extrapolation study](../../examples/collective_floor_extrapolation_v1/RESULTS.md).
   The frozen rank-2 and rank-4 training cells and rank-8 holdout completed on
