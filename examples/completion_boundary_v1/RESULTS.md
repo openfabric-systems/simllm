@@ -205,7 +205,8 @@ It refuses to overwrite a prior execution or silently substitute a rebuilt
 baseline. `--plan-only` records identities and inputs without native execution.
 
 HTSIM-28's exact native continuation and BACK-38's retained-artifact metric
-path are literal deliverables. BRIDGE-2 is unblocked at the native continuation
+path are literal deliverables, advancing M4's checked physical execution
+foundation. M4 remains in progress. BRIDGE-2 is unblocked at the native continuation
 boundary, but still owns cross-step state, online graph frames and bookkeeping
 cursors. BACK-72 owns deliberately rejected compositions and additional
 platform support. TRAF-8 and TRAF-88 retain captured pipeline serving and the

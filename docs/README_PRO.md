@@ -716,8 +716,9 @@ Reproduce with
   metric chain on the BACK-25 and BACK-26 vocabulary;
   the frozen expectations live in
   [examples/rnic_live_v1](../examples/rnic_live_v1/expectations.md)),
-  the online stateful co-simulator session (BRIDGE-2 and HTSIM-18, with
-  BRIDGE-1's prepared worker reuse landed for recorded replays), KV
+  the online stateful co-simulator session (BRIDGE-2, built on HTSIM-18's
+  native persistence, HTSIM-28's exact completion boundaries and BACK-38's
+  checked step retention; BRIDGE-1 supplies prepared reuse for recorded replays), KV
   lifecycle (CORE-3; the coarse resource runtime CORE-4 and the completion
   reduction CORE-5 have landed), and
   calibration against real captures.
