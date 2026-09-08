@@ -13,8 +13,14 @@ large-model latency prediction.
 
 The final preimplementation expectation commit is
 `9787af3f30397f568adc5739192640ffe6e77d67`; it precedes implementation and the
-first study execution. The executed implementation is
-`a2700e9396c4a09b061ea5889983c4933f3b2115`. The first frozen execution passes.
+first study execution. The first executed implementation is
+`a2700e9396c4a09b061ea5889983c4933f3b2115`. Both the first frozen execution
+and the repetition at `7bec62b323d3179e300f34cf232a48ab86ff2581` pass.
+The repetition follows a post-specified error-path repair: invalid cells now
+stop feeding downstream relations so the runner can write its void summary.
+Every valid raw configuration artifact and modeled number is identical across
+the two executions. A wrapper-level malformed-read test verifies raw retention
+and a void summary with no behavioral score.
 [results.json](results.json) records source and raw-evidence digests, independent
 oracles, timing relations and compatibility controls.
 

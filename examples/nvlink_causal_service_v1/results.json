@@ -495,7 +495,14 @@
     "future_insertion_early_visibility_shift_ps": 1000907,
     "read_response_before_request_visibility_ps": 694
   },
-  "implementation_commit": "a2700e9396c4a09b061ea5889983c4933f3b2115",
+  "implementation_commit": "7bec62b323d3179e300f34cf232a48ab86ff2581",
+  "previous_execution": {
+    "identical_raw_configuration_artifacts": true,
+    "implementation_commit": "a2700e9396c4a09b061ea5889983c4933f3b2115",
+    "raw_summary_sha256": "7ef2c4095201be7f9d850693ff96aec63f6634d3b5bd913036709c4ec04dab4e",
+    "reason_for_repeat": "Post-specified error-path correction keeps invalid cells out of downstream relations and guarantees a void summary. Valid cell behavior is unchanged.",
+    "verdict": "PASS"
+  },
   "raw_artifacts": [
     {
       "name": "disjoint-r12500000000-q0-alone.json",
@@ -834,7 +841,7 @@
       "sha256": "a273d6eaf5bee2309cb5aefa651095e3e84aef227eac751dae6d8c0a0ce750ae"
     }
   ],
-  "raw_summary_sha256": "7ef2c4095201be7f9d850693ff96aec63f6634d3b5bd913036709c4ec04dab4e",
+  "raw_summary_sha256": "7568165d99078e8e66095d7235184bebdcced397ea521923d4cae4133e50a1e9",
   "remaining_tasks": [
     "TRAF-45",
     "TRAF-73",
@@ -842,7 +849,7 @@
   ],
   "schema": "simllm-nvlink-causal-service-result-v1",
   "source_sha256": {
-    "examples/nvlink_causal_service_v1/run_study.py": "6f90dc31c54caf0f4c5ad032dd683c6a0759501d94b8fea9d956a0d9166f12a2",
+    "examples/nvlink_causal_service_v1/run_study.py": "56030b8e46a625e84671f89efbaa0b14ebe2bdd18fe6fade39a75d852508f24a",
     "simllm/backends/htsim_nvlink.py": "798f9326673e4fd1711aeb10f70469ba810d53317c076c7dfb906f3e23ba781f",
     "simllm/backends/nvlink_runtime.py": "2f729af7f70e653682114d10ba5ea7acbea9de461828d11a1e1819b9b72ff87c"
   },
