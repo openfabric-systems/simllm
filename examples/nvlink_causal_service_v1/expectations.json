@@ -19,6 +19,6 @@
   "switch_buffer_packets": 1,
   "slow_receiver_rate_bytes_per_second": 10000000000,
   "fatal_failure_verdict": "VOID",
-  "compatibility_authority": "compatibility",
+  "compatibility_authority": "compatibility_v1",
   "control_cases": ["write", "read", "fanin", "staggered"]
 }
