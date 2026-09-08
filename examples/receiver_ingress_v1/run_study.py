@@ -262,10 +262,12 @@ def apply_guards(row, declared, baseline=None, disabled=None):
     if row["status"] != "complete" or len(row["steps"]) != 3:
         findings.append("incomplete three-step request")
         return {**row, "fatal_findings": findings, "exact_oracles": oracles}
-    if mode == "disabled" and baseline is not None:
-        same = row["snapshot_sha256"] == baseline["snapshot_sha256"]
+    if mode == "disabled":
+        same = baseline is not None and row["snapshot_sha256"] == baseline["snapshot_sha256"]
         oracles.append({"family": "legacy_snapshot_identity", "matches": same})
-        if not same:
+        if baseline is None:
+            findings.append("disabled configuration has no immutable baseline evidence")
+        elif not same:
             findings.append("disabled snapshot differs from immutable baseline")
     if enabled and disabled is not None:
         if row["goal_sha256"] != disabled["goal_sha256"]:
@@ -416,12 +418,39 @@ def provenance(mode):
             "mechanism_freeze_commit": MECHANISM_FREEZE,
             "pre_run_clarification_commit": PRE_RUN_CLARIFICATION,
             "input_identity_clarification_commit": INPUT_IDENTITY_CLARIFICATION,
-            "clarification_status": "after first implementation edit, before any execution",
+            "ring_clarification_status": "after first implementation edit, before any unit or consumer execution",
+            "input_identity_clarification_status": "after initial unit execution, before first consumer execution",
             "script_sha256": digest(Path(__file__).read_bytes()),
             "expectations_sha256": digest((HERE / "expectations.md").read_bytes()),
             "source_sha256": {name: digest((source/name).read_bytes()) for name in
                               ("simllm/core/runtime.py", "simllm/core/authority.py",
-                               "simllm/core/completion.py", "simllm/traffic/collective_plan.py")}}
+                              "simllm/core/completion.py", "simllm/traffic/collective_plan.py")}}
+
+
+def load_baseline(directory, run_provenance):
+    raw = (directory / "results.json").read_bytes()
+    baseline = json.loads(raw)
+    expected = {case["name"]: case for case in cases()}
+    if (baseline["schema"] != "receiver-ingress-v1" or baseline["verdict"] != "valid" or
+            baseline["provenance"]["runtime_commit"] != BASELINE_COMMIT or
+            baseline["provenance"]["mode"] != "baseline"):
+        raise ValueError("baseline provenance or verdict is invalid")
+    for field in ("script_sha256", "expectations_sha256"):
+        if baseline["provenance"][field] != run_provenance[field]:
+            raise ValueError(f"baseline {field} differs from candidate")
+    rows = baseline["cells"]
+    names = [row["case"]["name"] for row in rows]
+    if (len(names) != len(expected) or set(names) != set(expected) or
+            baseline["executions"] != len(expected) or baseline["request_steps"] != 3*len(expected)):
+        raise ValueError("baseline population is missing, duplicated or unexpected")
+    for row in rows:
+        name = row["case"]["name"]
+        if (row["case"] != expected[name] or row["mode"] != "baseline" or
+                row["status"] != "complete" or len(row["steps"]) != 3 or row["fatal_findings"]):
+            raise ValueError("baseline configuration or outcome is invalid")
+        if digest((directory / name / "baseline" / "snapshot.json").read_bytes()) != row["snapshot_sha256"]:
+            raise ValueError("baseline snapshot digest mismatch")
+    return {row["case"]["name"]: row for row in rows}, digest(raw)
 
 
 def main():
@@ -440,17 +469,8 @@ def main():
     write_once(args.out / "pre_run_bounds.json", declared)
     baseline_rows = {}
     if args.baseline is not None:
-        raw = (args.baseline / "results.json").read_bytes()
-        baseline = json.loads(raw)
-        if baseline["provenance"]["runtime_commit"] != BASELINE_COMMIT or baseline["verdict"] != "valid":
-            raise ValueError("baseline provenance or verdict is invalid")
-        if baseline["provenance"]["script_sha256"] != run_provenance["script_sha256"]:
-            raise ValueError("baseline runner differs from candidate runner")
-        run_provenance["baseline_results_sha256"] = digest(raw)
-        baseline_rows = {r["case"]["name"]: r for r in baseline["cells"]}
-        for name, row in baseline_rows.items():
-            if digest((args.baseline / name / "baseline" / "snapshot.json").read_bytes()) != row["snapshot_sha256"]:
-                raise ValueError("baseline snapshot digest mismatch")
+        baseline_rows, baseline_digest = load_baseline(args.baseline, run_provenance)
+        run_provenance["baseline_results_sha256"] = baseline_digest
     write_once(args.out / "provenance.json", run_provenance)
     rows = []
     for case in cases():

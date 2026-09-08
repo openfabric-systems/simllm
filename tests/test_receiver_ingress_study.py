@@ -146,3 +146,48 @@ def test_zero_disabled_and_duplex_effects_are_not_scored(observed):
     assert len(relations) == 1
     assert relations[0]["family"] == "receiver_latency_increase"
     assert relations[0]["within_band"]
+
+
+def test_missing_baseline_never_silently_skips_disabled_identity(observed):
+    case, _, rows = observed
+    checked = study.apply_guards(rows["disabled"], study.bounds(case))
+    assert "disabled configuration has no immutable baseline evidence" in checked["fatal_findings"]
+
+
+@pytest.mark.parametrize("mutation", ["none", "missing", "duplicate", "unexpected",
+                                      "changed-case", "changed-mode", "snapshot", "script"])
+def test_baseline_loader_requires_exact_population_and_snapshots(
+    tmp_path, monkeypatch, observed, mutation,
+):
+    case, root, rows = observed
+    monkeypatch.setattr(study, "cases", lambda: [case])
+    row = study.apply_guards(rows["baseline"], study.bounds(case))
+    provenance = {"runtime_commit": study.BASELINE_COMMIT, "mode": "baseline",
+                  "script_sha256": "script", "expectations_sha256": "expectations"}
+    baseline = {"schema": "receiver-ingress-v1", "verdict": "valid", "executions": 1,
+                "request_steps": 3, "cells": [copy.deepcopy(row)], "provenance": provenance}
+    snapshot = tmp_path / case["name"] / "baseline/snapshot.json"
+    snapshot.parent.mkdir(parents=True)
+    snapshot.write_bytes((root / "baseline/snapshot.json").read_bytes())
+    if mutation == "missing":
+        baseline["cells"] = []
+    elif mutation == "duplicate":
+        baseline["cells"].append(copy.deepcopy(row))
+    elif mutation == "unexpected":
+        baseline["cells"][0]["case"]["name"] = "unregistered-case"
+    elif mutation == "changed-case":
+        baseline["cells"][0]["case"]["rate_gbps"] = 1
+    elif mutation == "changed-mode":
+        baseline["cells"][0]["mode"] = "disabled"
+    elif mutation == "snapshot":
+        snapshot.write_bytes(b"[]\n")
+    elif mutation == "script":
+        provenance["script_sha256"] = "changed"
+    study.write_once(tmp_path / "results.json", baseline)
+    expected = {"script_sha256": "script", "expectations_sha256": "expectations"}
+    if mutation == "none":
+        loaded, _ = study.load_baseline(tmp_path, expected)
+        assert loaded == {case["name"]: row}
+    else:
+        with pytest.raises(ValueError, match="baseline"):
+            study.load_baseline(tmp_path, expected)
