@@ -570,3 +570,59 @@ def test_projection_checker_rejects_duplicate_wqe_identity_and_stale_stage():
             result,
             replace(report, wqes=(*report.wqes[:-1], changed)),
         )
+
+
+@pytest.mark.parametrize(
+    "identity",
+    [
+        "rnic_id",
+        "destination_rnic_id",
+        "sq_id",
+        "rq_id",
+        "cq_id",
+        "qp_id",
+    ],
+)
+def test_returned_endpoint_identity_mutation_rejects_before_commit(identity, monkeypatch):
+    runtime = CoarseDeviceRuntime(receiver_ingress=True)
+    bookkeeper = RequestBookkeeper()
+    seed = _graph(((8, 0, 3),), execution_id="seed")
+    runtime.execute(seed, bookkeeping=bookkeeper)
+    before = (
+        runtime.bypass_ledger.records,
+        runtime.bypass_ledger.source_byte_ledger,
+        runtime.bypass_ledger.receiver_byte_ledger,
+        runtime.last_report,
+        runtime.selected_critical_visits,
+        bookkeeper.snapshot(),
+    )
+    original = AtlahsWqeLedger.submit
+
+    def altered_projection(ledger, submission):
+        record = original(ledger, submission)
+        if submission.extent_index == 1:
+            return replace(record, **{identity: getattr(record, identity) + ":stale"})
+        return record
+
+    graph = _graph(((8, 0, 3), (16, 0, 5)), execution_id="retry")
+    with monkeypatch.context() as patch:
+        patch.setattr(AtlahsWqeLedger, "submit", altered_projection)
+        with pytest.raises(ValueError, match=f"receiver ingress {identity} disagrees"):
+            runtime.execute(graph, bookkeeping=bookkeeper)
+    assert (
+        runtime.bypass_ledger.records,
+        runtime.bypass_ledger.source_byte_ledger,
+        runtime.bypass_ledger.receiver_byte_ledger,
+        runtime.last_report,
+        runtime.selected_critical_visits,
+        bookkeeper.snapshot(),
+    ) == before
+    actual = runtime.execute(graph, bookkeeping=bookkeeper)
+    fresh = CoarseDeviceRuntime(receiver_ingress=True)
+    fresh_bookkeeper = RequestBookkeeper()
+    fresh.execute(seed, bookkeeping=fresh_bookkeeper)
+    expected = fresh.execute(graph, bookkeeping=fresh_bookkeeper)
+    assert actual == expected
+    assert runtime.last_report == fresh.last_report
+    assert runtime.bypass_ledger.records == fresh.bypass_ledger.records
+    assert bookkeeper.snapshot() == fresh_bookkeeper.snapshot()

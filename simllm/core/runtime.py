@@ -2989,10 +2989,24 @@ class CoarseDeviceRuntime:
             raise ValueError("WQE projection changed external eligibility time")
         if isinstance(projection, ReceiverIngressWqeProjection) != self.receiver_ingress:
             raise ValueError("WQE receiver ingress disagrees with the selected authority")
-        if isinstance(
-            projection, ReceiverIngressWqeProjection
-        ) and projection.destination_rnic_id != self.profile.rnic_id(submission.destination_rank):
-            raise ValueError("WQE receiver ingress names the wrong destination port")
+        if isinstance(projection, ReceiverIngressWqeProjection):
+            source_node, source_gpu = self.profile.node_gpu(submission.source_rank)
+            destination_node, destination_gpu = self.profile.node_gpu(
+                submission.destination_rank
+            )
+            source = f"atlahs:node-{source_node}:gpu-{source_gpu}"
+            destination = f"atlahs:node-{destination_node}:gpu-{destination_gpu}"
+            identities = {
+                "rnic_id": self.profile.rnic_id(submission.source_rank),
+                "destination_rnic_id": self.profile.rnic_id(submission.destination_rank),
+                "sq_id": f"{source}:sq",
+                "rq_id": f"{destination}:rq",
+                "cq_id": f"{source}:cq",
+                "qp_id": f"{source}:qp",
+            }
+            for name, expected_identity in identities.items():
+                if getattr(projection, name) != expected_identity:
+                    raise ValueError(f"WQE receiver ingress {name} disagrees with its endpoint")
 
     def _completion_events(
         self,
