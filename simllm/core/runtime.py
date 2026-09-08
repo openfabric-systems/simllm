@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     )
 from simllm.core.authority import (
     check_bookkeeping_projection,
+    check_completion_event_projection,
     class_service_bytes,
     work_completed_bytes,
 )
@@ -708,6 +709,34 @@ class WqeLifecycleProjection:
                 raise ValueError("WQE packet timeline is not monotonic")
 
 
+@dataclass(frozen=True, kw_only=True)
+class ReceiverIngressWqeProjection(WqeLifecycleProjection):
+    """One coarse joint reservation, with its source admission boundary."""
+
+    source_ready_at_ps: int
+    destination_rnic_id: str
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        _require_int("source_ready_at_ps", self.source_ready_at_ps)
+        _require_text("destination_rnic_id", self.destination_rnic_id)
+        if not self.eligible_at_ps <= self.source_ready_at_ps <= self.started_at_ps:
+            raise ValueError("source readiness must lie between eligibility and grant")
+        if self.doorbell_started_at_ps is not None:
+            raise ValueError("coarse receiver ingress cannot own a native WQE")
+
+
+@dataclass(frozen=True)
+class WqePortReservation:
+    """Read-only endpoint occupancy projected from an authoritative WQE."""
+
+    wqe_id: str
+    rnic_id: str
+    started_at_ps: int
+    finished_at_ps: int
+    service_bytes: int
+
+
 @runtime_checkable
 class NativeRnicTransaction(Protocol):
     """Isolated native submission plan with an atomic prepare/commit boundary."""
@@ -762,15 +791,21 @@ class AtlahsWqeLedger:
         self,
         profile: CoarseDeviceProfile,
         *,
+        receiver_ingress: bool = False,
         _available_at_ps: Mapping[str, int] | None = None,
+        _receiver_available_at_ps: Mapping[str, int] | None = None,
         _sq_sequences: Mapping[str, int] | None = None,
         _cq_sequences: Mapping[str, int] | None = None,
         _records: Sequence[WqeLifecycleProjection] = (),
     ) -> None:
         if not isinstance(profile, CoarseDeviceProfile):
             raise TypeError("profile must be a CoarseDeviceProfile")
+        if type(receiver_ingress) is not bool:
+            raise TypeError("receiver_ingress must be a bool")
         self.profile = profile
+        self.receiver_ingress = receiver_ingress
         self._available_at_ps = dict(_available_at_ps or {})
+        self._receiver_available_at_ps = dict(_receiver_available_at_ps or {})
         self._sq_sequences = dict(_sq_sequences or {})
         self._cq_sequences = dict(_cq_sequences or {})
         self._records = list(_records)
@@ -780,7 +815,9 @@ class AtlahsWqeLedger:
 
         return AtlahsWqeLedger(
             self.profile,
+            receiver_ingress=self.receiver_ingress,
             _available_at_ps=self._available_at_ps,
+            _receiver_available_at_ps=self._receiver_available_at_ps,
             _sq_sequences=self._sq_sequences,
             _cq_sequences=self._cq_sequences,
             _records=self._records,
@@ -789,6 +826,50 @@ class AtlahsWqeLedger:
     @property
     def records(self) -> tuple[WqeLifecycleProjection, ...]:
         return tuple(self._records)
+
+    @property
+    def source_port_reservations(self) -> tuple[WqePortReservation, ...]:
+        return tuple(
+            WqePortReservation(
+                row.wqe_id,
+                row.rnic_id,
+                row.started_at_ps,
+                row.finished_at_ps,
+                row.payload_bytes,
+            )
+            for row in self._records
+        )
+
+    @property
+    def receiver_port_reservations(self) -> tuple[WqePortReservation, ...]:
+        return tuple(
+            WqePortReservation(
+                row.wqe_id,
+                row.destination_rnic_id,
+                row.started_at_ps,
+                row.finished_at_ps,
+                row.payload_bytes,
+            )
+            for row in self._records
+            if isinstance(row, ReceiverIngressWqeProjection)
+        )
+
+    @staticmethod
+    def _byte_ledger(
+        reservations: tuple[WqePortReservation, ...],
+    ) -> tuple[tuple[str, int], ...]:
+        totals: dict[str, int] = defaultdict(int)
+        for reservation in reservations:
+            totals[reservation.rnic_id] += reservation.service_bytes
+        return tuple(sorted(totals.items()))
+
+    @property
+    def source_byte_ledger(self) -> tuple[tuple[str, int], ...]:
+        return self._byte_ledger(self.source_port_reservations)
+
+    @property
+    def receiver_byte_ledger(self) -> tuple[tuple[str, int], ...]:
+        return self._byte_ledger(self.receiver_port_reservations)
 
     @property
     def random_draw_count(self) -> int:
@@ -801,6 +882,7 @@ class AtlahsWqeLedger:
         destination_node, destination_gpu = self.profile.node_gpu(
             submission.destination_rank
         )
+        ingress_active = self.receiver_ingress and source_node != destination_node
         rnic_id = self.profile.rnic_id(submission.source_rank)
         sq_id = f"atlahs:node-{source_node}:gpu-{source_gpu}:sq"
         rq_id = f"atlahs:node-{destination_node}:gpu-{destination_gpu}:rq"
@@ -808,10 +890,17 @@ class AtlahsWqeLedger:
         qp_id = f"atlahs:node-{source_node}:gpu-{source_gpu}:qp"
         sq_sequence = self._sq_sequences.get(sq_id, 0) + 1
         cq_sequence = self._cq_sequences.get(cq_id, 0) + 1
-        started_at_ps = max(
+        source_ready_at_ps = max(
             submission.eligible_at_ps,
             self._available_at_ps.get(rnic_id, 0),
         )
+        destination_rnic_id = self.profile.rnic_id(submission.destination_rank)
+        started_at_ps = source_ready_at_ps
+        if ingress_active:
+            started_at_ps = max(
+                started_at_ps,
+                self._receiver_available_at_ps.get(destination_rnic_id, 0),
+            )
         finished_at_ps = started_at_ps + _serialization_ps(
             submission.payload_bytes,
             self.profile.rnic_rate_bps,
@@ -823,7 +912,13 @@ class AtlahsWqeLedger:
             f"{_escape_id(submission.operation_id)}:"
             f"{submission.extent_index}"
         )
-        record = WqeLifecycleProjection(
+        projection_type = ReceiverIngressWqeProjection if ingress_active else WqeLifecycleProjection
+        ingress_metadata = (
+            {"source_ready_at_ps": source_ready_at_ps, "destination_rnic_id": destination_rnic_id}
+            if ingress_active
+            else {}
+        )
+        record = projection_type(
             authority=self.authority_name,
             execution_id=submission.execution_id,
             operation_id=submission.operation_id,
@@ -848,8 +943,11 @@ class AtlahsWqeLedger:
             completed_at_ps=completed_at_ps,
             channel_id=submission.channel_id,
             nccl_command_id=submission.nccl_command_id,
+            **ingress_metadata,
         )
         self._available_at_ps[rnic_id] = finished_at_ps
+        if ingress_active:
+            self._receiver_available_at_ps[destination_rnic_id] = finished_at_ps
         self._sq_sequences[sq_id] = sq_sequence
         self._cq_sequences[cq_id] = cq_sequence
         self._records.append(record)
@@ -1109,6 +1207,7 @@ class CoarseDeviceRuntime:
         kernel_launches: Mapping[str, KernelLaunch] | None = None,
         kv_pools: Iterable[KvPoolSpec] | None = None,
         precision: PrecisionConfig | None = None,
+        receiver_ingress: bool = False,
     ) -> None:
         from simllm.compute import KernelLaunch, SmSchedulerModel
 
@@ -1117,6 +1216,11 @@ class CoarseDeviceRuntime:
             raise TypeError("profile must be a CoarseDeviceProfile")
         if not isinstance(authority_mode, RnicAuthorityMode):
             raise TypeError("authority_mode must be a RnicAuthorityMode")
+        if type(receiver_ingress) is not bool:
+            raise TypeError("receiver_ingress must be a bool")
+        if receiver_ingress and authority_mode is not RnicAuthorityMode.BYPASS:
+            raise ValueError("receiver_ingress requires the coarse bypass authority")
+        self.receiver_ingress = receiver_ingress
         #: explicit run-wide fidelity surface, or None when none was supplied
         self.precision = precision
         #: the one seam this runtime selects; an explicit disagreement is
@@ -1147,7 +1251,10 @@ class CoarseDeviceRuntime:
         if authority_mode is RnicAuthorityMode.BYPASS:
             if native_session is not None:
                 raise ValueError("bypass mode cannot also supply a native RNIC session")
-            self._bypass_ledger: AtlahsWqeLedger | None = AtlahsWqeLedger(self.profile)
+            self._bypass_ledger: AtlahsWqeLedger | None = AtlahsWqeLedger(
+                self.profile,
+                receiver_ingress=receiver_ingress,
+            )
             self._native_session = None
         else:
             if native_session is None:
@@ -1359,6 +1466,8 @@ class CoarseDeviceRuntime:
                 wqe_authority,
             )
 
+            if self.receiver_ingress:
+                check_completion_event_projection(graph, result, report)
             if bookkeeping is not None:
                 self._validate_bookkeeping_append(
                     bookkeeping,
@@ -2776,6 +2885,34 @@ class CoarseDeviceRuntime:
     def _native_wqe_visits(
         projection: WqeLifecycleProjection,
     ) -> tuple[QueueVisit, ...]:
+        if isinstance(projection, ReceiverIngressWqeProjection):
+            return (
+                QueueVisit(
+                    execution_id=projection.execution_id,
+                    operation_id=projection.operation_id,
+                    resource=ResourceRef(ResourceKind.NIC_SEND_QUEUE, projection.sq_id),
+                    submitted_at_ps=projection.submitted_at_ps,
+                    eligible_at_ps=projection.eligible_at_ps,
+                    started_at_ps=projection.source_ready_at_ps,
+                    finished_at_ps=projection.source_ready_at_ps,
+                    completed_at_ps=projection.source_ready_at_ps,
+                    subject_object_id=projection.wqe_id,
+                    stage="coarse_source_admission",
+                ),
+                QueueVisit(
+                    execution_id=projection.execution_id,
+                    operation_id=projection.operation_id,
+                    resource=ResourceRef(ResourceKind.NIC_RECEIVE_QUEUE, projection.rq_id),
+                    submitted_at_ps=projection.submitted_at_ps,
+                    eligible_at_ps=projection.source_ready_at_ps,
+                    started_at_ps=projection.started_at_ps,
+                    finished_at_ps=projection.finished_at_ps,
+                    completed_at_ps=projection.completed_at_ps,
+                    service_bytes=projection.payload_bytes,
+                    subject_object_id=projection.wqe_id,
+                    stage="coarse_receiver_service",
+                ),
+            )
         if projection.doorbell_started_at_ps is None:
             return (
                 QueueVisit(
@@ -2850,6 +2987,26 @@ class CoarseDeviceRuntime:
             raise ValueError("WQE projection changed logical submission time")
         if projection.eligible_at_ps != submission.eligible_at_ps:
             raise ValueError("WQE projection changed external eligibility time")
+        if isinstance(projection, ReceiverIngressWqeProjection) != self.receiver_ingress:
+            raise ValueError("WQE receiver ingress disagrees with the selected authority")
+        if isinstance(projection, ReceiverIngressWqeProjection):
+            source_node, source_gpu = self.profile.node_gpu(submission.source_rank)
+            destination_node, destination_gpu = self.profile.node_gpu(
+                submission.destination_rank
+            )
+            source = f"atlahs:node-{source_node}:gpu-{source_gpu}"
+            destination = f"atlahs:node-{destination_node}:gpu-{destination_gpu}"
+            identities = {
+                "rnic_id": self.profile.rnic_id(submission.source_rank),
+                "destination_rnic_id": self.profile.rnic_id(submission.destination_rank),
+                "sq_id": f"{source}:sq",
+                "rq_id": f"{destination}:rq",
+                "cq_id": f"{source}:cq",
+                "qp_id": f"{source}:qp",
+            }
+            for name, expected_identity in identities.items():
+                if getattr(projection, name) != expected_identity:
+                    raise ValueError(f"WQE receiver ingress {name} disagrees with its endpoint")
 
     def _completion_events(
         self,
@@ -2888,6 +3045,37 @@ class CoarseDeviceRuntime:
                     )
 
         for wqe in wqes:
+            if isinstance(wqe, ReceiverIngressWqeProjection):
+                for visit in self._native_wqe_visits(wqe):
+                    for phase, timestamp, completed_bytes in (
+                        (EventPhase.SUBMITTED, visit.submitted_at_ps, None),
+                        (EventPhase.QUEUED, visit.eligible_at_ps, None),
+                        (EventPhase.STARTED, visit.started_at_ps, None),
+                        (EventPhase.PROGRESS, visit.finished_at_ps, visit.service_bytes),
+                    ):
+                        add(
+                            CompletionEvent(
+                                execution_id=graph.execution_id,
+                                operation_id=wqe.operation_id,
+                                phase=phase,
+                                timestamp_ps=timestamp,
+                                resource=visit.resource,
+                                completed_bytes=completed_bytes,
+                                subject_object_id=wqe.wqe_id,
+                            )
+                        )
+                add(
+                    CompletionEvent(
+                        execution_id=graph.execution_id,
+                        operation_id=wqe.operation_id,
+                        phase=EventPhase.COMPLETED,
+                        timestamp_ps=wqe.completed_at_ps,
+                        resource=ResourceRef(ResourceKind.COMPLETION_QUEUE, wqe.cq_id),
+                        completed_bytes=wqe.payload_bytes,
+                        subject_object_id=wqe.wqe_id,
+                    )
+                )
+                continue
             queued_at_ps = (
                 wqe.network_eligible_at_ps
                 if wqe.network_eligible_at_ps is not None
@@ -3526,6 +3714,7 @@ __all__ = [
     "IdentityArbitrationPolicy",
     "NativeRnicSession",
     "QueueVisit",
+    "ReceiverIngressWqeProjection",
     "RnicAuthorityMode",
     "RuntimeOperationRecord",
     "RuntimeReport",
@@ -3533,5 +3722,6 @@ __all__ = [
     "StrictPriorityArbitrationPolicy",
     "WeightedRoundRobinArbitrationPolicy",
     "WqeLifecycleProjection",
+    "WqePortReservation",
     "collective_goal_tags",
 ]

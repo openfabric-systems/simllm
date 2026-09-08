@@ -10,6 +10,12 @@ backend submodules.
   `rnic-cn`; a run is valid only with `physical_quiescence=verified`),
   binary discovered via `SIMLLM_HTSIM_RNIC`, the README build location,
   then `PATH`.
+- `HtsimRnicConfig.data_recovery` selects legacy `none`, constant `deadline`
+  or `exponential` tail probes for collective `rnic-cn`.
+  `retry_probe_windows` sets the positive control-deadline multiple.
+  `initial_window_bytes` and `initial_window_fan_in` form an independent,
+  strictly validated pre-grant DATA budget. Both mechanisms default to off;
+  the manifest reports their physical counters and unchanged storage bounds.
 - `simllm-htsim-flow-session-v1` (HTSIM-18): the opt-in framed stdin/stdout
   interface of the composed `htsim_rnic` binary. A 32-bit big-endian length
   prefixes each canonical JSON object. `open`, `inject`, inclusive
@@ -320,15 +326,16 @@ backend submodules.
 | Submodule | Repo | Ref | Provides |
 |---|---|---|---|
 | `third_party/atlahs` | [ATLAHS-rnic-private](https://github.com/yifeng-ethz/ATLAHS-rnic-private) | `main` | GOAL toolchain (txt2bin, LogGOPSim, goal_gen), validated `htsim_rnic` launcher (`atlahs_entry.py`) |
-| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `codex/htsim39_fair_egress_drop` (unmerged, see below) | UEC htsim, the composed SimLLM RNIC wrapper behind `HTSIM_ENABLE_SIMLLM_RNIC`, `htsim_rnic`, WQE bookkeeping, the ABI-v2 event relay with its physical control producers, the persistent flow session, and the Slingshot-class ss-dragonfly fabric wave (dragonfly geometry over ns-rosetta switches, progressive adaptive routing, the `htsim_ss_dragonfly` harness, and the `rnic-ss` endpoint hosted on the controlled Clos), and the ns-tm3 same-instant ingress arbiter with its per-ingress drop counters |
+| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `codex/htsim41_data_recovery` at `3bd3ac3` (unmerged, see below) | UEC htsim, the composed SimLLM RNIC wrapper behind `HTSIM_ENABLE_SIMLLM_RNIC`, `htsim_rnic`, WQE bookkeeping, the ABI-v2 event relay with its physical control producers, the persistent flow session, the Slingshot-class ss-dragonfly fabric wave, and the ns-tm3 ingress arbiter with finite control headroom, bounded initial DATA sending and optional exponential tail recovery |
 
 As of 2026-08-03 the launcher, the RNIC wiring, the DCQCN comparator
 (mlx5-faithful loss recovery, ECN-only and ECN plus PFC modes, storm
 metrics) and the full rnic-cn algorithm-book implementation
 (deterministic reservation ledger, windowed feedforward snapshots,
 fractional nflow, sender egress composition, BJP-derived resequencing
-window) are merged. The SimLLM pin for HTSim is on backend main at the
-load-harness merge (`1dcbfec`), which carries the WQE bookkeeping
+window) are merged. The SimLLM pin for HTSim extends the backend-main
+load-harness merge (`1dcbfec`) through the append-only DATA-recovery branch.
+The base carries the WQE bookkeeping
 commit, the composed SimLLM RNIC wrapper, the ABI-v2 event relay, the
 Slingshot-class dragonfly fabric wave (the physical ss-dragonfly fabric with
 Rosetta-style switches and progressive adaptive routing, its deterministic
@@ -732,6 +739,20 @@ The evidence classes, mlx5 hook and boundary-test matrix are recorded in
 [the RNIC hardware calibration plan](../papers/rnic-hardware-calibration.md).
 
 ## Status
+
+**Collective `rnic-cn` recovers wide-incast DATA loss through explicit initial
+budgets and physical tail probes.** The
+[DATA recovery study](../../examples/data_recovery_v1/RESULTS.md) supplies the
+consumer evidence for HTSIM-40 and HTSIM-41: width-64 all-to-all phases finish
+in 178.8352 microseconds at 400 Gbit/s and 328.8672 microseconds at 200 Gbit/s,
+and all six 4:1 expert-width-32 pipeline phases finish within their frozen
+budgets. Forty-four protected disabled CSVs and two dormant-recovery CSVs
+remain exact. Exponential intervals spread repeated attempts across the
+congested burst; the existing retry limit, final timeout and finite storage
+remain authoritative. The earlier constant-probe experiment remains void.
+The backend contract is `docs/rnic_cn_data_recovery.md` in the pinned backend.
+TRAF-88 owns subsequent topology and queue attribution; BACK-38 and TRAF-8
+own physical serving-metric integration.
 
 On 2026-08-17 the second device landed on the shared PCIe fabric. `GpuDevice`
 attaches to the same `PcieFabric` an RNIC uses, claims its own endpoint
@@ -2090,42 +2111,3 @@ model the two flows as separate nodes and say so.
   it also looks for a directory named `HTSIM`, which no case-sensitive
   checkout of this layout provides. None of this affects SimLLM runs, which
   invoke the simulators directly rather than through the launcher.
-
-- HTSIM-40 (Completeness; P1; L): integrate control headroom and finish the
-  wide-incast recovery acceptance. The explicit `headroom` selection reserves
-  control storage without changing data admission thresholds; `none` retains
-  fatal control loss. Backend implementation `6093025`, the typed simllm option
-  and [control_recovery_v1](../../examples/control_recovery_v1/RESULTS.md) preserve
-  every previously completed physical CSV with recovery off and on. The study
-  is void: all six 4:1 expert-width-32 pipeline cells pass the former control-loss
-  point but exhaust the unchanged eight-attempt data retry limit. Width-64
-  all-to-all completes at both rates, with approximately 50 ms phase makespans
-  and physical/ideal ratios of 653 and 331, exposing the data watchdog tail.
-  Remaining scope: resolve or explicitly route the data retry exhaustion and
-  watchdog latency findings before claiming the wide-incast consumer acceptance.
-  The orchestrator owns backend review, the pin bump and both consumer reruns
-  (`collective_width_tail_v1` and `pp_rail_contention_v1`); the pinned default and
-  request-level metric claims remain unchanged. No acceptance closure follows
-  from the control reserve alone.
-- HTSIM-41 (Completeness; P1; L): recover data loss under wide incast on
-  `rnic-cn` without the 50 ms watchdog. The
-  [control recovery study](../../examples/control_recovery_v1/RESULTS.md)
-  shows the width-64 all-to-all completing with control headroom but ending
-  one 50,000,000 ps data retransmission timeout after a tail loss (phase
-  50,039.59 us at 400 Gbit/s against a flow p99 of 149.52 us, 50,082.39 us
-  at 200 Gbit/s; physical over ideal 653 and 331), and the six 4:1
-  expert-width-32 pipeline cells exhausting the eight-attempt data retry
-  limit. Mechanism: the unsolicited first-window burst of 448 flows times
-  4,160 wire bytes (1,863,680 bytes at one leaf) exceeds the 1,048,576-byte
-  shared buffer, and a loss that no later packet exposes (last packet or
-  retire) is recovered only by the timeout. Acceptance: a declared
-  unsolicited-window rule bounded by the buffer sizing rule (credit before
-  data beyond the first window, or a per-flow unsolicited budget of buffer
-  over admitted fan-in); tail-loss detection that does not wait for the
-  timeout (receiver-side retire-driven gap resolution or a sender tail probe
-  at a declared multiple of the control deadline); both behind explicit
-  selections with the pinned behavior as identity; byte-identical completion
-  CSVs for every cell that completed before; and the width-64 all-to-all
-  plus the six pipeline cells completing with physical over ideal phase
-  ratios that the frozen expectations bound from first principles before
-  the run. Closes the HTSIM-40 remainder and unblocks TRAF-88.

@@ -278,7 +278,7 @@ per-WQE start stage.
 The request bookkeeper, backend result rows and completion stream are
 projections of that record, not independent WQE state machines; the
 `AtlahsWqeLedger` is not constructed in this mode. A run may instead explicitly
-select `AtlahsWqeLedger` as its sole timing-neutral bypass authority. A run
+select `AtlahsWqeLedger` as its sole coarse bypass authority. A run
 never enables both mutable authorities, and every
 projection must conserve identity, cardinality and timestamps available at its
 boundary. `CompletionReducer` owns only request metric history; it does not
@@ -497,6 +497,44 @@ resource scheduler is implemented alongside these baselines. Current adapters co
 
 Nothing in this package may import vLLM or SGLang.
 
+### Coarse receiver ingress
+
+**The coarse cross-node path models receiver contention through request
+latency.** `CoarseDeviceRuntime(receiver_ingress=True)` selects joint source
+and destination port reservations in the existing `AtlahsWqeLedger`.
+The default `False` retains the source-only compatibility model and its exact
+record fields, events and timestamps. A structural native RNIC selection
+rejects an additional coarse receiver authority before execution. Intra-node
+traffic keeps its existing service path.
+
+For B bytes at rate R bits per second, service is
+`d = ceil(B * 8 * 10^12 / R)` picoseconds. A source offers the transfer at
+`t = max(eligible_at, source_available)`. Both ports start at
+`s = max(t, receiver_available)` and release at `f = s + d`; completion becomes
+visible after the declared delivery delay. The same ledger transaction sets
+both availability cursors to f. Separate directional cursors preserve full
+duplex traffic and independent GPU rails. This indivisible coarse reservation
+uses deterministic submission order and receiver backpressure: a blocked
+transfer also delays later work from its source. It does not model buffered
+packet interleaving or calibrated switch queues.
+
+The immutable `ReceiverIngressWqeProjection` adds `source_ready_at_ps` and
+`destination_rnic_id` to the enabled WQE record. Read-only
+`WqePortReservation` tuples, exposed through `source_port_reservations` and
+`receiver_port_reservations`, carry each WQE's physical interval and bytes.
+`source_byte_ledger` and `receiver_byte_ledger` sum those authoritative records
+by endpoint; they are not separate mutable counters.
+
+`coarse_source_admission` reports source queue wait from eligibility to t and
+zero service bytes. `coarse_receiver_service` reports receiver wait from t to
+s, the one wire-service interval from s to f, and completion visibility.
+The source port's simultaneous physical occupancy remains in its reservation
+projection. Nine lifecycle events per WQE are checked against the authority,
+including each endpoint and queue identity, before runtime or bookkeeping
+state commits. Additive visit-wait totals stay separate from critical-path
+request latency. See [the receiver study](../../examples/receiver_ingress_v1/RESULTS.md)
+for physical bounds, enabled corrections and exact disabled comparisons.
+
 ## Mental model and ownership
 
 ```text
@@ -555,7 +593,7 @@ concurrent compute service, selection and queueing of copy engines,
 simultaneous kernel and copy execution, kernel-versus-DMA HBM arbitration,
 graph-level NCCL expansion, GPU-affine RNIC selection and semantic submission,
 and completion-event/projection plumbing. In bypass mode it delegates SQ/RQ/CQ
-and WQE state to the sole timing-neutral `AtlahsWqeLedger` authority. In
+and WQE state to the sole coarse `AtlahsWqeLedger` authority. In
 structural mode it delegates WQE lifecycle, WQ/CQ state, NIC arbitration and
 completion to the native RNIC session delivered by BACK-8, with wider WQ/CQ
 objects and pipeline arbitration remaining under BACK-9 and BACK-12. It must
@@ -599,6 +637,17 @@ does not claim to produce these resource-contention measurements.
    change only the order of simultaneously legal ready requests.
 
 ## Status
+
+**CORE-48 is complete for the opt-in coarse joint-reservation model.** The
+[receiver study](../../examples/receiver_ingress_v1/RESULTS.md) carries receiver
+contention through execution graphs, completion events and step results to
+time to first token (TTFT) and time per output token (TPOT). Eight sources each
+sending 65536 bytes to one 400 Gbit/s receiver require 10.48576 microseconds,
+exactly the byte-service floor and eight times the source-only result. All
+204 candidate configurations satisfy their exact request-timing oracles,
+all 114 scaling instances hold, and all 102 disabled snapshots remain
+byte-identical. CORE-8 retains the broader cross-layer queue contract;
+BACK-38 and TRAF-8 retain physical serving integration and calibration.
 
 Step records and the virtual clock (`VirtualClock`: heap-ordered events,
 monotonic picosecond time and deterministic tie-breaking) are implemented and
@@ -1298,19 +1347,6 @@ capture exists.
   `pd_session_v1` compact cells. The void run remains void and cannot be
   retrospectively rescored.
 
-- CORE-48 (Precision; P1; M): give the cross-node coarse RNIC path a
-  destination-ingress serializer. Semantic sends serialize per source RNIC and
-  nothing at the receiver, so an all-remote many-to-one combine completes at
-  the maximum single-source egress rather than at a contended arrival. The
-  TRAF-14 qualification could therefore only report its converging four-rank
-  combine as structural evidence: 100 ps at 400 Gbit/s and 200 ps at
-  200 Gbit/s are the largest single extent, not a physical oracle. Identify the
-  correction from explicit per-endpoint byte ledgers, sweep payload and fan-in
-  across dispatch-star, combine-star and symmetric all-remote fixtures, and
-  require exact byte conservation, the preregistered ingress-bound increase and
-  its live TTFT and TPOT effect, while symmetric and single-source cases keep
-  their accepted timestamps. Scope boundary: CORE-41 owns the analytic
-  intra-node routed service and must preserve all-remote timestamps exactly.
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
   queue-visit contract above before residual-driven calibration. Define one
   loss-checked projection from each authoritative runtime object into
