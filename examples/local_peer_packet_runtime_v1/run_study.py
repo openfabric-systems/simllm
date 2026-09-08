@@ -33,7 +33,8 @@ from simllm.compute import ComputeProvider, DurationEstimate, ModelDims
 from simllm.compute.gpu_packet_port import GpuPeerPacketSession
 from simllm.core import RequestPhase, ScheduledRequest, StepRecord
 from simllm.core.execution_io import execution_graph_to_json, execution_result_to_json
-from simllm.core.step import step_record_to_json, step_result_to_json
+from simllm.core.step import step_record_to_json
+from simllm.core.step_io import step_result_to_json
 from simllm.placement import (
     FabricLink,
     FabricNodePlacement,
@@ -388,10 +389,14 @@ def run_study(output, compatibility):
         guard(name + ":attachment-byte-floor", rows[-1].tx_finished_at_ps >= sum(p.wire_bytes for p in rows) * 10**12 // rate)
 
     compat = json.loads(compatibility.read_bytes())
+    git("diff", "--quiet", compat["current_commit"], "HEAD", "--", "simllm", "pyproject.toml")
     write("compatibility-input.json", compat)
     guard("compatibility:baseline-identity", compat["baseline_commit"] == frozen["compatibility_baseline_commit"])
     guard("compatibility:family-inventory", set(compat["families"]) == set(frozen["compatibility_families"]))
     for family, value in compat["families"].items():
+        for side in ("before", "after"):
+            bundle = compatibility.parent / f"{family}-{side}.bin"
+            guard(f"compatibility:{family}:{side}-bundle", digest(bundle.read_bytes()) == value[f"{side}_sha256"])
         guard("compatibility:" + family, value["equal"] and value["before_sha256"] == value["after_sha256"])
     guard("timing-family-inventory", {row["family"] for row in relations} == set(frozen["behavioral_relations"]))
     source_paths = git("ls-files", "simllm", "examples/local_peer_packet_runtime_v1", "pyproject.toml").decode().splitlines()
