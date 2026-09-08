@@ -480,8 +480,6 @@ def test_evidence_checker_reports_missing_read_control_without_raising(study_che
 
 
 def test_fatal_cell_keeps_raw_evidence_and_writes_void_summary(study_module, tmp_path, monkeypatch):
-    import json
-
     original_serve = study_module.NvlinkDomainService.serve_aligned
     original_git = study_module.git
 
@@ -489,10 +487,13 @@ def test_fatal_cell_keeps_raw_evidence_and_writes_void_summary(study_module, tmp
         result = original_serve(self, inputs, **kwargs)
         if not inputs:
             return result
+        reads = {t.extent_id for t in inputs if t.operation is NvlinkOperation.PEER_READ}
         return replace(
             result,
             packets=tuple(
-                p for p in result.packets if p.direction is not NvlinkPacketDirection.REQUEST
+                p
+                for p in result.packets
+                if not (p.extent_id in reads and p.direction is NvlinkPacketDirection.REQUEST)
             ),
         )
 
@@ -508,7 +509,7 @@ def test_fatal_cell_keeps_raw_evidence_and_writes_void_summary(study_module, tmp
     assert result["verdict"] == "VOID"
     assert result["behavioral_score"] is None
     assert any("read request present" in finding for finding in result["fatal_findings"])
-    assert json.loads((output / "summary.json").read_text()) == result
+    assert (output / "summary.json").read_bytes() == study_module.canonical(result)
     invalid = [row for row in result["configurations"] if row["fatal_verdict"] == "VOID"]
     assert invalid
     assert all((output / row["evidence_file"]).is_file() for row in invalid)
