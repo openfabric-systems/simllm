@@ -11,6 +11,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 
 from simllm.backends.htsim_nvlink import (
+    NVLINK_ALIGNED_PROFILE_IMPLEMENTATION,
     NVLINK_CANDIDATE_EVIDENCE_CLASS,
     NvlinkAlignedDomainResult,
     NvlinkAlignedOptions,
@@ -526,7 +527,7 @@ def run_study() -> dict[str, object]:
         "authority": {
             "expectations_commit": EXPECTATIONS_COMMIT,
             "expectations_sha256": EXPECTATIONS_SHA256,
-            "aligned_implementation": "simllm-htsim-nvlink-domain-v2",
+            "aligned_implementation": NVLINK_ALIGNED_PROFILE_IMPLEMENTATION,
             "compatibility_implementation": "simllm-htsim-nvlink-domain-v1",
         },
         "attempt_history": [

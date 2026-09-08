@@ -892,7 +892,8 @@ def test_aligned_credit_reuse_is_owned_by_receiver_release():
     )
 
     assert isinstance(result, NvlinkAlignedDomainResult)
-    assert result.fixed_point_iterations == 3
+    assert result.fixed_point_iterations == 0
+    assert result.event_count > 0
     releases = {release.packet_id: release for release in result.credit_releases}
     first, second = sorted(result.packets, key=lambda packet: packet.sequence)
     first_release = releases[first.packet_id]
