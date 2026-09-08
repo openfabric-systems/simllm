@@ -35,7 +35,9 @@ are 40, 80, 160, 320, 640, 1280 and 2560 microseconds. Their sum is 127*P,
 or 5.08 milliseconds. These are eligibility intervals; source contention may
 add time before actual dispatch. Arithmetic is checked before execution for
 every legal configured attempt. Configuration that cannot represent its
-largest interval in an unsigned 64-bit timestamp is rejected.
+largest interval in an unsigned 64-bit timestamp is rejected. Exponential
+selection also requires the long timeout to exceed its largest probe interval,
+so a configured fallback cannot silently preempt the selected schedule.
 
 The design borrows the established distinction between a speculative probe
 and a loss declaration, and the use of increasing probe intervals during
