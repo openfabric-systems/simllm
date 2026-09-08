@@ -647,7 +647,16 @@ exactly the byte-service floor and eight times the source-only result. All
 204 candidate configurations satisfy their exact request-timing oracles,
 all 114 scaling instances hold, and all 102 disabled snapshots remain
 byte-identical. CORE-8 retains the broader cross-layer queue contract;
-BACK-38 and TRAF-8 retain physical serving integration and calibration.
+TRAF-8 and BRIDGE-2 retain captured pipeline serving and cross-step integration.
+
+**BACK-38 supplies the checked physical step foundation.** One explicitly
+selected native session retains transport state across the step's ordered
+artifacts, and native completion projections reach the existing request
+reducer through `ExecutionResult` and `StepResult`. The
+[completion-boundary study](../../examples/completion_boundary_v1/RESULTS.md)
+separates logical completion from physical quiescence and qualifies all
+twenty-four live step results. HTSIM-28 supplies exact dependent release;
+BRIDGE-2 extends this foundation to cross-step frames and bookkeeping cursors.
 
 Step records and the virtual clock (`VirtualClock`: heap-ordered events,
 monotonic picosecond time and deterministic tie-breaking) are implemented and
@@ -1554,17 +1563,17 @@ capture exists.
   gating and scheduler queue time.
 - BRIDGE-2 (Completeness; P1; L): implement the online stateful co-simulator
   client using the delivered strict full `StepResult` codec and an HTSIM
-  persistent flow session extended with HTSIM-28. BRIDGE-2 is blocked behind
-  HTSIM-28 because the delivered HTSIM-18 protocol cannot express the exact
-  completion-to-dependent-injection boundary; see
-  [the protocol audit](../../examples/congestion_chain_v1/RESULTS.md). The
+  persistent flow session. HTSIM-28 supplies exact completion-to-dependent
+  release and BACK-38 supplies checked graph-to-request projection within one
+  step; the [successor study](../../examples/completion_boundary_v1/RESULTS.md)
+  removes that native prerequisite. The
   backend foundation retains one event list, topology,
   native RNIC authority and transport policy across flow injections; its
   frozen study demonstrated byte-identical stateless-equivalent latencies,
   discriminating retained queue state and lower wall time. The remaining
-  client must lower live `ExecutionGraph` dependencies into flow injections
-  and inclusive virtual-time horizons, translate the returned native
-  lifecycle projections into canonical `CompletionEvent` values, append the
+  client must retain native state across incoming graph frames and steps,
+  reuse the checked `ExecutionGraph` dependency lowering and canonical
+  `CompletionEvent` projection, and append the
   exact object, stage and completion facts at the supplied bookkeeping cursor,
   construct `ExecutionResult`, reduce the full `StepResult`, and publish only
   after all identities, cursors, timestamps and quiescence evidence validate.

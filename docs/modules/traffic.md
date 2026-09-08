@@ -2151,8 +2151,8 @@ shipped collectives.
   competing switch dependencies remain outside the delivered trace's scope;
   any attribution that needs them must add authoritative observations. The
   original contention study remains void. TRAF-8 retains captured stages,
-  microbatches and general serving metrics, and BACK-38 retains persistent
-  physical execution.
+  microbatches and general serving metrics. BACK-38 supplies persistent
+  physical execution within a checked step; BRIDGE-2 owns cross-step state.
 
 ### Completeness
 

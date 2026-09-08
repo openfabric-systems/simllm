@@ -765,6 +765,21 @@ The evidence classes, mlx5 hook and boundary-test matrix are recorded in
 
 ## Status
 
+**BACK-38 and HTSIM-28 deliver retained physical execution across a checked
+step's ordered artifacts.** The explicit `flow_session` option preserves the
+native topology, random state, transport, congestion controller and network
+interface while releasing dependent messages at exact completion boundaries.
+The [completion-boundary study](../../examples/completion_boundary_v1/RESULTS.md)
+demonstrates retained queues, exact native continuation and live request
+metrics: at 200 Gbit/s an 8 KiB successor takes 42.7648 microseconds with
+retained work, compared with 2.4992 microseconds in the fresh diagnostic.
+All 44 exact-oracle rows have zero residual, all six behavioral families hold,
+and sixteen disabled-path and old-protocol controls remain exact. The first
+execution remains void; the complete repeat uses explicitly post-specified
+message-identity checks with unchanged behavioral expectations and simulator.
+BRIDGE-2 owns cross-step framed serving and bookkeeping; BACK-72 owns the
+deliberately rejected compositions and additional platform support.
+
 The external congestion controller remains the sole rate authority when the
 native interface observes congestion notifications. BACK-71 restores the
 validated observation path without enabling another reaction point. Its
@@ -783,8 +798,8 @@ remain exact. Exponential intervals spread repeated attempts across the
 congested burst; the existing retry limit, final timeout and finite storage
 remain authoritative. The earlier constant-probe experiment remains void.
 The backend contract is `docs/rnic_cn_data_recovery.md` in the pinned backend.
-TRAF-88 owns subsequent topology and queue attribution; BACK-38 and TRAF-8
-own physical serving-metric integration.
+TRAF-88 owns subsequent topology and queue attribution; TRAF-8 and BRIDGE-2
+own captured pipeline serving and cross-step integration.
 
 On 2026-08-17 the second device landed on the shared PCIe fabric. `GpuDevice`
 attaches to the same `PcieFabric` an RNIC uses, claims its own endpoint
@@ -1330,17 +1345,6 @@ created" statement stands and refers to different, never-registered work.
   Acceptance includes per-class attribution, calibrated queue and tag knees,
   and defended p50 through p99.9 latency. Until those mechanisms land,
   analytical incidence must not be described as detected hardware behavior.
-- BACK-38 (Precision; P1; L): preserve htsim topology, RNG,
-  transport, congestion-control and RNIC state across ordered GOAL artifacts
-  instead of starting a fresh process at every boundary. Multi-artifact
-  `rnic-cn` currently fails before backend execution, while `rnic-nn` and
-  `rnic-nn-fluid` remain accepted. Acceptance must execute one checked graph
-  projection in a state-preserving session, reconcile every artifact and
-  completion identity, and retain the current rejection and stateless-profile
-  bytes as the explicit off paths.
-  BACK-38 is blocked behind HTSIM-28 because the delivered session cannot
-  reuse a completion time it has just exposed as the dependent injection
-  boundary; see [the protocol audit](../../examples/congestion_chain_v1/RESULTS.md).
 - BACK-45 (Precision; P1; M): qualify per-artifact ownership near the crossing
   point where the NVLink and fabric services of one artifact are comparable.
   Every artifact `examples/mixed_attribution_v1` measured sat 150x to 400x away
@@ -2016,17 +2020,6 @@ model the two flows as separate nodes and say so.
   HTSIM-6 and BACK-9: policy lookahead removes the repeated declare cost,
   structural WQ backpressure limits how much work can be exposed, and the
   event-loop scaling needs its own look.
-- HTSIM-28 (Precision; P1; M): extend the persistent flow session with an
-  atomic completion boundary that permits a dependent injection at the exact
-  discovered timestamp, preserving pending equal-time events and every runtime
-  authority. The delivered inclusive `advance` and strictly later `inject`
-  cannot express that transition. The completion wait also yields before an
-  earlier local compute action, without polling past a native completion.
-  Preserve contiguous identities, validation before mutation and all existing
-  verb bytes. Acceptance demonstrates exact continuation, separate logical
-  completion and physical quiescence, and unchanged old-verb controls; see the
-  [successor freeze](../../examples/completion_boundary_v1/expectations.md) and
-  the [original protocol audit](../../examples/congestion_chain_v1/RESULTS.md).
 - HTSIM-34 (Precision; P1; M): finite outstanding work at the RoCE sender.
   `RoceSrc` is a rate-paced open-loop sender with no window, no send queue and
   no outstanding-bytes cap, so it approximates an infinitely deep pipeline and
