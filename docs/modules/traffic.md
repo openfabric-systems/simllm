@@ -1224,6 +1224,21 @@ shipped collectives.
 
 ### Precision
 
+- TRAF-90 (Precision; P0; L): replace the aligned NVLink engine's batch
+  fixed-point scheduling with one causal packet event calendar. A future
+  extent must not reserve earlier link service, a read response must wait for
+  request visibility, and every in-flight or resident byte must have finite
+  downstream capacity reserved before transmission. The receiver of each hop
+  owns its credit release, including the switch input on a queued route.
+  Freeze the independent integer oracles and bounded-buffer, read, replay,
+  fan-in and future-arrival matrix before implementation. Acceptance requires
+  exact completion at two link rates and two payload lengths, finite draining
+  under one-packet buffers, no duplicated credit or terminal, and exact
+  compatibility and analytic bypass controls. This is component correctness;
+  TRAF-45 separately connects the engine to time to first token and time per
+  output token, and TRAF-73/TRAF-86 retain hardware identification. The freeze
+  is [causal NVLink service](../../examples/nvlink_causal_service_v1/expectations.md).
+
 - TRAF-81 (Precision; P1; L): complete the blocked rank-16 cell in the
   [independent collective-floor extrapolation study](../../examples/collective_floor_extrapolation_v1/RESULTS.md).
   The frozen rank-2 and rank-4 training cells and rank-8 holdout completed on
