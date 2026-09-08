@@ -295,8 +295,10 @@ Four rules make the generalization concrete.
 4. **Direction is explicit at both endpoints.** A modeled port has egress and
    ingress, and a leg that charges only the source is a known defect class in
    this repository, not a simplification: the intra-node path was corrected to
-   charge `max(egress_bytes, ingress_bytes)` per endpoint under CORE-41, while
-   the cross-node path still has no destination-ingress serializer (CORE-48).
+   charge `max(egress_bytes, ingress_bytes)` per endpoint under CORE-41.
+   CORE-48 supplies opt-in coarse joint source and receiver reservations for
+   cross-node transfers, with exact source-only compatibility. This coarse
+   qualification does not replace physical ingress evidence in a packet path.
 
 ## Mapping from existing assets to model roles
 
@@ -312,7 +314,7 @@ Four rules make the generalization concrete.
 | GPU copy-engine service | Per-direction profiles with their own setup cost and bandwidth for host to device, device to host, device to device and peer transfers, and an estimate that rejects a direction the engine does not declare; this is the mechanism the measured copy-engine peer efficiencies calibrate | `CopyEngineProfile`, `CopyDirectionProfile` and `CopyEngineServiceModel` in `simllm/compute/gpu_model.py` | COMP-34 closed, adding typed ports over these directions rather than replacing them; COMP-41 open for measured per-port ceilings on a shipped profile |
 | NCCL stack skeleton | Name-mirrored communicator, planner, GPU FIFO, proxy, `ncclNet.isend` and `test`, verbs and doorbell, on one virtual clock | `simllm/compute/nccl_stack.py` | COMP-15 open; BACK-47 names the plugin seam as the producer boundary |
 | Host initiation | `HostInitiationModel` with the exact-zero ideal profile and calibrated launch-throughput profiles | `simllm/compute/host.py` | COMP-2 closed; COMP-28 open for the analytical submission fallback |
-| Analytic intra-node locality | Placement-driven local versus remote split, per-endpoint byte ledger, `max(egress, ingress)` endpoint load | `classify_step_locality` in `simllm/traffic/locality.py` | TRAF-10 and CORE-41 closed; CORE-48 open for cross-node ingress; TRAF-45 adds the packetized leg |
+| Analytic intra-node locality | Placement-driven local versus remote split, per-endpoint byte ledger, `max(egress, ingress)` endpoint load | `classify_step_locality` in `simllm/traffic/locality.py` | TRAF-10 and CORE-41 closed; CORE-48 closed for opt-in coarse cross-node ingress; TRAF-45 adds the packetized leg |
 | Collective envelope arms and regime curve | `CollectiveLatencyProfile`, `CollectiveFixedCostEnvelope` and the inert `CollectiveBandwidthCurve` | `simllm/traffic/collective_latency.py` | TRAF-36, TRAF-42, TRAF-43 and TRAF-44 open |
 
 ## Calibration doctrine
@@ -437,7 +439,7 @@ Registered by this document, with the state each task is in now:
 | BACK-46 | Composition landed on 2026-08-17: `GpuDevice` attaches to the shared fabric with its own endpoint identity and ordering domain, owns its regions, grants named peers read access, and has its transactions charged in a per-endpoint ledger, so a NIC payload read whose completer is a GPU-owned region is charged under the GPU's identity, and a foreign claim is refused with unchanged state ([study](../../examples/rnic_gpu_endpoint_v1/RESULTS.md): 10 of 10 published scored instances, no fatal guard violated, every accepted BACK-10, BACK-19 and BACK-20 artifact byte-identical). What remains is the metric clause: the relations are native WQE completion times rather than a projected TTFT or TPOT, so this entry stays open and BACK-49 carries the live chain. |
 | BACK-47 | The mirrored NCCL stack boundary is not named as the plugin ABI seam, and its packet-emission half toward the GPU is unregistered while the half toward the NIC stops at zero-time events. |
 | BACK-48 | The ABI v2 packet vocabulary is reachable only through a wire port, so a non-wire port cannot emit an attempt, a TX boundary or an arrival in the same language. |
-| TRAF-45 | The intra-node leg has no packetized path behind the analytic locality off path, and the ingress term of a converging combine is still owned elsewhere (CORE-48 cross-node, COMP-31 local mechanism). |
+| TRAF-45 | The intra-node packet leg requires its own receiving-port service behind the analytic locality off path. CORE-48 supplies coarse cross-node ingress; COMP-31 owns the local mechanism. The coarse result does not qualify the local packet path. |
 
 Registered by the BACK-46 implementation, which found them rather than assumed
 them:

@@ -1314,11 +1314,11 @@ created" statement stands and refers to different, never-registered work.
   Every artifact `examples/mixed_attribution_v1` measured sat 150x to 400x away
   from that boundary, so the argmax rule is evidenced only in its extremes and
   the `co_critical_ps` component has unit evidence alone. The comparison is
-  also biased: the local term charges the maximum of endpoint egress and
-  ingress since CORE-41, while the cross-node term still has no
-  destination-ingress serializer (CORE-48), so a converging combine is
-  under-charged and a near-boundary artifact can be assigned to NVLink that a
-  fully modeled fabric would own. Acceptance: a cell whose two media sit within
+  also requires matched receiving-capacity semantics: the local term charges
+  the maximum of endpoint egress and ingress since CORE-41. CORE-48 supplies
+  an opt-in coarse joint source and receiver reservation, closing the missing
+  coarse service; its qualification does not change the packet/artifact path
+  or establish this ownership crossing. Acceptance: a cell whose two media sit within
   a small factor, run with the ingress-aware fabric term, shows ownership
   flipping in the registered direction and reports the flip through the
   per-request components, while the far-from-crossing cells keep their measured
