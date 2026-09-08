@@ -13,6 +13,14 @@ rule and numerical sentinel values were already frozen at `5de4db2`. The
 explicit rewritten ring-floor and sentinel assertions are post-specified
 regression checks; this clarification is not claimed to precede implementation.
 
+A subsequent pre-consumer clarification, after initial unit execution, fixes
+the enabled input-identity projection: compare graph bytes after setting only
+`released_at_ps` to zero. Later release stamps follow measured predecessor
+completion and therefore change with the intended latency correction. Every
+other graph field and every GOAL byte remains exact. Disabled historical
+snapshots keep all release timestamps and receive no normalization. This
+enabled projection is also a post-specified regression check.
+
 ## Model and authority
 
 The explicit coarse `receiver_ingress` selection extends the existing
@@ -126,7 +134,8 @@ its known absent receiver limit is not asserted to obey receiver physics.
 The current default and explicit false selection must reproduce its report,
 events, bookkeeping, graph and request outcomes exactly. Enabled identity
 checks compare physical timestamps and metrics, allowing only the declared
-additional receiver projections. Preserve graph and GOAL bytes in both modes.
+additional receiver projections. Preserve the normalized workload graph and
+GOAL bytes in both modes under the explicit input-identity projection above.
 
 ## Bounds before measurements
 
