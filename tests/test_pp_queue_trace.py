@@ -2,6 +2,7 @@
 
 import copy
 from collections import Counter
+from types import SimpleNamespace
 
 import pytest
 
@@ -613,6 +614,85 @@ def test_earlier_recovered_hole_is_actual_completion_cause(tmp_path):
     assert later["ordering_delay_ps"] > 9_000_000
     retry = next(packet for packet in flow["packets"] if packet["lifecycle_id"] == 5)
     assert retry["retry_authorization"]["trigger_lifecycle_id"] == 6
+
+
+@pytest.mark.parametrize("factory", [unloaded, recovered_hole])
+def test_drop_projection_is_optional_and_preserves_existing_audit(factory, tmp_path):
+    fixture = factory()
+    directory = fixture.write(tmp_path / "trace")
+    options = {"switch_buffer_bytes": 4160} if factory is recovered_hole else {}
+    baseline = fixture.audit(directory, **options)
+    assert baseline == fixture.audit(directory, capture_drop_occupancy=False, **options)
+    projected = fixture.audit(directory, capture_drop_occupancy=True, **options)
+    snapshots = {}
+    for flow in projected["pp_flows"]:
+        for packet in flow["packets"]:
+            snapshot = packet.pop("drop_occupancy")
+            if snapshot is not None:
+                snapshots[packet["lifecycle_id"]] = snapshot
+    assert projected == baseline
+    if factory is unloaded:
+        assert snapshots == {}
+    else:
+        assert snapshots == {1: {
+            "switch_type": 1, "switch_id": 0, "egress_id": 8,
+            "time_ps": 1_183_200, "wire_bytes": 4160,
+            "base_shared_buffer_bytes": 4160, "base_egress_buffer_bytes": 4160,
+            "shared_partition_bytes": {
+                "ep_data": 4160, "ep_control": 0, "pp_or_other_control": 0, "other_data": 0,
+            },
+            "egress_partition_bytes": {
+                "ep_data": 4160, "ep_control": 0, "pp_or_other_control": 0, "other_data": 0,
+            },
+            "admits_without_ep_data": True,
+        }}
+
+
+@pytest.mark.parametrize("selection", [0, 1, "true", None])
+def test_drop_projection_rejects_nonboolean_selection(selection, tmp_path):
+    fixture = unloaded()
+    with pytest.raises(trace.TraceAuditError, match="selection must be boolean"):
+        fixture.audit(fixture.write(tmp_path / "trace"), capture_drop_occupancy=selection)
+
+
+@pytest.mark.parametrize("other_bytes,ep_bytes,admitted", [(128, 800, True), (900, 32, False)])
+def test_drop_projection_uses_shared_base_pool_and_only_removes_expert_data(other_bytes, ep_bytes, admitted):
+    def visit(group, wire, reserve=False):
+        return SimpleNamespace(packet=SimpleNamespace(group=group, wire=wire), reserve=reserve)
+
+    audit = trace.Audit.__new__(trace.Audit)
+    audit.capacity = 1024
+    # The target egress is empty. A different egress on this switch owns the
+    # blocking DATA. Active wire service, control reserve and another switch
+    # do not occupy this switch's base buffer.
+    audit.queues = {
+        (1, 0, 8): SimpleNamespace(buffered={}, buffered_bytes=0, reserve_bytes=0),
+        (1, 0, 9): SimpleNamespace(
+            buffered={
+                1: visit("ep_data", ep_bytes),
+                2: visit("ep_control", 64),
+                3: visit("other_data", other_bytes),
+                4: visit("ep_control", 64, reserve=True),
+            },
+            buffered_bytes=ep_bytes + 128 + other_bytes, reserve_bytes=64,
+            active=visit("ep_data", 4160),
+        ),
+        (1, 1, 9): SimpleNamespace(
+            buffered={5: visit("ep_data", 8192)}, buffered_bytes=8192, reserve_bytes=0,
+        ),
+    }
+    audit.switch_bytes = Counter({(1, 0): ep_bytes + 128 + other_bytes, (1, 1): 8192})
+    audit.switch_reserve = Counter({(1, 0): 64})
+    snapshot = audit.drop_snapshot(SimpleNamespace(wire=128), {
+        "switch_type": 1, "switch_id": 0, "egress_id": 8, "time_ps": 10,
+    })
+    assert snapshot["base_shared_buffer_bytes"] == ep_bytes + 64 + other_bytes <= audit.capacity
+    assert snapshot["base_egress_buffer_bytes"] == 0
+    assert snapshot["shared_partition_bytes"] == {
+        "ep_data": ep_bytes, "ep_control": 64, "pp_or_other_control": 0, "other_data": other_bytes,
+    }
+    assert set(snapshot["egress_partition_bytes"].values()) == {0}
+    assert snapshot["admits_without_ep_data"] is admitted
 
 
 @pytest.mark.parametrize(
