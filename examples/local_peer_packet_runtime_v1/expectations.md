@@ -37,7 +37,14 @@ parent transport terminal follows every child terminal, and no later child
 event can refer to that consumed parent. Logical extent completion may precede
 transport retirement. The retained acknowledgement control exercises this
 distinction. Physical service duration comes from the resource grant/release
-visits, not from an unqualified common event-kind name. The native common header
+visits, not from an unqualified common event-kind name. Intermediate phase and
+step snapshots may retain live attempts and parent tokens. At each snapshot,
+live sets exactly equal admitted/started identities minus retired identities;
+missing-terminal and full quiescence checks apply at declared final drain.
+The allocator and common consumer persist across phases and steps. Payload
+coverage is the union of successful logical packet ranges, never the sum of
+all attempt starts, so retransmission cannot double-credit logical bytes.
+The native common header
 must be included in the installed package, with legacy header aliases intact.
 
 Only extent and operation lifecycle events cross into the execution result;
