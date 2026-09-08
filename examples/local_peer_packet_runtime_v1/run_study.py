@@ -93,7 +93,7 @@ def physical_domain(ranks, switched, *, rate=25_000_000_000, capacity=65536):
                 links.append(FabricLink(link, a, b, rate * 8, 1000))
                 routes.extend((PeerRoute(source, destination, ((link,),)), PeerRoute(destination, source, ((link,),))))
     return PeerFabric("peer-domain", "node-0", tuple(ports), tuple(links), tuple(routes),
-                      switch_input_buffer_bytes=capacity if switched else None)
+                      switch_input_buffer_bytes=capacity)
 
 
 def profile_for(switched, *, rate=25_000_000_000, rx_rate=25_000_000_000,
@@ -226,7 +226,8 @@ def session_findings(observation, *, final):
         require(all(not s["live_attempt_tokens"] and not s["live_extent_tokens"] for s in observation["port_snapshots"]), "final token retirement")
         require(all(row["returned"] for row in observation["buffer_claims"]), "final credit return")
         require(observation["drained_result"] is not None, "final reservation history retained")
-        expected_visits = (6 if observation["binding"]["fabric"]["switch_input_buffer_bytes"] is not None else 3) * len(packets)
+        expected_visits = sum(6 if path["path"]["output_link"] is not None else 3
+                              for path in observation["physical_paths"])
         require(len(visit_keys) == expected_visits, "complete resource visit inventory")
         for packet in packets:
             require(Counter(e["event_kind"] for e in events if e["attempt_token"] == next(
@@ -418,7 +419,20 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--compatibility", type=Path, required=True, help="baseline/current canonical artifact comparison manifest")
     args = parser.parse_args()
-    result = run_study(args.output.resolve(), args.compatibility.resolve())
+    output = args.output.resolve()
+    if output.exists():
+        parser.error("output must be a new immutable run directory")
+    try:
+        result = run_study(output, args.compatibility.resolve())
+    except (AssertionError, ValueError, TypeError, RuntimeError, KeyError, IndexError, OSError) as error:
+        if not output.exists():
+            raise
+        result = {"schema": "simllm-local-peer-packet-study-v1", "expectations_commit": FREEZE,
+                  "source_commit": git("rev-parse", "HEAD").decode().strip(), "verdict": "VOID",
+                  "fatal_findings": [f"harness aborted: {type(error).__name__}: {error}"],
+                  "behavioral_score": None,
+                  "raw_sha256": {p.relative_to(output).as_posix(): digest(p.read_bytes()) for p in output.rglob("*") if p.is_file()}}
+        (output / "summary.json").write_bytes(canonical(result))
     print(json.dumps({key: result[key] for key in ("verdict", "fatal_findings", "behavioral_score")}, indent=2))
     return 0 if result["verdict"] == "PASS" else 1
 
