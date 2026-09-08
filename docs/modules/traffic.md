@@ -2354,6 +2354,8 @@ shipped collectives.
   projection byte and timestamp exactly.
 
 - TRAF-45 (Completeness; P1; L): add a packetized intra-node leg behind the
+  [frozen live peer runtime study](../../examples/local_peer_packet_runtime_v1/expectations.md).
+  The study couples the BACK-48 vocabulary and COMP-40 port binding to the
   analytic locality path. `classify_step_locality` charges local segments from a
   per-endpoint byte ledger at one declared flat rate, which is exact arithmetic
   over a surrogate port: there is no packet, no attempt identity, no
