@@ -25,6 +25,10 @@ import json
 from collections import deque
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .peer_topology import PeerFabric
 
 PLACEMENT_SCHEMA = "simllm-placement-manifest-v1"
 
@@ -206,6 +210,8 @@ class FabricTopologyManifest:
     switch_latency_ps: int | None = None
     switches: tuple[FabricSwitchPlacement, ...] = ()
     links: tuple[FabricLink, ...] = ()
+    #: Optional local attachment inventory; absent preserves the old encoding.
+    peer_fabrics: tuple[PeerFabric, ...] = ()
 
     def by_rank(self, global_rank: int) -> GpuFabricPlacement:
         for node in self.nodes:
@@ -254,6 +260,7 @@ class FabricTopologyManifest:
             raise ValueError("fixed fabric topology requires gpu-rank mapping")
         if type(self.physical_rendering_enabled) is not bool:
             raise TypeError("physical_rendering_enabled must be a boolean")
+        self._validate_peer_fabrics()
 
         nics = tuple(nic for node in self.nodes for nic in node.nics)
         nic_ids = [nic.nic_id for nic in nics]
@@ -449,10 +456,44 @@ class FabricTopologyManifest:
             for message in trace.messages
         )
 
+    def _validate_peer_fabrics(self) -> None:
+        from .peer_topology import PeerFabric
+
+        if not isinstance(self.peer_fabrics, tuple):
+            raise TypeError("peer_fabrics must be an immutable tuple")
+        domain_ids: set[str] = set()
+        gpu_owners: set[int] = set()
+        physical_ids = {link.link_id for link in self.links}
+        physical_ids.update(port.port_id for switch in self.switches for port in switch.ports)
+        physical_ids.update(nic.nic_id for node in self.nodes for nic in node.nics)
+        for domain in self.peer_fabrics:
+            if not isinstance(domain, PeerFabric):
+                raise TypeError("peer_fabrics must contain PeerFabric values")
+            domain.validate(self)
+            if domain.domain_id in domain_ids:
+                raise ValueError("duplicate peer domain identity")
+            domain_ids.add(domain.domain_id)
+            ranks = {port.gpu_rank for port in domain.ports if port.gpu_rank is not None}
+            if ranks & gpu_owners:
+                raise ValueError("GPU peer feed cannot have two domain authorities")
+            gpu_owners.update(ranks)
+            identifiers = {port.port_id for port in domain.ports} | {link.link_id for link in domain.links}
+            if physical_ids & identifiers:
+                raise ValueError("peer and fabric physical identities must be unique")
+            physical_ids.update(identifiers)
+
+    def to_dict(self) -> dict:
+        """Project the pinned schema without adding empty optional fields."""
+
+        raw = asdict(self)
+        if not self.peer_fabrics:
+            del raw["peer_fabrics"]
+        return raw
+
     def save(self, path: str | Path) -> Path:
         path = Path(path)
         path.write_text(
-            json.dumps(asdict(self), indent=2) + "\n",
+            json.dumps(self.to_dict(), indent=2) + "\n",
             encoding="utf-8",
             newline="\n",
         )
@@ -460,6 +501,8 @@ class FabricTopologyManifest:
 
     @classmethod
     def load(cls, path: str | Path) -> FabricTopologyManifest:
+        from .peer_topology import PeerFabric
+
         raw = json.loads(Path(path).read_text())
         if raw.get("schema") != FABRIC_SCHEMA:
             raise ValueError(f"unsupported schema: {raw.get('schema')!r}")
@@ -500,4 +543,5 @@ class FabricTopologyManifest:
             switch_latency_ps=raw.get("switch_latency_ps"),
             switches=switches,
             links=links,
+            peer_fabrics=tuple(PeerFabric.from_dict(row) for row in raw.get("peer_fabrics", ())),
         )

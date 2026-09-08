@@ -81,7 +81,7 @@ def test_existing_builder_bytes_unchanged_by_new_builder(tmp_path):
 def test_legacy_disabled_fabric_bytes_remain_readable(tmp_path):
     fabric = disaggregated_manifests(prefill_nodes=1, decode_nodes=1,
                                     render_physical_topology=False).fabric
-    raw = asdict(fabric)
+    raw = fabric.to_dict()
     for key in ("physical_rendering_enabled", "topology_name", "evidence_class",
                 "switch_latency_ps", "switches", "links"):
         raw.pop(key)

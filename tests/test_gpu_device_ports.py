@@ -429,7 +429,7 @@ def test_a_port_rejects_a_capability_it_does_not_advertise():
     ],
 )
 def test_a_gpu_port_may_not_declare_a_transport_control_capability(capability):
-    with pytest.raises(ValueError, match="BACK-48"):
+    with pytest.raises(ValueError, match="COMP-40"):
         _peer_store_port(
             capabilities=(GpuPortCapability.PEER_STORE_EGRESS, capability)
         )

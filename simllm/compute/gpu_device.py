@@ -124,14 +124,15 @@ class GpuPortDirection(str, Enum):
 class GpuPortCapability(str, Enum):
     """What a port advertises.
 
-    The first three have a mechanism behind them in this repository. The
-    transport-control three do not: they exist so that a request for one is
-    rejected by name instead of silently accepted, and BACK-48 owns making the
-    ABI v2 vocabulary reachable from a non-wire port.
+    Scalar copy and peer-store service bind to GpuDevice. Physical peer packet
+    service binds to GpuPeerPacketSession with explicit attachments. Transport
+    controls remain explicit rejections because the peer runtime has no such
+    mechanism.
     """
 
     COPY_ENGINE_TRANSFER = "copy_engine_transfer"
     PEER_STORE_EGRESS = "peer_store_egress"
+    PEER_PACKET_SERVICE = "peer_packet_service"
     CEILING_OVERRIDE = "ceiling_override"
     ECN_MARKING = "ecn_marking"
     PRIORITY_FLOW_CONTROL = "priority_flow_control"
@@ -162,6 +163,7 @@ class GpuPortApplicability(str, Enum):
 MECHANISM_CAPABILITIES = (
     GpuPortCapability.COPY_ENGINE_TRANSFER,
     GpuPortCapability.PEER_STORE_EGRESS,
+    GpuPortCapability.PEER_PACKET_SERVICE,
 )
 
 #: capabilities with no mechanism behind them today; declaring one is rejected
@@ -322,9 +324,8 @@ class GpuPortConfig:
                 raise ValueError(
                     f"port {self.port_id!r} declares capability "
                     f"{capability.value!r}, which no GPU port can service today: "
-                    "the ABI v2 packet and transport-control vocabulary is "
-                    "reachable only through a wire port, and BACK-48 owns making "
-                    "it reachable from a non-wire port"
+                    "packet observation does not implement a transport control; "
+                    "COMP-40 owns the remaining GPU protocol bindings"
                 )
         if self.enabled and not any(
             capability in self.capabilities for capability in MECHANISM_CAPABILITIES
@@ -343,6 +344,13 @@ class GpuPortConfig:
                 f"port {self.port_id!r} claims the peer-store egress cursor, which "
                 "belongs to an egress peer-link port"
             )
+        if self.advertises(GpuPortCapability.PEER_PACKET_SERVICE):
+            if (self.role is not GpuPortRole.PEER_LINK
+                    or self.protocol is not GpuPortProtocol.NVLINK
+                    or self.direction is not GpuPortDirection.BIDIRECTIONAL):
+                raise ValueError("peer packet service requires a bidirectional NVLink peer port")
+            if self.capabilities != (GpuPortCapability.PEER_PACKET_SERVICE,):
+                raise ValueError("packet service and scalar port mechanisms have mutually exclusive authority")
 
     def _validate_copy_directions(self) -> None:
         carries_copy = GpuPortCapability.COPY_ENGINE_TRANSFER in self.capabilities
@@ -450,6 +458,9 @@ class GpuDeviceConfig:
         self._validate_mechanism_authority()
 
     def _validate_mechanism_authority(self) -> None:
+        peer_ports = [port for port in self.ports if port.enabled and port.role is GpuPortRole.PEER_LINK]
+        if any(port.advertises(GpuPortCapability.PEER_PACKET_SERVICE) for port in peer_ports) and len(peer_ports) != 1:
+            raise ValueError("one GPU peer feed cannot have packet and other peer port authorities")
         claimed_copy: dict[tuple[str, CopyDirection], str] = {}
         peer_store_owner: str | None = None
         for port in self.ports:
@@ -684,6 +695,8 @@ class GpuDevice:
         )
 
     def _resolve(self, config: GpuPortConfig) -> GpuPort:
+        if config.advertises(GpuPortCapability.PEER_PACKET_SERVICE):
+            raise ValueError("peer packet ports require GpuPeerPacketSession with explicit physical attachments")
         # Mechanism binding is validated for a disabled port too: a declaration
         # that names an engine or a cursor the architecture does not have is a
         # configuration error whether or not the port is live, exactly as a

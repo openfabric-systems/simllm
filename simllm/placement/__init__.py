@@ -56,6 +56,7 @@ from simllm.placement.manifest import (
     RankPlacement,
 )
 from simllm.placement.mapper import RankMapper
+from simllm.placement.peer_topology import PeerFabric, PeerPortPlacement, PeerRoute
 from simllm.placement.rail import (
     RAIL_FABRIC_VARIANTS,
     declared_pipeline_placement,
@@ -86,6 +87,9 @@ __all__ = [
     "GpuFabricPlacement",
     "GroupMembership",
     "NicFabricPlacement",
+    "PeerFabric",
+    "PeerPortPlacement",
+    "PeerRoute",
     "PlacementManifest",
     "RankMapper",
     "RankPlacement",

@@ -448,7 +448,7 @@ def test_preparation_locks_unchanged_inputs_and_records_bounds_before_conversion
     (retained / "step.goal").write_bytes(baseline_trace.render().encode())
     (retained / "step.bin").write_bytes(b"frozen baseline binary")
     (retained / "clos.topo").write_bytes(projection.topology_text.encode())
-    for name, value in (("placement.json", asdict(placement)), ("fabric.json", asdict(fabric)),
+    for name, value in (("placement.json", asdict(placement)), ("fabric.json", fabric.to_dict()),
                         ("semantic_graph.json", study.execution_graph_to_json(baseline)),
                         ("endpoint_by_rank.json", projection.endpoint_by_rank)):
         study.write_json(retained / name, value)

@@ -100,7 +100,7 @@ def identity_guards() -> dict:
     for variant in VARIANTS:
         placement = declared_pipeline_placement(8)
         fabric = declared_rail_fabric(placement, variant=variant)
-        raw = (json.dumps(asdict(fabric), indent=2) + "\n").encode()
+        raw = (json.dumps(fabric.to_dict(), indent=2) + "\n").encode()
         digest = hashlib.sha256(raw).hexdigest()
         if digest != DEFAULT_MANIFEST_DIGESTS[variant]:
             raise ValueError(f"default {variant} manifest changed")
@@ -224,7 +224,7 @@ class ContentionStepSink(HtsimStepSink):
         fabric = declared_rail_fabric(placement, variant=variant, spine_count=spines)
         self.projection = project_declared_clos(fabric)
         write_json(out / "placement.json", asdict(placement))
-        write_json(out / "fabric.json", asdict(fabric))
+        write_json(out / "fabric.json", fabric.to_dict())
         write_json(out / "endpoint_by_rank.json", self.projection.endpoint_by_rank)
         write_json(out / "semantic_graph.json", execution_graph_to_json(self.graph))
         self.topology_path = out / "clos.topo"

@@ -144,6 +144,7 @@ from simllm.compute import (
 from simllm.core import (
     CollectiveWork,
     DependencyLevel,
+    LocalityLevel,
     PrecisionConfig,
     StepRecord,
     StepResult,
@@ -185,6 +186,7 @@ from simllm.traffic import (
 if TYPE_CHECKING:
     from simllm.backends.goal_session import GoalTraceSnapshot
     from simllm.backends.packet_breakdown import PacketStepBreakdown
+    from simllm.backends.peer_step import PeerPacketConfig, PeerStepEvidence
     from simllm.backends.session_projection import SessionStepEvidence
     from simllm.backends.step_attribution import HtsimRequestMetricReducer
     from simllm.core import ExecutionGraph
@@ -238,6 +240,8 @@ class HtsimStepSinkConfig:
     host_model: HostInitiationModel = field(default_factory=HostInitiationModel.ideal)
     #: one physical authority per checked step; absent preserves the old path
     flow_session: FlowSessionConfig | None = field(default=None, kw_only=True)
+    #: retained physical local packet authority; absence preserves analytic timing
+    peer_packet: PeerPacketConfig | None = field(default=None, kw_only=True)
     #: read-only runtime visits and conserved breakdown; absent by default
     emit_packet_breakdown: bool = field(default=False, kw_only=True)
     emit_bottleneck_report: bool = field(default=False, kw_only=True)
@@ -315,6 +319,19 @@ class HtsimStepSinkConfig:
     )
 
     def __post_init__(self) -> None:
+        if self.peer_packet is not None:
+            from simllm.backends.peer_step import PeerPacketConfig
+            if not isinstance(self.peer_packet, PeerPacketConfig):
+                raise TypeError("peer_packet must be PeerPacketConfig or None")
+            self.peer_packet.validate_placement(self.placement_manifest)
+            if self.flow_session is not None:
+                raise ValueError("retained physical wire and local composition remains BACK-72")
+            if self.emit_packet_breakdown or self.emit_bottleneck_report:
+                raise ValueError("detailed peer packet critical-path reporting remains BACK-73")
+            if (self.collective_floor_calibration is not None
+                    or self.collective_latency_profile not in (None, "legacy")
+                    or self.collective_fixed_cost_arm != "off"):
+                raise ValueError("peer packet service cannot also charge aggregate or calibrated transport timing")
         if self.flow_session is not None:
             if not isinstance(self.flow_session, FlowSessionConfig):
                 raise TypeError("flow_session must be FlowSessionConfig or None")
@@ -504,7 +521,8 @@ class HtsimStepSinkConfig:
             self.precision,
             compute=compute_level_for_provider(self.provider),
             dependency=DependencyLevel.SERIAL,
-            locality=locality_level_for_placement(self.placement_manifest),
+            locality=(LocalityLevel.PACKET_NVLINK if self.peer_packet is not None
+                      else locality_level_for_placement(self.placement_manifest)),
             network=network_level_for_profile(self.profile),
             selection_source="HtsimStepSinkConfig",
         )
@@ -1009,6 +1027,7 @@ class _PlannedExecutionArtifact:
     ) = None
     registration_cost_ps: int = 0
     goal_snapshot: GoalTraceSnapshot | None = None
+    peer_phase: ClassifiedCommunicationPhase | None = None
 
 
 @dataclass(frozen=True)
@@ -1150,6 +1169,7 @@ class _PlannedStep:
     bottleneck_widths: tuple[int, ...] = ()
     flow_session: FlowSessionConfig | None = None
     session_graph: ExecutionGraph | None = None
+    peer_graph: ExecutionGraph | None = None
 
 
 @dataclass(frozen=True)
@@ -1166,6 +1186,7 @@ class _SimulatedStep:
     packet_breakdown: PacketStepBreakdown | None = None
     bottleneck_report: object = None
     session_evidence: SessionStepEvidence | None = None
+    peer_evidence: PeerStepEvidence | None = None
 
 
 @dataclass(frozen=True)
@@ -1189,6 +1210,10 @@ class HtsimStepSink:
         self._request_metric_reducer = request_metric_reducer
         placement = copy.deepcopy(config.placement_manifest)
         self._rank_mapper = RankMapper(placement) if placement is not None else None
+        self._peer_runtime = None
+        if config.peer_packet is not None:
+            from simllm.backends.peer_step import PeerPacketRuntime
+            self._peer_runtime = PeerPacketRuntime(config.peer_packet, placement)
         if self._rank_mapper is not None:
             groups = (("tp_ranks", config.tp_ranks),)
             if config.ep_ranks is not None:
@@ -1212,6 +1237,7 @@ class HtsimStepSink:
         self.packet_breakdowns: list[PacketStepBreakdown] = []
         self.bottleneck_reports = []
         self.session_evidence: list[SessionStepEvidence] = []
+        self.peer_evidence: list[PeerStepEvidence] = []
         #: calibrated decompositions; deliberately empty on the legacy/off path
         self.collective_timing_outcomes: list[StepCollectiveTimingOutcome] = []
         #: aggregate floor projections; deliberately empty on the exact off path
@@ -1354,6 +1380,8 @@ class HtsimStepSink:
             ),
             base_tag=cfg.base_tag,
         )
+        if self._peer_runtime is not None:
+            self._peer_runtime.validate_graph(graph, locality)
         projection = project_execution_graph_goal(
             graph,
             num_goal_ranks=cfg.num_goal_ranks,
@@ -1379,6 +1407,8 @@ class HtsimStepSink:
         compatibility_fast_path = self._rank_mapper is None or (
             locality.nvlink_bytes == 0 and self._rank_mapper.mode == "gpu-rank"
         )
+        if self._peer_runtime is not None:
+            compatibility_fast_path = False
         cross_check_trace = None
         cross_check_comparison = None
         if cfg.dependency_cross_check is not None:
@@ -1587,6 +1617,7 @@ class HtsimStepSink:
                     )
                 )
             for phase_index, phase in enumerate(classified_phases):
+                from simllm.backends.goal_session import GoalTraceSnapshot
                 collective_floor_term = collective_floor_terms.get(
                     phase.phase.phase_id
                 )
@@ -1606,7 +1637,8 @@ class HtsimStepSink:
                 planned_artifacts.append(
                     _PlannedExecutionArtifact(
                         artifact_id=phase.phase.phase_id,
-                        operation_ids=artifact.operation_ids,
+                        operation_ids=((operation_id,) if self._peer_runtime is not None
+                                       else artifact.operation_ids),
                         goal_path=(
                             trace.write(cfg.workdir / f"{stem}.goal")
                             if trace is not None
@@ -1658,6 +1690,9 @@ class HtsimStepSink:
                             if phase_index == 0
                             else 0
                         ),
+                        goal_snapshot=(GoalTraceSnapshot.from_trace(trace)
+                                       if self._peer_runtime is not None and trace is not None else None),
+                        peer_phase=(phase if self._peer_runtime is not None else None),
                     )
                 )
             after_compute = operations[collective_index + 1 :]
@@ -1791,6 +1826,7 @@ class HtsimStepSink:
             bottleneck_widths=bottleneck_widths,
             flow_session=cfg.flow_session,
             session_graph=graph if cfg.flow_session is not None else None,
+            peer_graph=graph if self._peer_runtime is not None else None,
         )
 
     def _run_goal(
@@ -1814,6 +1850,14 @@ class HtsimStepSink:
         )
 
     def _execute_plan(self, plan: _PlannedStep) -> _SimulatedStep:
+        try:
+            return self._execute_artifacts(plan)
+        except Exception:
+            if self._peer_runtime is not None:
+                self._peer_runtime.invalidate()
+            raise
+
+    def _execute_artifacts(self, plan: _PlannedStep) -> _SimulatedStep:
         """Execute checked artifacts in their authoritative graph order."""
 
         backend_artifact_count = sum(
@@ -1841,6 +1885,8 @@ class HtsimStepSink:
         fabric_finishes = []
         fabric_services = []
         composed_services = []
+        local_services = []
+        peer_boundaries = []
         num_flows = 0
         quiescent = True
         backend_runs = 0
@@ -1850,6 +1896,19 @@ class HtsimStepSink:
         authority_artifact_bytes: list[int] = []
         artifact_offset_ps = 0
         for artifact in plan.artifacts:
+            local_service = artifact.local_service_ps
+            peer_phase = None
+            peer_fabric_rows = ()
+            fixed_service = (artifact.registration_cost_ps + artifact.collective_base_latency_ps
+                             + artifact.aggregate_collective_floor_ps)
+            if self._peer_runtime is not None:
+                eligible = plan.virtual_time_ps + artifact_offset_ps + fixed_service
+                if artifact.peer_phase is not None:
+                    assert plan.peer_graph is not None
+                    peer_phase = self._peer_runtime.run_phase(plan.peer_graph.execution_id, artifact.peer_phase, eligible)
+                    local_service = peer_phase.service_ps
+                else:
+                    self._peer_runtime.advance_to(eligible)
             first_start_ps = last_finish_ps = 0
             if artifact.goal_path is None:
                 if artifact.completion_csv is not None:
@@ -1867,6 +1926,13 @@ class HtsimStepSink:
                     authority_artifact_bytes.append(len(payload))
                 run = (session_runs[artifact.artifact_id] if session_evidence is not None else
                        self._run_goal(plan, artifact.goal_path, artifact.completion_csv))
+                if self._peer_runtime is not None:
+                    from simllm.backends.peer_step import validate_peer_fabric_result
+                    if artifact.goal_snapshot is None or artifact.goal_path.read_bytes() != artifact.goal_snapshot.rendered_bytes:
+                        raise ValueError("peer phase remote artifact changed after its checked projection")
+                    peer_fabric_rows = validate_peer_fabric_result(artifact.goal_snapshot.messages, run, plan.profile)
+                    first_start_ps = min(flow.start_time_ps for flow in peer_fabric_rows)
+                    last_finish_ps = max(flow.completion_time_ps for flow in peer_fabric_rows)
                 fabric_service_ps = run.job_completion_time_ps()
                 if plan.emit_packet_breakdown:
                     if not run.quiescent or not run.flows:
@@ -1902,12 +1968,24 @@ class HtsimStepSink:
             fabric_starts.append(first_start_ps)
             fabric_finishes.append(last_finish_ps)
             fabric_services.append(fabric_service_ps)
+            local_services.append(local_service)
             composed_services.append(
                 artifact.registration_cost_ps
                 + artifact.collective_base_latency_ps
                 + artifact.aggregate_collective_floor_ps
-                + max(artifact.local_service_ps, fabric_service_ps)
+                + max(local_service, fabric_service_ps)
             )
+            if self._peer_runtime is not None:
+                from simllm.backends.peer_step import PeerArtifactBoundary
+                peer_boundaries.append(PeerArtifactBoundary(
+                    artifact.artifact_id, artifact.operation_ids,
+                    plan.virtual_time_ps + artifact_offset_ps,
+                    plan.virtual_time_ps + artifact_offset_ps + composed_services[-1],
+                    local_service, fabric_service_ps, fixed_service, peer_phase,
+                    () if artifact.goal_snapshot is None else artifact.goal_snapshot.messages,
+                    peer_fabric_rows,
+                ))
+                self._peer_runtime.advance_to(peer_boundaries[-1].completed_at_ps)
             artifact_offset_ps += composed_services[-1]
         fabric_phase_service_ps = tuple(fabric_services)
         composed_phase_service_ps = tuple(composed_services)
@@ -1992,8 +2070,8 @@ class HtsimStepSink:
             backend_runs=backend_runs,
             compute_service_ps=plan.compute_service_ps,
             nvlink_service_ps=sum(
-                artifact.local_service_ps
-                for artifact in plan.artifacts
+                local_service
+                for artifact, local_service in zip(plan.artifacts, local_services, strict=True)
                 if artifact.collective_operation_id is not None
             ),
             nvlink_bandwidth_bytes_per_second=(
@@ -2001,9 +2079,7 @@ class HtsimStepSink:
             ),
             fabric_phase_service_ps=fabric_phase_service_ps,
             composed_phase_service_ps=composed_phase_service_ps,
-            local_phase_service_ps=tuple(
-                artifact.local_service_ps for artifact in plan.artifacts
-            ),
+            local_phase_service_ps=tuple(local_services),
             base_phase_latency_ps=tuple(
                 artifact.collective_base_latency_ps for artifact in plan.artifacts
             ),
@@ -2138,6 +2214,11 @@ class HtsimStepSink:
         )
         if session_evidence is not None:
             session_evidence.validate_result(result)
+        peer_evidence = None
+        if self._peer_runtime is not None:
+            assert plan.peer_graph is not None
+            peer_evidence = self._peer_runtime.step_evidence(plan.peer_graph, tuple(peer_boundaries))
+            peer_evidence.validate_result(result)
         packet_breakdown = None
         if plan.emit_packet_breakdown:
             from simllm.backends.packet_breakdown import build_packet_breakdown
@@ -2169,6 +2250,7 @@ class HtsimStepSink:
             packet_breakdown=packet_breakdown,
             bottleneck_report=bottleneck_report,
             session_evidence=session_evidence,
+            peer_evidence=peer_evidence,
         )
 
     def _run_session_artifacts(self, plan: _PlannedStep):
@@ -2256,9 +2338,19 @@ class HtsimStepSink:
         return self._execute_plan(plan)
 
     def _publish(self, simulation: _SimulatedStep, record: StepRecord | None = None) -> StepResult | None:
+        try:
+            return self._publish_result(simulation, record)
+        except Exception:
+            if self._peer_runtime is not None:
+                self._peer_runtime.invalidate()
+            raise
+
+    def _publish_result(self, simulation: _SimulatedStep, record: StepRecord | None = None) -> StepResult | None:
         result = simulation.result
         if simulation.session_evidence is not None:
             simulation.session_evidence.validate_result(result)
+        if simulation.peer_evidence is not None:
+            simulation.peer_evidence.validate_result(result)
         if result is not None and self._request_metric_reducer is not None:
             if record is None:
                 raise ValueError("request metric reduction requires the consumed StepRecord")
@@ -2270,6 +2362,8 @@ class HtsimStepSink:
             result = replace(result, request_metrics=metrics)
         if simulation.session_evidence is not None:
             self.session_evidence.append(simulation.session_evidence)
+        if simulation.peer_evidence is not None:
+            self.peer_evidence.append(simulation.peer_evidence)
         if simulation.bottleneck_report is not None:
             self.bottleneck_reports.append(simulation.bottleneck_report)
         if simulation.packet_breakdown is not None:
@@ -2298,6 +2392,10 @@ class HtsimStepSink:
 
     def __call__(self, record: StepRecord) -> StepResult | None:
         return self._publish(self._simulate_step(record), record)
+
+    def close_peer_packets(self) -> tuple[dict, ...]:
+        """Drain retained physical tails after the final consumed logical step."""
+        return () if self._peer_runtime is None else self._peer_runtime.close()
 
 
 class HtsimPersistentStepSink(HtsimStepSink):
@@ -2339,6 +2437,9 @@ class HtsimPersistentStepSink(HtsimStepSink):
 
     def prepare(self, records: Sequence[StepRecord]) -> None:
         """Prepare one finite replay atomically from the caller's perspective."""
+
+        if self._peer_runtime is not None:
+            raise ValueError("parallel prepared steps cannot share a retained peer packet calendar")
 
         if not self.config.unsafe_disable_child_lifetime_binding:
             prepare_htsim_child_lifetime()
