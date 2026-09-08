@@ -328,6 +328,7 @@ def analyze_execution(cell, inputs, out, references, execution, stdout, traced):
 
         audit = audit_trace(out / "trace", completion_rows=[asdict(flow) for flow in flows],
                             endpoint_by_rank=projection.endpoint_by_rank,
+                            spine_count=cell.spines,
                             delta_ps=cell.window_ps, tick_ps=TICK_PS)
         write_json(out / "trace_audit.json", audit)
         trace_boundary_guard(audit, manifest)
@@ -336,7 +337,10 @@ def analyze_execution(cell, inputs, out, references, execution, stdout, traced):
                physical_quiescence_time_ps=int(manifest_value(manifest, "physical_quiescence_time_ps")),
                bounds=b, complete_flow_phase_ps=whole_phase, ep_phase_ps=ep_phase,
                ideal_phase_ps=phase(ideal), normalized_phase_makespan=whole_phase / phase(ideal),
-               job_completion_ps=run.job_completion_time_ps())
+               job_completion_ps=run.job_completion_time_ps(),
+               native_manifest=[" ".join(token for token in line.split()
+                                if not token.startswith(("goal=", "completion_csv=", "topology=")))
+                                for line in manifest])
     if not findings:
         event = previous.final_stage_event(graph, pp)
         result = previous.packet_step_result(reference.step_record(), event, cell.width, pp)
@@ -410,6 +414,36 @@ def compare_windows(low, high):
             "hop_maximum_delta_ps": high["pp_hop_maximum_ps"] - low["pp_hop_maximum_ps"]}
 
 
+def load_holding_comparisons(low, high):
+    def originals(row):
+        return {(flow["source_rank"], flow["destination_rank"], packet["packet_index"]): packet
+                for flow in row["trace_audit"]["pp_flows"] for packet in flow["packets"]
+                if packet["attempt"] == 0}
+
+    left, right = originals(low), originals(high)
+    rows = []
+    fields = ("source_start_ps", "eta_ps", "arrival_ps", "logical_release_ps", "ring_holding_ps",
+              "rx_service_start_ps", "rx_service_end_ps", "delivery_ps")
+    for key in sorted(left.keys() & right.keys()):
+        a, b = left[key], right[key]
+        if any(a.get(field) is None or b.get(field) is None for field in fields):
+            continue
+        differences = {field.removesuffix("_ps") + "_delta_ps": b[field] - a[field] for field in fields}
+        queue_delta = (sum(v["queue_wait_ps"] for v in b["visits"])
+                       - sum(v["queue_wait_ps"] for v in a["visits"]))
+        absorbed = (queue_delta > 0 and differences["arrival_delta_ps"] == queue_delta
+                    and differences["ring_holding_delta_ps"] == -queue_delta
+                    and all(differences[name + "_delta_ps"] == 0 for name in (
+                        "source_start", "eta", "logical_release", "rx_service_start", "rx_service_end", "delivery")))
+        rows.append({"source_rank": key[0], "destination_rank": key[1], "packet_index": key[2],
+                     **differences, "switch_queue_wait_delta_ps": queue_delta,
+                     "extra_queue_wait_absorbed_by_holding": absorbed})
+    return {"comparable_original_count": len(rows),
+            "originals_with_changed_or_missing_admission": len(left.keys() | right.keys()) - len(rows),
+            "absorbed_original_count": sum(row["extra_queue_wait_absorbed_by_holding"] for row in rows),
+            "packets": rows}
+
+
 def behavioral_relations(physical):
     indexed = {(row["variant"], row["spines"], row["width"], row["ep_width"], row["window_ps"]): row
                for row in physical}
@@ -438,8 +472,11 @@ def behavioral_relations(physical):
 
         def queue(rows):
             values = [row["trace_audit"]["queue_work"]["ep_data_service_ahead_ps"] for row in rows]
+            lower_bounds = [sum(flow["ep_data_bound_ps"] for flow in row["trace_audit"]["pp_flows"])
+                            for row in rows]
             return {"ep_widths": [row["ep_width"] for row in rows],
-                    "ep_data_service_ahead_work_ps": values}, values[-1] > 0
+                    "ep_data_service_ahead_work_ps": values,
+                    "strictly_earlier_ep_data_bound_work_ps": lower_bounds}, values[-1] > 0
 
         relation("R2-expert-service-ahead", keys, queue)
 
@@ -448,7 +485,8 @@ def behavioral_relations(physical):
             request_delta = rows[-1]["request_ttft_ps"] - rows[0]["request_ttft_ps"]
             return {"hop_maximum_delta_ps": hop_delta, "request_ttft_delta_ps": request_delta,
                     "unloaded_ttft_ps": rows[0]["request_ttft_ps"],
-                    "loaded_ttft_ps": rows[-1]["request_ttft_ps"]}, hop_delta > 0 and request_delta > 0
+                    "loaded_ttft_ps": rows[-1]["request_ttft_ps"],
+                    "holding_comparison": load_holding_comparisons(rows[0], rows[-1])}, hop_delta > 0 and request_delta > 0
 
         relation("R3-request-penalty", [keys[0], keys[-1]], penalty)
     for variant in reference.VARIANTS:
@@ -475,7 +513,8 @@ def summarize(rows, provenance):
     findings = []
     pair_fields = ("completion_sha256", "request_ttft_ps", "pp_hop_maximum_ps",
                    "physical_quiescence", "physical_quiescence_time_ps", "complete_flow_phase_ps",
-                   "ep_phase_ps", "job_completion_ps", "request_attribution", "pp_fct_samples_ps")
+                   "ep_phase_ps", "job_completion_ps", "request_attribution", "pp_fct_samples_ps",
+                   "native_manifest")
     for cell in cells():
         off = indexed[(cell.name, False)]
         if cell.population != "physical":
@@ -516,6 +555,8 @@ def summarize(rows, provenance):
             "diagnostics": diagnostics, "fatal_findings": findings,
             "refuted_families": sorted(set(refuted)),
             "traf88_acceptance": "met" if verdict == "valid-positive-penalty" else "not-met",
+            "attribution_scope": "R2 queue work and R3 request changes are separate tests; "
+            "trigger-packet timelines are not marginal latency contributions",
             "scope": "forward-only singleton request; no TPOT or hardware calibration"}
 
 

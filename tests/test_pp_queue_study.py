@@ -165,10 +165,12 @@ def valid_rows(*, positive_penalty):
                    physical_quiescence=True, physical_quiescence_time_ps=200_000_000,
                    complete_flow_phase_ps=100_000_000, ep_phase_ps=90_000_000,
                    job_completion_ps=100_000_000, request_attribution={"kernel_ps": 2_000_000},
+                   native_manifest=["physical_quiescence=verified physical_quiescence_time_ps=200000000"],
                    pp_fct_samples_ps=[10_000_000 + holding + load_penalty],
                    bounds={"ep_phase_floor_ps": 1_000_000},
                    trace_audit={"queue_work": {"ep_data_service_ahead_ps": row["ep_width"]},
                                 "pp_flows": [{"source_rank": 0, "destination_rank": 8,
+                                              "ep_data_bound_ps": row["ep_width"],
                                               "packets": [{"packet_index": 0, "attempt": 0,
                                                            "arrival_ps": 1_000_000,
                                                            "logical_release_ps": 1_000_000 + holding,
@@ -224,3 +226,19 @@ def test_trace_publication_must_bind_the_runtime_boundary(mutation):
         audit[mutation] = "unknown"
     with pytest.raises(ValueError):
         study.trace_boundary_guard(audit, manifest)
+
+
+def test_arrival_delay_absorbed_by_holding_is_reported_without_latency_credit():
+    row = valid_rows(positive_penalty=False)[0]
+    packet = row["trace_audit"]["pp_flows"][0]["packets"][0]
+    packet.update(source_start_ps=0, eta_ps=1_000_000, rx_service_start_ps=20_000_000,
+                  rx_service_end_ps=20_083_200, delivery_ps=20_083_200,
+                  visits=[{"queue_wait_ps": 0}])
+    loaded = deepcopy(row)
+    packet = loaded["trace_audit"]["pp_flows"][0]["packets"][0]
+    packet["arrival_ps"] += 83_200
+    packet["ring_holding_ps"] -= 83_200
+    packet["visits"][0]["queue_wait_ps"] = 83_200
+    result = study.load_holding_comparisons(row, loaded)
+    assert result["absorbed_original_count"] == result["comparable_original_count"] == 1
+    assert result["packets"][0]["delivery_delta_ps"] == 0
