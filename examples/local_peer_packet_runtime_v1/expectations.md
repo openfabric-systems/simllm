@@ -23,6 +23,23 @@ The native wire grammar and existing version 1 and version 2 serialized
 artifacts stay exact. Extent identity, attempt identity, parent identity and
 byte offsets stay distinct. A packet terminal does not consume its parent.
 
+Native wire `Delivered` retains its transport-retirement meaning. It need not
+equal receiver visibility. Native `PacketTxStarted` can represent producer
+attempt issue, so its interval to TX finish is not universally link service.
+The shared consumer receives immutable ABI, capability, admission, route and
+timestamp-boundary context alongside the unchanged native packet rows. The
+legacy opaque `wqe_id` correlation field never implies a GPU owns an RNIC
+work queue. Existing wire serialization and event ordering remain unchanged.
+
+The GPU packet authority exposes destination visibility separately. Its attempt
+transport terminal is at the later of visibility and acknowledgement. Its
+parent transport terminal follows every child terminal, and no later child
+event can refer to that consumed parent. Logical extent completion may precede
+transport retirement. The retained acknowledgement control exercises this
+distinction. Physical service duration comes from the resource grant/release
+visits, not from an unqualified common event-kind name. The native common header
+must be included in the installed package, with legacy header aliases intact.
+
 Only extent and operation lifecycle events cross into the execution result;
 submission, eligibility, grant and completion are all retained.
 An extent becomes visible after every required payload packet becomes visible.
