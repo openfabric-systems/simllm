@@ -355,15 +355,15 @@ backend submodules.
 | Submodule | Repo | Ref | Provides |
 |---|---|---|---|
 | `third_party/atlahs` | [ATLAHS-rnic-private](https://github.com/yifeng-ethz/ATLAHS-rnic-private) | `main` | GOAL toolchain (txt2bin, LogGOPSim, goal_gen), validated `htsim_rnic` launcher (`atlahs_entry.py`) |
-| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `codex/htsim41_data_recovery` at `3bd3ac3` (unmerged, see below) | UEC htsim, the composed SimLLM RNIC wrapper behind `HTSIM_ENABLE_SIMLLM_RNIC`, `htsim_rnic`, WQE bookkeeping, the ABI-v2 event relay with its physical control producers, the persistent flow session, the Slingshot-class ss-dragonfly fabric wave, and the ns-tm3 ingress arbiter with finite control headroom, bounded initial DATA sending and optional exponential tail recovery |
+| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `6efec16` ([paired PR #22](https://github.com/yifeng-ethz/HTSIM-rnic-private/pull/22)) | UEC htsim, the composed SimLLM RNIC wrapper behind `HTSIM_ENABLE_SIMLLM_RNIC`, `htsim_rnic`, WQE bookkeeping, the ABI-v2 event relay with its physical control producers, the persistent flow session, the Slingshot-class ss-dragonfly fabric wave, and the ns-tm3 ingress arbiter with finite control headroom, bounded initial DATA sending and optional exponential tail recovery |
 
 As of 2026-08-03 the launcher, the RNIC wiring, the DCQCN comparator
 (mlx5-faithful loss recovery, ECN-only and ECN plus PFC modes, storm
 metrics) and the full rnic-cn algorithm-book implementation
 (deterministic reservation ledger, windowed feedforward snapshots,
 fractional nflow, sender egress composition, BJP-derived resequencing
-window) are merged. The SimLLM pin for HTSim extends the backend-main
-load-harness merge (`1dcbfec`) through the append-only DATA-recovery branch.
+window) are merged. The SimLLM pin for HTSim includes the merged load harness and DATA recovery,
+then adds exact completion-boundary continuation for retained step sessions.
 The base carries the WQE bookkeeping
 commit, the composed SimLLM RNIC wrapper, the ABI-v2 event relay, the
 Slingshot-class dragonfly fabric wave (the physical ss-dragonfly fabric with
@@ -430,16 +430,12 @@ and the MSVC `Release`/`RelWithDebInfo`/`Debug`/`MinSizeRel` layouts,
 then `PATH`. The framework adapters and traffic-model layer stay in
 Python and use this platform-neutral discovery path.
 
-As of 2026-09-02 the pin moves off backend main to `617ce20` on the backend
-branch `codex/htsim39_fair_egress_drop`, which is open and unmerged. A pin on
-an unmerged backend branch is a supported intermediate state under the rule
-above while backend work is in review. It carries the HTSIM-39 fix and nothing
-else: the ns-tm3 switch now arbitrates physical ingress ports that deliver in
+The pin includes the HTSIM-39 ingress-fairness fix: the ns-tm3 switch
+arbitrates physical ingress ports that deliver in
 the same picosecond, presenting them to its shared pipeline in a rotating port
 order instead of the fixed order the event list happened to produce, and it
 counts admitted and dropped packets per physical ingress so a study can score
-how a congested buffer shared its loss. Roll the pin back to backend main when
-the branch merges.
+how a congested buffer shared its loss.
 
 HTSIM-39 is closed on that fix. The cause was a tie rather than a policy: in
 the 2 sender 5.2 MB fan-in, 8323 instants had an arrival from both ports at
