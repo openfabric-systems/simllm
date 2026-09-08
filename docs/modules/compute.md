@@ -1886,6 +1886,18 @@ semantic comparison remains DEPLOY-12's scope.
 
 ### Precision
 
+- COMP-91 (Precision; P0; S): repair the API-metadata weight validator's false
+  one-byte-per-parameter floor for an explicit MXFP4 E2M1, group-32, E8M0
+  declaration. Count packed value bytes and minimum scale bytes independently,
+  allowing higher-precision exceptions and file overhead to increase storage.
+  Acceptance checks exact and one-byte-under-floor envelopes at group boundaries
+  and two complete-group sizes, preserves all strict manifest and metadata-only
+  checks, and leaves accepted BF16/FP8 identities byte-identical. The generic
+  compute path still rejects the format until COMP-54 supplies the complete K3
+  structure; COMP-59 retains physical capture. See the
+  [frozen storage expectations](../../examples/packed_weight_identity_v1/expectations.md).
+
+
 - COMP-88 (Precision; P1; M): move the external serving-composition constants
   into a content-addressed artifact joined to the imported operation slice.
   The matched-seam study declares the 1.1 prefill correction, 1.08 decode
