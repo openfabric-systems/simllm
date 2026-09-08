@@ -1245,6 +1245,15 @@ created" statement stands and refers to different, never-registered work.
 
 ### Precision
 
+- BACK-71 (Precision; P0; M): restore the external congestion controller's
+  validated notification path. Native transmit support intercepts every CNP
+  observation and rejects the composed external-controller fixture when no
+  native reaction point exists. Route only native-transmit notifications to
+  the native reaction point; retain external token, extent and capability
+  checks and the single-controller contract. Acceptance is the frozen
+  [ownership checks](../../examples/completion_boundary_v1/cnp_owner_checks.md),
+  exact observation-selection completion controls and the full composed gate.
+
 - BACK-13 (Precision; P1; L): build a versioned CX-7 observable-state model
   and capture schema. Inventory only public Linux mlx5, rdma-core, NVIDIA
   MFT/DOCA and device-reported fields. Tag each as `documented`,
@@ -1402,6 +1411,18 @@ created" statement stands and refers to different, never-registered work.
   or minus 10 ms after the last cut) against the campaign values.
 
 ### Completeness
+
+- BACK-72 (Completeness; P2; M): extend the optional physical step session to
+  locality remapping, custom topology, calibrated collective surcharges,
+  registration, dependency cross-checks, packet/bottleneck reports and GOAL
+  start dependencies with explicit start evidence. Its first supported path
+  uses generated all-remote topology and completion dependencies; unsupported
+  compositions are rejected before opening a child. Add owned streaming on
+  POSIX platforms without waitid/WNOWAIT while preserving descendant cleanup.
+  Acceptance requires each selected composition to reach returned request
+  metrics with a single timing authority, exact disabled-path equivalence
+  and failure-before-publication tests. The absent session option preserves
+  the accepted stateless ideal path and physical multi-artifact refusal.
 
 - BACK-9 (Completeness; P1; L): replace the timing-neutral WQE ledger with
   the structural **RDMA
