@@ -47,14 +47,19 @@ finite destination buffer. Every destination sharing a source attachment uses
 one input-link calendar. Every source sharing a destination attachment uses
 one output-link calendar. Virtual output queues do not multiply input capacity.
 
-Source feed and its link occupy max(feed service, link service). The switch
+For source feed service E and link service L, the link occupies max(E,L).
+The source feed releases after E, so a faster source may feed a different
+physical link while the first link remains busy. Sharing a physical attachment
+must therefore be enforced by its own link calendar, never hidden by holding
+the aggregate source feed until link release. The switch
 input/output and output attachment occupy max(crossbar service, output-link
 service), then the second hop propagates. This declares store-and-forward
 packet admission with overlapped output feeding, without a third full packet
 serialization stage. Each downstream capacity is reserved before transmission.
 Physical link release and downstream arrival are separated by propagation. A
 link acknowledgement includes the forward and reverse propagation path plus
-explicit additional acknowledgement processing. A credit return includes the
+explicit additional acknowledgement processing A:
+ack_at = hop_tx_finished + forward_P + reverse_P + A. A credit return includes the
 reverse hop propagation plus explicit additional return processing. These
 physical-mode parameters are separate from the legacy component latency
 options; no existing profile field silently acquires a different meaning.
