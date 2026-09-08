@@ -1,5 +1,11 @@
 # TRAF-74 NV4 long-flow incast second-capture result
 
+The qualification and mechanism-attribution claims below are superseded by the
+[measurement-boundary audit](../nvlink_measurement_boundary_v1/RESULTS.md).
+The original report is retained: its launch-skew value is budget-derived, the
+alignment precondition is undecidable, and packetization is not identified.
+
+
 ## Hardware against simulation
 
 | Degree | Flow | Hardware aggregate GB/s | Simulation aggregate GB/s | Signed error | Hardware completion us by source | Simulation completion us by source | Maximum launch skew | Budget | Verdict | Responsible parameter |

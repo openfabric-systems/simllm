@@ -1158,17 +1158,22 @@ TRAF-78 owns observed routing geometry, TRAF-75 owns supported-path directional
 precision, TRAF-77 owns hardware transport calibration, and TRAF-26 owns
 complete production peer workloads.
 
-The [second TRAF-74 capture](../../examples/nvlink_incast_validation_v1/RESULTS_RUN2.md)
-validates the scored base domain at the only incast degrees a four-A100 `NV4`
-node can realize. Merlin job `202466` completes all 42 rows, all 13 fatal
-guards pass, and the worst sequential launch-skew fraction is 1.129 percent
-against the frozen 10.000 percent ceiling. All six cells then miss the frozen
-plus or minus 16 percent band: hardware aggregate goodput spans 4.461874 to
-14.288373 GB/s while simultaneous-release simulation spans 94.104154 to
-194.808553 GB/s, with a worst absolute signed relative error of 2011.175
-percent. The frozen size-dependent rule attributes every miss to
-packetization. TRAF-74 closes as a literal non-void validation, and TRAF-86
-owns the identified packetization precision residual.
+The [measurement-boundary audit](../../examples/nvlink_measurement_boundary_v1/RESULTS.md)
+separates producer service, source release, common phase timing and packet
+transport. TRAF-91 closes the inference correction: four packet-free size pairs
+trigger the historical attribution function, including one whose small cell
+misses the original 16 percent band. All 20 synthetic exact checks have zero
+residual. The old size rule does not identify packetization.
+
+The second TRAF-74 capture retains all 42 observations and its original score.
+Its reported 1.129 percent launch-skew fraction is a declared budget divided
+by a local elapsed time, with no observed common-clock start interval. Its
+aligned model qualification is void because that fatal precondition is
+undecidable. This does not establish that hardware alignment failed. The
+captured low rates remain diagnostic; their cause is unidentified. TRAF-74's
+completed capture stays in the historical task ledger, while its non-void
+qualification and packet-identification claims are withdrawn. TRAF-86 owns
+fresh discrimination and qualification through the explicit four-card request.
 
 NVLink hardware incast identification is long-flow only. Sender launches on
 the real node serialize through sequential PCIe writes, so nanosecond-scale
@@ -1236,20 +1241,6 @@ shipped collectives.
 
 ### Precision
 
-- TRAF-91 (Precision; P0; M): audit the historical TRAF-74 timing boundary and
-  packetization attribution before using that capture to change a model
-  parameter. A fixed per-transfer overhead can satisfy the five-percentage-point
-  size rule without any packet mechanism; the reported launch-skew fraction
-  uses a declared budget rather than observed common-clock starts. Freeze new
-  synthetic counterexamples, preserve every original capture and score, and
-  separate local event durations, common phase timing, producer pacing and
-  memory service. Acceptance supersedes unsupported current validity and
-  attribution claims, records any fatal precondition as undecidable, and gives
-  TRAF-86 a discriminating four-card request with no invented measurements.
-  The [audit expectations](../../examples/nvlink_measurement_boundary_v1/expectations.md)
-  qualify the inference boundary, not the physical packet model.
-
-
 - TRAF-81 (Precision; P1; L): complete the blocked rank-16 cell in the
   [independent collective-floor extrapolation study](../../examples/collective_floor_extrapolation_v1/RESULTS.md).
   The frozen rank-2 and rank-4 training cells and rank-8 holdout completed on
@@ -1269,32 +1260,31 @@ shipped collectives.
   result. The evidence remains shape-only across architectures: no A100
   absolute latency, bandwidth, floor or slope calibrates H200. This study
   changes no installed authority or signature metric by itself.
-- TRAF-86 (Precision; P1; L): replace the NVLink domain's declared packetization
-  service conversion identified by the completed TRAF-74 comparison. The
-  surrogate being replaced maps each logical flow directly onto the profile's
-  256-byte payload plus 16-byte header and then services those packets at the
-  measured TX egress and RX ingress plateaus. On base commit `6559313`, it
-  predicts 94.104154 to 194.808553 GB/s for the six simultaneous-release cells.
-  Merlin job `202466` instead measures 4.461874 to 14.288373 GB/s at 4 MiB and
-  8 MiB, with all 13 fatal guards passing and every per-source completion plus
-  aggregate comparison outside the frozen plus or minus 16 percent band. The
-  size-dependent miss shrinks by more than five percentage points at 8 MiB for
-  every degree, so the frozen TRAF-74 rule names packetization rather than the
-  TX plateau, RX plateau, credit round or pass-through switch identity. Treat
-  that capture as identification evidence, not as a held-out acceptance set.
-  After TRAF-80 lands the public-document packet and credit structure, freeze
-  the effective logical-message to packet-service conversion, its counter or
-  trace observable, and new 16 MiB and 32 MiB held-out long-flow cells before
-  implementation or capture. The replacement must keep checksum, ordering,
-  per-link data and raw counters, replay, recovery, throttle, topology and
-  competing-process guards decidable; put the base conversion behind an
-  explicit compatibility mode that reproduces every frozen base completion,
-  aggregate, byte count and order exactly. Acceptance requires one new non-void
-  degree-1, degree-2 and degree-3 comparison whose aggregate and every
-  per-source median are inside its pre-run physical band, plus an end-to-end
-  TTFT or TPOT change through the supported metric chain. Degrees 4, 8 and 16
-  remain declared simulation-only extrapolations and are not validated by an
-  NV4 result.
+- TRAF-86 (Precision; P1; L): identify and replace the NVLink domain's
+  producer-to-packet service conversion through independently observed source,
+  memory, link and destination boundaries. The surrogate maps each logical
+  flow directly to 256-byte payload plus 16-byte header packets at the declared
+  profile's service rates. The TRAF-74 capture is diagnostic evidence with an
+  undecidable alignment precondition; its size trend does not identify a
+  packetization parameter, as the completed TRAF-91 audit demonstrates. Do not
+  fit that trend into a replacement conversion. Execute the
+  [four-card request](../../examples/nvlink_measurement_boundary_v1/measurement-request.json)
+  after qualifying the producer and clocks and freezing its exact cells and
+  physical bands. Separate retained paced, unpaced scalar/vector and copy-engine
+  producers, eager and warm graph launch, local and peer memory paths, and
+  aligned and staggered sharing. Record actual source starts, destination
+  visibility, bounded clock mappings, compiled memory instructions and
+  documented counter units. A missing fatal observation voids qualification.
+  Preserve every original capture and score and keep the current conversion as
+  a byte-identical off path. After an observable discriminates a named mechanism,
+  freeze its replacement and new 16 MiB/32 MiB held-out cells before
+  implementation or capture. Acceptance requires a non-void degree-1, degree-2
+  and degree-3 comparison inside its pre-run per-source and common-phase bands,
+  with no double charge of producer or registration service, and an end-to-end
+  time-to-first-token or time-per-output-token change through the supported
+  metric chain. This remains open for collector qualification, hardware
+  reservation, identification and live precision. Four cards do not validate
+  physical incast degrees 4, 8 or 16.
 
 - TRAF-77 (Precision; P1; L): replace the MiniMax scaling study's borrowed
   32 MiB switch-wide buffer and uncalibrated rnic-cn transport service with
