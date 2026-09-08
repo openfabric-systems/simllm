@@ -155,7 +155,8 @@
     "COMP-81",
     "CORE-67",
     "HTSIM-40",
-    "HTSIM-41"
+    "HTSIM-41",
+    "CORE-48"
   ],
   "retired_never_landed": [
     "HTSIM-19"
