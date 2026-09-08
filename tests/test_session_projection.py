@@ -12,7 +12,7 @@ from simllm.backends.flow_session import FlowSessionConfig, FlowSessionDrain
 from simllm.backends.goal_session import GoalSessionExecutor, GoalTraceSnapshot
 from simllm.backends.session_projection import build_session_evidence
 from simllm.backends.step_attribution import HtsimRequestMetricReducer
-from simllm.backends.step_sink import HtsimStepSink, HtsimStepSinkConfig
+from simllm.backends.step_sink import HtsimPersistentStepSink, HtsimStepSink, HtsimStepSinkConfig
 from simllm.compute import ComputeProvider, DurationEstimate, HostInitiationModel, ModelDims
 from simllm.core import (
     CollectiveWork,
@@ -206,6 +206,26 @@ def test_sink_retains_one_session_and_returns_request_metrics(monkeypatch, tmp_p
     for evidence, result in zip(sink.session_evidence, (first, second), strict=True):
         evidence.validate_result(result)
         assert len(evidence.graph.operations) == 8 and len(evidence.artifacts) == 6
+
+
+def test_prepared_sessions_publish_proofs_and_metrics_only_when_consumed(monkeypatch, tmp_path):
+    fake_child(monkeypatch, tmp_path)
+    reducer = HtsimRequestMetricReducer({f"r{i}": 0 for i in range(16)})
+    records = [record(), record(1, 32_080_000)]
+    with HtsimPersistentStepSink(config(tmp_path), max_workers=2,
+                                 request_metric_reducer=reducer) as sink:
+        sink.prepare(records)
+        assert len(ObservedSession.created) == 2
+        assert all(child.closed for child in ObservedSession.created)
+        assert sink.session_evidence == sink.outcomes == []
+        assert reducer.latest_request_metrics == ()
+        with pytest.raises(ValueError, match="next prepared step"):
+            sink(records[1])
+        assert reducer.latest_request_metrics == ()
+        first, second = [sink(item) for item in records]
+        assert len(sink.session_evidence) == 2
+        assert first.request_metrics[0].ttft_ps == second.request_metrics[0].tpot_ps == 32_080_000
+        assert sink.prepared_steps_remaining == 0
 
 
 @pytest.mark.parametrize("field,value", (("emit_packet_breakdown", True), ("emit_bottleneck_report", True),

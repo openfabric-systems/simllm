@@ -23,6 +23,22 @@ backend submodules.
   native RNIC authority and transport policy. Structural `rnic-nn` and
   generated `rnic-cn` are supported; the explicit nonstructural fluid mode is
   rejected. The unchanged one-GOAL command remains the exact default off path.
+  `await_completion` stops after the first callback that completes a selected
+  pending flow, returns every completion from that callback and preserves
+  remaining callbacks at the same timestamp. Its boundary token permits
+  `inject_at_boundary` to release declared dependents at that exact time.
+  Ordinary injection still excludes that timestamp. A normal horizon yields
+  before later work; hard time, callback and wall-time limits terminate a
+  failed session. Logical completion and verified physical quiescence are
+  distinct timestamps.
+- `FlowSessionConfig` + `FlowSession`: the owned streaming client for that
+  protocol. Configuration declares profile, endpoint count, link rate, native
+  effective-hardware SHA-256 and policy token. The client checks canonical
+  frames, contiguous sequences, message aliases and lifecycle timing, retains
+  immutable rows and raw transcripts, and reaps the child on every terminal
+  path. `GoalSessionExecutor` executes immutable checked GOAL snapshots through
+  this authority, preserving completion dependencies, per-rank compute order
+  and receive availability without changing physical flow completion time.
 - `FlowCompletion` + `parse_completion_csv`: completion-CSV parsing
   with a stable legacy prefix
   (`profile,flow_id,source,destination,tag,payload_bytes,start_time_ps,completion_time_ps,fct_ps`)
@@ -247,6 +263,18 @@ backend submodules.
   stands. Per-step subprocess invocation is the documented diagnostic mode and
   remains the default.
 
+  `HtsimStepSinkConfig.flow_session` explicitly selects one native process
+  across all ordered artifacts of a checked step. The session retains queue,
+  transport, topology and random state between artifacts. It drains once after
+  the last artifact, then publishes checked original-graph `CompletionEvent`
+  and `ExecutionResult` projections through `session_evidence`. The optional
+  `HtsimRequestMetricReducer` constructor argument attaches request metrics to
+  the returned `StepResult` after that proof. Native quiescence remains in the
+  evidence even when local work finishes later. The supported composition uses
+  generated all-remote topology and completion dependencies; BACK-72 owns the
+  optional compositions rejected before child creation. The absent option
+  preserves stateless ideal runs and the physical multi-artifact refusal.
+
   The seam-local `dependency_cross_check="atlahs-goal"` option independently
   renders and executes the same all-remote schedule through the direct ATLAHS
   GOAL path. The graph-projected execution remains the sole authority for the
@@ -274,16 +302,17 @@ backend submodules.
 - `HtsimPersistentStepSink` (BRIDGE-1): the opt-in prepared-replay form of
   the same sink for a finite record sequence known before consumption.
   `prepare` copies and lowers the records serially, then a persistent local
-  thread pool pipelines `txt2bin` and the unchanged isolated one-GOAL
-  `htsim_rnic` invocations. Results remain unpublished until the complete
+  thread pool pipelines each selected step execution. With the default
+  configuration this uses `txt2bin` and isolated one-GOAL `htsim_rnic`
+  invocations; `flow_session` retains one native process per step. Results
+  remain unpublished until the complete
   batch succeeds and are served only for dataclass value-equal records in
   their original order. The pool can serve another batch after the first is
   fully consumed.
-  This preserves the diagnostic path's reset semantics with a fresh process
-  and local state for every GOAL artifact and step. This mode does not claim a
-  stateful online backend session, and ordered `rnic-cn` multi-artifact runs
-  are rejected before backend execution. The backend flow session and full
-  result codec are now delivered; BRIDGE-2 owns their graph-level client.
+  The default preserves the diagnostic path's reset semantics with a fresh
+  process and local state for every GOAL artifact. Selected physical sessions
+  retain state within each step. BRIDGE-2 owns the online framed client and
+  retention across steps.
 - `SerialStepLowerer` + `SerialStepLowererConfig`: CORE-2 diagnostic lowering
   from a `StepRecord` to per-layer compute plus semantic TP/EP collective
   operations. Explicit framework observations bypass the fallback schedule and
@@ -1416,7 +1445,8 @@ created" statement stands and refers to different, never-registered work.
   locality remapping, custom topology, calibrated collective surcharges,
   registration, dependency cross-checks, packet/bottleneck reports, empty
   collectives and GOAL start dependencies with explicit start evidence. Add
-  repeated message envelopes only with explicit native matching order. Its first supported path
+  repeated message envelopes only with explicit native matching order. Its
+  first supported path
   uses generated all-remote topology and completion dependencies; unsupported
   compositions are rejected before opening a child. Add owned streaming on
   POSIX platforms without waitid/WNOWAIT while preserving descendant cleanup.
