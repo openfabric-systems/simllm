@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from simllm.backends._child_process import (
+    OwnedBinaryProcess,
     _windows_job_diagnostics_for_test,
     _WindowsJob,
     cleanup_owned_children,
@@ -302,3 +303,92 @@ def test_owner_termination_kills_only_the_registered_child(tmp_path):
             except subprocess.TimeoutExpired:
                 sentinel.kill()
                 sentinel.wait(timeout=5.0)
+
+
+def test_owned_binary_stream_preserves_immediate_first_frame_and_stderr():
+    code = (
+        "import os, sys\n"
+        "for size in (65537, 5):\n"
+        "    data = bytearray()\n"
+        "    while len(data) < size:\n"
+        "        data.extend(os.read(0, size - len(data)))\n"
+        "    os.write(2, b'diagnostic' * 20000)\n"
+        "    sys.stdout.buffer.write(data)\n"
+        "    sys.stdout.buffer.flush()\n"
+        "assert os.read(0, 1) == b''\n"
+    )
+    process = OwnedBinaryProcess((sys.executable, "-c", code), timeout_s=10)
+    with process:
+        first = b"\x00\xff" * 32768 + b"x"
+        process.write(first)
+        assert process.read_exact(len(first)) == first
+        process.write(b"again")
+        assert process.read_exact(5) == b"again"
+        assert process.finish() == 0
+    assert process.stderr == b"diagnostic" * 40000
+    _wait_until_not_live(process.pid)
+    process.abort()
+
+
+def test_binary_stream_eof_reaps_child_and_preserves_marker(tmp_path, monkeypatch):
+    monkeypatch.setenv("SIMLLM_CHILD_LIFETIME_MARKER_DIR", str(tmp_path))
+    monkeypatch.setenv("SIMLLM_CHILD_LIFETIME_RUN_NONCE", "stream-eof")
+    with OwnedBinaryProcess((sys.executable, "-c", "print('x', end='')"),
+                            timeout_s=5) as process, pytest.raises(EOFError):
+        process.read_exact(4)
+    marker = _wait_for_marker(tmp_path)
+    assert marker["child_pid"] == process.pid
+    _wait_until_not_live(process.pid)
+
+
+def test_binary_stream_watchdog_applies_while_caller_is_idle():
+    process = OwnedBinaryProcess(
+        (sys.executable, "-c", "import time; time.sleep(30)"), timeout_s=0.3)
+    time.sleep(0.5)
+    with pytest.raises(subprocess.TimeoutExpired):
+        process.read_exact(1)
+    _wait_until_not_live(process.pid)
+
+
+def test_binary_stream_blocked_write_is_bounded():
+    with OwnedBinaryProcess(
+        (sys.executable, "-c", "import time; time.sleep(30)"), timeout_s=0.3
+    ) as process, pytest.raises(subprocess.TimeoutExpired):
+        process.write(b"x" * (1 << 20))
+    _wait_until_not_live(process.pid)
+
+
+def test_binary_stream_rejects_trailing_output():
+    code = "import os; os.read(0, 1); os.write(1, b'extra')"
+    with (OwnedBinaryProcess((sys.executable, "-c", code), timeout_s=5) as process,
+          pytest.raises(RuntimeError, match="trailing protocol bytes")):
+        process.finish()
+    _wait_until_not_live(process.pid)
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows Job Object control")
+def test_binary_stream_keeps_windows_job_open_until_finish():
+    code = "import os; os.write(1, os.read(0, 1)); assert os.read(0, 1) == b''"
+    with OwnedBinaryProcess((sys.executable, "-c", code), timeout_s=5) as process:
+        process.write(b"x")
+        assert process.read_exact(1) == b"x"
+        diagnostics = _windows_job_diagnostics_for_test()
+        assert diagnostics["assign_result"] is True
+        assert diagnostics["handle_open_after_assign"] is True
+        assert process.finish() == 0
+    assert _windows_job_diagnostics_for_test()["handle_open_after_close"] is False
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows Job Object control")
+def test_binary_stream_job_creation_failure_never_releases_child(tmp_path, monkeypatch):
+    executed = tmp_path / "stream-executed"
+
+    def fail_job_creation():
+        raise OSError("injected Job Object failure")
+
+    monkeypatch.setattr(_WindowsJob, "create", staticmethod(fail_job_creation))
+    with pytest.raises(OSError, match="injected Job Object failure"):
+        OwnedBinaryProcess((sys.executable, "-c",
+                            f"from pathlib import Path; Path({str(executed)!r}).touch()"),
+                           timeout_s=5)
+    assert not executed.exists()

@@ -50,7 +50,7 @@ def main() -> int:
             expected_parent_pid
         ):
             return 125
-        if sys.stdin.buffer.read(1) != _HANDSHAKE:
+        if os.read(sys.stdin.fileno(), 1) != _HANDSHAKE:
             return 125
         if os.getppid() != expected_parent_pid:
             return 125

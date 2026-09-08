@@ -23,6 +23,22 @@ backend submodules.
   native RNIC authority and transport policy. Structural `rnic-nn` and
   generated `rnic-cn` are supported; the explicit nonstructural fluid mode is
   rejected. The unchanged one-GOAL command remains the exact default off path.
+  `await_completion` stops after the first callback that completes a selected
+  pending flow, returns every completion from that callback and preserves
+  remaining callbacks at the same timestamp. Its boundary token permits
+  `inject_at_boundary` to release declared dependents at that exact time.
+  Ordinary injection still excludes that timestamp. A normal horizon yields
+  before later work; hard time, callback and wall-time limits terminate a
+  failed session. Logical completion and verified physical quiescence are
+  distinct timestamps.
+- `FlowSessionConfig` + `FlowSession`: the owned streaming client for that
+  protocol. Configuration declares profile, endpoint count, link rate, native
+  effective-hardware SHA-256 and policy token. The client checks canonical
+  frames, contiguous sequences, message aliases and lifecycle timing, retains
+  immutable rows and raw transcripts, and reaps the child on every terminal
+  path. `GoalSessionExecutor` executes immutable checked GOAL snapshots through
+  this authority, preserving completion dependencies, per-rank compute order
+  and receive availability without changing physical flow completion time.
 - `FlowCompletion` + `parse_completion_csv`: completion-CSV parsing
   with a stable legacy prefix
   (`profile,flow_id,source,destination,tag,payload_bytes,start_time_ps,completion_time_ps,fct_ps`)
@@ -247,6 +263,18 @@ backend submodules.
   stands. Per-step subprocess invocation is the documented diagnostic mode and
   remains the default.
 
+  `HtsimStepSinkConfig.flow_session` explicitly selects one native process
+  across all ordered artifacts of a checked step. The session retains queue,
+  transport, topology and random state between artifacts. It drains once after
+  the last artifact, then publishes checked original-graph `CompletionEvent`
+  and `ExecutionResult` projections through `session_evidence`. The optional
+  `HtsimRequestMetricReducer` constructor argument attaches request metrics to
+  the returned `StepResult` after that proof. Native quiescence remains in the
+  evidence even when local work finishes later. The supported composition uses
+  generated all-remote topology and completion dependencies; BACK-72 owns the
+  optional compositions rejected before child creation. The absent option
+  preserves stateless ideal runs and the physical multi-artifact refusal.
+
   The seam-local `dependency_cross_check="atlahs-goal"` option independently
   renders and executes the same all-remote schedule through the direct ATLAHS
   GOAL path. The graph-projected execution remains the sole authority for the
@@ -274,16 +302,17 @@ backend submodules.
 - `HtsimPersistentStepSink` (BRIDGE-1): the opt-in prepared-replay form of
   the same sink for a finite record sequence known before consumption.
   `prepare` copies and lowers the records serially, then a persistent local
-  thread pool pipelines `txt2bin` and the unchanged isolated one-GOAL
-  `htsim_rnic` invocations. Results remain unpublished until the complete
+  thread pool pipelines each selected step execution. With the default
+  configuration this uses `txt2bin` and isolated one-GOAL `htsim_rnic`
+  invocations; `flow_session` retains one native process per step. Results
+  remain unpublished until the complete
   batch succeeds and are served only for dataclass value-equal records in
   their original order. The pool can serve another batch after the first is
   fully consumed.
-  This preserves the diagnostic path's reset semantics with a fresh process
-  and local state for every GOAL artifact and step. This mode does not claim a
-  stateful online backend session, and ordered `rnic-cn` multi-artifact runs
-  are rejected before backend execution. The backend flow session and full
-  result codec are now delivered; BRIDGE-2 owns their graph-level client.
+  The default preserves the diagnostic path's reset semantics with a fresh
+  process and local state for every GOAL artifact. Selected physical sessions
+  retain state within each step. BRIDGE-2 owns the online framed client and
+  retention across steps.
 - `SerialStepLowerer` + `SerialStepLowererConfig`: CORE-2 diagnostic lowering
   from a `StepRecord` to per-layer compute plus semantic TP/EP collective
   operations. Explicit framework observations bypass the fallback schedule and
@@ -326,15 +355,15 @@ backend submodules.
 | Submodule | Repo | Ref | Provides |
 |---|---|---|---|
 | `third_party/atlahs` | [ATLAHS-rnic-private](https://github.com/yifeng-ethz/ATLAHS-rnic-private) | `main` | GOAL toolchain (txt2bin, LogGOPSim, goal_gen), validated `htsim_rnic` launcher (`atlahs_entry.py`) |
-| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `codex/htsim41_data_recovery` at `3bd3ac3` (unmerged, see below) | UEC htsim, the composed SimLLM RNIC wrapper behind `HTSIM_ENABLE_SIMLLM_RNIC`, `htsim_rnic`, WQE bookkeeping, the ABI-v2 event relay with its physical control producers, the persistent flow session, the Slingshot-class ss-dragonfly fabric wave, and the ns-tm3 ingress arbiter with finite control headroom, bounded initial DATA sending and optional exponential tail recovery |
+| `third_party/htsim` | [HTSIM-rnic-private](https://github.com/yifeng-ethz/HTSIM-rnic-private) | `6efec16` ([paired PR #22](https://github.com/yifeng-ethz/HTSIM-rnic-private/pull/22)) | UEC htsim, the composed SimLLM RNIC wrapper behind `HTSIM_ENABLE_SIMLLM_RNIC`, `htsim_rnic`, WQE bookkeeping, the ABI-v2 event relay with its physical control producers, the persistent flow session, the Slingshot-class ss-dragonfly fabric wave, and the ns-tm3 ingress arbiter with finite control headroom, bounded initial DATA sending and optional exponential tail recovery |
 
 As of 2026-08-03 the launcher, the RNIC wiring, the DCQCN comparator
 (mlx5-faithful loss recovery, ECN-only and ECN plus PFC modes, storm
 metrics) and the full rnic-cn algorithm-book implementation
 (deterministic reservation ledger, windowed feedforward snapshots,
 fractional nflow, sender egress composition, BJP-derived resequencing
-window) are merged. The SimLLM pin for HTSim extends the backend-main
-load-harness merge (`1dcbfec`) through the append-only DATA-recovery branch.
+window) are merged. The SimLLM pin for HTSim includes the merged load harness and DATA recovery,
+then adds exact completion-boundary continuation for retained step sessions.
 The base carries the WQE bookkeeping
 commit, the composed SimLLM RNIC wrapper, the ABI-v2 event relay, the
 Slingshot-class dragonfly fabric wave (the physical ss-dragonfly fabric with
@@ -401,16 +430,12 @@ and the MSVC `Release`/`RelWithDebInfo`/`Debug`/`MinSizeRel` layouts,
 then `PATH`. The framework adapters and traffic-model layer stay in
 Python and use this platform-neutral discovery path.
 
-As of 2026-09-02 the pin moves off backend main to `617ce20` on the backend
-branch `codex/htsim39_fair_egress_drop`, which is open and unmerged. A pin on
-an unmerged backend branch is a supported intermediate state under the rule
-above while backend work is in review. It carries the HTSIM-39 fix and nothing
-else: the ns-tm3 switch now arbitrates physical ingress ports that deliver in
+The pin includes the HTSIM-39 ingress-fairness fix: the ns-tm3 switch
+arbitrates physical ingress ports that deliver in
 the same picosecond, presenting them to its shared pipeline in a rotating port
 order instead of the fixed order the event list happened to produce, and it
 counts admitted and dropped packets per physical ingress so a study can score
-how a congested buffer shared its loss. Roll the pin back to backend main when
-the branch merges.
+how a congested buffer shared its loss.
 
 HTSIM-39 is closed on that fix. The cause was a tie rather than a policy: in
 the 2 sender 5.2 MB fan-in, 8323 instants had an arrival from both ports at
@@ -740,6 +765,28 @@ The evidence classes, mlx5 hook and boundary-test matrix are recorded in
 
 ## Status
 
+**BACK-38 and HTSIM-28 deliver retained physical execution across a checked
+step's ordered artifacts.** The explicit `flow_session` option preserves the
+native topology, random state, transport, congestion controller and network
+interface while releasing dependent messages at exact completion boundaries.
+The [completion-boundary study](../../examples/completion_boundary_v1/RESULTS.md)
+demonstrates retained queues, exact native continuation and live request
+metrics: at 200 Gbit/s an 8 KiB successor takes 42.7648 microseconds with
+retained work, compared with 2.4992 microseconds in the fresh diagnostic.
+All 44 exact-oracle rows have zero residual, all six behavioral families hold,
+and sixteen disabled-path and old-protocol controls remain exact. The first
+execution remains void; the complete repeat uses explicitly post-specified
+message-identity checks with unchanged behavioral expectations and simulator.
+BRIDGE-2 owns cross-step framed serving and bookkeeping; BACK-72 owns the
+deliberately rejected compositions and additional platform support.
+
+The external congestion controller remains the sole rate authority when the
+native interface observes congestion notifications. BACK-71 restores the
+validated observation path without enabling another reaction point. Its
+[eight-configuration comparison](../../examples/completion_boundary_v1/CNP_RESULTS.md)
+preserves all 24 paired completion rows and their order at exactly zero
+picoseconds difference; the complete composed native gate passes.
+
 **Collective `rnic-cn` recovers wide-incast DATA loss through explicit initial
 budgets and physical tail probes.** The
 [DATA recovery study](../../examples/data_recovery_v1/RESULTS.md) supplies the
@@ -751,8 +798,8 @@ remain exact. Exponential intervals spread repeated attempts across the
 congested burst; the existing retry limit, final timeout and finite storage
 remain authoritative. The earlier constant-probe experiment remains void.
 The backend contract is `docs/rnic_cn_data_recovery.md` in the pinned backend.
-TRAF-88 owns subsequent topology and queue attribution; BACK-38 and TRAF-8
-own physical serving-metric integration.
+TRAF-88 owns subsequent topology and queue attribution; TRAF-8 and BRIDGE-2
+own captured pipeline serving and cross-step integration.
 
 On 2026-08-17 the second device landed on the shared PCIe fabric. `GpuDevice`
 attaches to the same `PcieFabric` an RNIC uses, claims its own endpoint
@@ -1298,17 +1345,6 @@ created" statement stands and refers to different, never-registered work.
   Acceptance includes per-class attribution, calibrated queue and tag knees,
   and defended p50 through p99.9 latency. Until those mechanisms land,
   analytical incidence must not be described as detected hardware behavior.
-- BACK-38 (Precision; P1; L): preserve htsim topology, RNG,
-  transport, congestion-control and RNIC state across ordered GOAL artifacts
-  instead of starting a fresh process at every boundary. Multi-artifact
-  `rnic-cn` currently fails before backend execution, while `rnic-nn` and
-  `rnic-nn-fluid` remain accepted. Acceptance must execute one checked graph
-  projection in a state-preserving session, reconcile every artifact and
-  completion identity, and retain the current rejection and stateless-profile
-  bytes as the explicit off paths.
-  BACK-38 is blocked behind HTSIM-28 because the delivered session cannot
-  reuse a completion time it has just exposed as the dependent injection
-  boundary; see [the protocol audit](../../examples/congestion_chain_v1/RESULTS.md).
 - BACK-45 (Precision; P1; M): qualify per-artifact ownership near the crossing
   point where the NVLink and fabric services of one artifact are comparable.
   Every artifact `examples/mixed_attribution_v1` measured sat 150x to 400x away
@@ -1402,6 +1438,20 @@ created" statement stands and refers to different, never-registered work.
   or minus 10 ms after the last cut) against the campaign values.
 
 ### Completeness
+
+- BACK-72 (Completeness; P2; M): extend the optional physical step session to
+  locality remapping, custom topology, calibrated collective surcharges,
+  registration, dependency cross-checks, packet/bottleneck reports, empty
+  collectives and GOAL start dependencies with explicit start evidence. Add
+  repeated message envelopes only with explicit native matching order. Its
+  first supported path
+  uses generated all-remote topology and completion dependencies; unsupported
+  compositions are rejected before opening a child. Add owned streaming on
+  POSIX platforms without waitid/WNOWAIT while preserving descendant cleanup.
+  Acceptance requires each selected composition to reach returned request
+  metrics with a single timing authority, exact disabled-path equivalence
+  and failure-before-publication tests. The absent session option preserves
+  the accepted stateless ideal path and physical multi-artifact refusal.
 
 - BACK-9 (Completeness; P1; L): replace the timing-neutral WQE ledger with
   the structural **RDMA

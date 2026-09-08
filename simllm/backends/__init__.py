@@ -35,6 +35,13 @@ from simllm.backends.fabric_profile import (
     render_topology,
 )
 from simllm.backends.fct import NormalizedFct, normalized_fct
+from simllm.backends.flow_session import (
+    FlowSession,
+    FlowSessionConfig,
+    FlowSessionDrain,
+    FlowSessionError,
+    FlowSessionUpdate,
+)
 from simllm.backends.htsim import HtsimUecConfig, build_htsim_uec_command
 from simllm.backends.htsim_dcqcn import (
     HtsimDcqcnConfig,
@@ -266,6 +273,11 @@ __all__ = [
     "DeviceStepOutcome",
     "FabricProfile",
     "FlowCompletion",
+    "FlowSession",
+    "FlowSessionConfig",
+    "FlowSessionDrain",
+    "FlowSessionError",
+    "FlowSessionUpdate",
     "HtsimDcqcnConfig",
     "HtsimPersistentStepSink",
     "HtsimRequestMetricReducer",

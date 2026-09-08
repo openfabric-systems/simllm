@@ -153,6 +153,30 @@ private:
     NetworkToken next_token_{1};
 };
 
+class ExternalControlPort final : public NetworkPort {
+public:
+    explicit ExternalControlPort(bool notifications)
+        : notifications_(notifications) {}
+
+    simllm::rnic::NetworkPortCapabilities capabilities() const noexcept override {
+        simllm::rnic::NetworkPortCapabilities caps;
+        caps.abi_version = simllm::rnic::kNetworkPortAbiVersionV2;
+        caps.packet_attempt_events = true;
+        caps.ecn_cnp_events = notifications_;
+        return caps;
+    }
+
+    NetworkSubmitResult trySubmit(
+        const simllm::rnic::NetworkTxDescriptor&,
+        Picoseconds) override {
+        return NetworkSubmitResult::accepted(next_token_++);
+    }
+
+private:
+    bool notifications_;
+    NetworkToken next_token_{100};
+};
+
 template <typename Value>
 void appendValue(std::ostringstream& output, const Value& value) {
     if constexpr (std::is_enum_v<Value>) {
@@ -846,6 +870,109 @@ RnicDeviceAttachments externalNetworkAttachments(FakeNetworkPort& port) {
     RnicDeviceAttachments attachments;
     attachments.network_port = &port;
     return attachments;
+}
+
+void testExternalCongestionControlOwnership(TestRunner& test) {
+    using simllm::rnic::NetworkEventKind;
+    using simllm::rnic::NetworkEventScope;
+    for (const bool notifications : {false, true}) {
+        ExternalControlPort port(notifications);
+        RnicDeviceAttachments attachments;
+        attachments.network_port = &port;
+        RnicDevice device(back24Config(), attachments);
+        WorkRequest request;
+        request.wr_id = 1;
+        request.flow_id = 7101;
+        request.destination = 2;
+        request.payload_bytes = 4096;
+        const PostResult first = device.postSend(request, 0);
+        request.wr_id = 2;
+        request.flow_id = 7102;
+        const PostResult second = device.postSend(request, 0);
+        device.ringDoorbell(0);
+        device.progress(0);
+        test.check(device.txPipeline() == nullptr,
+                   "external congestion control has no native transmitter");
+
+        NetworkEvent packet;
+        packet.abi_version = simllm::rnic::kNetworkPortAbiVersionV2;
+        packet.scope = NetworkEventScope::PacketAttempt;
+        packet.kind = NetworkEventKind::PacketTxStarted;
+        packet.token = 1000;
+        packet.parent_token = *device.wqe(first.wqe_id).network_token;
+        packet.wqe_id = first.wqe_id;
+        packet.payload_bytes = request.payload_bytes;
+        packet.wire_bytes = request.payload_bytes + 64;
+        packet.event_time_ps = 10;
+        device.onNetworkEvent(packet);
+
+        NetworkEvent cnp;
+        cnp.abi_version = simllm::rnic::kNetworkPortAbiVersionV2;
+        cnp.scope = NetworkEventScope::TransportControl;
+        cnp.kind = NetworkEventKind::CnpReceived;
+        cnp.token = packet.token;
+        cnp.parent_token = packet.parent_token;
+        cnp.wqe_id = packet.wqe_id;
+        cnp.event_time_ps = 99;
+        const std::string before = canonicalWqeRecords(device);
+        NetworkEvent unknown = cnp;
+        unknown.token = 1001;
+        test.expectThrowAs<std::invalid_argument>(
+            [&]() { device.onNetworkEvent(unknown); },
+            "external CNP rejects an unknown packet token");
+        NetworkEvent cross_extent = cnp;
+        cross_extent.parent_token = *device.wqe(second.wqe_id).network_token;
+        cross_extent.wqe_id = second.wqe_id;
+        test.expectThrowAs<std::invalid_argument>(
+            [&]() { device.onNetworkEvent(cross_extent); },
+            "external CNP rejects a token retained by another extent");
+        if (!notifications) {
+            test.expectThrowAs<std::invalid_argument>(
+                [&]() { device.onNetworkEvent(cnp); },
+                "external CNP requires the notification capability");
+        }
+        test.check(canonicalWqeRecords(device) == before,
+                   "rejected external CNP observations preserve WQE state");
+
+        // A valid earlier event also proves rejected future observations did
+        // not advance the device clock. The controller already handled CNP.
+        cnp.event_time_ps = 11;
+        if (notifications) {
+            device.onNetworkEvent(cnp);
+            test.check(canonicalWqeRecords(device) == before,
+                       "valid external CNP is a timing-neutral observation");
+        }
+        packet.kind = NetworkEventKind::PacketTxFinished;
+        packet.event_time_ps = 12;
+        device.onNetworkEvent(packet);
+        packet.kind = NetworkEventKind::PacketRxArrived;
+        packet.event_time_ps = 14;
+        device.onNetworkEvent(packet);
+        packet.kind = NetworkEventKind::Delivered;
+        device.onNetworkEvent(packet);
+        if (notifications) {
+            cnp.event_time_ps = 15;
+            device.onNetworkEvent(cnp);
+        }
+
+        NetworkEvent terminal;
+        terminal.abi_version = simllm::rnic::kNetworkPortAbiVersionV2;
+        terminal.kind = NetworkEventKind::Delivered;
+        terminal.token = packet.parent_token;
+        terminal.wqe_id = first.wqe_id;
+        terminal.event_time_ps = 20;
+        device.onNetworkEvent(terminal);
+        device.progress(20);
+        test.check(device.counters().network_delivered == 1
+                       && device.wqe(first.wqe_id).timeline.network_outcome_at_ps == 20
+                       && device.nicCounters().rp_cnp_handled == 0,
+                   "external controller retires once without a native rate cut");
+        cnp.event_time_ps = 21;
+        test.expectThrowAs<std::logic_error>(
+            [&]() { device.onNetworkEvent(cnp); },
+            "external CNP correlation expires with its parent extent");
+        device.validateInvariants();
+    }
 }
 
 struct Back24Fixture {
@@ -1896,6 +2023,7 @@ int main(int argc, char** argv) {
     testComposedPcieOperationAtomicity(test);
     testInertDeliveryFailureRetainsEvent(test);
     testRejectedNetworkTerminalsAreTransactional(test);
+    testExternalCongestionControlOwnership(test);
     const int session_record_failures =
         runRnicSessionRecordChecks();
     test.check(

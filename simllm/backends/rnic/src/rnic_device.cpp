@@ -711,11 +711,11 @@ void RnicDevice::onNetworkEvent(const NetworkEvent& event) {
             "external RNIC network event supplied to the inert port");
     }
     validateCallerTime(event.event_time_ps);
-    if (event.kind == NetworkEventKind::CnpReceived) {
-        // A congestion notification is a transport control event, not a
-        // packet-attempt one: it names no attempt and retires nothing. It goes
-        // to the reaction point and never reaches the work queue.
-        if (!tx_pipeline_ || !tx_pipeline_->hasReactionPoint()) {
+    if (tx_pipeline_ && event.kind == NetworkEventKind::CnpReceived) {
+        // The native transmit pipeline owns its congestion reaction. An
+        // external transport owns its own reaction and its CNP observations
+        // follow the work queue's packet-correlation checks below.
+        if (!tx_pipeline_->hasReactionPoint()) {
             throw std::logic_error(
                 "RNIC device has no congestion reaction point");
         }
