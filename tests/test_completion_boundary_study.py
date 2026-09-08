@@ -62,6 +62,53 @@ def test_population_and_independent_arithmetic():
     assert points["declared_inputs"]["new_graph_counts"]["active_calc_joins"] == 0
 
 
+def flow_comparison_fixture():
+    evidence = study.Evidence()
+    for profile in ("rnic-nn", "rnic-cn"):
+        for batch in study.BATCHES:
+            for rate in study.RATES:
+                for step in range(3):
+                    for message in range(16):
+                        evidence.flows.append({"profile": profile, "batch": batch, "rate": rate,
+                            "step": step, "operation_id": f"op-{message // 4}",
+                            "flow_id": f"declared-message-{message}", "source": message % 2,
+                            "destination": 1 - message % 2, "tag": message, "payload_bytes": 4096,
+                            "sequence": message + 1 if profile == "rnic-nn" else 16 - message,
+                            "fct_ps": 1000 + message if profile == "rnic-nn" else 2000 + 2 * message})
+    return evidence
+
+
+def test_cross_profile_join_uses_messages_and_preserves_local_sequences():
+    evidence = flow_comparison_fixture()
+    before = copy.deepcopy(evidence.flows)
+    study.normalize_flow_metrics(evidence)
+    assert all(guard["passed"] for guard in evidence.guards)
+    for row, original in zip(evidence.flows, before, strict=True):
+        assert all(row[key] == value for key, value in original.items())
+        if row["profile"] == "rnic-cn":
+            assert row["matched_nn_sequence"] == 17 - row["sequence"]
+            assert row["normalized_fct_to_matched_nn"] == {"numerator": 2, "denominator": 1}
+
+
+@pytest.mark.parametrize("fault", ("missing", "duplicate", "missing-field", "operation_id", "flow_id",
+                                   "source", "destination", "tag", "payload_bytes", "batch", "rate", "step"))
+def test_bad_cross_profile_message_inventory_is_fatal(fault):
+    evidence = flow_comparison_fixture()
+    row = evidence.flows[-1]
+    if fault == "missing":
+        evidence.flows.pop()
+    elif fault == "duplicate":
+        evidence.flows.append(dict(row))
+    elif fault == "missing-field":
+        del row["flow_id"]
+    else:
+        row[fault] = "wrong" if isinstance(row[fault], str) else row[fault] + 100
+    study.normalize_flow_metrics(evidence)
+    assert evidence.summary()["status"] == "void"
+    assert evidence.summary()["behavioral_score"] is None
+    assert not any("normalized_fct_to_matched_nn" in row for row in evidence.flows)
+
+
 def test_fatal_void_removes_score_and_collection_continues():
     evidence = study.Evidence()
 

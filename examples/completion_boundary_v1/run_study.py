@@ -20,6 +20,7 @@ from typing import Any
 
 HERE = Path(__file__).resolve().parent
 FREEZE = "4d75849189df4a4b9113ee36101b246559cbf47b"
+COMPARISON_CHECKS_FREEZE = "5b19d24c56d34353ac5a1a539da3bb0e0eb2117f"
 BASE_SIM = "b7d64e1ced5a9e52b71ab89285932a17498a1998"
 BASE_NATIVE = "cc1c80f434600ec977fdb5916fc5ff74be63231d"
 BASE_BINARY_SHA256 = "c864c0a8cae31756124366033829a92df1271954aeb908da77fe7044a8692e0e"
@@ -176,6 +177,7 @@ class Evidence:
             row.get("family") == "retention" for row in failed) else "failed"
         families = sorted({row["family"] for row in self.relations})
         return {"schema": "simllm-completion-boundary-study-v1", "freeze_commit": FREEZE,
+                "post_specified_comparison_checks_commit": COMPARISON_CHECKS_FREEZE,
                 "status": status, "population": population(),
                 "configurations": self.configurations, "exact_oracle_rows": self.oracles,
                 "behavioral_relations": self.relations, "fatal_guards": self.guards,
@@ -736,6 +738,31 @@ def compare_off(evidence: Evidence, name: str, before: dict, after: dict, *, rej
                          before_inventory=before["artifact_inventory"], after_inventory=after["artifact_inventory"])
 
 
+def normalize_flow_metrics(evidence: Evidence) -> None:
+    """Join declared messages across profiles without equating local cursors."""
+    fields = ("batch", "rate", "step", "operation_id", "flow_id", "source",
+              "destination", "tag", "payload_bytes")
+    inventory = {}
+    valid = True
+    for profile in ("rnic-nn", "rnic-cn"):
+        rows = [row for row in evidence.flows if row["profile"] == profile]
+        indexed = {tuple(row.get(key) for key in fields): row for row in rows}
+        complete = (len(rows) == len(indexed) == 192
+                    and all(all(key in row for key in fields) for row in rows))
+        evidence.guard(f"normalized-flow-inventory:{profile}", complete,
+                       rows=len(rows), unique_messages=len(indexed), expected=192)
+        valid &= complete
+        inventory[profile] = indexed
+    same_keys = inventory["rnic-nn"].keys() == inventory["rnic-cn"].keys()
+    evidence.guard("normalized-flow-key-sets", same_keys)
+    if not valid or not same_keys:
+        return
+    for key, row in inventory["rnic-cn"].items():
+        baseline = inventory["rnic-nn"][key]
+        row["matched_nn_sequence"] = baseline["sequence"]
+        row["normalized_fct_to_matched_nn"] = plain(Fraction(row["fct_ps"], baseline["fct_ps"]))
+
+
 def execute(args, identity: dict) -> dict:
     evidence, chains, live = Evidence(), {}, {}
     hardware = identity["hardware"]["effective_hardware_sha256"]
@@ -783,17 +810,7 @@ def execute(args, identity: dict) -> dict:
                 evidence.capture(name + "-checks", compare_off, evidence, name, before, after,
                                  rejection=rejection, configuration=False)
     check_relations(evidence, chains, live)
-    ideal_flows = {(row["batch"], row["rate"], row["step"], row["sequence"]): row
-                   for row in evidence.flows if row["profile"] == "rnic-nn"}
-    for row in evidence.flows:
-        if row["profile"] != "rnic-cn":
-            continue
-        baseline = ideal_flows.get((row["batch"], row["rate"], row["step"], row["sequence"]))
-        matched = baseline is not None and all(row[key] == baseline[key] for key in (
-            "source", "destination", "tag", "payload_bytes", "operation_id", "flow_id"))
-        evidence.guard(f"normalized-flow-join:{row['batch']}:{row['rate']}:{row['step']}:{row['sequence']}", matched)
-        if matched:
-            row["normalized_fct_to_matched_nn"] = plain(Fraction(row["fct_ps"], baseline["fct_ps"]))
+    normalize_flow_metrics(evidence)
     expected = {"chain-bandwidth": 4, "chain-payload": 4, "retention": 4,
                 "live-bandwidth": 6, "live-payload": 6, "live-physical-excess": 12}
     observed = {family: sum(row["family"] == family for row in evidence.relations) for family in expected}
@@ -822,6 +839,13 @@ def prepare_identity(args) -> dict:
                             check=True, capture_output=True).stdout
     if freeze_path.read_bytes() != frozen:
         raise ValueError("expectations changed after the final freeze")
+    git(args.candidate_code, "merge-base", "--is-ancestor", COMPARISON_CHECKS_FREEZE, "HEAD")
+    comparison = args.candidate_code / "examples/completion_boundary_v1/post_run_checks.md"
+    frozen_comparison = subprocess.run(["git", "-C", str(args.candidate_code), "show",
+        f"{COMPARISON_CHECKS_FREEZE}:examples/completion_boundary_v1/post_run_checks.md"],
+        check=True, capture_output=True).stdout
+    if comparison.read_bytes() != frozen_comparison:
+        raise ValueError("post-specified comparison checks changed after their freeze")
     binaries = {}
     for name in ("candidate_binary", "baseline_binary", "candidate_txt2bin", "baseline_txt2bin", "hardware_helper"):
         path = getattr(args, name).resolve()
@@ -835,6 +859,8 @@ def prepare_identity(args) -> dict:
             or f"SIMLLM_REPOSITORY_ROOT:PATH={args.candidate_code}" not in cache_text):
         raise ValueError("candidate build must enable composition and bind the candidate SimLLM tree")
     return {"schema": "simllm-completion-boundary-identities-v1", "freeze_commit": FREEZE,
+            "post_specified_comparison_checks_commit": COMPARISON_CHECKS_FREEZE,
+            "comparison_checks_sha256": hashlib.sha256(frozen_comparison).hexdigest(),
             "freeze_sha256": hashlib.sha256(frozen).hexdigest(), "sources": sources,
             "frozen_source_bases": {"simllm": BASE_SIM, "htsim": BASE_NATIVE},
             "runner": {"path": str(Path(__file__).resolve()), "sha256": digest(Path(__file__))},
