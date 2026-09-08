@@ -1,0 +1,1034 @@
+{
+  "analytic_identity": true,
+  "base_commit": "043c8cfd53054fb5ec8102d0173730480ab6df1f",
+  "behavioral_family_count": 5,
+  "behavioral_instance_count": 22,
+  "behavioral_relations": [
+    {
+      "expected_relation_ps": 1440,
+      "family": "read_dependency",
+      "instance": "read-r12500000000-b256",
+      "observed_relation_ps": 1440,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": 1440,
+      "family": "read_dependency",
+      "instance": "read-r12500000000-b1024",
+      "observed_relation_ps": 1440,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": 800,
+      "family": "read_dependency",
+      "instance": "read-r25000000000-b256",
+      "observed_relation_ps": 800,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": 800,
+      "family": "read_dependency",
+      "instance": "read-r25000000000-b1024",
+      "observed_relation_ps": 800,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": 21760,
+      "family": "bandwidth_scaling",
+      "instance": "payload-256",
+      "observed_relation_ps": 21760,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": 87040,
+      "family": "bandwidth_scaling",
+      "instance": "payload-1024",
+      "observed_relation_ps": 87040,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": 87040,
+      "family": "payload_scaling",
+      "instance": "rate-12500000000",
+      "observed_relation_ps": 87040,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": 30000,
+      "family": "backpressure",
+      "instance": "return-r12500000000-c1-m4",
+      "observed_relation_ps": 30000,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": 30000,
+      "family": "backpressure",
+      "instance": "return-r12500000000-c4-m1",
+      "observed_relation_ps": 30000,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": 30000,
+      "family": "backpressure",
+      "instance": "return-r12500000000-c1-m1",
+      "observed_relation_ps": 30000,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": 8160,
+      "family": "backpressure",
+      "instance": "capacity-r12500000000-d0",
+      "observed_relation_ps": 8160,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": 38160,
+      "family": "backpressure",
+      "instance": "capacity-r12500000000-d10000",
+      "observed_relation_ps": 38160,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": 43520,
+      "family": "payload_scaling",
+      "instance": "rate-25000000000",
+      "observed_relation_ps": 43520,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": 30000,
+      "family": "backpressure",
+      "instance": "return-r25000000000-c1-m4",
+      "observed_relation_ps": 30000,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": 30000,
+      "family": "backpressure",
+      "instance": "return-r25000000000-c4-m1",
+      "observed_relation_ps": 30000,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": 30000,
+      "family": "backpressure",
+      "instance": "return-r25000000000-c1-m1",
+      "observed_relation_ps": 30000,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": 8160,
+      "family": "backpressure",
+      "instance": "capacity-r25000000000-d0",
+      "observed_relation_ps": 8160,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": 38160,
+      "family": "backpressure",
+      "instance": "capacity-r25000000000-d10000",
+      "observed_relation_ps": 38160,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "replay",
+      "instance": "disjoint-r12500000000-q0",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "replay",
+      "instance": "disjoint-r12500000000-q1",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "replay",
+      "instance": "disjoint-r25000000000-q0",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "replay",
+      "instance": "disjoint-r25000000000-q1",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    }
+  ],
+  "behavioral_score": {
+    "passed": 22,
+    "total": 22
+  },
+  "closure_scope": "TRAF-90 component correctness only",
+  "compatibility_controls": [
+    {
+      "after_sha256": "022f24600c7c4892df4ffee4312a6e091b1c478ea7520b153c9dd18aa43fe683",
+      "before_sha256": "022f24600c7c4892df4ffee4312a6e091b1c478ea7520b153c9dd18aa43fe683",
+      "case": "write",
+      "equal": true
+    },
+    {
+      "after_sha256": "a23f475bfba6d01c48abf88a60ce65cc698e88152bfcf50f722ca927ff55e069",
+      "before_sha256": "a23f475bfba6d01c48abf88a60ce65cc698e88152bfcf50f722ca927ff55e069",
+      "case": "read",
+      "equal": true
+    },
+    {
+      "after_sha256": "737ce997a855bf31556262a72641b38f94d4d7e366bf6b02a56a384dd4be5bdc",
+      "before_sha256": "737ce997a855bf31556262a72641b38f94d4d7e366bf6b02a56a384dd4be5bdc",
+      "case": "fanin",
+      "equal": true
+    },
+    {
+      "after_sha256": "45e67f3dd7e182f4580c0b4d09234de0ec27a31c9bfe03994515c9d321d01193",
+      "before_sha256": "45e67f3dd7e182f4580c0b4d09234de0ec27a31c9bfe03994515c9d321d01193",
+      "case": "staggered",
+      "equal": true
+    }
+  ],
+  "configuration_count": 84,
+  "evidence_class": "declared-mechanism-correctness",
+  "evidence_classification": "Future causality, disjoint independence, class identity, finite drain and compatibility are unscored guards. Exact rows have their own count. Only nonzero timing relations enter the behavioral denominator.",
+  "exact_oracle_count": 36,
+  "exact_oracles": [
+    {
+      "case": "write-r12500000000-b256-c1-m1-d0",
+      "ceiling_ps": 24480,
+      "expected_ps": 24480,
+      "floor_ps": 21760,
+      "observed_ps": 24480,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r12500000000-b256-c1-m1-d10000",
+      "ceiling_ps": 24480,
+      "expected_ps": 24480,
+      "floor_ps": 21760,
+      "observed_ps": 24480,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r12500000000-b256-c1-m4-d0",
+      "ceiling_ps": 24480,
+      "expected_ps": 24480,
+      "floor_ps": 21760,
+      "observed_ps": 24480,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r12500000000-b256-c1-m4-d10000",
+      "ceiling_ps": 24480,
+      "expected_ps": 24480,
+      "floor_ps": 21760,
+      "observed_ps": 24480,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r12500000000-b256-c4-m1-d0",
+      "ceiling_ps": 24480,
+      "expected_ps": 24480,
+      "floor_ps": 21760,
+      "observed_ps": 24480,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r12500000000-b256-c4-m1-d10000",
+      "ceiling_ps": 24480,
+      "expected_ps": 24480,
+      "floor_ps": 21760,
+      "observed_ps": 24480,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r12500000000-b256-c4-m4-d0",
+      "ceiling_ps": 24480,
+      "expected_ps": 24480,
+      "floor_ps": 21760,
+      "observed_ps": 24480,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r12500000000-b256-c4-m4-d10000",
+      "ceiling_ps": 24480,
+      "expected_ps": 24480,
+      "floor_ps": 21760,
+      "observed_ps": 24480,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r12500000000-b1024-c1-m1-d0",
+      "ceiling_ps": 97920,
+      "expected_ps": 97920,
+      "floor_ps": 87040,
+      "observed_ps": 97920,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r12500000000-b1024-c1-m1-d10000",
+      "ceiling_ps": 127920,
+      "expected_ps": 127920,
+      "floor_ps": 87040,
+      "observed_ps": 127920,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r12500000000-b1024-c1-m4-d0",
+      "ceiling_ps": 97920,
+      "expected_ps": 97920,
+      "floor_ps": 87040,
+      "observed_ps": 97920,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r12500000000-b1024-c1-m4-d10000",
+      "ceiling_ps": 127920,
+      "expected_ps": 127920,
+      "floor_ps": 87040,
+      "observed_ps": 127920,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r12500000000-b1024-c4-m1-d0",
+      "ceiling_ps": 97920,
+      "expected_ps": 97920,
+      "floor_ps": 87040,
+      "observed_ps": 97920,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r12500000000-b1024-c4-m1-d10000",
+      "ceiling_ps": 127920,
+      "expected_ps": 127920,
+      "floor_ps": 87040,
+      "observed_ps": 127920,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r12500000000-b1024-c4-m4-d0",
+      "ceiling_ps": 97920,
+      "expected_ps": 89760,
+      "floor_ps": 87040,
+      "observed_ps": 89760,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r12500000000-b1024-c4-m4-d10000",
+      "ceiling_ps": 127920,
+      "expected_ps": 89760,
+      "floor_ps": 87040,
+      "observed_ps": 89760,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r25000000000-b256-c1-m1-d0",
+      "ceiling_ps": 13600,
+      "expected_ps": 13600,
+      "floor_ps": 10880,
+      "observed_ps": 13600,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r25000000000-b256-c1-m1-d10000",
+      "ceiling_ps": 13600,
+      "expected_ps": 13600,
+      "floor_ps": 10880,
+      "observed_ps": 13600,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r25000000000-b256-c1-m4-d0",
+      "ceiling_ps": 13600,
+      "expected_ps": 13600,
+      "floor_ps": 10880,
+      "observed_ps": 13600,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r25000000000-b256-c1-m4-d10000",
+      "ceiling_ps": 13600,
+      "expected_ps": 13600,
+      "floor_ps": 10880,
+      "observed_ps": 13600,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r25000000000-b256-c4-m1-d0",
+      "ceiling_ps": 13600,
+      "expected_ps": 13600,
+      "floor_ps": 10880,
+      "observed_ps": 13600,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r25000000000-b256-c4-m1-d10000",
+      "ceiling_ps": 13600,
+      "expected_ps": 13600,
+      "floor_ps": 10880,
+      "observed_ps": 13600,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r25000000000-b256-c4-m4-d0",
+      "ceiling_ps": 13600,
+      "expected_ps": 13600,
+      "floor_ps": 10880,
+      "observed_ps": 13600,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r25000000000-b256-c4-m4-d10000",
+      "ceiling_ps": 13600,
+      "expected_ps": 13600,
+      "floor_ps": 10880,
+      "observed_ps": 13600,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r25000000000-b1024-c1-m1-d0",
+      "ceiling_ps": 54400,
+      "expected_ps": 54400,
+      "floor_ps": 43520,
+      "observed_ps": 54400,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r25000000000-b1024-c1-m1-d10000",
+      "ceiling_ps": 84400,
+      "expected_ps": 84400,
+      "floor_ps": 43520,
+      "observed_ps": 84400,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r25000000000-b1024-c1-m4-d0",
+      "ceiling_ps": 54400,
+      "expected_ps": 54400,
+      "floor_ps": 43520,
+      "observed_ps": 54400,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r25000000000-b1024-c1-m4-d10000",
+      "ceiling_ps": 84400,
+      "expected_ps": 84400,
+      "floor_ps": 43520,
+      "observed_ps": 84400,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r25000000000-b1024-c4-m1-d0",
+      "ceiling_ps": 54400,
+      "expected_ps": 54400,
+      "floor_ps": 43520,
+      "observed_ps": 54400,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r25000000000-b1024-c4-m1-d10000",
+      "ceiling_ps": 84400,
+      "expected_ps": 84400,
+      "floor_ps": 43520,
+      "observed_ps": 84400,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r25000000000-b1024-c4-m4-d0",
+      "ceiling_ps": 54400,
+      "expected_ps": 46240,
+      "floor_ps": 43520,
+      "observed_ps": 46240,
+      "residual_ps": 0
+    },
+    {
+      "case": "write-r25000000000-b1024-c4-m4-d10000",
+      "ceiling_ps": 84400,
+      "expected_ps": 46240,
+      "floor_ps": 43520,
+      "observed_ps": 46240,
+      "residual_ps": 0
+    },
+    {
+      "case": "read-r12500000000-b256",
+      "ceiling_ps": 25920,
+      "expected_ps": 25920,
+      "floor_ps": 23200,
+      "observed_ps": 25920,
+      "residual_ps": 0
+    },
+    {
+      "case": "read-r12500000000-b1024",
+      "ceiling_ps": 99360,
+      "expected_ps": 91200,
+      "floor_ps": 88480,
+      "observed_ps": 91200,
+      "residual_ps": 0
+    },
+    {
+      "case": "read-r25000000000-b256",
+      "ceiling_ps": 14400,
+      "expected_ps": 14400,
+      "floor_ps": 11680,
+      "observed_ps": 14400,
+      "residual_ps": 0
+    },
+    {
+      "case": "read-r25000000000-b1024",
+      "ceiling_ps": 55200,
+      "expected_ps": 47040,
+      "floor_ps": 44320,
+      "observed_ps": 47040,
+      "residual_ps": 0
+    }
+  ],
+  "expectations_commit": "9787af3f30397f568adc5739192640ffe6e77d67",
+  "expectations_sha256": "e966dec69d5f016fb51b15c0934358b50d955701b178e7cc92a8aec33d04d51c",
+  "fatal_findings": [],
+  "fatal_verdict": "PASS",
+  "hardware_measurement": false,
+  "historical_findings": {
+    "base_source_sha256": "ef055af5ac56b9c323689008590240d01f7c6da741c03079113b490ff1f30665",
+    "evidence_class": "historical_implementation_diagnostic_unscored",
+    "future_insertion_early_visibility_shift_ps": 1000907,
+    "read_response_before_request_visibility_ps": 694
+  },
+  "implementation_commit": "a2700e9396c4a09b061ea5889983c4933f3b2115",
+  "raw_artifacts": [
+    {
+      "name": "disjoint-r12500000000-q0-alone.json",
+      "sha256": "1b2bd10ed98aae1c4ebad4d63cb123e910523e33d9114c91f438f9daf0755e53"
+    },
+    {
+      "name": "disjoint-r12500000000-q0-clean.json",
+      "sha256": "64734f1fdc4537bbaffda39d14d62e4c1f86c963b318b658abc0db3d63397d53"
+    },
+    {
+      "name": "disjoint-r12500000000-q0-combined.json",
+      "sha256": "84c8a2142fbfa8f02cbdc947b819b7bfeab9b1cb6e48d66393a20cd0b97e5fb9"
+    },
+    {
+      "name": "disjoint-r12500000000-q0-replay.json",
+      "sha256": "ec4bd3e628ae69f0350ea0a3a8d5cc32b287d3e9dcd8c58e9dc0e74d50aa9e01"
+    },
+    {
+      "name": "disjoint-r12500000000-q1-alone.json",
+      "sha256": "2c4b93fbd1dcda647562f9416c21b9b62d353020289abd4363e14cd92de2c4fe"
+    },
+    {
+      "name": "disjoint-r12500000000-q1-clean.json",
+      "sha256": "ff849fbab9678b11cbf54a73fe8388ab93c4cfa21980ab93e5371ec380b15a9b"
+    },
+    {
+      "name": "disjoint-r12500000000-q1-combined.json",
+      "sha256": "ba4c5796af6bd448e840664ff4cbf833b81440fe8bfa5252af3111f549e09125"
+    },
+    {
+      "name": "disjoint-r12500000000-q1-replay.json",
+      "sha256": "7bc137eac398bd6847427063491a0a8bfe83594532b83f7d25d589aeede2ad25"
+    },
+    {
+      "name": "disjoint-r25000000000-q0-alone.json",
+      "sha256": "a822bbfcdf7503aaa4ed6fb51e171bfbe3f04d1999e1619cbdde34af4eca41dd"
+    },
+    {
+      "name": "disjoint-r25000000000-q0-clean.json",
+      "sha256": "56874c2da63dc2abdfeffd21039e71e82d293a4c0c13ca9a8cc359aee22d0372"
+    },
+    {
+      "name": "disjoint-r25000000000-q0-combined.json",
+      "sha256": "ba2f5ea8bdf05cb8c41ffe05ba3cb39bb94f1d7972f971845e9e94438657082a"
+    },
+    {
+      "name": "disjoint-r25000000000-q0-replay.json",
+      "sha256": "bb9d46e3a5529a4be6103455c6fcee11fd803135c814c78fe159baab221dc20b"
+    },
+    {
+      "name": "disjoint-r25000000000-q1-alone.json",
+      "sha256": "454cef91290b17a62d4a5764b3d27cb9c47145d51727074287304dcd79999bfa"
+    },
+    {
+      "name": "disjoint-r25000000000-q1-clean.json",
+      "sha256": "2c575592966548ff1719f5861f61c397413251f7700efab26fad4c40778588d6"
+    },
+    {
+      "name": "disjoint-r25000000000-q1-combined.json",
+      "sha256": "8ad114c36c78bd89a13f4f6bc7ff0945385145ceb3ff8ea58069ca045c60e0b8"
+    },
+    {
+      "name": "disjoint-r25000000000-q1-replay.json",
+      "sha256": "0f74c83729155feab26cafa20b63c87b331927edc2446883da938cb1295d183c"
+    },
+    {
+      "name": "duplex-r12500000000.json",
+      "sha256": "28b1d206758c9dfa6b14dc864d82ca3e296b75d2dc9132ce868834c2c38f43ad"
+    },
+    {
+      "name": "duplex-r25000000000.json",
+      "sha256": "dde7de51dd9d72a8a84c284dd2506f1c4c606c04aab80d119a85dcb2a27446eb"
+    },
+    {
+      "name": "early-r12500000000.json",
+      "sha256": "6dcad71a0bfa5f528b9b4a2fec5b4ad80ca3d8afc9cc8c28cbcffdb12f6336ef"
+    },
+    {
+      "name": "early-r25000000000.json",
+      "sha256": "4ef190ff340333890911d95707976a4925b19fd26dde1fc71986f9dbf82b332e"
+    },
+    {
+      "name": "fanin-r12500000000-q0-d0-classes.json",
+      "sha256": "d3ff00d4376c359f746d0798f0e63b1c2b6c090cacf352de523dea64a91fa604"
+    },
+    {
+      "name": "fanin-r12500000000-q0-d0.json",
+      "sha256": "54d6999336cfe134192402341f1cfdae8b6a88a51e3dc73ce4f5dd7699f2178b"
+    },
+    {
+      "name": "fanin-r12500000000-q0-d10000-classes.json",
+      "sha256": "24a654f2a3d8b0ffbcc83c9587353af2a3fe3a9d5d4db73a7b4bcb7c43be9fc6"
+    },
+    {
+      "name": "fanin-r12500000000-q0-d10000.json",
+      "sha256": "8b9aa791d63d225c54065cc8c22d78ec9be4d3a0c59f186a87e52aaed642f138"
+    },
+    {
+      "name": "fanin-r12500000000-q1-d0-classes.json",
+      "sha256": "be78dd8d2f4d628094470720df5aa24496bd2586901f281e952e0f75925cebfc"
+    },
+    {
+      "name": "fanin-r12500000000-q1-d0.json",
+      "sha256": "46cae1e451c258d22408928ac0fcd3451b902e3fc29fab166936c890833df7d5"
+    },
+    {
+      "name": "fanin-r12500000000-q1-d10000-classes.json",
+      "sha256": "e8a8bd09c076dfd9cb085d7511b24efc94df0a2e8dacb1794dfc2f4b794a5ab3"
+    },
+    {
+      "name": "fanin-r12500000000-q1-d10000.json",
+      "sha256": "b015fffefe452d4f9f6b6922387223df927753bd46581a915f16b7a865c53c28"
+    },
+    {
+      "name": "fanin-r25000000000-q0-d0-classes.json",
+      "sha256": "341ead5fe19f4f7d175cd29872a9532a392be26d9dc93a23bb092d62b4079eab"
+    },
+    {
+      "name": "fanin-r25000000000-q0-d0.json",
+      "sha256": "1c14457ef7f9972484fb49422832dc0f2c85c8af2207b278dc614d91e9fbbabe"
+    },
+    {
+      "name": "fanin-r25000000000-q0-d10000-classes.json",
+      "sha256": "6ef1a843e5efe5bba9629eea948ebaaba303eca32fe238f36821fb034875a403"
+    },
+    {
+      "name": "fanin-r25000000000-q0-d10000.json",
+      "sha256": "c99b37b9d6b54031bd2c9481dd37b7949d07584ef432d427bb80d763fcffe9c1"
+    },
+    {
+      "name": "fanin-r25000000000-q1-d0-classes.json",
+      "sha256": "88637d23739193e4b3e7f2a0c01674645d25f5e47e725589824b6f8344db1b4a"
+    },
+    {
+      "name": "fanin-r25000000000-q1-d0.json",
+      "sha256": "7be628528347dfdb12e163725b9bcc3ceb4f7674c1f3d8d256b1865083837637"
+    },
+    {
+      "name": "fanin-r25000000000-q1-d10000-classes.json",
+      "sha256": "30d341908a3cddd1a61460edbfd5bc3dd54fad04191daa9cdfe71c326f8f8a79"
+    },
+    {
+      "name": "fanin-r25000000000-q1-d10000.json",
+      "sha256": "ff110ab87424454118fdb8e6f80b18c3a7f4479b6145909422dec813619bc16b"
+    },
+    {
+      "name": "future-r12500000000-o1000000-order0.json",
+      "sha256": "d0b0b238b735447857b8d7f231a0b3001127b7110a58c4dda30f44fa77489431"
+    },
+    {
+      "name": "future-r12500000000-o1000000-order1.json",
+      "sha256": "57915f84f2d65e99484357b1f4e3fa0de16daea3b1f83fe866545f1c3fa0b90e"
+    },
+    {
+      "name": "future-r12500000000-o2000000-order0.json",
+      "sha256": "72ff949a792513395b7960248f50fcc09d823db5982de942499faeff154cd697"
+    },
+    {
+      "name": "future-r12500000000-o2000000-order1.json",
+      "sha256": "1d42790caf2ab96c87d7f913c76df440bc2ed4cf95e938bd78a2b782050db350"
+    },
+    {
+      "name": "future-r25000000000-o1000000-order0.json",
+      "sha256": "4a5c52c363fec9e3fd6644526e1b66f4847f321f4a8a0bfe879b8ac496aa84d4"
+    },
+    {
+      "name": "future-r25000000000-o1000000-order1.json",
+      "sha256": "ab0b1da6a6b52309d316381e45ffd1f0dd7fb2cb4d8acd03b8eea11c5c78e287"
+    },
+    {
+      "name": "future-r25000000000-o2000000-order0.json",
+      "sha256": "ead81d45e532adcadc85f25a376251955ce912f6246cae018963bdcb62e66bdd"
+    },
+    {
+      "name": "future-r25000000000-o2000000-order1.json",
+      "sha256": "783f78acee9534a73076568b00a8a3110e63f0a4685a1140372b0f2e13c73450"
+    },
+    {
+      "name": "read-r12500000000-b1024-competing.json",
+      "sha256": "b32ab5a582009ed33d8879f54038665e328d88ce80f9450e30c5dbaf0ab674ff"
+    },
+    {
+      "name": "read-r12500000000-b1024.json",
+      "sha256": "025911998b0cdd8cd4736a4d8224006bfdf3968f89ba84ba400aab75f42e6542"
+    },
+    {
+      "name": "read-r12500000000-b256-competing.json",
+      "sha256": "3c4ebaabd7a734692181f7b292630bfac9278249296cdb5d8bff3818dc91eca9"
+    },
+    {
+      "name": "read-r12500000000-b256.json",
+      "sha256": "41a8655a432e5ccbdc5d40e36e7b903ffb61448b3d0422c9fed400cbb30a49ee"
+    },
+    {
+      "name": "read-r25000000000-b1024-competing.json",
+      "sha256": "63fc4ce51937bcc2c012bc840933d5dfed2324e59559431271a41af699fc86f4"
+    },
+    {
+      "name": "read-r25000000000-b1024.json",
+      "sha256": "850c843426cc2bf626b1dee1fb5e48fca05f0b8664b39660ff9f0f973471bd5c"
+    },
+    {
+      "name": "read-r25000000000-b256-competing.json",
+      "sha256": "1495beac1b399a8b5c82ff8e793fbb856e5150cea790dfd3c344efda410985c8"
+    },
+    {
+      "name": "read-r25000000000-b256.json",
+      "sha256": "e593e9e140468f02f2262b8cdc5726ffd5b01349b93087618900de6e8f04d450"
+    },
+    {
+      "name": "write-r12500000000-b1024-c1-m1-d0.json",
+      "sha256": "815ede37da13708a5a2188893269187bd93c31deabebda53b71d601c03126b05"
+    },
+    {
+      "name": "write-r12500000000-b1024-c1-m1-d10000.json",
+      "sha256": "3e9a9d9a83f8f0ccc340b487122de2e9763b439219b3f70858fd75a0ca032717"
+    },
+    {
+      "name": "write-r12500000000-b1024-c1-m4-d0.json",
+      "sha256": "e2aff30e32842c0cbc17b941d990ea361069c357f513e6cecd4f92f39c8575e3"
+    },
+    {
+      "name": "write-r12500000000-b1024-c1-m4-d10000.json",
+      "sha256": "cf65b90984d525c86897be6406750fcc2c05a1c9954bcfe76d8f0a4516c73b17"
+    },
+    {
+      "name": "write-r12500000000-b1024-c4-m1-d0.json",
+      "sha256": "d75116a4ef43b24711aa7c89fb40c9922bae63e1a502c9114f0fdc32d714f571"
+    },
+    {
+      "name": "write-r12500000000-b1024-c4-m1-d10000.json",
+      "sha256": "88b2a5696b3591f417765cfeea97101f5c00848acf869a4328c7e25ec11be90d"
+    },
+    {
+      "name": "write-r12500000000-b1024-c4-m4-d0.json",
+      "sha256": "436169b8a51fb71ab39dc7aa8a8f9e218513b78e876fa67598cca8bdef349eb2"
+    },
+    {
+      "name": "write-r12500000000-b1024-c4-m4-d10000.json",
+      "sha256": "ad0029322ec8d3b6cbad969239de31be0110727480e502098499228481b66d41"
+    },
+    {
+      "name": "write-r12500000000-b256-c1-m1-d0.json",
+      "sha256": "3bc0612f34b54323bcc7c9c0dd555939470b4380bf6231d0a701b4099a5273ed"
+    },
+    {
+      "name": "write-r12500000000-b256-c1-m1-d10000.json",
+      "sha256": "65e7fc5987f7f521ec399130154a5189785296e7354b2b4b8ebab874005a833b"
+    },
+    {
+      "name": "write-r12500000000-b256-c1-m4-d0.json",
+      "sha256": "703ef4dc727d1edc654e49275b1b02118dc401846a236c200addb8c2bdfb14cf"
+    },
+    {
+      "name": "write-r12500000000-b256-c1-m4-d10000.json",
+      "sha256": "b10c33ba56b49ef1d4982d78559f919f134714f8e21edfc9af1bfcac52939654"
+    },
+    {
+      "name": "write-r12500000000-b256-c4-m1-d0.json",
+      "sha256": "fa7d5942aa82520204d6fd0b18ff65cede26fff9c09d99a2d6dce19bfe3cea0e"
+    },
+    {
+      "name": "write-r12500000000-b256-c4-m1-d10000.json",
+      "sha256": "b90dde0ee9631caa23e679a88738de30909fa7de64a3420f19c95563634e1297"
+    },
+    {
+      "name": "write-r12500000000-b256-c4-m4-d0.json",
+      "sha256": "3f9f5abb3597d6c71d83f4380054b08ac24b7abe46bdb8f713887e18a411c455"
+    },
+    {
+      "name": "write-r12500000000-b256-c4-m4-d10000.json",
+      "sha256": "553e0fea1df6182c0ee0ad4c0599ce1b5eca62c801be93646594002fccb4418b"
+    },
+    {
+      "name": "write-r25000000000-b1024-c1-m1-d0.json",
+      "sha256": "5d51d1f5a268944202407fdb5cae47b88c70576e2c3c148e06f82a5a679b6cea"
+    },
+    {
+      "name": "write-r25000000000-b1024-c1-m1-d10000.json",
+      "sha256": "cae0b24e77c2c95ec64d357877f4736ca787f133be5cefa6d2ecb3653178f324"
+    },
+    {
+      "name": "write-r25000000000-b1024-c1-m4-d0.json",
+      "sha256": "5eed00b16bbbebc9b4a08c0ac4d9cbaa92fa2bb03c0c94547811aa17207d4491"
+    },
+    {
+      "name": "write-r25000000000-b1024-c1-m4-d10000.json",
+      "sha256": "3d8a05c2a3b6300f5f7549d6e1367d80442896835fdd38593f9a3b22a10622b2"
+    },
+    {
+      "name": "write-r25000000000-b1024-c4-m1-d0.json",
+      "sha256": "0d07d9e60b6a76550dc95d0db20e6a7de3e8163927f6e4900dbf4e81941f05c0"
+    },
+    {
+      "name": "write-r25000000000-b1024-c4-m1-d10000.json",
+      "sha256": "55d17b6eee40bc529cd64eed139c734548e751d418c7d3951ef33fd63a8e3304"
+    },
+    {
+      "name": "write-r25000000000-b1024-c4-m4-d0.json",
+      "sha256": "3a22a98cc7e221cd97a4a813bc5980676f1692903b7bc338dd214eebfb3045ba"
+    },
+    {
+      "name": "write-r25000000000-b1024-c4-m4-d10000.json",
+      "sha256": "68f74cf8f55bb2b330dd3ef22102cce60a91e0bc070e3fa1da9af84a63d6dac1"
+    },
+    {
+      "name": "write-r25000000000-b256-c1-m1-d0.json",
+      "sha256": "1280b749fa88466e6185493f040cd1358784da88739a0d8631b2c0dd509a9fc2"
+    },
+    {
+      "name": "write-r25000000000-b256-c1-m1-d10000.json",
+      "sha256": "c735e6f0cd5746868cf8cb1a3a05495327122693d8cff733c67d3efa190349dc"
+    },
+    {
+      "name": "write-r25000000000-b256-c1-m4-d0.json",
+      "sha256": "e968a04ce6978b58859b8288add2891a552e85a7f8060e963d8e4ef6cb7f1f6c"
+    },
+    {
+      "name": "write-r25000000000-b256-c1-m4-d10000.json",
+      "sha256": "cd8e7309cd64e474606c1511383fa114966557bd0386c13eb5912d15fa82a0ae"
+    },
+    {
+      "name": "write-r25000000000-b256-c4-m1-d0.json",
+      "sha256": "39ad7d6e84969db4091e49c662bbda391fa0783998dcae3359fb1accc3014c4c"
+    },
+    {
+      "name": "write-r25000000000-b256-c4-m1-d10000.json",
+      "sha256": "eab98f3cd4fcc90d103f0c45d4726eec81ea68a14e7d8d25a215ac51e7fe42c8"
+    },
+    {
+      "name": "write-r25000000000-b256-c4-m4-d0.json",
+      "sha256": "721785362756e9c6802d7b7b331ea882982dfd8d0630834fe045c4ed065d77ff"
+    },
+    {
+      "name": "write-r25000000000-b256-c4-m4-d10000.json",
+      "sha256": "a273d6eaf5bee2309cb5aefa651095e3e84aef227eac751dae6d8c0a0ce750ae"
+    }
+  ],
+  "raw_summary_sha256": "7ef2c4095201be7f9d850693ff96aec63f6634d3b5bd913036709c4ec04dab4e",
+  "remaining_tasks": [
+    "TRAF-45",
+    "TRAF-73",
+    "TRAF-86"
+  ],
+  "schema": "simllm-nvlink-causal-service-result-v1",
+  "source_sha256": {
+    "examples/nvlink_causal_service_v1/run_study.py": "6f90dc31c54caf0f4c5ad032dd683c6a0759501d94b8fea9d956a0d9166f12a2",
+    "simllm/backends/htsim_nvlink.py": "798f9326673e4fd1711aeb10f70469ba810d53317c076c7dfb906f3e23ba781f",
+    "simllm/backends/nvlink_runtime.py": "2f729af7f70e653682114d10ba5ea7acbea9de461828d11a1e1819b9b72ff87c"
+  },
+  "structural_checks": [
+    {
+      "expected_relation_ps": null,
+      "family": "read_dependency",
+      "instance": "read-r12500000000-b256-competing",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "read_dependency",
+      "instance": "read-r12500000000-b1024-competing",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "read_dependency",
+      "instance": "read-r25000000000-b256-competing",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "read_dependency",
+      "instance": "read-r25000000000-b1024-competing",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "future_insertion",
+      "instance": "future-r12500000000-o1000000-order0",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "future_insertion",
+      "instance": "future-r12500000000-o1000000-order1",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "future_insertion",
+      "instance": "future-r12500000000-o2000000-order0",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "future_insertion",
+      "instance": "future-r12500000000-o2000000-order1",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "independent_resources",
+      "instance": "duplex-r12500000000",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "independent_resources",
+      "instance": "disjoint-r12500000000-q0",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "finite_drain",
+      "instance": "fanin-r12500000000-q0-d0",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "finite_drain",
+      "instance": "fanin-r12500000000-q0-d10000",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "independent_resources",
+      "instance": "disjoint-r12500000000-q1",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "finite_drain",
+      "instance": "fanin-r12500000000-q1-d0",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "finite_drain",
+      "instance": "fanin-r12500000000-q1-d10000",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "future_insertion",
+      "instance": "future-r25000000000-o1000000-order0",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "future_insertion",
+      "instance": "future-r25000000000-o1000000-order1",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "future_insertion",
+      "instance": "future-r25000000000-o2000000-order0",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "future_insertion",
+      "instance": "future-r25000000000-o2000000-order1",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "independent_resources",
+      "instance": "duplex-r25000000000",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "independent_resources",
+      "instance": "disjoint-r25000000000-q0",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "finite_drain",
+      "instance": "fanin-r25000000000-q0-d0",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "finite_drain",
+      "instance": "fanin-r25000000000-q0-d10000",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "independent_resources",
+      "instance": "disjoint-r25000000000-q1",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "finite_drain",
+      "instance": "fanin-r25000000000-q1-d0",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    },
+    {
+      "expected_relation_ps": null,
+      "family": "finite_drain",
+      "instance": "fanin-r25000000000-q1-d10000",
+      "observed_relation_ps": null,
+      "verdict": "PASS"
+    }
+  ],
+  "verdict": "PASS"
+}
