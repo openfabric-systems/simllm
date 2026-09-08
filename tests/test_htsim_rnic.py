@@ -15,6 +15,7 @@ from simllm.backends import (
 from simllm.backends.htsim_rnic import (
     _parse_goal_completion_time_ps,
     parse_control_recovery_manifest,
+    parse_data_recovery_manifest,
 )
 from simllm.goal import GoalTrace, find_txt2bin, to_binary
 from simllm.traffic import gather, scatter
@@ -182,3 +183,75 @@ def test_legacy_manifest_has_no_invented_recovery_record():
 def test_control_manifest_rejects_negative_or_conflicting_counters(lines):
     with pytest.raises(ValueError):
         parse_control_recovery_manifest(lines)
+
+
+@pytest.mark.parametrize("budget", [0, 4159, 4160, 8320, 2**64 - 1])
+def test_data_recovery_and_initial_window_are_independent_typed_selections(budget):
+    cfg = HtsimRnicConfig(Path("t.bin"), "rnic-cn", 400_000_000_000,
+                          data_recovery="deadline", retry_probe_windows=2,
+                          initial_window_bytes=budget, initial_window_fan_in=1)
+    assert build_htsim_rnic_command(Path("htsim_rnic"), cfg)[-8:] == [
+        "-rnic_cn_data_recovery", "deadline", "-rnic_cn_retry_probe_windows", "2",
+        "-rnic_cn_initial_window_bytes", str(budget), "-rnic_cn_initial_window_fan_in", "1"]
+    cfg = HtsimRnicConfig(Path("t.bin"), "rnic-cn", 1,
+                          initial_window_bytes=budget, initial_window_fan_in=1)
+    assert "-rnic_cn_data_recovery" not in build_htsim_rnic_command(Path("htsim_rnic"), cfg)
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"data_recovery": "headroom"}, {"data_recovery": True},
+    {"data_recovery": "deadline", "profile": "rnic-nn"},
+    {"initial_window_bytes": 0, "initial_window_fan_in": 1, "profile": "rnic-nn-fluid"},
+    {"retry_probe_windows": 2}, {"retry_probe_windows": 0},
+    {"data_recovery": "deadline", "retry_probe_windows": 2**32},
+    {"initial_window_bytes": 0}, {"initial_window_fan_in": 1},
+    {"initial_window_bytes": -1, "initial_window_fan_in": 1},
+    {"initial_window_bytes": 2**64, "initial_window_fan_in": 1},
+    {"initial_window_bytes": 0, "initial_window_fan_in": 0},
+    {"initial_window_bytes": 0, "initial_window_fan_in": 2**64},
+    *({"extra_flags": {f"-rnic_cn_{name}": "0"}} for name in (
+        "data_recovery", "retry_probe_windows", "initial_window_bytes", "initial_window_fan_in")),
+])
+def test_data_recovery_rejects_invalid_or_ambiguous_config(kwargs):
+    args = {"goal_bin": Path("t.bin"), "profile": "rnic-cn", "linkspeed_bps": 1}
+    args.update(kwargs)
+    with pytest.raises(ValueError):
+        HtsimRnicConfig(**args)
+
+
+@pytest.mark.parametrize("field", ["retry_probe_windows", "initial_window_bytes",
+                                   "initial_window_fan_in"])
+@pytest.mark.parametrize("value", [True, 1.0, "1"])
+def test_data_recovery_rejects_coercible_integer_types(field, value):
+    with pytest.raises(TypeError):
+        HtsimRnicConfig(Path("t.bin"), "rnic-cn", 1, **{field: value})
+
+
+def test_data_manifest_preserves_legacy_absence_and_reaches_run_result(monkeypatch):
+    assert parse_data_recovery_manifest(["[RNIC manifest] physical_quiescence=verified"]) == {}
+    stdout = (
+        "[RNIC manifest] rnic_cn_data_recovery=deadline rnic_cn_retry_probe_windows=4 "
+        "rnic_cn_initial_window=bounded rnic_cn_initial_window_bytes=0 "
+        "rnic_cn_initial_window_fan_in=64 rnic_cn_initial_buffer_bytes=1048576 "
+        "rnic_cn_probe_epoch=physical-retry-serialization-end "
+        "rnic_cn_recovery_release=actual-arrival-tick\n"
+        "[RNIC manifest] physical_quiescence=verified\n")
+    monkeypatch.setattr("simllm.backends.htsim_rnic.run_owned_process",
+                        lambda *args, **kwargs: CompletedProcess([], 0, stdout, ""))
+    result = run_htsim_rnic(HtsimRnicConfig(Path("t.bin"), "rnic-cn", 1,
+                                           data_recovery="deadline"), Path("htsim_rnic"))
+    assert result.data_recovery["data_recovery"] == "deadline"
+    assert result.data_recovery["initial_window_bytes"] == 0
+    assert result.data_recovery["retry_probe_windows"] == 4
+
+
+@pytest.mark.parametrize("fields", [
+    "rnic_cn_data_recovery=invalid", "rnic_cn_initial_window=invalid",
+    "rnic_cn_retry_probe_windows=-1", "rnic_cn_retry_probe_windows=+4",
+    "rnic_cn_initial_window_bytes=1.0", "rnic_cn_initial_sizing=",
+    "rnic_cn_initial_window_bytes=18446744073709551616",
+    "rnic_cn_retry_probe_windows=2 rnic_cn_retry_probe_windows=4",
+])
+def test_data_manifest_rejects_invalid_and_conflicting_fields(fields):
+    with pytest.raises(ValueError):
+        parse_data_recovery_manifest([f"[RNIC manifest] {fields}"])

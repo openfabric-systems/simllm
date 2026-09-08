@@ -66,6 +66,13 @@ class HtsimRnicConfig:
     precision: PrecisionConfig | None = None
     #: control admission protection on rnic-cn; none preserves the pinned command
     control_recovery: Literal["none", "headroom"] = "none"
+    #: physical deadline probes for missing DATA; none preserves legacy retries
+    data_recovery: Literal["none", "deadline"] = "none"
+    #: control windows after a retry's serialization end before its next probe
+    retry_probe_windows: int = 4
+    #: optional pre-grant wire budget, paired with a declared pool fan-in bound
+    initial_window_bytes: int | None = None
+    initial_window_fan_in: int | None = None
     #: the seams this configuration selects; set by validation, never by a caller
     selected_precision_levels: dict[str, object] = field(
         init=False,
@@ -85,6 +92,30 @@ class HtsimRnicConfig:
             raise ValueError("control_recovery requires rnic-cn")
         if "-rnic_cn_control_recovery" in self.extra_flags:
             raise ValueError("use typed control_recovery instead of extra_flags")
+        if self.data_recovery not in ("none", "deadline"):
+            raise ValueError("data_recovery must be none or deadline")
+        if type(self.retry_probe_windows) is not int:
+            raise TypeError("retry_probe_windows must be an integer")
+        if not 1 <= self.retry_probe_windows <= 2**32 - 1:
+            raise ValueError("retry_probe_windows must be a positive uint32")
+        if self.data_recovery == "none" and self.retry_probe_windows != 4:
+            raise ValueError("nondefault retry_probe_windows requires deadline recovery")
+        for name, minimum in (("initial_window_bytes", 0), ("initial_window_fan_in", 1)):
+            value = getattr(self, name)
+            if value is not None:
+                if type(value) is not int:
+                    raise TypeError(f"{name} must be an integer or None")
+                if not minimum <= value <= 2**64 - 1:
+                    raise ValueError(f"{name} must fit uint64 and be at least {minimum}")
+        if (self.initial_window_bytes is None) != (self.initial_window_fan_in is None):
+            raise ValueError("initial_window_bytes and initial_window_fan_in require each other")
+        if (self.data_recovery != "none" or self.initial_window_bytes is not None
+                ) and self.profile != "rnic-cn":
+            raise ValueError("data recovery and initial window require rnic-cn")
+        for name in ("data_recovery", "retry_probe_windows", "initial_window_bytes",
+                     "initial_window_fan_in"):
+            if f"-rnic_cn_{name}" in self.extra_flags:
+                raise ValueError(f"use typed {name} instead of extra_flags")
         self.selected_precision_levels = check_precision_selection(
             self.precision,
             network=network_level_for_profile(self.profile),
@@ -105,6 +136,12 @@ def build_htsim_rnic_command(binary: Path, cfg: HtsimRnicConfig) -> list[str]:
         argv += ["-topo", str(cfg.topology)]
     if cfg.control_recovery != "none":
         argv += ["-rnic_cn_control_recovery", cfg.control_recovery]
+    if cfg.data_recovery != "none":
+        argv += ["-rnic_cn_data_recovery", cfg.data_recovery,
+                 "-rnic_cn_retry_probe_windows", str(cfg.retry_probe_windows)]
+    if cfg.initial_window_bytes is not None:
+        argv += ["-rnic_cn_initial_window_bytes", str(cfg.initial_window_bytes),
+                 "-rnic_cn_initial_window_fan_in", str(cfg.initial_window_fan_in)]
     for flag, value in cfg.extra_flags.items():
         argv += [flag, value]
     return argv
@@ -146,6 +183,7 @@ class RnicRunResult:
     quiescent: bool
     goal_completion_time_ps: int | None = None
     control_recovery: dict[str, str | int] = field(default_factory=dict)
+    data_recovery: dict[str, str | int] = field(default_factory=dict)
 
     def job_completion_time_ps(self) -> int:
         """Completion of all represented schedule work released at time zero."""
@@ -173,6 +211,41 @@ def parse_control_recovery_manifest(manifest: list[str]) -> dict[str, str | int]
                 if name in record and record[name] != parsed:
                     raise ValueError(f"conflicting control recovery manifest field: {name}")
                 record[name] = parsed
+    return record
+
+
+def parse_data_recovery_manifest(manifest: list[str]) -> dict[str, str | int]:
+    """Read explicit DATA recovery fields without inventing legacy defaults."""
+
+    prefixes = ("rnic_cn_data_", "rnic_cn_retry_", "rnic_cn_initial_", "rnic_cn_recovery_",
+                "rnic_cn_probe_")
+    text_fields = {"data_recovery", "initial_window", "initial_sizing", "recovery_release",
+                   "probe_epoch"}
+    counters = {"rnic_cn_tail_probes", "rnic_cn_late_retry_admissions"}
+    record: dict[str, str | int] = {}
+    for line in manifest:
+        for token in line.split():
+            key, separator, value = token.partition("=")
+            if not separator or not (key.startswith(prefixes) or key in counters):
+                continue
+            name = key.removeprefix("rnic_cn_")
+            if name in text_fields:
+                if not value:
+                    raise ValueError(f"empty data recovery manifest field: {name}")
+                parsed: str | int = value
+            else:
+                if not value.isascii() or not value.isdecimal():
+                    raise ValueError(f"invalid data recovery counter or sizing value: {name}")
+                parsed = int(value)
+                if parsed > 2**64 - 1:
+                    raise ValueError(f"overflowed data recovery manifest field: {name}")
+            if name in record and record[name] != parsed:
+                raise ValueError(f"conflicting data recovery manifest field: {name}")
+            record[name] = parsed
+    if "data_recovery" in record and record["data_recovery"] not in ("none", "deadline"):
+        raise ValueError("invalid native data_recovery selection")
+    if "initial_window" in record and record["initial_window"] not in ("none", "bounded"):
+        raise ValueError("invalid native initial_window selection")
     return record
 
 
@@ -251,6 +324,7 @@ def run_htsim_rnic(cfg: HtsimRnicConfig, binary: Path | None = None,
         quiescent=quiescent,
         goal_completion_time_ps=_parse_goal_completion_time_ps(result.stdout),
         control_recovery=parse_control_recovery_manifest(manifest),
+        data_recovery=parse_data_recovery_manifest(manifest),
     )
 
 
