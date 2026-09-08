@@ -218,8 +218,9 @@ the full suite and are not additional behavioral evidence.
 
 An earlier full-suite invocation was interrupted before endpoint-identity
 hardening; its retained log is not a gate. The completed full suite above
-uses the final committed runtime and harness. The inherited packet backend
-is unchanged from the separately validated HTSIM-41 pin.
+uses the final committed runtime and harness. The inherited packet-model
+binary remains byte-identical to the separately validated HTSIM-41 binary;
+the publication pin also includes its test-portability repair.
 
 CORE-48 closes for this executable coarse model, including receiver-bound
 TTFT/TPOT effects and exact compatibility. CORE-8 retains general cross-layer

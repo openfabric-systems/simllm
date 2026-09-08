@@ -75,9 +75,13 @@ The executed backend source is
 `96d5aa821f96c86901cce6f3b81609740d285558`, binary SHA-256
 `4e6e75d47a603289747d7c83a09ea30db0d7a15e781394bb3a00504e21ac1ac0`.
 The executed simllm source is `3da33dfab1bd5db0610262abcde382ad50aacd81`.
-The final backend pin `3bd3ac3b71dc833a9d149820094085d9f5e6127f` adds only
-its design document after the run; the
-executed C++ sources and tests are identical to this source commit.
+The publication pin `ac3c9fdc1f2d2621ce63545f8d0ddbcfd320c018` follows the
+design-only commit `3bd3ac3b71dc833a9d149820094085d9f5e6127f` with a Windows
+test-portability repair: two file readers close before deletion and two
+hash-locked topology fixtures retain LF checkout bytes. Production sources,
+numerical oracles and the rebuilt executable SHA-256 remain identical to the
+executed study. The complete post-repair native suite passes all 497 tests;
+the study's original run record and binary identity remain unchanged.
 [results.json](results.json) records input, reference, runner, wrapper and
 binary hashes plus every configuration outcome. Raw logs and completion CSVs
 remain outside Git. Published JSON replaces local artifact roots with project
