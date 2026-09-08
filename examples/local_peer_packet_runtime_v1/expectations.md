@@ -53,7 +53,11 @@ service), then the second hop propagates. This declares store-and-forward
 packet admission with overlapped output feeding, without a third full packet
 serialization stage. Each downstream capacity is reserved before transmission.
 Physical link release and downstream arrival are separated by propagation. A
-link acknowledgement cannot precede the forward and reverse propagation path.
+link acknowledgement includes the forward and reverse propagation path plus
+explicit additional acknowledgement processing. A credit return includes the
+reverse hop propagation plus explicit additional return processing. These
+physical-mode parameters are separate from the legacy component latency
+options; no existing profile field silently acquires a different meaning.
 No value here identifies a confidential NVSwitch buffer or arbitration field.
 
 ## Frozen live matrix and independent arithmetic
@@ -101,9 +105,9 @@ coefficient may be fitted to these relations.
 
 A one-packet direct transfer consumes one credit and the whole272-byte receive
 buffer. Submit an identical next transfer at its logical visibility boundary.
-For return delay D in {0,100000}ps, the next transmission starts at that
-boundary plus D; its completion adds D+L+P+R. A200000ps acknowledgement
-tail must remain pending without delaying consumer visibility or resetting the
+For additional return processing D in {0,100000}ps, the next transmission
+starts at that boundary plus P+D; its completion adds P+D+L+P+R. An
+additional200000ps acknowledgement processing tail must remain pending without delaying consumer visibility or resetting the
 calendar. Drain only after the final logical step and retain its separate time.
 
 For two queued fan-out extents, source feed is100GB/s, link rates are12.5 or
@@ -113,7 +117,9 @@ buffer budget. Aggregate input serialization cannot beat total wire bytes over
 that link rate. Reducing capacity cannot admit more simultaneously owned bytes.
 Reversing extent submission order under identity swaps which independent donor
 gets early service while preserving geometry, bytes and the symmetric makespan.
-A class-label permutation preserves every event and timestamp under identity.
+A class-label permutation preserves every event, timestamp and service under
+identity after excluding only the changed input class annotations from the
+comparison. It never excludes identities, geometry or modeled values.
 These are fatal conformance controls, not extra scored timing families.
 
 The common consumer must reject malformed attempts, duplicate or missing

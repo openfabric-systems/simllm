@@ -2353,7 +2353,7 @@ shipped collectives.
   inventing order between independent operations and retain every supported
   projection byte and timestamp exactly.
 
-- TRAF-45 (Completeness; P1; L): add a packetized intra-node leg behind the
+- TRAF-45 (Completeness; P1; L): add a packetized intra-node leg with the
   [frozen live peer runtime study](../../examples/local_peer_packet_runtime_v1/expectations.md).
   The study couples the BACK-48 vocabulary and COMP-40 port binding to the
   analytic locality path. `classify_step_locality` charges local segments from a

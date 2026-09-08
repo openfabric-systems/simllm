@@ -31,7 +31,6 @@
   "propagation_ps_per_hop": 1000,
   "finite_buffer_bytes": 65536,
   "credits_per_pool": 256,
-  "credit_return_ps": 0,
   "additional_acknowledgement_ps": 0,
   "arbitration": "identity",
   "analytic_bytes_per_second": 450000000000,
@@ -106,14 +105,14 @@
     "packets": 1,
     "credits_per_pool": 1,
     "receiver_buffer_bytes": 272,
-    "return_ps": [
+    "link_bytes_per_second": 25000000000,
+    "rx_bytes_per_second": 25000000000,
+    "propagation_ps": 1000,
+    "return_processing_ps": [
       0,
       100000
     ],
-    "acknowledgement_ps": 200000,
-    "link_bytes_per_second": 25000000000,
-    "rx_bytes_per_second": 25000000000,
-    "propagation_ps": 1000
+    "acknowledgement_processing_ps": 200000
   },
   "attachment_control": {
     "destinations": [
@@ -143,5 +142,6 @@
     "ecn_marking",
     "priority_flow_control",
     "congestion_notification"
-  ]
+  ],
+  "credit_return_processing_ps": 0
 }
