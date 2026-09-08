@@ -71,13 +71,27 @@ at T does not mean all callbacks at T executed. Ordinary injection at T remains
 illegal. Ordinary `advance(T)` processes the remaining callbacks at T and closes
 that opportunity. Time zero must work without unsigned subtraction.
 
-An await response distinguishes `completion`, `horizon` and `quiescence`,
-reports the current event-list time and fully processed horizon separately,
-and carries new lifecycle events, new completion rows, accepted cursor and
-exclusive authority counters. A completion response additionally carries the
-exact boundary timestamp and token. Every new completion row exposes native
-success or transport-error status; error completion cannot become a request
-metric. Existing legacy completion rows and CSV bytes retain their old form.
+An await response carries exactly the common `schema`, `status`, `verb` plus
+`reason`, `event_time_ps`, `fully_processed_horizon_ps`,
+`ordinary_injection_floor_ps`, `events_executed`, `events`, `completion_rows`,
+`last_accepted_sequence`, `authority_counters`, `quiescent`, `boundary_time_ps`
+and `boundary_id`. Reason is `completion`, `horizon` or `quiescence`. The two
+boundary fields are nonnull only for completion; the horizon and exclusion
+floor are null when no corresponding prefix exists, particularly at an
+initial callback pause at zero. The exclusion floor becomes zero at that
+pause while the fully processed horizon remains null. Each new completion row
+is the legacy row plus `completion_status`; only `success` permits metrics or
+dependent injection. Existing legacy completion rows and CSV bytes retain
+their old form. The new injection response is the ordinary accepted sequence
+and eligibility response plus its still-open `boundary_id`.
+
+Limits are inclusive. Execute an event at `max_time_ps`; satisfaction in that
+callback succeeds. Completion at `through_ps` takes precedence over a horizon
+yield, and satisfaction by the final allowed callback succeeds. An already
+quiescent request succeeds without executing a callback. A boundary token may
+authorize multiple distinct injections while open; stale-token rejection means
+use after invalidation. Rejection preserves the token and accepted cursor
+internally, although the existing error response terminates the session.
 
 A normal scheduling horizon is a successful yield. For a pending local action
 at L while native flows remain pending, the client awaits through L-1, so it
@@ -242,6 +256,13 @@ evidence outside Git. The public result retains all verdicts, metrics,
 relations, identity counts and hashes without rescoring omitted evidence.
 Retain failed executions with their original chronology. No added shape, load,
 rate, policy or timing offset is allowed after the first run under this freeze.
+Use 1,000,000 callbacks per await and a 60-second child wall-time watchdog.
+Native chain, retention and old-transcript sessions have an absolute simulated
+time limit of 1,000,000,000 ps. Live sessions have the checked step release plus
+10,000,000,000 ps as their absolute limit. Record these values in the retained
+runner inputs before execution. Native unit tests may deliberately select
+smaller limits to exercise terminal rejection; they are a separate evidence
+class and do not alter this study population.
 
 The fatal set includes frame and lifecycle integrity, complete unique graph
 and message joins, exact dependency timing, successful completion status,
