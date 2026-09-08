@@ -29,7 +29,12 @@ attempt issue, so its interval to TX finish is not universally link service.
 The shared consumer receives immutable ABI, capability, admission, route and
 timestamp-boundary context alongside the unchanged native packet rows. The
 legacy opaque `wqe_id` correlation field never implies a GPU owns an RNIC
-work queue. Existing wire serialization and event ordering remain unchanged.
+work queue. Existing wire serialization and event ordering remain unchanged. The wire JSON
+stores admissions, packet events and extent terminals in separate arrays. Its
+batch validation proves timestamp bounds and coverage, but cannot prove the
+cross-scope callback order of equal-time events. Native live-handler checks
+retain that stronger guarantee. GPU online projections retain actual emission
+sequence and reject late children; a post-hoc sort cannot repair bad order.
 
 The GPU packet authority exposes destination visibility separately. Its attempt
 transport terminal is at the later of visibility and acknowledgement. Its
