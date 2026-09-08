@@ -145,8 +145,24 @@ def verify_frozen_authority(frozen: dict[str, Any]) -> None:
     authority = frozen["aligned_authority"]
     module_path = ROOT / authority["module_path"]
     profile = authority["candidate_profile"]
-    if sha256(module_path) != authority["module_base_blob_sha256"]:
-        raise RuntimeError("the aligned NVLink module moved after the freeze")
+    # This collector consumes frozen predictions, not the evolving simulator.
+    # A repository verifies their historical source; a staged archive must
+    # carry those exact source bytes itself.
+    if (ROOT / ".git").exists():
+        historical = subprocess.run(
+            ("git", "show", f"{EXPECTATIONS_COMMIT}:{authority['module_path']}"),
+            cwd=ROOT,
+            capture_output=True,
+            timeout=30,
+            check=False,
+        )
+        if historical.returncode:
+            raise RuntimeError("the frozen aligned NVLink source is unavailable in Git")
+        module_digest = hashlib.sha256(historical.stdout).hexdigest()
+    else:
+        module_digest = sha256(module_path)
+    if module_digest != authority["module_base_blob_sha256"]:
+        raise RuntimeError("the frozen aligned NVLink source digest disagrees")
     if sha256(ROOT / profile["path"]) != profile["sha256"]:
         raise RuntimeError("the candidate profile moved after the freeze")
     producer = frozen["producer_contract"]["source"]
