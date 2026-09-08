@@ -6,6 +6,13 @@ study run. The as-of simllm commit is
 packet studies retain their original outcomes. This study uses CPU simulation
 only and makes no hardware calibration claim.
 
+Pre-run clarification chronology: the chunk notation and sentinel wording
+below are clarified after the first receiver implementation edit, before any
+unit execution or study run. The mechanism, matrix, accepted ring payload
+rule and numerical sentinel values were already frozen at `5de4db2`. The
+explicit rewritten ring-floor and sentinel assertions are post-specified
+regression checks; this clarification is not claimed to precede implementation.
+
 ## Model and authority
 
 The explicit coarse `receiver_ingress` selection extends the existing
@@ -93,10 +100,13 @@ Retain these additional fixtures:
 
 - The accepted ring grid: widths {2,4}, payloads {4,4096}, rates {200,400}
   Gbit/s and per-channel service {0,7000} ps. There are 2*(W-1) rounds,
-  each with max(1,floor(B/W)) bytes per send. Both modes keep the accepted
+  each with q=max(1,floor(B/W)) bytes per send. Define chunk service
+  d_q=ceil(q*8*10^12/R); ring latency is 2*(W-1)*(C+d_q+D), with C the
+  configured per-channel service. Both modes keep the accepted
   physical timestamps and metric durations, including channel service.
 - The four-rank, three-byte ring sentinel at both rates and zero channel
-  service keeps TTFT and TPOT at 120 and 240 ps, respectively.
+  service keeps TTFT=TPOT=120 ps at 400 Gbit/s and TTFT=TPOT=240 ps at
+  200 Gbit/s.
 - The asymmetric three-byte plus five-byte stars at both rates. Dispatch
   remains 160/320 ps. Combine changes from 100/200 ps to 160/320 ps. The
   original source-only combine values were structural evidence, not
@@ -135,7 +145,8 @@ The equal star predictions meet their capacity floors. The four-rank complete
 all-to-all has a 3*d receiver/source floor, model prediction 5*d and fully
 serial ceiling 12*d. Its gap above the floor is the declared reservation
 schedule, not evidence of a calibrated switch queue. For ring fixtures, the
-causal lower bound is 2*(W-1)*d and channel service is an explicit extra term.
+causal lower bound is 2*(W-1)*d_q; channel service and completion visibility
+are explicit extra terms.
 
 ## Fatal guards and regression boundaries
 
