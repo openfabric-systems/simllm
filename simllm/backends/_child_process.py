@@ -6,14 +6,16 @@ import atexit
 import ctypes
 import hashlib
 import json
+import math
 import os
+import queue
 import re
 import signal
 import subprocess
 import sys
 import threading
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -296,10 +298,11 @@ class _WindowsJob:
 
 @dataclass
 class _OwnedChild:
-    process: subprocess.Popen[str]
+    process: subprocess.Popen[str] | subprocess.Popen[bytes]
     command: tuple[str, ...]
     process_group_id: int | None
     windows_job: _WindowsJob | None
+    kill_before_reap: bool = False
 
 
 class _OwnedChildRegistry:
@@ -353,7 +356,8 @@ class _OwnedChildRegistry:
 
     @staticmethod
     def _signal_posix(child: _OwnedChild, signum: int) -> None:
-        if child.process.poll() is not None:
+        status = child.process.returncode if child.kill_before_reap else child.process.poll()
+        if status is not None:
             return
         group_id = child.process_group_id
         if group_id is None or group_id != child.process.pid:
@@ -380,7 +384,16 @@ class _OwnedChildRegistry:
         self._terminate_many((child,))
 
     def _terminate_many(self, children: Sequence[_OwnedChild]) -> None:
-        active = tuple(child for child in children if child.process.poll() is None)
+        for child in children:
+            if not child.kill_before_reap:
+                continue
+            if os.name == "posix":
+                self._signal_posix(child, signal.SIGKILL)
+            elif child.windows_job is not None:
+                child.windows_job.terminate()
+            child.process.wait(timeout=_TERMINATION_GRACE_S)
+        active = tuple(child for child in children
+                       if not child.kill_before_reap and child.process.poll() is None)
         for child in active:
             if os.name == "posix":
                 self._signal_posix(child, signal.SIGTERM)
@@ -626,3 +639,228 @@ def run_owned_process(
             _REGISTRY.unregister(child)
         elif job is not None:
             job.close()
+
+
+class OwnedBinaryReadError(EOFError):
+    """An incomplete read retaining every byte received before EOF."""
+
+    def __init__(self, partial: bytes) -> None:
+        super().__init__("owned child ended a binary response early")
+        self.partial = partial
+
+
+class OwnedBinaryProcess:
+    """An owned binary stream with one deadline for its entire lifetime."""
+
+    def __init__(
+        self,
+        command: Sequence[str],
+        *,
+        timeout_s: float,
+        environment: Mapping[str, str] | None = None,
+    ) -> None:
+        self.command = tuple(str(item) for item in command)
+        if not self.command:
+            raise ValueError("owned process command must not be empty")
+        if isinstance(timeout_s, bool) or not math.isfinite(timeout_s) or timeout_s <= 0:
+            raise ValueError("owned process timeout must be finite and positive")
+        if os.name == "posix" and not all(
+            hasattr(os, name) for name in ("waitid", "WNOWAIT", "WEXITED", "P_PID")
+        ):
+            raise RuntimeError("owned binary streams require POSIX waitid/WNOWAIT or Windows Jobs")
+        self.timeout_s = timeout_s
+        self._deadline = time.monotonic() + timeout_s
+        self._lock = threading.RLock()
+        self._closed = False
+        self._failure: BaseException | None = None
+        self._stderr = bytearray()
+        self._tasks: queue.Queue[tuple[Callable[[], Any], queue.Queue[Any]] | None] = (
+            queue.Queue()
+        )
+        self._timer: threading.Timer | None = None
+        self._threads: list[threading.Thread] = []
+        _REGISTRY.prepare()
+        job = _WindowsJob.create() if os.name == "nt" else None
+        process = None
+        self._child: _OwnedChild | None = None
+        try:
+            process = subprocess.Popen(
+                (sys.executable, str(_LAUNCHER), str(os.getpid()), "--", *self.command),
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                bufsize=0,
+                env=_popen_environment(environment),
+                start_new_session=os.name == "posix",
+            )
+            if job is not None:
+                job.note("after_popen", process)
+                job.assign(process)
+                job.note("after_assign", process)
+            self._child = _OwnedChild(
+                process, self.command, process.pid if os.name == "posix" else None, job,
+                kill_before_reap=True,
+            )
+            _REGISTRY.register(self._child)
+            _write_marker(process, self.command, environment)
+            for target in (self._work, self._drain_stderr):
+                thread = threading.Thread(target=target, daemon=True)
+                self._threads.append(thread)
+                thread.start()
+            self._timer = threading.Timer(max(0, self._deadline - time.monotonic()),
+                                          self._expire)
+            self._timer.daemon = True
+            self._timer.start()
+            self.write(_HANDSHAKE.encode("ascii"))
+        except BaseException:
+            if self._child is not None:
+                self.abort()
+            else:
+                if process is not None:
+                    process.kill()
+                    process.wait()
+                if job is not None:
+                    job.close()
+            raise
+
+    @property
+    def pid(self) -> int:
+        assert self._child is not None
+        return self._child.process.pid
+
+    @property
+    def stderr(self) -> bytes:
+        with self._lock:
+            return bytes(self._stderr)
+
+    def _expire(self) -> None:
+        self._failure = subprocess.TimeoutExpired(self.command, self.timeout_s)
+        self.abort()
+
+    def _work(self) -> None:
+        while (task := self._tasks.get()) is not None:
+            function, result = task
+            try:
+                result.put((True, function()))
+            except BaseException as error:  # noqa: BLE001 (forward to the waiting owner)
+                result.put((False, error))
+
+    def _drain_stderr(self) -> None:
+        assert self._child is not None and self._child.process.stderr is not None
+        try:
+            while data := self._child.process.stderr.read(65536):
+                with self._lock:
+                    room = (1 << 20) - len(self._stderr)
+                    self._stderr.extend(data[:room])
+                if len(data) > room:
+                    self._failure = RuntimeError("owned child stderr exceeds one mebibyte")
+                    self.abort()
+                    return
+        except (OSError, ValueError):
+            return
+
+    def _call(self, function: Callable[[], Any]) -> Any:
+        try:
+            if self._failure is not None:
+                raise self._failure
+            if self._closed:
+                raise RuntimeError("owned binary process is closed")
+            remaining = self._deadline - time.monotonic()
+            if remaining <= 0:
+                raise subprocess.TimeoutExpired(self.command, self.timeout_s)
+            result: queue.Queue[Any] = queue.Queue(maxsize=1)
+            self._tasks.put((function, result))
+            try:
+                succeeded, value = result.get(timeout=remaining)
+            except queue.Empty:
+                raise subprocess.TimeoutExpired(self.command, self.timeout_s) from None
+            if self._failure is not None:
+                raise self._failure
+            if not succeeded:
+                raise value
+            return value
+        except BaseException:
+            self.abort()
+            raise
+
+    def write(self, data: bytes) -> None:
+        def write_all() -> None:
+            assert self._child is not None and self._child.process.stdin is not None
+            view = memoryview(data)
+            while view:
+                written = self._child.process.stdin.write(view)
+                if not written:
+                    raise BrokenPipeError("owned child closed its input")
+                view = view[written:]
+        self._call(write_all)
+
+    def read_exact(self, size: int) -> bytes:
+        if type(size) is not int or size < 0:
+            raise ValueError("binary read size must be a nonnegative integer")
+
+        def read_all() -> bytes:
+            assert self._child is not None and self._child.process.stdout is not None
+            data = bytearray()
+            while len(data) < size:
+                chunk = self._child.process.stdout.read(size - len(data))
+                if not chunk:
+                    raise OwnedBinaryReadError(bytes(data))
+                data.extend(chunk)
+            return bytes(data)
+        return self._call(read_all)
+
+    def finish(self) -> int:
+        """Close input, require clean output EOF, and reap the successful child."""
+        def finish_io() -> int:
+            assert self._child is not None
+            process = self._child.process
+            assert process.stdin is not None and process.stdout is not None
+            process.stdin.close()
+            if process.stdout.read(1):
+                raise RuntimeError("owned child wrote trailing protocol bytes")
+            if os.name == "posix":
+                # Keep the leader unreaped until its group has been killed. Its PID
+                # then still authenticates descendants even after early leader exit.
+                os.waitid(os.P_PID, process.pid, os.WEXITED | os.WNOWAIT)
+                _REGISTRY.terminate(self._child)
+                assert process.returncode is not None
+                status = process.returncode
+            else:
+                status = process.wait(timeout=max(0, self._deadline - time.monotonic()))
+            self._threads[1].join(timeout=max(0, self._deadline - time.monotonic()))
+            if self._threads[1].is_alive():
+                raise subprocess.TimeoutExpired(self.command, self.timeout_s)
+            return status
+        try:
+            return self._call(finish_io)
+        finally:
+            self.abort()
+
+    def abort(self) -> None:
+        """Idempotently stop the owned process and release its ownership record."""
+        with self._lock:
+            if self._closed:
+                return
+            self._closed = True
+            if self._timer is not None:
+                self._timer.cancel()
+            if self._child is not None:
+                try:
+                    _REGISTRY.terminate(self._child)
+                finally:
+                    _REGISTRY.unregister(self._child)
+            self._tasks.put(None)
+        for thread in self._threads:
+            if thread is not threading.current_thread():
+                thread.join(timeout=0.1)
+        if self._child is not None:
+            for pipe in (self._child.process.stdin, self._child.process.stdout,
+                         self._child.process.stderr):
+                if pipe is not None:
+                    pipe.close()
+
+    def __enter__(self) -> OwnedBinaryProcess:  # noqa: PYI034 (Python 3.10 compatibility)
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
+        self.abort()
