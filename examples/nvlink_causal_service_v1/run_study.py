@@ -680,7 +680,7 @@ def run_study(output_root):
                 "evidence_sha256": digest(data),
             }
         )
-        return result
+        return None if cell_findings else result
 
     rates, sizes = frozen["link_rates_bytes_per_second"], frozen["payload_bytes"]
     for rate, size, credits, capacity, delay in product(

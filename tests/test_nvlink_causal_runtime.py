@@ -422,7 +422,7 @@ def test_packet_eligibility_is_a_validated_integer_timestamp(value):
 
 
 @pytest.fixture
-def study_checker():
+def study_module():
     import importlib.util
 
     spec = importlib.util.spec_from_file_location(
@@ -431,7 +431,12 @@ def study_checker():
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module.guard_findings
+    return module
+
+
+@pytest.fixture
+def study_checker(study_module):
+    return study_module.guard_findings
 
 
 @pytest.mark.parametrize("mutation", ["capacity", "reservation", "visibility", "credit-source"])
@@ -472,3 +477,38 @@ def test_evidence_checker_reports_missing_read_control_without_raising(study_che
     findings = study_checker(result, config, inputs)
     assert "exact input packet identities" in findings
     assert any("read request present" in finding for finding in findings)
+
+
+def test_fatal_cell_keeps_raw_evidence_and_writes_void_summary(study_module, tmp_path, monkeypatch):
+    import json
+
+    original_serve = study_module.NvlinkDomainService.serve_aligned
+    original_git = study_module.git
+
+    def remove_read_requests(self, inputs, **kwargs):
+        result = original_serve(self, inputs, **kwargs)
+        if not inputs:
+            return result
+        return replace(
+            result,
+            packets=tuple(
+                p for p in result.packets if p.direction is not NvlinkPacketDirection.REQUEST
+            ),
+        )
+
+    def local_test_source(*arguments):
+        if arguments[0] == "show" and arguments[1].startswith("HEAD:"):
+            return (ROOT / arguments[1].removeprefix("HEAD:")).read_bytes()
+        return original_git(*arguments)
+
+    monkeypatch.setattr(study_module.NvlinkDomainService, "serve_aligned", remove_read_requests)
+    monkeypatch.setattr(study_module, "git", local_test_source)
+    output = tmp_path / "malformed-cell"
+    result = study_module.run_study(output)
+    assert result["verdict"] == "VOID"
+    assert result["behavioral_score"] is None
+    assert any("read request present" in finding for finding in result["fatal_findings"])
+    assert json.loads((output / "summary.json").read_text()) == result
+    invalid = [row for row in result["configurations"] if row["fatal_verdict"] == "VOID"]
+    assert invalid
+    assert all((output / row["evidence_file"]).is_file() for row in invalid)
