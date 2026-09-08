@@ -1,0 +1,103 @@
+{
+  "artifact_kind": "study_measurement_request",
+  "request_id": "nvlink-four-card-boundary-v1",
+  "owning_tasks": ["TRAF-73", "TRAF-86"],
+  "input_evidence": "synthetic_payloads",
+  "reservation_status": "awaiting-reservation",
+  "capture_ready": false,
+  "attempts": [],
+  "measurements": [],
+  "hardware": {
+    "node_count": 1,
+    "gpu_count": 4,
+    "campaigns": ["A100", "GH200"],
+    "campaign_rule": "Qualify and report each architecture separately; do not transfer absolute rates or assume the same four-card connectivity.",
+    "required_allocation": "exclusive GPUs with no competing compute processes",
+    "maximum_physical_incast_degree": 3,
+    "topology": "observed device identities and directed physical port attachments"
+  },
+  "required_pre_capture_freeze": [
+    "Content hashes of source, compiler, executable and device code objects",
+    "A runnable producer with explicit unpaced and monotone-ordinal paced modes",
+    "Instruction-width inspection for the scalar and vector variants",
+    "Observed physical topology and link-rate units for each selected card",
+    "Clock mappings, uncertainty bounds and instrumented-versus-uninstrumented controls",
+    "Exact cells, repetitions, thermal controls, physical floors, ceilings and mechanism-specific quantitative bands",
+    "Separate identification cells and unseen acceptance cells",
+    "Approved allocation or reservation reference"
+  ],
+  "required_observations": [
+    "device_UUID_and_architecture",
+    "source_binary_and_device_code_hashes",
+    "common_clock_mapping_and_uncertainty",
+    "host_submission_start_and_end",
+    "graph_build_instantiation_first_replay_and_warm_replay_intervals",
+    "per_source_producer_release_and_finish",
+    "destination_visibility_with_defined_memory_order",
+    "local_device_event_durations",
+    "common_first_release_to_last_visibility_span",
+    "per_link_counter_field_ID_scope_units_sample_timestamp_and_update_latency",
+    "clock_power_temperature_throttle_and_error_records"
+  ],
+  "stages": [
+    {
+      "id": "topology-and-clock-qualification",
+      "owner": "TRAF-73",
+      "discriminates": "Physical attachment and clock-domain assumptions before timing comparisons",
+      "matrix": {"ordered_pairs": "all 12 directed pairs", "architectures": ["A100", "GH200"]},
+      "required_observations": ["UUID-to-port map", "peer-access capability", "active link count and per-direction rate", "clock offset and drift uncertainty before and after the batch"],
+      "rejection_conditions": ["Assumed NV4 connectivity without observation", "Unsupported peer access or transport substitution", "No bounded mapping for timestamps used in a common phase"]
+    },
+    {
+      "id": "producer-and-launch-discrimination",
+      "owner": "TRAF-86",
+      "discriminates": "Producer instruction issue, intentional pacing and host launch work versus transport service",
+      "matrix": {
+        "pair": [0, 1],
+        "payload_bytes": [4194304, 8388608],
+        "producers": ["retained historical producer", "unpaced scalar peer copy", "unpaced verified vector peer copy", "asynchronous peer copy engine"],
+        "kernel_thread_blocks": [32, 128],
+        "threads_per_block": 128,
+        "copy_engine_streams": [1, 4],
+        "launch_modes": ["eager", "warm captured CUDA graph"],
+        "pattern_labels_with_identical_order": ["one_source", "two_source_simultaneous", "three_source_simultaneous"]
+      },
+      "required_observations": ["Separate first and warm launches", "Compiled memory instruction widths", "Actual producer release and destination visibility", "Unpaced producer has no clock-based busy wait"],
+      "rejection_conditions": ["Treating access_width as compiled instruction evidence", "Changing an address-pattern label changes an unpaced release schedule", "Graph construction charged to device kernel service", "A paced copy-engine tail is called unpaced service"]
+    },
+    {
+      "id": "memory-path-discrimination",
+      "owner": "TRAF-86",
+      "discriminates": "Source memory reads, destination memory writes and cache reuse versus link traffic",
+      "matrix": {
+        "payload_bytes": [4194304, 8388608],
+        "destination": ["local", "peer"],
+        "source": ["local memory copy", "register-generated stores"],
+        "working_set": ["warm same addresses", "rotating addresses larger than the observed last-level cache"]
+      },
+      "required_observations": ["Address range and allocation placement", "Observed cache size", "Payload bytes and available memory/link traffic counters", "Separate source, link and receiver service floors"],
+      "rejection_conditions": ["Calling warm-cache traffic a high-bandwidth-memory measurement", "Using register-generated stores as an identical copy workload", "Converting an undocumented raw counter directly to packet count"]
+    },
+    {
+      "id": "sharing-and-phase-discrimination",
+      "owner": "TRAF-86",
+      "discriminates": "Receiver sharing, independent links and causal source release",
+      "matrix": {
+        "payload_bytes": [4194304, 8388608],
+        "patterns": ["one sender", "two-sender incast", "three-sender incast", "fan-out", "disjoint pairs", "opposite directions"],
+        "release_conditions": ["aligned within measured uncertainty", "deliberately staggered with recorded starts"]
+      },
+      "required_observations": ["Common phase and each local visit", "All source starts and receiver visibility terminals", "Per-link traffic and actual shared attachments", "Payload checksum plus a separate temporal-order observation when order is claimed"],
+      "rejection_conditions": ["Maximum local duration substituted for a common phase", "Assumed launch budget reported as observed skew", "Missing clock uncertainty or arrival visibility semantics", "Four-card evidence extrapolated to physical degree four or greater"]
+    },
+    {
+      "id": "collective-boundary-comparison",
+      "owner": "TRAF-86",
+      "discriminates": "Library protocol and registration costs above the directed packet path",
+      "matrix": {"ranks": [2, 4], "payload_bytes": [4194304, 8388608], "collectives": ["all-reduce", "all-to-all"], "launch_modes": ["eager", "warm captured CUDA graph"]},
+      "required_observations": ["Library build identity", "Selected algorithm, protocol and channel count", "Registration interval", "Matched directed-byte ledger and phase completion"],
+      "rejection_conditions": ["A library algorithm change absorbed into a link-rate calibration", "Registration or launch charged twice", "No complete participating-rank phase"]
+    }
+  ],
+  "off_path": "Retain the existing declared candidate and compatibility results exactly until a separately frozen, valid identification changes a named parameter."
+}
