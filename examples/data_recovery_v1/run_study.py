@@ -39,6 +39,8 @@ from simllm.backends.htsim_rnic import (
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 FREEZE = "7904e8f09a4174f7320a0107ac676660f3dfcf02"
+BACKOFF_FREEZE = "fc8614599e51a05d23535f566382368639f52043"
+PROBE_POLICIES = ("constant", "exponential")
 ARMS = ("disabled", "recovery-only", "window-only", "combined")
 BUFFER_BYTES = 1 << 20
 MAX_WIRE_BYTES = 4160
@@ -47,13 +49,36 @@ PROBE_WINDOWS = 4
 MAXIMUM_RETRANSMISSIONS = 8
 
 
-def selections(arm, bounds):
+def probe_schedule(probe_policy="constant"):
+    if probe_policy not in PROBE_POLICIES:
+        raise ValueError(f"unknown probe policy: {probe_policy}")
+    base = PROBE_WINDOWS * CONTROL_DEADLINE_PS
+    intervals = [base * (2**index if probe_policy == "exponential" else 1)
+                 for index in range(MAXIMUM_RETRANSMISSIONS - 1)]
+    return {"probe_policy": probe_policy, "probe_base_interval_ps": base,
+            "probe_interval_rule": "P*2^(attempt-1)" if probe_policy == "exponential" else "P",
+            "probe_intervals_ps": intervals,
+            "cumulative_probe_timer_allowance_ps": sum(intervals),
+            "terminal_retry": "legacy-timeout"}
+
+
+def expectation_contract(probe_policy="constant"):
+    probe_schedule(probe_policy)
+    return ((BACKOFF_FREEZE, HERE / "expectations_backoff.md") if probe_policy == "exponential"
+            else (FREEZE, HERE / "expectations.md"))
+
+
+def selections(arm, bounds, probe_policy="constant"):
+    probe_schedule(probe_policy)
+    if bounds.get("probe_policy", probe_policy) != probe_policy:
+        raise ValueError("probe policy disagrees with declared bounds")
     if arm not in (*ARMS, "legacy-none"):
         raise ValueError(f"unknown arm: {arm}")
     bounded = arm in ("window-only", "combined")
     return {
         "control_recovery": "none" if arm == "legacy-none" else "headroom",
-        "data_recovery": "deadline" if arm in ("recovery-only", "combined") else "none",
+        "data_recovery": ("exponential" if probe_policy == "exponential" else "deadline")
+        if arm in ("recovery-only", "combined") else "none",
         "retry_probe_windows": PROBE_WINDOWS,
         "initial_window_bytes": bounds["initial_window_bytes"] if bounded else None,
         "initial_window_fan_in": bounds["declared_fan_in"] if bounded else None,
@@ -85,7 +110,8 @@ def topology_inputs(path):
             "hop_propagation_ps": 1_000_000}
 
 
-def pre_run_bounds(cell: Cell):
+def pre_run_bounds(cell: Cell, probe_policy="constant"):
+    schedule = probe_schedule(probe_policy)
     topology = topology_inputs(cell.topology)
     offered = messages(cell.goal)
     receiver_bytes, leaf_flows = Counter(), Counter()
@@ -111,7 +137,7 @@ def pre_run_bounds(cell: Cell):
         + 8 * topology["hop_propagation_ps"] + MAX_WIRE_BYTES * 8000 // cell.rate)
     budget = 9 * service + 8 * (PROBE_WINDOWS * CONTROL_DEADLINE_PS + queue_allowance)
     return {
-        **topology, "expected_flow_count": sum(offered.values()),
+        **topology, **schedule, "expected_flow_count": sum(offered.values()),
         "receiver_bytes": {str(key): value for key, value in sorted(receiver_bytes.items())},
         "leaf_input_send_counts": {str(key): value for key, value in sorted(leaf_flows.items())},
         "declared_fan_in": fan_in, "initial_window_bytes": BUFFER_BYTES // fan_in,
@@ -162,6 +188,7 @@ def observe(cell, output, stdout, returncode, arm, bounds):
     manifest = [line for line in stdout.splitlines() if line.startswith("[RNIC manifest]")]
     row = {
         "cell": cell.name, "source": cell.source, "pattern": cell.pattern,
+        "probe_policy": bounds.get("probe_policy", "constant"),
         "width": cell.width, "rate_gbps": cell.rate, "arm": arm,
         "formerly_failed": cell.formerly_failed, "returncode": returncode,
         "status": "failed", "bounds": bounds, "fatal_findings": [],
@@ -224,7 +251,7 @@ def manifest_findings(row):
     except (ValueError, TypeError) as error:
         return [f"invalid native manifest: {error}"]
     row["control_recovery"], row["data_recovery"] = control, data
-    expected = selections(row["arm"], row["bounds"])
+    expected = selections(row["arm"], row["bounds"], row.get("probe_policy", "constant"))
     if control.get("recovery") != expected["control_recovery"]:
         findings.append("control recovery manifest disagrees with typed selection")
     bounded = expected["initial_window_bytes"] is not None
@@ -235,6 +262,8 @@ def manifest_findings(row):
         "initial_window_fan_in": expected["initial_window_fan_in"] if bounded else 0,
         "initial_buffer_bytes": BUFFER_BYTES, "initial_sizing": "F-times-U-at-most-B",
         "probe_epoch": "physical-retry-serialization-end", "recovery_release": "actual-arrival-tick",
+        "probe_backoff": {"none": "none", "deadline": "constant", "exponential": "exponential"}[
+            expected["data_recovery"]], "terminal_retry": "legacy-timeout",
     }
     for key, value in wanted.items():
         if data.get(key) != value:
@@ -360,11 +389,21 @@ def write_normalization(cell, output):
                              f.baseline_fct_ps, f.slowdown, "diagnostic-shared-or-dynamic-phase"))
 
 
-def run_cell(cell, arm, binary, root, provenance, bounds, resume=False, timeout_s=3600):
+def run_cell(cell, arm, binary, root, provenance, bounds, resume=False, timeout_s=3600,
+             probe_policy="constant"):
+    schedule = probe_schedule(probe_policy)
+    freeze, expectations = expectation_contract(probe_policy)
+    for field, wanted in (("probe_policy", probe_policy), ("expectations_commit", freeze),
+                          ("expectations_file", expectations.name)):
+        if provenance.get(field, wanted) != wanted:
+            raise ValueError(f"probe policy disagrees with run provenance: {field}")
+    selected = selections(arm, bounds, probe_policy)
     output = root / cell.name / arm
     output.mkdir(parents=True, exist_ok=True)
     lock = {
         "expectations_sha256": provenance["expectations_sha256"],
+        "expectations_commit": provenance.get("expectations_commit", freeze),
+        "expectations_file": provenance.get("expectations_file", expectations.name),
         "binary_sha256": provenance["binary_sha256"], "script_sha256": provenance["script_sha256"],
         "helper_sha256": provenance["helper_sha256"], "wrapper_sha256": provenance["wrapper_sha256"],
         "goal_sha256": digest(cell.reference / f"{cell.goal_stem}.bin"),
@@ -373,7 +412,7 @@ def run_cell(cell, arm, binary, root, provenance, bounds, resume=False, timeout_
         "reference_completion_sha256": digest(cell.reference / "completion.csv")
         if not cell.formerly_failed else None,
         "seed": cell.seed, "rate_gbps": cell.rate, "arm": arm, "bounds": bounds,
-        "selections": selections(arm, bounds), "timeout_s": timeout_s,
+        "selections": selected, "timeout_s": timeout_s, **schedule,
     }
     lock_path = output / "inputs.json"
     if lock_path.exists():
@@ -446,7 +485,7 @@ def summarize(rows, provenance, expected_jobs=None):
             contrasts.append({"family": "rate_contrast", "width": width,
                               "phase_ratio_200_over_400": slow["phase_makespan_ps"] /
                               fast["phase_makespan_ps"], "expected_serialization_ratio": 2,
-                              "fixed_probe_interval_ps": PROBE_WINDOWS * CONTROL_DEADLINE_PS})
+                              **probe_schedule(slow.get("probe_policy", "constant"))})
     fatal = [{"cell": row["cell"], "arm": row["arm"], "finding": finding}
              for row in rows for finding in row["fatal_findings"]]
     if expected_jobs is not None and (set(indexed) != set(expected_jobs) or len(indexed) != len(rows)):
@@ -495,13 +534,15 @@ def main():
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--timeout-s", type=int, default=3600)
+    parser.add_argument("--probe-policy", choices=PROBE_POLICIES, default="constant")
     args = parser.parse_args()
     if args.workers < 1 or args.timeout_s < 1:
         parser.error("workers and timeout must be positive")
     if args.out is None:
         if not os.getenv("SIMLLM_DATA_ROOT"):
             parser.error("configure SIMLLM_DATA_ROOT or --out")
-        args.out = Path(os.environ["SIMLLM_DATA_ROOT"]) / "data_recovery_v1"
+        args.out = Path(os.environ["SIMLLM_DATA_ROOT"]) / (
+            "data_recovery_backoff_v1" if args.probe_policy == "exponential" else "data_recovery_v1")
     if args.out.resolve().is_relative_to(REPO):
         parser.error("--out must be outside the repository")
     if args.collective_reference is None or args.pipeline_reference is None:
@@ -514,16 +555,22 @@ def main():
         parser.error("backend source must be committed before recording implementation provenance")
     cells = discover(args.collective_reference, args.pipeline_reference)
     args.out.mkdir(parents=True, exist_ok=True)
-    bounds = {cell.name: pre_run_bounds(cell) for cell in cells}
+    bounds = {cell.name: pre_run_bounds(cell, args.probe_policy) for cell in cells}
     write_once(args.out / "physical_bounds.json", bounds)
     for cell in cells:
         bounds[cell.name]["ideal_phase_ps"] = ideal_reference(cell)
         bounds[cell.name]["engineering_budget_over_ideal"] = (
             bounds[cell.name]["engineering_budget_ps"] / bounds[cell.name]["ideal_phase_ps"])
     write_once(args.out / "pre_run_bounds.json", bounds)
+    freeze, expectations = expectation_contract(args.probe_policy)
     provenance = {
-        "expectations_commit": git("rev-parse", FREEZE),
-        "expectations_sha256": text_digests(HERE / "expectations.md"),
+        **probe_schedule(args.probe_policy),
+        "expectations_commit": git("rev-parse", freeze),
+        "expectations_file": expectations.name,
+        "expectations_sha256": text_digests(expectations),
+        "base_expectations_commit": FREEZE,
+        "base_expectations_sha256": text_digests(HERE / "expectations.md"),
+        "terminal_retry_expectations_commit": BACKOFF_FREEZE,
         "simllm_commit": git("rev-parse", "HEAD"), "htsim_commit": git("rev-parse", "HEAD", cwd=source),
         "binary_sha256": digest(binary), "baseline_binary_sha256": digest(baseline),
         "script_sha256": digest(__file__),
@@ -536,7 +583,7 @@ def main():
     snapshots = args.out / "runner-snapshots"
     snapshots.mkdir(exist_ok=True)
     for path in (Path(__file__), REPO / "examples/control_recovery_v1/run_study.py",
-                 REPO / "simllm/backends/htsim_rnic.py", HERE / "expectations.md"):
+                 REPO / "simllm/backends/htsim_rnic.py", HERE / "expectations.md", expectations):
         target = snapshots / f"{digest(path)}{path.suffix}"
         if not target.exists():
             target.write_bytes(path.read_bytes())
@@ -546,7 +593,7 @@ def main():
     def execute(job):
         cell, arm = job
         return run_cell(cell, arm, Path(binary), args.out, provenance, bounds[cell.name],
-                        args.resume, args.timeout_s)
+                        args.resume, args.timeout_s, args.probe_policy)
 
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         rows = list(pool.map(execute, jobs))

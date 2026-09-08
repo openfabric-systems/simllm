@@ -67,7 +67,7 @@ class HtsimRnicConfig:
     #: control admission protection on rnic-cn; none preserves the pinned command
     control_recovery: Literal["none", "headroom"] = "none"
     #: physical deadline probes for missing DATA; none preserves legacy retries
-    data_recovery: Literal["none", "deadline"] = "none"
+    data_recovery: Literal["none", "deadline", "exponential"] = "none"
     #: control windows after a retry's serialization end before its next probe
     retry_probe_windows: int = 4
     #: optional pre-grant wire budget, paired with a declared pool fan-in bound
@@ -92,14 +92,14 @@ class HtsimRnicConfig:
             raise ValueError("control_recovery requires rnic-cn")
         if "-rnic_cn_control_recovery" in self.extra_flags:
             raise ValueError("use typed control_recovery instead of extra_flags")
-        if self.data_recovery not in ("none", "deadline"):
-            raise ValueError("data_recovery must be none or deadline")
+        if self.data_recovery not in ("none", "deadline", "exponential"):
+            raise ValueError("data_recovery must be none, deadline or exponential")
         if type(self.retry_probe_windows) is not int:
             raise TypeError("retry_probe_windows must be an integer")
         if not 1 <= self.retry_probe_windows <= 2**32 - 1:
             raise ValueError("retry_probe_windows must be a positive uint32")
         if self.data_recovery == "none" and self.retry_probe_windows != 4:
-            raise ValueError("nondefault retry_probe_windows requires deadline recovery")
+            raise ValueError("nondefault retry_probe_windows requires enabled data recovery")
         for name, minimum in (("initial_window_bytes", 0), ("initial_window_fan_in", 1)):
             value = getattr(self, name)
             if value is not None:
@@ -218,9 +218,9 @@ def parse_data_recovery_manifest(manifest: list[str]) -> dict[str, str | int]:
     """Read explicit DATA recovery fields without inventing legacy defaults."""
 
     prefixes = ("rnic_cn_data_", "rnic_cn_retry_", "rnic_cn_initial_", "rnic_cn_recovery_",
-                "rnic_cn_probe_")
+                "rnic_cn_probe_", "rnic_cn_terminal_")
     text_fields = {"data_recovery", "initial_window", "initial_sizing", "recovery_release",
-                   "probe_epoch"}
+                   "probe_epoch", "probe_backoff", "terminal_retry"}
     counters = {"rnic_cn_tail_probes", "rnic_cn_tail_probe_wire_bytes",
                 "rnic_cn_late_retry_admissions", "rnic_cn_deterministic_retransmissions",
                 "rnic_cn_deterministic_retransmission_wire_bytes"}
@@ -244,8 +244,12 @@ def parse_data_recovery_manifest(manifest: list[str]) -> dict[str, str | int]:
             if name in record and record[name] != parsed:
                 raise ValueError(f"conflicting data recovery manifest field: {name}")
             record[name] = parsed
-    if "data_recovery" in record and record["data_recovery"] not in ("none", "deadline"):
+    if "data_recovery" in record and record["data_recovery"] not in ("none", "deadline", "exponential"):
         raise ValueError("invalid native data_recovery selection")
+    if "probe_backoff" in record and record["probe_backoff"] not in ("none", "constant", "exponential"):
+        raise ValueError("invalid native probe_backoff selection")
+    if "terminal_retry" in record and record["terminal_retry"] != "legacy-timeout":
+        raise ValueError("invalid native terminal_retry selection")
     if "initial_window" in record and record["initial_window"] not in ("none", "bounded"):
         raise ValueError("invalid native initial_window selection")
     return record

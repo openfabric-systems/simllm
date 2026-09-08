@@ -23,7 +23,7 @@ HEADER = ("profile,flow_id,source,destination,tag,payload_bytes,"
           "start_time_ps,completion_time_ps,fct_ps\n")
 
 
-def fixture_cell(tmp_path, *, formerly_failed=False):
+def fixture_cell(tmp_path, *, formerly_failed=False, probe_policy="constant"):
     reference = tmp_path / "collective-all-to-all-w8-400g-rnic-cn"
     ideal = tmp_path / "collective-all-to-all-w8-400g-rnic-nn"
     reference.mkdir()
@@ -37,7 +37,7 @@ def fixture_cell(tmp_path, *, formerly_failed=False):
     (ideal / "completion.csv").write_text(HEADER + "rnic-nn,1,0,8,1,100,0,4002000,4002000\n")
     cell = study.Cell("collective", reference, 8, 400, "all-to-all", topology,
                       "collective", "1", formerly_failed)
-    bounds = study.pre_run_bounds(cell)
+    bounds = study.pre_run_bounds(cell, probe_policy)
     bounds["ideal_phase_ps"] = study.ideal_reference(cell)
     bounds["engineering_budget_over_ideal"] = (
         bounds["engineering_budget_ps"] / bounds["ideal_phase_ps"])
@@ -45,8 +45,11 @@ def fixture_cell(tmp_path, *, formerly_failed=False):
 
 
 def manifest(arm, bounds):
-    selected = study.selections(arm, bounds)
+    selected = study.selections(arm, bounds, bounds.get("probe_policy", "constant"))
+    backoff = {"none": "none", "deadline": "constant", "exponential": "exponential"}[
+        selected["data_recovery"]]
     data = (f"rnic_cn_data_recovery={selected['data_recovery']} rnic_cn_retry_probe_windows=4 "
+            f"rnic_cn_probe_backoff={backoff} rnic_cn_terminal_retry=legacy-timeout "
             f"rnic_cn_initial_window={'bounded' if selected['initial_window_bytes'] is not None else 'none'} "
             f"rnic_cn_initial_window_bytes={selected['initial_window_bytes'] or 0} "
             f"rnic_cn_initial_window_fan_in={selected['initial_window_fan_in'] or 0} "
@@ -278,3 +281,71 @@ def test_receiver_prefix_floor_retains_physical_impossibility_check():
     findings, ratio = study.receiver_prefix_findings(flows, 400)
     assert findings == ["receiver 8 prefix 2 beats byte floor"]
     assert ratio < 1
+
+
+def test_exponential_schedule_is_separate_from_unchanged_engineering_budget(tmp_path):
+    cell, _ = fixture_cell(tmp_path)
+    constant = study.pre_run_bounds(cell)
+    exponential = study.pre_run_bounds(cell, "exponential")
+    timer_fields = set(study.probe_schedule())
+    assert {key: value for key, value in constant.items() if key not in timer_fields} == {
+        key: value for key, value in exponential.items() if key not in timer_fields}
+    assert exponential["probe_intervals_ps"] == [40_000_000 * 2**index for index in range(7)]
+    assert exponential["cumulative_probe_timer_allowance_ps"] == 127 * 40_000_000 == 5_080_000_000
+    assert constant["cumulative_probe_timer_allowance_ps"] == 7 * 40_000_000
+    assert exponential["terminal_retry"] == "legacy-timeout"
+    assert study.expectation_contract() == (study.FREEZE, study.HERE / "expectations.md")
+    assert study.expectation_contract("exponential") == (
+        "fc8614599e51a05d23535f566382368639f52043", study.HERE / "expectations_backoff.md")
+
+
+@pytest.mark.parametrize("arm", ["legacy-none", *study.ARMS])
+def test_exponential_selection_changes_only_recovery_arms(tmp_path, arm):
+    cell, _ = fixture_cell(tmp_path)
+    constant = study.selections(arm, study.pre_run_bounds(cell))
+    exponential = study.selections(arm, study.pre_run_bounds(cell, "exponential"), "exponential")
+    expected = {**constant}
+    if arm in ("recovery-only", "combined"):
+        expected["data_recovery"] = "exponential"
+    assert exponential == expected
+
+
+@pytest.mark.parametrize("field,value", [("probe_backoff", "constant"),
+                                         ("terminal_retry", "next-probe")])
+def test_exponential_manifest_disagreement_is_fatal(tmp_path, field, value):
+    cell, bounds = fixture_cell(tmp_path, probe_policy="exponential")
+    stdout = manifest("combined", bounds)
+    expected = "exponential" if field == "probe_backoff" else "legacy-timeout"
+    stdout = stdout.replace(f"rnic_cn_{field}={expected}", f"rnic_cn_{field}={value}")
+    row = study.observe(cell, cell.reference, stdout, 0, "combined", bounds)
+    study.apply_guards(cell, cell.reference, row)
+    assert study.summarize([row], {})["verdict"] == "void"
+
+
+def test_exponential_execution_locks_policy_freeze_and_rejects_constant_resume(tmp_path, monkeypatch):
+    cell, bounds = fixture_cell(tmp_path, probe_policy="exponential")
+    binary, root = tmp_path / "backend", tmp_path / "run"
+    binary.write_bytes(b"native")
+    provenance = {"expectations_sha256": ["backoff"], "binary_sha256": study.digest(binary),
+                  "script_sha256": "runner", "helper_sha256": "helper", "wrapper_sha256": "wrapper",
+                  "probe_policy": "exponential", "expectations_commit": study.BACKOFF_FREEZE}
+
+    def execute(command, **kwargs):
+        assert command[command.index("-rnic_cn_data_recovery") + 1] == "exponential"
+        Path(command[command.index("-completion_csv") + 1]).write_bytes(
+            (cell.reference / "completion.csv").read_bytes())
+        return CompletedProcess(command, 0, manifest("combined", bounds), "")
+
+    monkeypatch.setattr(study, "run_owned_process", execute)
+    row = study.run_cell(cell, "combined", binary, root, provenance, bounds, probe_policy="exponential")
+    assert row["fatal_findings"] == []
+    assert row["probe_policy"] == row["inputs"]["probe_policy"] == "exponential"
+    assert row["inputs"]["expectations_commit"] == study.BACKOFF_FREEZE
+    assert row["inputs"]["expectations_file"] == "expectations_backoff.md"
+    assert row["inputs"]["selections"]["data_recovery"] == "exponential"
+    with pytest.raises(ValueError, match="provenance"):
+        study.run_cell(cell, "combined", binary, root, provenance, bounds, resume=True)
+    with pytest.raises(ValueError, match="resume input mismatch"):
+        study.run_cell(cell, "combined", binary, root,
+                       {**provenance, "probe_policy": "constant", "expectations_commit": study.FREEZE},
+                       study.pre_run_bounds(cell), resume=True)

@@ -186,12 +186,13 @@ def test_control_manifest_rejects_negative_or_conflicting_counters(lines):
 
 
 @pytest.mark.parametrize("budget", [0, 4159, 4160, 8320, 2**64 - 1])
-def test_data_recovery_and_initial_window_are_independent_typed_selections(budget):
+@pytest.mark.parametrize("recovery", ["deadline", "exponential"])
+def test_data_recovery_and_initial_window_are_independent_typed_selections(budget, recovery):
     cfg = HtsimRnicConfig(Path("t.bin"), "rnic-cn", 400_000_000_000,
-                          data_recovery="deadline", retry_probe_windows=2,
+                          data_recovery=recovery, retry_probe_windows=2,
                           initial_window_bytes=budget, initial_window_fan_in=1)
     assert build_htsim_rnic_command(Path("htsim_rnic"), cfg)[-8:] == [
-        "-rnic_cn_data_recovery", "deadline", "-rnic_cn_retry_probe_windows", "2",
+        "-rnic_cn_data_recovery", recovery, "-rnic_cn_retry_probe_windows", "2",
         "-rnic_cn_initial_window_bytes", str(budget), "-rnic_cn_initial_window_fan_in", "1"]
     cfg = HtsimRnicConfig(Path("t.bin"), "rnic-cn", 1,
                           initial_window_bytes=budget, initial_window_fan_in=1)
@@ -201,6 +202,7 @@ def test_data_recovery_and_initial_window_are_independent_typed_selections(budge
 @pytest.mark.parametrize("kwargs", [
     {"data_recovery": "headroom"}, {"data_recovery": True},
     {"data_recovery": "deadline", "profile": "rnic-nn"},
+    {"data_recovery": "exponential", "profile": "rnic-nn-fluid"},
     {"initial_window_bytes": 0, "initial_window_fan_in": 1, "profile": "rnic-nn-fluid"},
     {"retry_probe_windows": 2}, {"retry_probe_windows": 0},
     {"data_recovery": "deadline", "retry_probe_windows": 2**32},
@@ -259,7 +261,17 @@ def test_data_manifest_preserves_legacy_absence_and_reaches_run_result(monkeypat
     "rnic_cn_tail_probe_wire_bytes=-1",
     "rnic_cn_tail_probe_wire_bytes=4160 rnic_cn_tail_probe_wire_bytes=0",
     "rnic_cn_deterministic_retransmission_wire_bytes=1.5",
+    "rnic_cn_probe_backoff=quadratic", "rnic_cn_terminal_retry=next-probe",
+    "rnic_cn_probe_backoff=constant rnic_cn_probe_backoff=exponential",
 ])
 def test_data_manifest_rejects_invalid_and_conflicting_fields(fields):
     with pytest.raises(ValueError):
         parse_data_recovery_manifest([f"[RNIC manifest] {fields}"])
+
+
+def test_exponential_native_manifest_retains_backoff_and_terminal_policy():
+    record = parse_data_recovery_manifest([
+        ("[RNIC manifest] rnic_cn_data_recovery=exponential "
+         "rnic_cn_probe_backoff=exponential rnic_cn_terminal_retry=legacy-timeout")])
+    assert record == {"data_recovery": "exponential", "probe_backoff": "exponential",
+                      "terminal_retry": "legacy-timeout"}
