@@ -23,7 +23,8 @@ The native wire grammar and existing version 1 and version 2 serialized
 artifacts stay exact. Extent identity, attempt identity, parent identity and
 byte offsets stay distinct. A packet terminal does not consume its parent.
 
-Only extent and operation completion events cross into the execution result.
+Only extent and operation lifecycle events cross into the execution result;
+submission, eligibility, grant and completion are all retained.
 An extent becomes visible after every required payload packet becomes visible.
 The event-derived execution result must agree exactly with the returned step
 result before request metrics consume it. A selected local packet phase never
@@ -35,7 +36,9 @@ ordinary step sink. The retained physical remote-session/locality composition
 stays explicitly unavailable under BACK-72. Parallel speculative preparation
 cannot share this mutable packet session. All overlapping packet visits remain
 a complete resource ledger; their sum is never called a critical-path wait or
-added wholesale to token latency. TRAF-54 owns richer critical-path reporting.
+added wholesale to token latency. BACK-73 owns detailed packet critical-path reporting, which is explicitly
+unavailable in this initial packet path. COMP-40 retains host-port emission
+until a host protocol is actually bound, even if peer-port binding completes.
 
 ## Physical route model
 
@@ -113,7 +116,10 @@ buffer. Submit an identical next transfer at its logical visibility boundary.
 For additional return processing D in {0,100000}ps, the next transmission
 starts at that boundary plus P+D; its completion adds P+D+L+P+R. An
 additional200000ps acknowledgement processing tail must remain pending without delaying consumer visibility or resetting the
-calendar. Drain only after the final logical step and retain its separate time.
+calendar. Drain only after the final logical step and retain its separate time. For this
+control, first visibility is22760ps, second start is23760+D ps, second
+visibility is46520+D ps and final drain is236640+D ps. Acknowledgements
+release retained state without occupying the link or endpoint after TX service.
 
 For two queued fan-out extents, source feed is100GB/s, link rates are12.5 or
 25GB/s, and total physical input capacity is272 or544bytes. The source's two

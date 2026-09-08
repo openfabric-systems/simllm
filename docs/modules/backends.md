@@ -1439,6 +1439,19 @@ created" statement stands and refers to different, never-registered work.
 
 ### Completeness
 
+- BACK-73 (Completeness; P2; M): project the retained local packet calendar's
+  realized blocker predecessors into packet-level critical-path reporting.
+  The initial TRAF-45 path retains every resource visit and projects total
+  local completion into request latency, but explicitly rejects detailed packet
+  breakdown selection. Build an acyclic causal predecessor chain that joins
+  graph eligibility, finite-buffer and credit release, link grants and consumer
+  visibility. Acceptance: selected intervals exactly cover the local critical
+  duration and conserve the step/request attribution without summing overlapping
+  waits; a converging phase has a different per-resource work sum from its
+  wall duration; and disabled reporting preserves all packet timestamps,
+  completion order, bytes and serialized accepted outputs exactly. TRAF-54
+  retains collective protocol work and does not own this reporting surface.
+
 - BACK-72 (Completeness; P2; M): extend the optional physical step session to
   locality remapping, custom topology, calibrated collective surcharges,
   registration, dependency cross-checks, packet/bottleneck reports, empty
