@@ -510,12 +510,25 @@ def rail_identity(unloaded, loaded):
             raise ValueError("rail control lacks the complete unique original PP inventory")
         return indexed
 
+    def hop_times(row):
+        hops = row["pp_hops"]
+        indexed = {
+            (hop["source"], hop["destination"], hop["payload_bytes"]):
+            tuple(hop[field] for field in ("start_time_ps", "completion_time_ps", "fct_ps"))
+            for hop in hops
+        }
+        if len(indexed) != len(hops) or len(hops) != row["width"] - 1:
+            raise ValueError("rail control lacks the complete unique PP hop inventory")
+        return indexed
+
     left, right = originals(unloaded), originals(loaded)
-    same = left == right and unloaded["pp_hops"] == loaded["pp_hops"]
+    # Each cell validates its own tags; adding EP changes their allocation.
+    flow_times_exact = hop_times(unloaded) == hop_times(loaded)
+    same = left == right and flow_times_exact
     no_ep = all(row["trace_audit"]["queue_work"]["ep_data_service_ahead_ps"] == 0
                 for row in (unloaded, loaded))
     return {"original_packet_count": len(left), "packet_fields": fields,
-            "all_original_times_exact": left == right, "pp_flow_times_exact": unloaded["pp_hops"] == loaded["pp_hops"],
+            "all_original_times_exact": left == right, "pp_flow_times_exact": flow_times_exact,
             "zero_ep_service_ahead": no_ep, "matches": same and no_ep}
 
 

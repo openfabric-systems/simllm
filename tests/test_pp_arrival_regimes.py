@@ -251,7 +251,12 @@ def valid_rows():
                    physical_quiescence=True, physical_quiescence_time_ps=5_000_000_000,
                    complete_flow_phase_ps=3_000_000_000, ep_phase_ps=3_000_000_000 if cell.ep_width else 0,
                    job_completion_ps=3_000_000_000, request_attribution={"kernel_ps": 1_000_000 * cell.width + cell.arrival_ps},
-                   pp_fct_samples_ps=[10_000_000 + penalty], pp_hops=[{"source": 0, "fct_ps": 10_000_000 + penalty}],
+                   pp_fct_samples_ps=[10_000_000 + penalty], pp_hops=[
+                       {"source": 8 * stage, "destination": 8 * (stage + 1), "payload_bytes": 65536,
+                        "tag": 1000 + stage + bool(cell.ep_width), "start_time_ps": stage * 10_000_000,
+                        "completion_time_ps": (stage + 1) * 10_000_000 + penalty,
+                        "fct_ps": 10_000_000 + penalty}
+                       for stage in range(cell.width - 1)],
                    native_manifest=["identity"], trace_audit=audit_for(cell) if traced else None)
         rows.append(row)
     return rows
@@ -279,6 +284,39 @@ def test_valid_scoped_result_keeps_evidence_classes_separate():
     assert len(result["trace_identity_oracles"]) == 16 and len(result["rail_identity_oracles"]) == 4
     assert result["control_counts"] == {"ideal": 16, "regression": 12, "legacy": 12}
     assert "behavioral_score" not in result
+
+
+def rail_pair():
+    return [row for row in valid_rows() if row["population"] == "physical" and row["traced"]
+            and row["variant"] == "rail" and row["width"] == 4 and row["arrival_ps"] == 16000]
+
+
+def test_rail_timing_matches_across_different_renderer_tag_allocations():
+    unloaded, loaded = rail_pair()
+    assert unloaded["pp_hops"][0]["tag"] != loaded["pp_hops"][0]["tag"]
+    loaded["pp_hops"].reverse()
+    oracle = study.rail_identity(unloaded, loaded)
+    assert oracle["matches"] and oracle["pp_flow_times_exact"]
+
+
+@pytest.mark.parametrize("field", ("start_time_ps", "completion_time_ps", "fct_ps",
+                                  "source", "destination", "payload_bytes"))
+def test_rail_timing_rejects_changed_time_or_hop_correspondence(field):
+    unloaded, loaded = rail_pair()
+    loaded["pp_hops"][0][field] += 1
+    oracle = study.rail_identity(unloaded, loaded)
+    assert not oracle["matches"] and not oracle["pp_flow_times_exact"]
+
+
+@pytest.mark.parametrize("mutation", ("missing", "duplicate"))
+def test_rail_timing_rejects_incomplete_hop_inventory(mutation):
+    unloaded, loaded = rail_pair()
+    if mutation == "missing":
+        loaded["pp_hops"].pop()
+    else:
+        loaded["pp_hops"][1] = deepcopy(loaded["pp_hops"][0])
+    with pytest.raises(ValueError, match="complete unique PP hop"):
+        study.rail_identity(unloaded, loaded)
 
 
 def loaded_trace(rows):

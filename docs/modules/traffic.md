@@ -418,8 +418,12 @@ comparison. Expert traffic adds queue service at depths two, four and eight;
 the two-stage request absorbs that delay with unchanged time to first token,
 while the deeper requests gain about 2.54 milliseconds through shared-buffer
 loss, retry timers and ordered delivery. TRAF-88 owns the remaining physically
-scoped penalty qualification after this all-depth hypothesis is refuted;
-TRAF-8 owns captured stages, microbatches and general serving integration.
+scoped penalty qualification. The [arrival study](../../examples/pp_arrival_regimes_v1/RESULTS.md)
+retains a void result: its ideal shift assumption misses the active slot
+calendar, and one original packet reaches the receiver too late instead of
+being fabric-dropped. TRAF-88 owns the next prospective oracle and mechanism
+qualification; TRAF-8 owns captured stages, microbatches and general serving
+integration.
 
 Pattern expansion landed with M1 (`simllm.traffic.patterns`): scatter,
 gather, ring allreduce (reduce-scatter + allgather, 2(W-1) chained rounds),
@@ -2126,8 +2130,17 @@ shipped collectives.
   penalty. This mixed result does not satisfy the frozen all-instance bar.
   HTSIM-40/41 recovery, complete phase evidence, read-only packet/queue traces
   and receiver-window separation are completed prerequisites, not residual work.
-  The remaining qualification must prospectively identify its load, pipeline
-  arrival and recovery regime and its expected direction and quantitative band,
+  The 72-execution [arrival study](../../examples/pp_arrival_regimes_v1/RESULTS.md)
+  is void: eight loaded ideal controls refute its shift-invariant oracle, and
+  the four-stage, 80-nanosecond case refutes the assumption that every critical
+  original is fabric-dropped. It reaches the receiver 2,289,520 ps too late
+  instead. Four additional recorded rail guard failures compare changing
+  renderer tags; their physical timing is exact and the future comparator is
+  corrected with explicitly post-specified checks. The retained run is never
+  rescored. The next qualification must freeze a calendar-aware ideal oracle
+  and a receiver-admission hypothesis before new implementation or execution.
+  It must prospectively identify its load, pipeline arrival and recovery
+  regime and its expected direction and quantitative band,
   then connect observed source, receiver and ordering dependencies to positive
   hop and request changes within that declared scope. Preserve the measured
   two-stage absorption and deeper recovery cases as regressions; do not tune
