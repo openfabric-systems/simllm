@@ -71,6 +71,13 @@ def digest(value):
     return hashlib.sha256(value).hexdigest()
 
 
+def exact_ps(value):
+    """Retain an exact nonintegral discrepancy instead of rounding it away."""
+    if isinstance(value, Fraction):
+        return int(value) if value.denominator == 1 else str(value)
+    return value
+
+
 def git(*args):
     return subprocess.run(["git", *args], cwd=ROOT, check=True, capture_output=True).stdout
 
@@ -268,11 +275,11 @@ def run_study(output, compatibility):
             findings.append(name)
 
     def oracle(name, actual, expected):
-        oracles.append({"id": name, "actual_ps": actual, "expected_ps": expected,
-                        "residual_ps": actual - expected, "passed": actual == expected})
+        oracles.append({"id": name, "actual_ps": exact_ps(actual), "expected_ps": expected,
+                        "residual_ps": exact_ps(actual - expected), "passed": actual == expected})
 
     def relation(family, name, actual, expected):
-        relations.append({"family": family, "id": name, "actual_ps": actual,
+        relations.append({"family": family, "id": name, "actual_ps": exact_ps(actual),
                           "expected_ps": expected, "passed": actual == expected})
 
     def check_session(name, value, final):
@@ -314,11 +321,22 @@ def run_study(output, compatibility):
                 guard(f"{name}-step{index}:same-compute", row["outcome"]["compute_estimate_ps"] == off["outcome"]["compute_estimate_ps"] == 37000)
                 guard(f"{name}-step{index}:same-logical-bytes", row["locality"]["nvlink_directed_bytes"] == off["locality"]["nvlink_directed_bytes"] == 2 * donors * 1024)
                 guard(f"{name}-step{index}:original-boundary", row["execution_result"]["completed_at_ps"] == row["result"]["completed_at_ps"])
+                metric, = row["result"]["request_metrics"]
+                off_metric, = off["result"]["request_metrics"]
+                guard(f"{name}-step{index}:sampled-request-boundary", metric["request_id"] == "peer-star"
+                      and metric["completed_at_ps"] == row["result"]["completed_at_ps"])
+                token_latency = metric["ttft_ps"] if index == 0 else Fraction(**metric["tpot_ps"])
+                off_token_latency = off_metric["ttft_ps"] if index == 0 else Fraction(**off_metric["tpot_ps"])
                 relation("packet-versus-analytic-token-latency", f"{name}-token{index}",
-                         row["result"]["step_latency_ps"] - off["result"]["step_latency_ps"], expected_comm - expected_analytic)
+                         token_latency - off_token_latency, expected_comm - expected_analytic)
                 for session in row["sessions"]:
+                    guard(f"{name}-step{index}:frozen-packet-geometry", all(
+                        packet["payload_bytes"] == 256 and packet["wire_bytes"] == 272 for packet in session["packets"])
+                        and all(len(extent["packet_ids"]) == 4 for extent in session["extents"]))
                     check_session(f"{name}-step{index}", session, False)
             oracle(f"{name}-TTFT", packet["request_totals"]["ttft_ps"], 37000 + expected_comm)
+            oracle(f"{name}-TPOT", packet["request_totals"]["tpot_ps"], 37000 + expected_comm)
+            oracle(f"{name}-analytic-TPOT", analytic["request_totals"]["tpot_ps"], 37000 + expected_analytic)
             oracle(f"{name}-job-completion", packet["job_completion_ps"], 3 * (37000 + expected_comm))
             for session in packet["final_sessions"]:
                 check_session(name + "-drain", session, True)
