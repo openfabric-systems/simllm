@@ -297,7 +297,14 @@ def run_study(output_root):
         "source_sha256": digest(Path(__file__).read_bytes()),
         "preserved_sha256": preserved,
         "fatal_findings": findings,
-        "packet_free_configuration_count": 2 * len(pairs),
+        "packet_free_row_evaluation_count": 2 * len(pairs),
+        "packet_free_distinct_configuration_count": len(
+            {
+                (row["size_bytes"], pair["rate_bytes_per_second"], pair["fixed_overhead_ps"])
+                for pair in pairs
+                for row in pair["rows"]
+            }
+        ),
         "phase_configuration_count": len(phases),
         "exact_oracle_count": len(oracles),
         "exact_oracles": oracles,

@@ -94,5 +94,6 @@ def test_preservation_failure_voids_audit_before_historical_code_load(audit, mon
     result = audit.run_study(output)
     assert result["verdict"] == "VOID"
     assert result["behavioral_score"] is None
-    assert result["packet_free_configuration_count"] == 0
+    assert result["packet_free_row_evaluation_count"] == 0
+    assert result["packet_free_distinct_configuration_count"] == 0
     assert (output / "summary.json").is_file()
