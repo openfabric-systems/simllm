@@ -293,7 +293,11 @@ class Audit:
         payload_limit,
         header,
         control,
+        capture_drop_occupancy=False,
     ):
+        require(type(capture_drop_occupancy) is bool, "drop occupancy selection must be boolean")
+        self.capture_drop_occupancy = capture_drop_occupancy
+        self.drop_occupancy = {}
         require(
             rate > 0 and 8_000_000_000_000 % rate == 0,
             "audit requires an exact integral picosecond wire-byte duration",
@@ -650,6 +654,8 @@ class Audit:
                     full and not reserve,
                     "fabric drop lacks a full buffer or exhausted control reserve",
                 )
+                if self.capture_drop_occupancy and self.is_pp_data(packet):
+                    self.drop_occupancy[packet.lifecycle] = self.drop_snapshot(packet, row)
                 packet.dropped = True
                 queue.drops += 1
             else:
@@ -798,6 +804,44 @@ class Audit:
             ),
             "queue occupancy snapshot violates independent byte conservation",
         )
+
+    def drop_snapshot(self, packet, row):
+        """Project the observed admission state without advancing any resource."""
+        switch = row["switch_type"], row["switch_id"]
+        target = (*switch, row["egress_id"])
+        shared = Counter(dict.fromkeys(PARTITIONS, 0))
+        egress = Counter(dict.fromkeys(PARTITIONS, 0))
+        for key, queue in self.queues.items():
+            if key[:2] != switch:
+                continue
+            for visit in queue.buffered.values():
+                if visit.reserve:
+                    continue
+                shared[visit.packet.group] += visit.packet.wire
+                if key == target:
+                    egress[visit.packet.group] += visit.packet.wire
+        base_shared = self.switch_bytes[switch] - self.switch_reserve[switch]
+        queue = self.queues[target]
+        base_egress = queue.buffered_bytes - queue.reserve_bytes
+        require(
+            sum(shared.values()) == base_shared and sum(egress.values()) == base_egress,
+            "drop occupancy partitions disagree with the base buffer ledger",
+        )
+        return {
+            "switch_type": switch[0],
+            "switch_id": switch[1],
+            "egress_id": target[2],
+            "time_ps": row["time_ps"],
+            "wire_bytes": packet.wire,
+            "base_shared_buffer_bytes": base_shared,
+            "base_egress_buffer_bytes": base_egress,
+            "shared_partition_bytes": dict(shared),
+            "egress_partition_bytes": dict(egress),
+            "admits_without_ep_data": (
+                base_shared - shared["ep_data"] + packet.wire <= self.capacity
+                and base_egress - egress["ep_data"] + packet.wire <= self.capacity
+            ),
+        }
 
     def is_pp_data(self, packet):
         return packet.kind == "DATA" and self.flows[packet.flow]["class"] == "pp"
@@ -1322,6 +1366,8 @@ class Audit:
                 "retry_authorization": packet.authorization,
                 "visits": packet.visits,
             }
+            if self.capture_drop_occupancy:
+                row["drop_occupancy"] = self.drop_occupancy.get(packet.lifecycle)
             rows.append(row)
         path = {
             "dispatch_offset_ps": trigger.source_start - flow["start_time_ps"],
@@ -1463,6 +1509,7 @@ def audit_trace(
     packet_payload_bytes: int = 4096,
     data_header_bytes: int = 64,
     control_wire_bytes: int = 64,
+    capture_drop_occupancy: bool = False,
 ) -> dict:
     """Return compact PP evidence only after every fatal trace guard succeeds.
 
@@ -1504,6 +1551,7 @@ def audit_trace(
         packet_payload_bytes,
         data_header_bytes,
         control_wire_bytes,
+        capture_drop_occupancy,
     )
     counts = Counter()
     for table, row in _merged_rows(directory, counts):
