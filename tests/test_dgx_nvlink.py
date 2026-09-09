@@ -91,3 +91,15 @@ def test_absent_native_selection_does_not_import_native_binding(monkeypatch):
     engine.admit((NvlinkTransfer(extent_id="one", source=0, destination=1,
                                  payload_bytes=256, topology_endpoint_count=8),), include_switch=True)
     assert engine.drain().packets[0].visible_at_ps > 0
+
+
+def test_frozen_dgx_study_matches_committed_results(native_library, tmp_path):  # noqa: F811
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    subprocess.run([
+        sys.executable, str(root / "examples/dgx_nvlink_v1/run_study.py"),
+        "--library", native_library, "--output", str(tmp_path / "evidence"), "--check",
+    ], cwd=root, check=True, capture_output=True, text=True)
