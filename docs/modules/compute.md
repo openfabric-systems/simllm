@@ -1869,6 +1869,16 @@ declared, source-attributed and joined to the imported operation slice through
 a content-addressed composition surface.** COMP-88 owns promotion from the
 study-local declaration to that installed surface.
 
+The [packed metadata admission study](../../examples/packed_weight_identity_v1/RESULTS.md)
+closes COMP-91. The explicitly declared group-32 MXFP4 format accounts for
+packed values and their scale bytes separately. A 512-value envelope has a
+272-byte payload floor, so its 320-byte synthetic container passes admission;
+one byte below the floor rejects. All five independent byte oracles have zero
+residual across 15 admission cases. Existing BF16 and FP8 identities preserve
+their canonical bytes, and generic compute rejects the packed format until
+COMP-54 supplies its complete structure. These are metadata constraints, not
+verified weight contents, memory-traffic measurements or physical kernel timing.
+
 ## Open tasks
 
 Folded 2026-09-07 (maintainer triage): COMP-48 into COMP-44 (the launch-mode

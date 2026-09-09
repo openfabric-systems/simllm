@@ -1,0 +1,32 @@
+{
+  "container_overhead_bytes": [
+    0,
+    48
+  ],
+  "group_size": 32,
+  "hardware_measurement": false,
+  "identity_template": "offline/calibration/suites/deepseek-v3-text-v1-frameworks-2026-08-25/suite.json",
+  "model_scope": "synthetic metadata envelope only",
+  "parameter_counts": [
+    31,
+    32,
+    33,
+    512,
+    1024
+  ],
+  "preserved_sha256": {
+    "offline/calibration/suites/deepseek-v3-text-v1-frameworks-2026-08-25/suite.json": "0a8297a7990c42ee6b2277c7507d90ee875ab07ba3c91324b5098d1a928dabea",
+    "offline/calibration/suites/qwen3-32b-fp8-text-v1-frameworks-2026-08-28/suite.json": "f0830d3692029dca5464af6932f273d7147258d72edaf5986aada37a0ba25435",
+    "offline/calibration/suites/qwen3.8-27b-text-v1-frameworks-2026-08-25/suite.json": "7be24843ffae71de65a1eab243eab9f592ce614097d701d5234eabd0c5980a9c",
+    "offline/calibration/suites/transformer-dag-v1-frameworks-2026-08-24/suite.json": "1282207c5ad8c8c0d0bea586bca7a39197a997dc165c3ad730a9847ddedd9dce"
+  },
+  "quantization": "mxfp4-e2m1-group32-e8m0",
+  "remaining_tasks": [
+    "COMP-54",
+    "COMP-59"
+  ],
+  "scale_bits": 8,
+  "schema": "simllm-packed-weight-identity-expectations-v1",
+  "task": "COMP-91",
+  "value_bits": 4
+}
