@@ -77,6 +77,13 @@ remain offline; none runs once per serving step.
   KV-token and attention-pair counts. The standard transformer and Qwen Gated
   DeltaNet inventory builders consume this one authority, so a hybrid model
   cannot silently use different case axes.
+- `grouped_expert_kernels` describes each owner's selected row histogram and
+  active weight extents as one gate/up projection followed by one down
+  projection. `RoutedComputeConfig` prices this work through the standard
+  step lowerer and binds an optional declared minimum to the complete GPU
+  envelope. The minimum applies to each nonempty grouped invocation; inactive
+  owners pay none. The [routed compute qualification](../../examples/routed_compute_v1/RESULTS.md)
+  connects these prices to runtime completion and actual request TTFT/TPOT.
 - `GpuDeviceConfig` and `GpuDevice`: the versioned GPU composition entry point.
   A device is an architecture profile plus typed `GpuPortConfig` ports, each
   carrying protocol, role, direction, declared capabilities, an optional
@@ -2147,12 +2154,19 @@ semantic comparison remains DEPLOY-12's scope.
   route evidence, and COMP-72 owns resumable registered execution when the
   cluster returns. COMP-5 remains open on GH200 counter qualification and the
   full registered stability sweep.
-- COMP-7 (Precision; P1; M): MoE compute assumes perfectly balanced routing:
-  every rank computes `top_k` experts' flops for its own tokens and streams all
-  resident experts once. Consume the landed `simllm-routed-experts-v1`
-  projection through `RoutedMoeSupply`, using the same selected placement
-  epoch as traffic, to drive per-rank effective expert load and hot-expert
-  imbalance. Pricing trap, from first-party A100 measurement: at the captured
+- COMP-7 (Precision; P1; M): complete calibrated routed-expert compute on
+  captured model work. The default fused surrogate assumes balanced routing
+  and streams every resident expert. The explicit
+  [routed mechanism](../../examples/routed_compute_v1/RESULTS.md) consumes one
+  `RoutedMoeSupply` projection for exact per-owner rows, active weights and
+  traffic at the same placement epoch. Thirty-six model steps qualify causal
+  dispatch/compute/combine timing, including a declared grouped-kernel minimum.
+  This TP1, single-token-owner, all-MoE path still uses declared kernel service
+  and a one-stream active-weight model. Apply architecture-qualified service
+  to captured Granite loads, retain complete row/byte/placement conservation,
+  and bound the resulting decode excess alongside COMP-43. Wider physical
+  invocation identities and peer workloads retain COMP-6 and TRAF-26.
+  Pricing trap, from first-party A100 measurement: at the captured
   granite expert loads the roofline is not the binding term. The
   [A100 kernel constants study](../../examples/a100_kernel_constants_v1/RESULTS.md)
   measured all 18 captured expert cells at 5.17 to 12.20 times their own memory
@@ -2364,8 +2378,13 @@ semantic comparison remains DEPLOY-12's scope.
   ceiling is rejected rather than borrowing another architecture's number, and
   every accepted artifact stays byte-identical. This is P2 while no study
   selects a measured port ceiling and becomes P1 when one does.
-- COMP-43 (Precision; P1; M): price the fixed per-kernel cost that neither
-  compute provider carries. The surrogate being replaced is the absence of any
+- COMP-43 (Precision; P1; M): calibrate the fixed per-kernel cost on its exact
+  architecture and captured invocation shapes. The delivered
+  [routed mechanism](../../examples/routed_compute_v1/RESULTS.md) applies an
+  explicitly declared minimum to each grouped gate/up and down invocation
+  after either provider's estimate, rejects a different GPU envelope, and
+  preserves the zero/off path. Its synthetic values close no calibration.
+  The default surrogate being replaced is the absence of any
   floor: `RooflineProvider` returns `max(flops/peak, bytes/bandwidth)` and
   `ProfileTableProvider` returns a table entry, so a kernel whose work is
   smaller than the device's own per-kernel cost is priced below what the device

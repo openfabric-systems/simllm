@@ -20,6 +20,7 @@ from simllm.compute import (
     HostInitiationModel,
     ModelDims,
     RooflineProvider,
+    RoutedComputeConfig,
     step_kernel,
 )
 from simllm.core.execution import (
@@ -70,6 +71,7 @@ class SerialStepLowererConfig:
     host_model: HostInitiationModel = field(default_factory=HostInitiationModel.ideal)
     routed_moe_supply: RoutedMoeSupply | None = None
     attach_collective_plan: bool = True
+    routed_compute: RoutedComputeConfig | None = None
 
     def __post_init__(self) -> None:
         tp_ranks = tuple(self.tp_ranks)
@@ -96,6 +98,28 @@ class SerialStepLowererConfig:
         if not isinstance(self.host_model, HostInitiationModel):
             raise TypeError("host_model must be a HostInitiationModel")
         self.host_model.validate_device(self.gpu)
+        if self.routed_compute is not None:
+            if not isinstance(self.routed_compute, RoutedComputeConfig):
+                raise TypeError("routed_compute must be RoutedComputeConfig or None")
+            if self.routed_moe_supply is None:
+                raise ValueError("routed compute requires one RoutedMoeSupply")
+            if ep_ranks is None or len(ep_ranks) < 2:
+                raise ValueError("routed compute requires at least two expert-owner ranks")
+            if tp_ranks != (self.routed_moe_supply.engine_rank,):
+                raise ValueError("routed compute requires TP1 at the token-owning engine")
+            if self.dims.num_experts <= 0 or self.dims.defaulted_fields:
+                raise ValueError("routed compute requires explicit all-MoE model geometry")
+            for name in (
+                "num_layers", "hidden_size", "num_heads", "num_kv_heads",
+                "head_size", "vocab_size", "dtype_bytes", "num_experts",
+                "top_k", "moe_intermediate_size",
+            ):
+                value = getattr(self.dims, name)
+                if type(value) is not int or value <= 0:
+                    raise ValueError(f"routed compute requires positive integer {name}")
+            if not self.host_model.is_ideal:
+                raise ValueError("routed compute currently requires ideal host initiation")
+            self.routed_compute.validate_gpu(self.gpu)
         object.__setattr__(self, "tp_ranks", tp_ranks)
         object.__setattr__(self, "ep_ranks", ep_ranks)
 
@@ -196,6 +220,8 @@ class SerialStepLowerer(ExecutionLowerer):
         """
 
         cfg = self.config
+        if cfg.routed_compute is not None:
+            raise ValueError("routed service is per rank and operation; consume its graph")
         num_sampled = record.num_sampled
         if num_sampled is None:
             num_sampled = len(record.scheduled)
@@ -287,6 +313,11 @@ class SerialStepLowerer(ExecutionLowerer):
         observations: ExecutionObservations | None = None,
     ) -> ExecutionGraph:
         execution_id = _execution_id(record)
+        if self.config.routed_compute is not None:
+            if observations is not None:
+                raise ValueError("routed compute conflicts with an observed schedule")
+            from simllm.backends.routed_step_lowerer import lower_routed_step
+            return self._finish(lower_routed_step(record, self.config))
         if observations is not None:
             return self._finish(
                 execution_graph_from_observations(
@@ -481,6 +512,8 @@ class ObservedStepLowerer(ExecutionLowerer):
         record: StepRecord,
         observations: ExecutionObservations | None = None,
     ) -> ExecutionGraph:
+        if self.config.routed_compute is not None:
+            return self._serial.lower(record, observations)
         if observations is None:
             return self._serial.lower(record)
         cfg = self.config

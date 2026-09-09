@@ -103,7 +103,11 @@ from simllm.traffic.routed_conservation import (
     RoutedTokenOwnership,
     routed_moe_conservation_report,
 )
-from simllm.traffic.routed_moe import RoutedMoeSupply
+from simllm.traffic.routed_moe import (
+    RoutedExpertAssignment,
+    RoutedMoeSupply,
+    validate_routed_moe_supply,
+)
 
 #: the two allreduce sites of one transformer layer, in execution order
 TP_ALLREDUCE_SITES = ("attention", "mlp")
@@ -895,6 +899,28 @@ class _RoutedMoeDispatchLayer:
     ranks: tuple[int, ...]
     messages: tuple[RoutedMoeMessage, ...]
     placement_epoch: int
+    expert_assignments: tuple[RoutedExpertAssignment, ...] = ()
+
+
+@dataclass(frozen=True)
+class RoutedMoeLayerWork:
+    """Compute rows and traffic projected from one selected routed layer."""
+
+    layer: int
+    placement_epoch: int
+    ranks: tuple[int, ...]
+    expert_assignments: tuple[RoutedExpertAssignment, ...]
+    dispatch: MoeAllToAll
+    combine: MoeAllToAll
+
+    def expert_rows(self, rank: int) -> tuple[tuple[int, int], ...]:
+        if rank not in self.ranks:
+            raise ValueError("expert owner rank is outside the selected group")
+        counts: dict[int, int] = {}
+        for assignment in self.expert_assignments:
+            if assignment.owner_rank == rank:
+                counts[assignment.expert_id] = counts.get(assignment.expert_id, 0) + 1
+        return tuple(sorted(counts.items()))
 
 
 def _scheduled_routed_tokens(
@@ -1006,6 +1032,8 @@ def _routed_moe_dispatch_layers(
     dims: ModelDims,
     ranks: tuple[int, ...],
     supply: RoutedMoeSupply,
+    *,
+    include_expert_assignments: bool = False,
 ) -> tuple[_RoutedMoeDispatchLayer, ...]:
     """Build the shared ordered authority for captured routed traffic."""
 
@@ -1069,6 +1097,7 @@ def _routed_moe_dispatch_layers(
     layers: list[_RoutedMoeDispatchLayer] = []
     for layer in expected_layers:
         messages: list[RoutedMoeMessage] = []
+        assignments: list[RoutedExpertAssignment] = []
         for scheduled_request in scheduled_requests:
             if supply.routed_experts is not None:
                 token_rows = (
@@ -1100,6 +1129,11 @@ def _routed_moe_dispatch_layers(
                 destinations: dict[int, int] = {}
                 for top_k_index, expert in enumerate(expert_ids):
                     destination = owners[(layer, expert)]
+                    if include_expert_assignments:
+                        assignments.append(RoutedExpertAssignment(
+                            scheduled_request.request_id, token_index,
+                            top_k_index, expert, destination,
+                        ))
                     destinations.setdefault(destination, top_k_index)
                 for destination, top_k_index in destinations.items():
                     if destination == source:
@@ -1119,6 +1153,7 @@ def _routed_moe_dispatch_layers(
                 ranks=ranks,
                 messages=tuple(messages),
                 placement_epoch=placement.placement_epoch,
+                expert_assignments=tuple(assignments),
             )
         )
     return tuple(layers)
@@ -1213,6 +1248,33 @@ def _routed_moe_alltoalls(
 ) -> list[MoeAllToAll]:
     return _routed_moe_alltoalls_from_layers(
         _routed_moe_dispatch_layers(record, dims, ranks, supply)
+    )
+
+
+def step_routed_moe_work(
+    record: StepRecord,
+    dims: ModelDims,
+    ep_ranks: Sequence[int],
+    supply: RoutedMoeSupply,
+) -> tuple[RoutedMoeLayerWork, ...]:
+    """Retain local and remote expert rows with their exact traffic projection."""
+
+    validate_routed_moe_supply(supply)
+    if supply.lifetimes is not None:
+        for request in record.scheduled:
+            lifetime = supply.lifetimes.by_request_id(request.request_id)
+            if request.num_new_tokens and lifetime.view_released:
+                raise ValueError("routed compute cannot consume a released routing view")
+    layers = _routed_moe_dispatch_layers(
+        record, dims, tuple(ep_ranks), supply, include_expert_assignments=True,
+    )
+    operations = _routed_moe_alltoalls_from_layers(layers)
+    return tuple(
+        RoutedMoeLayerWork(
+            layer.layer, layer.placement_epoch, layer.ranks,
+            layer.expert_assignments, operations[2 * index], operations[2 * index + 1],
+        )
+        for index, layer in enumerate(layers)
     )
 
 
