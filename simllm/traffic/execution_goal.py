@@ -813,7 +813,15 @@ def verify_execution_goal_projection(
             "projection artifacts are not the canonical causal-level partition"
         )
 
-    expected_edges = Counter(_edge_tuple(_goal_edge(edge)) for edge in edges)
+    expected_edges: Counter[tuple[str, str, str, str, int | None]] = Counter()
+    effective_by_key: dict[
+        tuple[str, str, str, str, int | None], EffectiveDependencyEdge
+    ] = {}
+    for edge in edges:
+        key = _edge_tuple(_goal_edge(edge))
+        expected_edges[key] += 1
+        # Preserve the first matching occurrence and the separate multiplicity.
+        effective_by_key.setdefault(key, edge)
     emitted_edges: Counter[tuple[str, str, str, str, int | None]] = Counter()
     boundary_edges: Counter[tuple[str, str, str, str, int | None]] = Counter()
     serialized_edges: Counter[tuple[str, str, str, str, int | None]] = Counter()
@@ -917,11 +925,7 @@ def verify_execution_goal_projection(
             edge.operation_id
         ]:
             raise ValueError("serialized projection edge does not advance artifact order")
-        effective = next(
-            candidate
-            for candidate in edges
-            if _edge_tuple(_goal_edge(candidate)) == key
-        )
+        effective = effective_by_key[key]
         if _requires_artifact_boundary(effective, operation_by_id):
             raise ValueError(
                 "distributed whole-operation edge must form an artifact boundary"
