@@ -143,6 +143,14 @@ Disaggregated session driver (`simllm/adapters/vllm/pd_session.py`):
   provider per role while retaining its original shared provider as the exact
   default. A provider that publishes pricing provenance is projected into the
   request result; a provider with no provenance leaves that member absent.
+- `VllmPdRequestResult.to_comparison_json()` deep-copies the complete ordinary
+  serialization and excludes exactly `prefill_internal_request_id` and
+  `decode_internal_request_id` at the root. Both identifiers must be nonblank
+  strings. The named comparison schema declares those exclusions; nested
+  identifiers, pricing, token outputs, timestamps and future fields remain
+  present. Ordinary `to_json()` and all native state remain unchanged.
+  Exact comparisons preserve Unicode code points and JSON scalar types;
+  the calibration-record string normalizer is not this comparison encoder.
 - The pinned vLLM v0.27.1 scheduler-side KV connector is the real control
   seam. It gates producer completion and consumer external-token admission,
   while an explicit core KV-handoff event is the sole transfer-time authority.
@@ -683,7 +691,11 @@ bindings for CORE-53. The retained candidate study selected its exact decode
 row twice and surfaced candidate status without a calibration claim. Both
 record-absent runs retained all accepted KV bytes and timestamps, but the
 frozen complete-result byte guard was voided by vLLM's fresh pool-local request
-identifier suffixes. CORE-58 owns the next frozen identity boundary; see
+identifier suffixes. The independent
+[native identity study](../../examples/pd_session_identity_v1/RESULTS.md)
+closes CORE-58: both fresh native processes match all four cells exactly after
+excluding only those two root members, and all accepted compact values remain
+unchanged. CORE-53 retains COMP-73's target-record coverage requirement; see
 [the session kernel-cycle result](../../examples/pd_session_kernel_cycle_v1/RESULTS.md).
 
 The pinned DeepSeek-V3 configuration surface now publishes a complete logical
