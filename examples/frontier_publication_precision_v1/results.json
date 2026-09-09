@@ -2041,6 +2041,26 @@
       "DEPLOY-26"
     ]
   },
+  "software_gates": [
+    {
+      "failed": 18,
+      "log": "full-gate-v1.log",
+      "passed": 5628,
+      "qualification": "Rejected: changed source digest pinned by the historical decode study.",
+      "sha256": "de05de757fc248608763e5690ca2e38a9804bcc6b81664f50340040890003d76",
+      "skipped": 31
+    },
+    {
+      "elapsed_seconds": 1573.37,
+      "failed": 0,
+      "log": "full-gate-v2.log",
+      "passed": 5647,
+      "qualification": "PASS after restoring the pinned frontier source.",
+      "sha256": "35a3361ef9b3d025911a80a45845aca3a3a0cda924eaa9ecc9484d22b1b64a86",
+      "skipped": 31,
+      "source_commit": "260b4499b21a08e1785aa37499d3fe969a5caedf"
+    }
+  ],
   "study": "frontier_publication_precision_v1",
   "summary": {
     "behavioral_score": {

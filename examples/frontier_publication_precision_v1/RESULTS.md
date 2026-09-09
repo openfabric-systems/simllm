@@ -133,3 +133,8 @@ compared object. The evaluation digest is
 `4dcd753ef3dae9cf7a147e681fc4796f6d5b1956a3becbbbb08d4b691ff3953a`;
 the summary digest is
 `d04eafc20e14007837fbd860aa439d7bf2864094e017c1fa81d48fbfac4d2f9f`.
+
+The complete software gate passes with 5,647 tests passed and 31 skipped.
+The first gate retained 18 failures caused by the older study's pinned source
+hash; all are resolved by preserving that file. Both gate logs and their
+hashes are recorded separately from numerical evidence in the compact record.
