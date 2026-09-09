@@ -1,0 +1,175 @@
+{
+  "accepted_cells": [
+    {
+      "decode_first_token_service_ps": 77952000,
+      "handoff_ps": 100000000,
+      "kv_bytes": 393216,
+      "prefill_service_ps": 95424000,
+      "prompt_tokens": 8,
+      "tpot_ps": 77952000,
+      "ttft_ps": 273376000
+    },
+    {
+      "decode_first_token_service_ps": 77952000,
+      "handoff_ps": 200000000,
+      "kv_bytes": 393216,
+      "prefill_service_ps": 95424000,
+      "prompt_tokens": 8,
+      "tpot_ps": 77952000,
+      "ttft_ps": 373376000
+    },
+    {
+      "decode_first_token_service_ps": 77976000,
+      "handoff_ps": 100000000,
+      "kv_bytes": 786432,
+      "prefill_service_ps": 114936000,
+      "prompt_tokens": 16,
+      "tpot_ps": 77976000,
+      "ttft_ps": 292912000
+    },
+    {
+      "decode_first_token_service_ps": 77976000,
+      "handoff_ps": 200000000,
+      "kv_bytes": 786432,
+      "prefill_service_ps": 114936000,
+      "prompt_tokens": 16,
+      "tpot_ps": 77976000,
+      "ttft_ps": 392912000
+    }
+  ],
+  "behavioral_score": {
+    "families": 2,
+    "instances": 8
+  },
+  "byte_encoding": "Sorted JSON object members, ASCII escapes, exact Unicode code points and scalar types, no Unicode normalization, nonfinite numbers rejected.",
+  "closes": [
+    "CORE-58"
+  ],
+  "comparison_schema": "simllm-vllm-pd-request-comparison-v1",
+  "comparisons": [
+    {
+      "cell": "prompt-8-handoff-100000000",
+      "comparison_sha256": "9ca1add59fb8f41d8afd40923cdeb16d94a35bb540f99228aa1a244644cc6ce3",
+      "projected_bytes_equal": true,
+      "raw_difference_paths": [
+        [
+          "decode_internal_request_id"
+        ],
+        [
+          "prefill_internal_request_id"
+        ]
+      ]
+    },
+    {
+      "cell": "prompt-8-handoff-200000000",
+      "comparison_sha256": "e653b93e25f83a3ef2b561afeab9d3073d1202a4c2a1ad436d678c82dde3d3a0",
+      "projected_bytes_equal": true,
+      "raw_difference_paths": [
+        [
+          "decode_internal_request_id"
+        ],
+        [
+          "prefill_internal_request_id"
+        ]
+      ]
+    },
+    {
+      "cell": "prompt-16-handoff-100000000",
+      "comparison_sha256": "fb7f30d87e90253d532909caf50482d27624b3ebe42cdb18c1c94483294a957c",
+      "projected_bytes_equal": true,
+      "raw_difference_paths": [
+        [
+          "decode_internal_request_id"
+        ],
+        [
+          "prefill_internal_request_id"
+        ]
+      ]
+    },
+    {
+      "cell": "prompt-16-handoff-200000000",
+      "comparison_sha256": "542e7085975048c96fe8232e6d0af69573e249b721dc123370c220c67200aed3",
+      "projected_bytes_equal": true,
+      "raw_difference_paths": [
+        [
+          "decode_internal_request_id"
+        ],
+        [
+          "prefill_internal_request_id"
+        ]
+      ]
+    }
+  ],
+  "corruption_controls": {
+    "status": "PASS",
+    "unscored_count": 472
+  },
+  "does_not_establish": [
+    "Cross-process identity of complete execution traces",
+    "Physical kernel calibration",
+    "Complete target lookup coverage",
+    "Acceptance under the older restricted deployment-study projection"
+  ],
+  "exact_oracles": {
+    "maximum_residual": 0,
+    "rows": 16,
+    "scope": "Cache bytes and TTFT decomposition, independent evidence class"
+  },
+  "excluded_root_fields": [
+    "prefill_internal_request_id",
+    "decode_internal_request_id"
+  ],
+  "fatal_guards": {
+    "findings": [],
+    "status": "PASS",
+    "unscored_count": 105
+  },
+  "freeze_commit": "ae0a9d7ed52e1f13be1faebb8676f2234ea1c211",
+  "hardware_measurements": 0,
+  "implementation_and_run_commit": "882c670c87153b9914397dfa6df7f67d5b705e33",
+  "native_processes": 2,
+  "native_request_cells": 8,
+  "native_sha256": [
+    "cfc900c0a7b1f7a04c6958d597a1f4c203eb751298595e2e8d872e3984f98333",
+    "cd40bc6d4cedbda238679e8f7c33b50d52c12ae5d227391a209de187eef70d21"
+  ],
+  "original_core53_verdict": "VOID",
+  "packet_backend_runs": 0,
+  "physical_sanity": {
+    "cache_bytes": [
+      393216,
+      786432
+    ],
+    "declared_ceiling_ps": [
+      364572800,
+      679145600
+    ],
+    "handoff_ps": [
+      100000000,
+      200000000
+    ],
+    "nonempty_step_service_ps_range": [
+      77952000,
+      114936000
+    ],
+    "serialization_floor_ps": [
+      7864320,
+      15728640
+    ]
+  },
+  "raw_summary_sha256": "b795a3990df0c255986dc39f8f80ab80e59e64bd8e72e0ef6155e3e888fc4cd5",
+  "remaining_tasks": [
+    "CORE-53",
+    "COMP-73"
+  ],
+  "retained_admission_failure": {
+    "behavioral_score": null,
+    "native_request_cells": 0,
+    "reason": "The redirected default cache lacked the already available checkpoint; the fresh accepted run selects its explicit offline cache.",
+    "summary_sha256": "0530c8a9e00a525391b986de1a24f6320243a8ac489af7b754a266dabb46d628",
+    "verdict": "VOID"
+  },
+  "schema": "simllm-pd-session-identity-publication-v1",
+  "task": "CORE-58",
+  "verdict": "PASS"
+}
