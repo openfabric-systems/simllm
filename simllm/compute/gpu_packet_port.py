@@ -90,6 +90,7 @@ class GpuPeerPacketSession:
         self, session_id: str, profile: NvlinkCandidateProfile,
         binding: NvlinkPhysicalBinding, *, options: NvlinkAlignedOptions | None = None,
         ports: Sequence[GpuPacketPortBinding] | None = None,
+        native_switch_library: str | None = None,
     ) -> None:
         if not isinstance(session_id, str) or not session_id.strip():
             raise ValueError("GPU packet session identity must be nonblank")
@@ -129,7 +130,8 @@ class GpuPeerPacketSession:
             )) for rank, port in by_rank.items()
         }
         self._engine = NvlinkCausalEngine(profile, options or NvlinkAlignedOptions(),
-                                          physical=binding, on_packet_event=self._observe)
+                                          physical=binding, on_packet_event=self._observe,
+                                          native_switch_library=native_switch_library)
         self._next_token = 1
         self._extents: dict[str, GpuPacketExtent] = {}
         self._packets: dict[str, PacketAttemptEvent] = {}
@@ -322,6 +324,9 @@ class GpuPeerPacketSession:
     def evidence(self) -> dict:
         """A partial or final observation, with no hidden scalar timing owner."""
         return {
+            **({"switch_implementation": "native-cmodel-v1",
+                "switch_library_sha256": self._engine._native_switch.library_sha256}
+               if self._engine._native_switch is not None else {}),
             "schema": "simllm-gpu-peer-packet-observation-v1",
             "session_id": self.session_id,
             "authority": "physical_retained_v1",

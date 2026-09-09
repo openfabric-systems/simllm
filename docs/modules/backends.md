@@ -776,6 +776,13 @@ amendment to that gate.
 The evidence classes, mlx5 hook and boundary-test matrix are recorded in
 [the RNIC hardware calibration plan](../papers/rnic-hardware-calibration.md).
 
+The optional `PeerPacketConfig.native_switch_library` selects the C/C++
+NVSwitch port-grant kernel in `simllm/backends/nvswitch`. It owns crossbar
+port occupancy and arbitration while the retained Python calendar owns
+queues, credits and events. The [DGX A100/H100 study](../../examples/dgx_nvlink_v1/RESULTS.md)
+joins exact native/Python conformance to prefill and decode request metrics.
+The unselected Python path loads no native library.
+
 ## Status
 
 The [live peer packet study](../../examples/local_peer_packet_runtime_v1/RESULTS.md) establishes the shared packet vocabulary and
@@ -1461,7 +1468,31 @@ created" statement stands and refers to different, never-registered work.
 
 ### Completeness
 
-- BACK-73 (Completeness; P2; M): project the retained local packet calendar's
+- BACK-74 (Completeness; P1; L): extend the native NVSwitch model from
+  crossbar grants to switch queue and credit ownership through the existing
+  `NvlinkCausalEngine`, `NvlinkPhysicalBinding` and neutral packet-port
+  boundaries. The [DGX study](../../examples/dgx_nvlink_v1/RESULTS.md) supplies
+  the first native C/C++ slice: per-chip input/output occupancy, legal shared
+  receiver-capacity matching and exact service times. Python retains the
+  queues, credits, link events and endpoint visibility; its switch port clocks
+  are inert when native allocation is selected. Remaining native work moves
+  switch input storage, destination virtual queues and switch credit lifecycle
+  behind that same narrow interface, with one mutable owner per resource.
+  Freeze conformance stimuli before migration. Compare every grant, buffer
+  reservation/release, credit return, wire byte and destination delivery
+  against the accepted reference, including retained control tails across
+  phases, concurrent chips, fan-in, credit starvation and recovery. Preserve
+  both Python and analytic bypasses exactly, with no import/build requirement
+  when native service is absent. Every selected mechanism must reach
+  `CompletionEvent`, `StepResult` and request latency through the existing
+  live peer path. Product forwarding mode, depths and arbitration remain
+  declared until identified under TRAF-92; public patent embodiments alone
+  do not establish deployed A100/H100 behavior. TRAF-54 owns collective
+  protocol and BACK-73 critical-path reporting. The user's C-model-first
+  direction makes reference RTL optional under BACK-75, not a prerequisite
+  for this P1 workstream or a claim of NVIDIA RTL equivalence.
+
+- BACK-73 (Completeness; P1; M): project the retained local packet calendar's
   realized blocker predecessors into packet-level critical-path reporting.
   The initial TRAF-45 path retains every resource visit and projects total
   local completion into request latency, but explicitly rejects detailed packet
@@ -1473,6 +1504,18 @@ created" statement stands and refers to different, never-registered work.
   wall duration; and disabled reporting preserves all packet timestamps,
   completion order, bytes and serialized accepted outputs exactly. TRAF-54
   retains collective protocol work and does not own this reporting surface.
+  P1 since 2026-09-09: TRAF-92 requires the exposed switch, receiver and
+  collective waits to explain one-node tensor/expert-parallel request latency.
+
+- BACK-75 (Completeness; P2; L): add an optional executable NVSwitch
+  reference register-transfer-level (RTL) model for the frozen native switch
+  contract after BACK-74. Reconstruct only generation-scoped behavior supported
+  by public publications or expressly declared assumptions, not proprietary
+  vendor internals. Declare the cycle-to-picosecond mapping and compare
+  identical stimuli at port grants, credit release, occupancy and delivery
+  boundaries. The native path remains usable with RTL disabled and preserves
+  its exact accepted results without RTL tools. RTL agreement supplies
+  component evidence only; hardware precision still requires TRAF-92.
 
 - BACK-72 (Completeness; P2; M): extend the optional physical step session to
   locality remapping, custom topology, calibrated collective surcharges,

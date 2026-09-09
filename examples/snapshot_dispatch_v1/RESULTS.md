@@ -44,3 +44,23 @@ Binary profiles, full function/caller rows, complete raw captures and first-exit
 The [first source-pair attempt](void-frozen-v1.json) remains VOID because process and data admission reused a check name. Its 138 raw files and first/final receipts remain unchanged. The naming repair and a composed-admission regression precede this fresh campaign; the frozen inputs and acceptance relations are unchanged.
 
 This qualifies fewer generic `isinstance` calls while preserving complete validation on the declared finite domain. The exact-type prefix adds identity comparisons on fallback visits, and the profiles do not count those bytecode comparisons. This result supplies no total instruction-count or wall-speedup claim. CORE-68 stays open until a fresh native independent-engine campaign completes the original workload within the original limits. Its three earlier VOID attempts remain unchanged. CORE-52, CORE-70, shared-resource composition and the large-model deployment frontier do not close here. No GPU allocation, native framework run, weight download or packet-backend run is part of this qualification.
+
+## Windows runtime identity
+
+The later Windows integration gate exposes a reader assumption: its built-in
+`math` module has no separate source file. The
+[portability amendment](portability-expectations.md), frozen at
+`5fceb445`, responds to that software failure before the correction and new
+fixture runs. File-backed identities remain exactly equal to the accepted
+Linux helper's complete runtime record. Built-in identities additionally name
+their origin and hash the actual loaded Python library obtained from its
+operating-system handle. Unrecognized provenance, missing files, invalid
+handles, lookup failure and truncated paths reject.
+
+The two library kinds crossed with two backing-file contents preserve the
+complete expected receipts and detect changed bytes. The local focused gate
+passes 50 checks with one Windows-only check skipped; these are unscored
+software checks, not new behavioral points. The actual Windows lookup is also
+part of the hosted gate. This changes runtime provenance capture only. All
+reported model jobs, profile relations and prior VOID receipts above retain
+their original executed source and verdict.

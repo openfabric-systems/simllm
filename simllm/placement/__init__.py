@@ -30,6 +30,7 @@ backend.
 """
 
 from simllm.placement.declared import declared_manifest
+from simllm.placement.dgx import dgx_peer_fabric
 from simllm.placement.disaggregated import (
     DECLARED_CLOS_ENDPOINTS_PER_LEAF,
     DECLARED_CLOS_EVIDENCE_CLASS,
@@ -97,6 +98,7 @@ __all__ = [
     "declared_manifest",
     "declared_pipeline_placement",
     "declared_rail_fabric",
+    "dgx_peer_fabric",
     "disaggregated_manifests",
     "sglang_disaggregated_manifests",
 ]
