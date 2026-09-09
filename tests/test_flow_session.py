@@ -2,8 +2,10 @@ import copy
 import json
 import os
 import struct
+import subprocess
 import sys
 import time
+from contextlib import contextmanager, nullcontext
 from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
 
@@ -225,6 +227,96 @@ def test_owned_session_exact_continuation_and_full_evidence(fixture):
     assert peer.requests[3]["verb"] == "inject_at_boundary"
     assert peer.requests[4]["boundary_id"] == peer.requests[3]["boundary_id"]
     assert peer.requests[2]["max_time_ps"] == 10_000_000_000
+
+
+def test_optional_exchange_deadline_wraps_complete_frames_and_finish(fixture, monkeypatch):
+    client, peer, stream, calls = fixture
+    client.config = replace(CONFIG, wall_timeout_s=1800, exchange_timeout_s=60)
+    actions, active = [], []
+
+    @contextmanager
+    def budget(seconds):
+        assert not active and seconds == 60
+        active.append(seconds)
+        actions.append(["begin"])
+        try:
+            yield stream
+        finally:
+            active.clear()
+            actions[-1].append("end")
+
+    monkeypatch.setattr(stream, "io_deadline", budget, raising=False)
+    for name in ("write", "read_exact", "finish"):
+        original = getattr(stream, name)
+
+        def observe(*args, _name=name, _original=original):
+            assert active == [60]
+            actions[-1].append(_name)
+            return _original(*args)
+
+        monkeypatch.setattr(stream, name, observe)
+    with client:
+        pass
+    assert calls[0][1]["timeout_s"] == 1800
+    assert actions[:-1] == [["begin", "write", "read_exact", "read_exact", "end"]] * 4
+    assert actions[-1] == ["begin", "finish", "end"]
+    assert [row["verb"] for row in peer.requests] == ["open", "await_completion", "drain", "close"]
+
+
+@pytest.mark.parametrize("invalid", [0, -1, True, float("nan"), float("inf"), "60"])
+def test_optional_exchange_deadline_rejects_invalid_configuration(invalid):
+    with pytest.raises(ValueError, match="exchange_timeout_s"):
+        replace(CONFIG, exchange_timeout_s=invalid)
+
+
+def test_optional_exchange_field_preserves_legacy_positional_configuration():
+    config = FlowSessionConfig("rnic-nn", 2, 400_000_000_000, "a" * 64, 9001, 7, 15, 50, 100)
+    assert (config.seed, config.wall_timeout_s, config.max_events, config.simulation_budget_ps,
+            config.exchange_timeout_s) == (7, 15, 50, 100, None)
+
+
+@pytest.mark.parametrize("interrupt", [False, True])
+def test_public_flow_open_preserves_protocol_or_interrupt_error_when_abort_fails(fixture, monkeypatch, interrupt):
+    client, _peer, stream, _calls = fixture
+    client.config = replace(CONFIG, exchange_timeout_s=1)
+    monkeypatch.setattr(stream, "io_deadline", lambda seconds: nullcontext(), raising=False)
+    original = KeyboardInterrupt("original interrupt") if interrupt else FlowSessionError("original malformed frame")
+
+    def fail_read(size):
+        raise original
+
+    def fail_abort():
+        stream.aborted = True
+        raise OSError("secondary flow cleanup")
+
+    monkeypatch.setattr(stream, "read_exact", fail_read)
+    monkeypatch.setattr(stream, "abort", fail_abort)
+    with pytest.raises(type(original)) as error:
+        client.open()
+    assert (error.value is original if interrupt else error.value.__cause__ is original)
+    assert client.poisoned and stream.aborted and str(client._cleanup_failure) == "secondary flow cleanup"
+
+
+@pytest.mark.parametrize("part", ["header", "body"])
+def test_real_flow_timeout_retains_partial_response_and_exchange_limit(part):
+    prefix = b"\x00\x00" if part == "header" else struct.pack(">I", 20) + b"abcde"
+    code = (
+        "import os,struct,time\n"
+        "header=os.read(0,4)\n"
+        "size=struct.unpack('>I',header)[0]\n"
+        "request=bytearray()\n"
+        "while len(request)<size: request.extend(os.read(0,size-len(request)))\n"
+        f"os.write(1,{prefix!r})\n"
+        "time.sleep(30)\n"
+    )
+    client = FlowSession(replace(CONFIG, wall_timeout_s=10, exchange_timeout_s=.3),
+                         (sys.executable, "-c", code), session_id="partial-timeout")
+    with pytest.raises(FlowSessionError) as error:
+        client.open()
+    assert isinstance(error.value.__cause__, subprocess.TimeoutExpired)
+    assert error.value.__cause__.timeout == .3
+    assert client.poisoned and client.transcript[-1] == ("response", prefix)
+    assert client._stream._child.process.poll() is not None
 
 
 def test_zero_time_boundary_has_no_inclusive_prefix(fixture):

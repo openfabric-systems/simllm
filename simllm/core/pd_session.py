@@ -9,8 +9,10 @@ exact per-request timing reduction. It imports no serving framework.
 from __future__ import annotations
 
 import enum
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
+from types import MappingProxyType
 from typing import Protocol, runtime_checkable
 
 from simllm.core.clock import VirtualClock
@@ -18,6 +20,7 @@ from simllm.core.clock import VirtualClock
 PD_SESSION_SCHEMA = "simllm-pd-session-result-v1"
 KV_HANDOFF_AUTHORITY = "simllm-declared-kv-handoff-v1"
 PACKET_KV_HANDOFF_AUTHORITY = "simllm-packet-kv-handoff-v1"
+SHARED_PACKET_KV_HANDOFF_AUTHORITY = "simllm-shared-packet-kv-handoff-v1"
 KV_HANDOFF_AUTHORITIES = (KV_HANDOFF_AUTHORITY, PACKET_KV_HANDOFF_AUTHORITY)
 KV_HANDOFF_ARMS = ("off", "declared-constant", "packet")
 
@@ -180,6 +183,175 @@ class KvHandoffPolicy(Protocol):
         """Schedule one handoff without advancing a shared clock."""
 
 
+def _identifier(name: str, value: object) -> str:
+    if type(value) is not str or not value.strip():
+        raise ValueError(f"{name} must be a nonblank string")
+    return value
+
+
+@dataclass(frozen=True)
+class PendingKvHandoff:
+    """An accepted shard inventory, with no predicted completion time."""
+
+    request_id: str
+    source_engine_id: str
+    destination_engine_id: str
+    kv_bytes: int
+    submitted_at_ps: int
+    eligible_at_ps: int
+    sequences: tuple[int, ...]
+
+    def __post_init__(self) -> None:
+        for name in ("request_id", "source_engine_id", "destination_engine_id"):
+            _identifier(name, getattr(self, name))
+        _positive_int("kv_bytes", self.kv_bytes)
+        _nonnegative_int("submitted_at_ps", self.submitted_at_ps)
+        _positive_int("eligible_at_ps", self.eligible_at_ps)
+        if self.eligible_at_ps <= self.submitted_at_ps:
+            raise ValueError("shared handoff requires positive submission delay")
+        if type(self.sequences) is not tuple or not self.sequences:
+            raise ValueError("pending handoff requires an immutable sequence inventory")
+        for sequence in self.sequences:
+            _positive_int("sequence", sequence)
+        if self.sequences != tuple(range(self.sequences[0], self.sequences[0] + len(self.sequences))):
+            raise ValueError("handoff sequences must be contiguous and ordered")
+
+
+@dataclass(frozen=True)
+class KvHandoffShardCompletion:
+    """Complete native flow observations, without an invented release event."""
+
+    row: Mapping[str, object]
+    events: tuple[Mapping[str, object], ...]
+
+    def __post_init__(self) -> None:
+        def freeze(value: Mapping[str, object]) -> Mapping[str, object]:
+            if not isinstance(value, Mapping) or any(
+                type(key) is not str or type(item) not in (str, int, type(None))
+                for key, item in value.items()
+            ):
+                raise TypeError("native shard observations must contain flat typed values")
+            return MappingProxyType(dict(value))
+
+        row = freeze(self.row)
+        events = tuple(freeze(event) for event in self.events)
+        if tuple(event.get("kind") for event in events) != ("accepted", "queued", "started", "completed"):
+            raise ValueError("shard completion requires its complete native lifecycle")
+        for name in ("sequence", "payload_bytes"):
+            _positive_int(name, row.get(name))
+        for name in ("source", "destination", "start_time_ps", "completion_time_ps", "fct_ps"):
+            _nonnegative_int(name, row.get(name))
+        for name in ("execution_id", "operation_id", "flow_id"):
+            _identifier(name, row.get(name))
+        if row.get("completion_status") != "success" or row["source"] == row["destination"]:
+            raise ValueError("shard completion must be a successful nonlocal flow")
+        times = tuple(_nonnegative_int("timestamp_ps", event.get("timestamp_ps")) for event in events)
+        if times != tuple(sorted(times)) or (times[0], times[-1]) != (
+            row["start_time_ps"], row["completion_time_ps"]
+        ) or row["fct_ps"] != times[-1] - times[0]:
+            raise ValueError("shard lifecycle and completion times disagree")
+        identity = ("sequence", "execution_id", "operation_id", "flow_id", "source", "destination", "payload_bytes")
+        if any(any(type(event.get(key)) is not type(row[key]) or event.get(key) != row[key]
+                   for key in identity) for event in events):
+            raise ValueError("shard lifecycle identity disagrees with its flow")
+        object.__setattr__(self, "row", row)
+        object.__setattr__(self, "events", events)
+
+    @property
+    def sequence(self) -> int:
+        return self.row["sequence"]
+
+    @property
+    def completed_at_ps(self) -> int:
+        return self.row["completion_time_ps"]
+
+    def to_json(self) -> dict[str, object]:
+        return {"row": dict(self.row), "events": [dict(event) for event in self.events]}
+
+
+@dataclass(frozen=True)
+class KvHandoffJoin:
+    """One consumer-visible all-shard join, distinct from a resource visit."""
+
+    submission: PendingKvHandoff
+    shards: tuple[KvHandoffShardCompletion, ...]
+
+    authority = SHARED_PACKET_KV_HANDOFF_AUTHORITY
+    pricing_arm = "shared-packet"
+
+    def __post_init__(self) -> None:
+        if type(self.submission) is not PendingKvHandoff:
+            raise TypeError("join requires its accepted pending handoff")
+        self.submission.__post_init__()
+        if type(self.shards) is not tuple or any(type(shard) is not KvHandoffShardCompletion for shard in self.shards):
+            raise TypeError("join requires immutable shard completions")
+        if tuple(shard.sequence for shard in self.shards) != self.submission.sequences:
+            raise ValueError("join must cover every accepted shard exactly once")
+        if sum(shard.row["payload_bytes"] for shard in self.shards) != self.kv_bytes:
+            raise ValueError("join shard bytes do not conserve")
+        if any(shard.row["start_time_ps"] != self.eligible_at_ps for shard in self.shards):
+            raise ValueError("join shard eligibility disagrees")
+
+    @property
+    def request_id(self) -> str:
+        return self.submission.request_id
+
+    @property
+    def kv_bytes(self) -> int:
+        return self.submission.kv_bytes
+
+    @property
+    def submitted_at_ps(self) -> int:
+        return self.submission.submitted_at_ps
+
+    @property
+    def eligible_at_ps(self) -> int:
+        return self.submission.eligible_at_ps
+
+    @property
+    def completed_at_ps(self) -> int:
+        return max(shard.completed_at_ps for shard in self.shards)
+
+    @property
+    def total_ps(self) -> int:
+        return self.completed_at_ps - self.submitted_at_ps
+
+    @property
+    def critical_shard_sequences(self) -> tuple[int, ...]:
+        return tuple(shard.sequence for shard in self.shards if shard.completed_at_ps == self.completed_at_ps)
+
+    def to_json(self) -> dict[str, object]:
+        return {
+            "authority": self.authority, "pricing_arm": self.pricing_arm,
+            "source_engine_id": self.submission.source_engine_id,
+            "destination_engine_id": self.submission.destination_engine_id,
+            "kv_bytes": self.kv_bytes, "submitted_at_ps": self.submitted_at_ps,
+            "eligible_at_ps": self.eligible_at_ps, "completed_at_ps": self.completed_at_ps,
+            "critical_shard_sequences": list(self.critical_shard_sequences),
+            "shards": [shard.to_json() for shard in self.shards],
+        }
+
+
+@runtime_checkable
+class PendingKvHandoffPolicy(Protocol):
+    """A shared handoff capability that progresses its existing native owner."""
+
+    def validate_engines(self, prefill_ids: Sequence[str], decode_ids: Sequence[str], width: int) -> None: ...
+
+    def bind(self, clock: VirtualClock, engine_local_ranks: Mapping[str, tuple[int, ...]]) -> None: ...
+
+    def submit(self, *, request_id: str, source_engine_id: str, destination_engine_id: str,
+               kv_bytes: int, submitted_at_ps: int) -> PendingKvHandoff: ...
+
+    def progress(self, pending: Sequence[PendingKvHandoff], *, through_ps: int | None) -> int | None: ...
+
+    def complete_due(self, pending: Sequence[PendingKvHandoff]) -> tuple[KvHandoffJoin, ...]: ...
+
+    def close(self) -> None: ...
+
+    def abort(self) -> None: ...
+
+
 @dataclass(frozen=True)
 class DeclaredKvHandoffPolicy:
     """Identity-off or declared-constant pricing for the KV join."""
@@ -251,7 +423,7 @@ class DisaggregatedRequestTimeline:
     admitted_at_ps: int
     prefill_eligible_at_ps: int
     prefill_completed_at_ps: int
-    handoff: KvHandoffEvent
+    handoff: KvHandoffEvent | KvHandoffJoin
     decode_eligible_at_ps: int
     decode_token_completed_at_ps: tuple[int, ...]
 
@@ -337,7 +509,7 @@ class DisaggregatedRequestTimeline:
             "admitted_at_ps": self.admitted_at_ps,
             "prefill_eligible_at_ps": self.prefill_eligible_at_ps,
             "prefill_completed_at_ps": self.prefill_completed_at_ps,
-            "handoff": {
+            "handoff": self.handoff.to_json() if isinstance(self.handoff, KvHandoffJoin) else {
                 "authority": self.handoff.authority,
                 "pricing_arm": self.handoff.pricing_arm,
                 "kv_bytes": self.handoff.kv_bytes,
@@ -374,10 +546,15 @@ __all__ = [
     "KV_HANDOFF_AUTHORITY",
     "PACKET_KV_HANDOFF_AUTHORITY",
     "PD_SESSION_SCHEMA",
+    "SHARED_PACKET_KV_HANDOFF_AUTHORITY",
     "DeclaredKvHandoffPolicy",
     "DisaggregatedRequestTimeline",
     "KvHandoffEvent",
     "KvHandoffGeometry",
+    "KvHandoffJoin",
     "KvHandoffPolicy",
+    "KvHandoffShardCompletion",
+    "PendingKvHandoff",
+    "PendingKvHandoffPolicy",
     "ServingPoolRole",
 ]
