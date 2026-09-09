@@ -1753,3 +1753,9 @@ capture exists.
   never attempted. Retain this run unchanged and diagnose host execution cost
   before freezing a successor campaign; a smaller partial run cannot close
   this task.
+  The first [host diagnostic](../../examples/pd_host_execution_diagnostic_v1/RESULTS.md)
+  is also VOID: its uninstrumented process completed 14 requests, but the
+  checker incorrectly required compact JSON from the existing spaced native
+  step writer. Retain that failure, freeze the source writer's exact encoding
+  before the parser repair, and execute a fresh paired diagnostic. No host
+  hotspot has been attributed and no diagnostic arm is admitted.

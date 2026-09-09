@@ -1,0 +1,128 @@
+{
+  "admitted_arms": 0,
+  "behavioral_score": null,
+  "completed_stages": [
+    "protocol",
+    "uninstrumented:capture"
+  ],
+  "evidence": {
+    "behavioral_instances": 0,
+    "exact_oracle_rows_retained_without_campaign_admission": 18,
+    "unscored_guard_rows_retained": 49832
+  },
+  "failure": {
+    "reason": "noncanonical or duplicate-member JSON: engine-work/simllm-prefill-0/step-records.jsonl",
+    "type": "GuardFailure"
+  },
+  "freeze_commit": "8f06648d26bbfb2bfff4751d29a2e2bf232b440d",
+  "instrumented_arm_attempted": false,
+  "limits": [
+    "CORE-52 remains open.",
+    "Original target-scale VOID is unchanged.",
+    "No host hotspot attribution, GPU timing or deployment-frontier claim."
+  ],
+  "native_process": {
+    "arm": "uninstrumented",
+    "clock_advances": 98,
+    "complete_requests": 14,
+    "exit_code": 0,
+    "sampled_max_current_rss_kib": 1147248,
+    "unique_steps": 70,
+    "wall_seconds": 260.0170595552772
+  },
+  "raw_bytes": 24977530,
+  "raw_file_count": 16,
+  "raw_files": [
+    {
+      "bytes": 1068,
+      "path": "exception.txt",
+      "sha256": "226ec6db46133d46bf1d78df7d788f4cbd0efb1d49809bec36b9c08a6f8730e1"
+    },
+    {
+      "bytes": 1145,
+      "path": "first-raw-receipts.json",
+      "sha256": "765b9e3d437a4b2788859efcd730317a30ef4c84351704f0c7495d3a541dcf16"
+    },
+    {
+      "bytes": 829,
+      "path": "process-caches/uninstrumented/vllm_cache_root/modelinfos/vllm-model_executor-models-granitemoe-GraniteMoeForCausalLM.json",
+      "sha256": "2a5f0a2f4dd6f84b326700312ae713b923f90a67c89d9287854e27ad3f13fe89"
+    },
+    {
+      "bytes": 5151388,
+      "path": "summary.json",
+      "sha256": "ae25e0fdf6f75cf14a66bffc50ce080e15f276b2766a9538ee74e5cf2019779b"
+    },
+    {
+      "bytes": 7321,
+      "path": "uninstrumented/construction-progress.jsonl",
+      "sha256": "7d065a19e60b2076c2bb59db5518513108f9cc1647dd8a9d4f607c89dc0fc61e"
+    },
+    {
+      "bytes": 18635,
+      "path": "uninstrumented/engine-work/simllm-decode-0/step-records.jsonl",
+      "sha256": "309266c76c614431935baad4c8c0d95debfe3902cbe325daef41579c33f14d38"
+    },
+    {
+      "bytes": 5039,
+      "path": "uninstrumented/engine-work/simllm-prefill-0/step-records.jsonl",
+      "sha256": "e9d385ba83dc6cc25e9d472fbf55b62e61afc17bd8e72129492ff6a63fc09921"
+    },
+    {
+      "bytes": 19726677,
+      "path": "uninstrumented/native.json",
+      "sha256": "e3d8c986a60d8f45370c6dfbff14a9962655ee65e47504036b118b6e963466c8"
+    },
+    {
+      "bytes": 17645,
+      "path": "uninstrumented/native.log",
+      "sha256": "eb9297d0332b5d84e30ed0578f314714f509f6e6cb6e83ebfc4bcedb3ad32342"
+    },
+    {
+      "bytes": 471,
+      "path": "uninstrumented/process.json",
+      "sha256": "528994f54e1ce09907ad5ab5a4ece5b49e23f97ccb8c50bc5e6f779e122ef101"
+    },
+    {
+      "bytes": 2084,
+      "path": "uninstrumented/prompt-16-requests-1.json",
+      "sha256": "3a6704500c4cf8c36937cd1fa3ee6e7dba193b039aad94f098c9e60ab88df936"
+    },
+    {
+      "bytes": 7264,
+      "path": "uninstrumented/prompt-16-requests-4.json",
+      "sha256": "fe60703047cb1b281c482c56ba3de1cf5454be1cbe8141a58072fc38326f767c"
+    },
+    {
+      "bytes": 2076,
+      "path": "uninstrumented/prompt-8-requests-1.json",
+      "sha256": "82df5e2080874d02234307266de24e843fc82790341bc98f7193a760e73450e5"
+    },
+    {
+      "bytes": 7227,
+      "path": "uninstrumented/prompt-8-requests-4.json",
+      "sha256": "658e4cdee23d75d9c913dc325081124323440ae5ebd1d985c0ad9da997102e21"
+    },
+    {
+      "bytes": 96,
+      "path": "uninstrumented/receipt.json",
+      "sha256": "ac346915dcea5f5f9dabd477e2db49e097c6805cae54a31a1e931da6a3c91709"
+    },
+    {
+      "bytes": 28565,
+      "path": "uninstrumented/request-progress.jsonl",
+      "sha256": "2541c0cf9fb50e2edfdc4adb6e2156f5317fefc3bda21c9b032b1a95a764c713"
+    }
+  ],
+  "schema": "simllm-pd-host-execution-diagnostic-publication-v1",
+  "software_validation": {
+    "pre_run_focused_seconds": 13.85,
+    "pre_run_focused_tests": 152,
+    "ruff": "PASS",
+    "status": "PENDING_FULL_GATE"
+  },
+  "source_commit": "51ed0d1ef5fb86a2fc643dfba3949f67627c3659",
+  "summary_sha256": "ae25e0fdf6f75cf14a66bffc50ce080e15f276b2766a9538ee74e5cf2019779b",
+  "task": "CORE-52",
+  "verdict": "VOID"
+}
