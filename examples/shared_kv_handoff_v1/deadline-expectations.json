@@ -1,0 +1,71 @@
+{
+  "as_of_commit": "ab21905",
+  "chronology": "source inspection before the timeout implementation and first shared native run",
+  "component_controls": [
+    "legacy-lifetime-expiry-while-idle",
+    "complete-exchange-cumulative-deadline",
+    "idle-between-exchanges-excluded",
+    "session-lifetime-still-caps-exchange",
+    "concurrent-and-nested-context-rejection",
+    "timeout-reaps-and-poisons",
+    "original-error-preserved",
+    "wire-and-simulation-time-identity"
+  ],
+  "deterministic_grid": {
+    "exchange_seconds": [
+      1,
+      2
+    ],
+    "idle_seconds": [
+      3,
+      6
+    ],
+    "lifetime_seconds": 30
+  },
+  "failure_policy": {
+    "behavioral_score_after_fatal": null,
+    "fatal": "VOID",
+    "retain_first_exit_receipts": true
+  },
+  "invariants": {
+    "legacy_default_timestamps_and_wire_bytes_exact": true,
+    "no_deadline_refresh_between_frame_parts": true,
+    "no_lifetime_extension": true,
+    "no_overlap_or_nested_context": true
+  },
+  "legacy_flow_session": {
+    "exchange_timeout_s": null,
+    "wall_timeout_s": 60
+  },
+  "native_echo_grid": {
+    "exchange_seconds": [
+      1,
+      2
+    ],
+    "idle_seconds": [
+      3,
+      6
+    ],
+    "lifetime_seconds": 30
+  },
+  "native_study_parameters_unchanged": [
+    "requests",
+    "engine_counts",
+    "prompt_tokens",
+    "rates",
+    "packet_sizes",
+    "submission_ps",
+    "propagation_ps",
+    "expected_services",
+    "oracles",
+    "behavioral_families",
+    "worker_resource_limits"
+  ],
+  "original_shared_freeze": "2ad72f7",
+  "schema": "simllm-shared-handoff-deadline-expectations-v1",
+  "shared_flow_session": {
+    "exchange_timeout_s": 60,
+    "wall_timeout_s": 1800
+  },
+  "task": "CORE-71"
+}
