@@ -1410,11 +1410,11 @@ capture exists.
   same host limit, retaining 18 complete independent request rows from five
   cells before its sixth cell finishes. Its failed process has matching first
   and final raw receipts; no independent process is admitted. Retain all three
-  attempts unchanged. The first [primitive dispatch study](../../examples/snapshot_dispatch_v1/RESULTS.md)
-  is also VOID: a duplicate checker name rejects admission of its completed
-  before-source process. Preserve those receipts and qualify a fresh source
-  pair after the naming repair. A complete fresh native campaign remains
-  required; the timing sweep and limits are unchanged.
+  attempts unchanged. The [primitive dispatch study](../../examples/snapshot_dispatch_v1/RESULTS.md)
+  qualifies exactly 1,536 fewer generic type-check calls on its largest input with all
+  1,553 visits retained, complete source-paired model jobs and unchanged guard
+  invocation counts. A complete fresh native campaign remains required;
+  the timing sweep and limits are unchanged.
   No native concurrency claim closes here.
 
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
