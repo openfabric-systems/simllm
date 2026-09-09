@@ -1,0 +1,124 @@
+{
+  "schema": "simllm-snapshot-dispatch-expectations-v1",
+  "task": "CORE-68",
+  "before_commit": "f904b29a3d25c2ae0a955cb1d771f6148f3ceb2b",
+  "allowed_package_change": "simllm/core/value_snapshot.py",
+  "before_snapshot_sha256": "07bc7adc817367fc037081eebe6c25508d1f4794d846648e21db6bc41787320e",
+  "locked_helper_expectations_sha256": "4e67e0e0f1183c41cbf0780f3617fdd48b14c70546e63475106d69a5766c6c77",
+  "primitive_vector": {
+    "string": "λ:字",
+    "integer": 1361129467683753853853498429727072845831,
+    "boolean": true,
+    "bytes_hex": "00ff80",
+    "none": null,
+    "float_hex": "-0x0.0p+0"
+  },
+  "cases": [
+    {
+      "id": "h0-q1",
+      "history": 0,
+      "width": 1
+    },
+    {
+      "id": "h1-q1",
+      "history": 1,
+      "width": 1
+    },
+    {
+      "id": "h1-q4",
+      "history": 1,
+      "width": 4
+    },
+    {
+      "id": "h1-q16",
+      "history": 1,
+      "width": 16
+    },
+    {
+      "id": "h4-q1",
+      "history": 4,
+      "width": 1
+    },
+    {
+      "id": "h4-q4",
+      "history": 4,
+      "width": 4
+    },
+    {
+      "id": "h4-q16",
+      "history": 4,
+      "width": 16
+    },
+    {
+      "id": "h16-q1",
+      "history": 16,
+      "width": 1
+    },
+    {
+      "id": "h16-q4",
+      "history": 16,
+      "width": 4
+    },
+    {
+      "id": "h16-q16",
+      "history": 16,
+      "width": 16
+    }
+  ],
+  "semantics": [
+    "primitives",
+    "nonfinite-nan",
+    "nonfinite-positive",
+    "nonfinite-negative",
+    "primitive-subclasses",
+    "enum-values",
+    "fraction-path-subclasses",
+    "dataclass-fields",
+    "dataclass-class",
+    "metadata-change",
+    "metaclass-spoof",
+    "alias-fresh-tuples",
+    "ordered-dictionary",
+    "unordered-containers",
+    "list-cycle",
+    "dict-cycle",
+    "projection-success",
+    "projection-decline",
+    "projection-error",
+    "projection-nested",
+    "projection-cycle",
+    "nonfinite-before-unsupported",
+    "unsupported-before-nonfinite"
+  ],
+  "isolated_semantics": [
+    "fraction-before",
+    "fraction-during"
+  ],
+  "limits": {
+    "wall_seconds": 600,
+    "rss_cap_kib": 8388608,
+    "sample_seconds": 0.25
+  },
+  "control_corruptions": [
+    "source-receipt",
+    "profile-calls",
+    "missing-semantic",
+    "job-result",
+    "missing-mutation",
+    "disk-only-bytes"
+  ],
+  "required_stages": [
+    "protocol",
+    "before-capture",
+    "before-admission",
+    "after-capture",
+    "after-admission",
+    "isolated-semantics",
+    "paired-relations",
+    "corruption-controls",
+    "final-receipts"
+  ],
+  "behavioral_instances": 9,
+  "behavioral_families": 1,
+  "exact_oracles": 16
+}
