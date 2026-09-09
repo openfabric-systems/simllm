@@ -604,3 +604,5 @@ examples/kimi_k3_qualification_v1/* text eol=lf
 examples/independent_engine_completion_v1/** text eol=lf
 examples/publication_snapshot_v1/** text eol=lf
 examples/dependency_index_v1/** text eol=lf
+
+examples/dgx_nvlink_v1/* text eol=lf

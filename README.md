@@ -237,14 +237,39 @@ wire port goes out to the fabric.
 <img src="resources/figures/xpu-rnic-model.png" width="72%" alt="The xPU and RNIC mental model: one simulated node holds xPU and RNIC devices, each composed from module boxes; PCIe connects the xPU host interface, the RNIC DMA engine and the host CPU with DRAM, so network invocation can come from the host driver, a CPU proxy or the GPU itself; scale-up ports connect peer xPUs inside the node, and the RNIC network port feeds the packet fabric">
 </p>
 
-The selected A100 packet candidate decomposes one scale-up transfer into
-queue-level TX, switch and RX services. Its parameters remain declared
-candidates; the [NVLink domain-model study](docs/design/nvlink-domain-model.md)
-records the exact evidence boundary and analytic bypass.
+Inside a **DGX A100**, a GPU sends data over its NVLinks to one of six
+NVSwitch chips, then onward to the destination GPU. Every GPU connects to
+every switch. The six chips operate in parallel in **one switching tier**.
+HGX names the GPU baseboard/platform used by server manufacturers; DGX names
+NVIDIA's complete system. The eight-GPU HGX and DGX variants share this peer
+wiring. [NVIDIA's system drawing](https://docs.nvidia.com/dgx/dgxa100-user-guide/introduction-to-dgxa100.html#dgx-a100-system-topology)
+provides the physical reference for the schematic below.
 
 <p align="center">
-<img src="resources/figures/nvlink-domain-model.png" width="96%" alt="The NVLink queue-level domain: a per-endpoint TX packetizes per-destination staging queues, gates them on returned credits and stripes packets over four bonded links; one parameterized switch is exact pass-through on the A100 direct mesh or exposes ingress FIFOs and a contention point for an NVSwitch-class profile; the per-endpoint RX tracks ingress-buffer occupancy, returns credits, reassembles extent sequences and delivers them in order. All numeric module values are declared candidates, while the pair and fan-out rates are published-measurement checks only.">
+<img src="resources/figures/nvlink-domain-model.png" width="100%" alt="DGX A100: two CPUs and four simplified PCIe branches connect eight GPUs; each GPU has two independent NVLinks to each of six parallel NVSwitch chips. The inset follows GPU egress, finite switch input queues, a crossbar and output grant, and GPU ingress with upstream credit returns. Queue sizes and grant policies are declared model choices.">
 </p>
+
+| Eight-GPU system | Parallel NVSwitch chips | Links from each GPU to the switches | Per-GPU send capacity | Send plus receive |
+|---|---:|---|---:|---:|
+| DGX / HGX A100 | 6, second generation | 2 + 2 + 2 + 2 + 2 + 2 | 300 GB/s | 600 GB/s |
+| DGX / HGX H100 | 4, third generation | 4 + 5 + 5 + 4 | 450 GB/s | 900 GB/s |
+
+These are nominal link capacities, not collective payload measurements. Each
+link carries 25 GB/s in each direction. Multiple senders share the receiving
+GPU's links and buffers. H100 changes the switch count and adds collective
+offload capability, while retaining one switching tier.
+[NVIDIA topology tables](https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/#nvlink-topology)
+and the [H100 drawing](resources/figures/dgx-h100-nvlink.svg) show the distinction.
+
+SimLLM gives every attachment a physical identity and follows packets through
+GPU egress, finite switch input queues, switch input/output grants and GPU
+ingress. The optional native C/C++ switch kernel owns port occupancy and
+arbitration; the existing packet calendar owns queues, credits and delivery.
+The [worked example](examples/dgx_nvlink_v1/RESULTS.md) exercises tensor
+parallelism and expert dispatch/combine through request latency. The
+[model guide](docs/design/nvlink-domain-model.md) defines the declared timing
+parameters and the [hardware qualification tasks](docs/modules/traffic.md#open-tasks).
+Merlin's four-GPU direct meshes are separate targets with no NVSwitch.
 
 ### The xPU device
 
