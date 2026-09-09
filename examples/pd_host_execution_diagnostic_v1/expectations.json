@@ -182,28 +182,28 @@
       "handoff_ps": 100000000,
       "id": "prompt-8-handoff-100000000",
       "prompt_tokens": 8,
-      "requests": 80
+      "requests": 1
     },
     {
       "decode_output_tokens": 4,
       "handoff_ps": 200000000,
       "id": "prompt-8-handoff-200000000",
       "prompt_tokens": 8,
-      "requests": 80
+      "requests": 1
     },
     {
       "decode_output_tokens": 4,
       "handoff_ps": 100000000,
       "id": "prompt-16-handoff-100000000",
       "prompt_tokens": 16,
-      "requests": 80
+      "requests": 1
     },
     {
       "decode_output_tokens": 4,
       "handoff_ps": 200000000,
       "id": "prompt-16-handoff-200000000",
       "prompt_tokens": 16,
-      "requests": 80
+      "requests": 1
     }
   ],
   "historical_files_sha256": {
@@ -226,6 +226,17 @@
     "examples/pd_session_v1/expectations.md": "12aa356846d9a0f316d47e48024db498dd71bd034c9ef1c589e96f55614bac82",
     "examples/pd_session_v1/results.json": "9660a5bcd47706fe857694d68340aab9fdab2d7096632624e6f310118d4a435e",
     "examples/pd_session_v1/run_study.py": "56d96ba0f1979ddf5160b93c19c4e93b57406c6ebf76d61e4a5661f9b317410b"
+  },
+  "identity_normalization": {
+    "allowed_step_paths": [
+      "record.scheduled[*].request_id",
+      "record.finished_request_ids[*]",
+      "record.preempted_request_ids[*]"
+    ],
+    "sampled_request_ids": "Must remain absent; an unexpected optional identity field rejects.",
+    "sink_path_allowlist": [],
+    "sink_paths": "No path-bearing sink field is admitted in the declared local arm; unexpected paths reject rather than generic prefix replacement.",
+    "step_mapping": "(engine_id, opaque_internal_id) -> (engine_id, stable_request_id), separately bijective within each actual engine."
   },
   "instrumentation": {
     "cpu_process_timer": "time.process_time_ns",
@@ -299,7 +310,9 @@
     ],
     "phase_semantics": "Inclusive call totals plus direct instrumented-child totals; exclusive=inclusive-child. Only declared bindings are covered.",
     "profile_export": "Complete function and caller table plus raw pstats.",
+    "profile_function_identity": "Complete (filename,line,function) keys and complete caller edges; do not merge by function name.",
     "profile_scope": "Two single-request cells only in instrumented arm, including progress persistence.",
+    "restore_binding_structure": "Remove a temporary instance attribute when the original method was inherited; do not leave a bound-method shadow. Preserve identical result/exception and arguments, empty counter stack and original profile hooks.",
     "restore_on_failure": true,
     "return_identity": "Same object and same exception; preserve args, kwargs, call count and source binding.",
     "thread_scope": "main-thread-only",
@@ -392,7 +405,8 @@
     "missing-profile-function-table",
     "unrestored-wrapper",
     "wrong-source-receipt",
-    "disk-only-raw-change"
+    "disk-only-raw-change",
+    "same-public-request-opposite-role-id"
   ],
   "session": {
     "collective_arm": "lower",

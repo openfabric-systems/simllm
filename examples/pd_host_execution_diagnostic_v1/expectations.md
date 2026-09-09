@@ -44,6 +44,8 @@ entry points. Uninstrumented work inside an entry point remains included in
 its exclusive value. Never sum overlapping inclusive timings or interpret a
 phase subtotal as total host wall time. Check exact counter arithmetic and
 require restoration of every wrapped callable, including on exceptions.
+Remove temporary instance attributes for originally inherited methods; leaving
+a bound-method shadow is not restoration.
 
 Counters wrap only the main thread, return the identical result object and
 propagate the identical exception. They never change the model clock, function
@@ -55,7 +57,8 @@ profile hooks.
 Detailed call profiling is bounded to the two one-request cells in the
 instrumented arm. It includes request execution and the original progress
 write. Keep the raw profile and a complete readable function/caller export,
-not only a selected top-function list. The four-request cells have passive
+not only a selected top-function list. Function identity is the full
+`(filename, line, function)` tuple, with all caller edges retained. The four-request cells have passive
 counters but no detailed call profile. Profiling overhead is descriptive; do
 not subtract it to invent an unobserved execution time.
 
@@ -79,11 +82,15 @@ Retain complete unique executor `StepRecord` and `StepResult` rows, clock
 advances and all public sink outcome collections. Bind opaque native IDs to
 stable request IDs by their actual per-request mapping. For cross-arm step
 comparison, normalize only scheduled, finished and preempted request-ID fields
-through that complete bijection. No arbitrary recursive string substitution
+through the complete engine-qualified bijection
+`(engine_id, opaque_id) -> (engine_id, stable_request_id)`. A same-request
+opposite-role substitution must reject. The optional `sampled_request_ids`
+field remains absent and cannot be silently added to normalization. No arbitrary recursive string substitution
 or ignored timing field is allowed. Sink outcomes must match in full. Their
 model identities, dependencies, prices, counts and service decomposition
-remain intact. Output paths, if any are present, must be separately identified
-and compared relative to the exact declared per-process output root.
+remain intact. The admitted local outcome collections have no path-bearing fields. The
+path allowlist is empty: an unexpected path rejects instead of being erased by
+a generic output-root replacement.
 
 Require the actual session-owned native engines, executor and worker bindings
 before and after execution. Construction advances the shared clock by zero.
