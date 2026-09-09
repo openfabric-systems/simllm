@@ -120,7 +120,7 @@ def check_engines(data, process, frozen, evidence):
                        and selected["pipeline_parallel_size"] == selected["data_parallel_size"] == 1
                        and selected["async_scheduling"] is False and selected["policy"] == "fcfs"
                        and selected["executor_mode"] == "virtual")
-        evidence.equal(name + ":memory-bandwidth", selected["gpu"]["mem_bandwidth"], frozen["bounds"]["memory_bytes_per_second"])
+        evidence.equal(name + ":memory-bandwidth", selected["gpu"]["mem_bandwidth"], float(frozen["bounds"]["memory_bytes_per_second"]))
     evidence.equal(label + ":unique-workers", len(set(worker_ids)), 8 * len(expected_ids))
     evidence.equal(label + ":unfinished", data["identity"]["unfinished_after"], [False] * len(expected_ids))
     if process["mode"] == "independent":
@@ -496,23 +496,28 @@ def check_checkpoints(data, process, steps, owners, evidence, *, expected_cache_
             evidence.equal(name + ":drain-no-state-change", retired["native"], current)
 
 
-def check_sinks_and_domains(data, process, steps, evidence):
+def check_selected_envelopes(data, label, evidence):
     from dataclasses import asdict
 
     from examples.independent_engine_completion_v1.common import json_value
     from simllm.compute import GPU_ENVELOPES, HostInitiationModel
     from simllm.traffic.collective_latency import resolve_collective_fixed_cost_envelope
 
-    label = process["id"] + ":accounting"
-    engines = [row["engine_id"] for row in data["retained_before"]]
-    evidence.equal(label + ":sink-engines", sorted(data["sinks"]), sorted(engines))
+    envelope = resolve_collective_fixed_cost_envelope("intra-node-fixed-cost-v1")
+    profile = envelope.arm_profile("lower")
     for selected in data["selected_before"]:
         name = label + ":selection:" + selected["engine_id"]
         evidence.equal(name + ":host", selected["host_model"], json_value(asdict(HostInitiationModel.ideal())))
         evidence.equal(name + ":gpu", selected["gpu"], json_value(asdict(GPU_ENVELOPES["b100"])))
-        envelope = resolve_collective_fixed_cost_envelope("intra-node-fixed-cost-v1")
-        profile = envelope.arm_profile("lower")
         evidence.equal(name + ":collective", selected["collective_profile"], json_value(asdict(profile)))
+    return profile, envelope
+
+
+def check_sinks_and_domains(data, process, steps, evidence):
+    label = process["id"] + ":accounting"
+    engines = [row["engine_id"] for row in data["retained_before"]]
+    evidence.equal(label + ":sink-engines", sorted(data["sinks"]), sorted(engines))
+    profile, envelope = check_selected_envelopes(data, label, evidence)
     for engine in engines:
         local = [step for (owner, index), step in steps.items() if owner == engine]
         name = label + ":" + engine

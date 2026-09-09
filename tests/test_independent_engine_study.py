@@ -12,8 +12,10 @@ from examples.independent_engine_completion_v1.checks import (
     check_checkpoints,
     check_component_checkpoints,
     check_components,
+    check_engines,
     check_native_relations,
     check_projections,
+    check_selected_envelopes,
     expected_times,
 )
 from examples.independent_engine_completion_v1.common import (
@@ -41,6 +43,54 @@ from simllm.core import StepRecord
 from simllm.core.step import step_record_to_json
 
 FROZEN = json.loads((HERE / "expectations.json").read_bytes())
+
+
+def source_selection_fixture():
+    """Real source envelopes over a selection-only, post-specified identity fixture."""
+    from simllm.compute import GPU_ENVELOPES, HostInitiationModel, RooflineProvider
+    from simllm.traffic import resolve_collective_fixed_cost_envelope
+
+    data = json.loads((Path(__file__).parent / "fixtures/independent_engine_selection.json").read_bytes())["data"]
+    profile = resolve_collective_fixed_cost_envelope("intra-node-fixed-cost-v1").arm_profile("lower")
+    for selected in data["selected_before"]:
+        selected.update(gpu=asdict(GPU_ENVELOPES["b100"]), host_model=asdict(HostInitiationModel.ideal()),
+                        provider_state=vars(RooflineProvider(efficiency=0.7)), collective_profile=asdict(profile))
+    data["selected_after"] = deepcopy(data["selected_before"])
+    return json_value(data)
+
+
+def test_source_selection_survives_exact_writer_and_physical_bound_join(tmp_path):
+    path = tmp_path / "selection.json"
+    write(path, source_selection_fixture())
+    data = read(path)
+    evidence = Evidence([])
+    check_engines(data, FROZEN["native_processes"][0], FROZEN, evidence)
+    check_selected_envelopes(data, "source-selection", evidence)
+    assert type(data["selected_before"][0]["gpu"]["mem_bandwidth"]) is float
+    assert evidence.oracles == evidence.relations == []
+
+
+@pytest.mark.parametrize("changed", [4.0e12, 8.0e12 + 0.5, True, "8000000000000", 8000000000000])
+def test_source_selection_rejects_changed_bandwidth_and_coerced_type(tmp_path, changed):
+    data = source_selection_fixture()
+    for selected in data["selected_before"]:
+        selected["gpu"]["mem_bandwidth"] = changed
+    data["selected_after"] = deepcopy(data["selected_before"])
+    path = tmp_path / "selection.json"
+    write(path, data)
+    data = read(path)
+    with pytest.raises(GuardFailure, match="memory-bandwidth"):
+        check_engines(data, FROZEN["native_processes"][0], FROZEN, Evidence([]))
+    with pytest.raises(GuardFailure, match="gpu"):
+        check_selected_envelopes(data, "source-selection", Evidence([]))
+
+
+@pytest.mark.parametrize("changed", [float("nan"), float("inf"), -float("inf")])
+def test_source_selection_refuses_nonfinite_encoding(tmp_path, changed):
+    data = source_selection_fixture()
+    data["selected_before"][0]["gpu"]["mem_bandwidth"] = changed
+    with pytest.raises(ValueError):
+        write(tmp_path / "invalid.json", data)
 
 
 def reference_data():
