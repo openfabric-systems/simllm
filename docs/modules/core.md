@@ -1097,8 +1097,14 @@ coverage remain in request provenance, and every miss delegates to an explicit
 roofline comparator. The first acceptance run is void: both record-absent arms
 reproduce every accepted KV byte count and timestamp, but their complete
 request-result bytes differ in the two vLLM-owned random pool-local request
-identifiers. CORE-53 therefore stays open on CORE-58 and COMP-73; see
+identifiers. The complete comparison boundary excludes exactly those two
+opaque root members and preserves every other serialized value, including
+nested and future fields. The independent native identity study closes
+CORE-58 with zero projected-byte differences across all four cells while
+leaving the original run void. CORE-53 stays open on COMP-73; see
 [the session kernel-cycle result](../../examples/pd_session_kernel_cycle_v1/RESULTS.md).
+The [native identity result](../../examples/pd_session_identity_v1/RESULTS.md)
+records the new boundary, its exact difference paths and nonmutation evidence.
 
 The frozen CORE-62 roofline replay passes its exact accounting gate at
 all 18 points: the residual after the inter-node then intra-node terms is 0 ps
@@ -1355,21 +1361,12 @@ capture exists.
   and does not create another pricing model. The candidate binding and exact
   signed movement are implemented, but the frozen acceptance run is void on
   complete request-result byte identity and the record covers only one decode
-  shape. CORE-58 owns the identity-proof boundary and COMP-73 owns the missing
-  target-record coverage; this task stays open on both.
-
-- CORE-58 (Precision; P1; S): repair the CORE-53 record-absent identity
-  acceptance boundary after its frozen run was voided solely by the fresh
-  random suffixes in vLLM's prefill and decode pool-local request identifiers.
-  Before rerunning, freeze either a canonical comparison projection that
-  retains every pricing-relevant and client-visible field, KV byte count and
-  timestamp while excluding only those two opaque identifiers, or a stable
-  identifier mechanism that does not change the accepted off path. Acceptance
-  requires two independent native sessions to match byte for byte on the
-  frozen boundary, an exact diagnostic proving that the unprojected results
-  differ only in the declared opaque fields, and unchanged accepted
-  `pd_session_v1` compact cells. The void run remains void and cannot be
-  retrospectively rescored.
+  shape. CORE-58 supplies the accepted complete comparison boundary through
+  `VllmPdRequestResult.to_comparison_json()`: only the two declared opaque root
+  identifiers are excluded, and every other serialized member remains exact.
+  Use this named boundary in a new prospective acceptance run after COMP-73
+  supplies the missing target-record coverage. Preserve the original void
+  study without rescoring it; this task stays open on COMP-73.
 
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
   queue-visit contract above before residual-driven calibration. Define one
