@@ -1,0 +1,1458 @@
+{
+  "behavioral_family_count": 4,
+  "behavioral_instance_count": 16,
+  "behavioral_relations": [
+    {
+      "expected": {
+        "decimal": 0.059604644775390625,
+        "exact": "15625/262144"
+      },
+      "family": "payload_scaling",
+      "instance": "4194304-50000000000-5000000",
+      "observed": {
+        "decimal": 0.059604644775390625,
+        "exact": "15625/262144"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "expected": {
+        "decimal": 0.11920928955078125,
+        "exact": "15625/131072"
+      },
+      "family": "payload_scaling",
+      "instance": "4194304-50000000000-10000000",
+      "observed": {
+        "decimal": 0.11920928955078125,
+        "exact": "15625/131072"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "expected": {
+        "decimal": 0.11920928955078125,
+        "exact": "15625/131072"
+      },
+      "family": "payload_scaling",
+      "instance": "4194304-100000000000-5000000",
+      "observed": {
+        "decimal": 0.11920928955078125,
+        "exact": "15625/131072"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "expected": {
+        "decimal": 0.2384185791015625,
+        "exact": "15625/65536"
+      },
+      "family": "payload_scaling",
+      "instance": "4194304-100000000000-10000000",
+      "observed": {
+        "decimal": 0.2384185791015625,
+        "exact": "15625/65536"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "expected": {
+        "decimal": 0.029802322387695312,
+        "exact": "15625/524288"
+      },
+      "family": "payload_scaling",
+      "instance": "8388608-50000000000-5000000",
+      "observed": {
+        "decimal": 0.029802322387695312,
+        "exact": "15625/524288"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "expected": {
+        "decimal": 0.059604644775390625,
+        "exact": "15625/262144"
+      },
+      "family": "payload_scaling",
+      "instance": "8388608-50000000000-10000000",
+      "observed": {
+        "decimal": 0.059604644775390625,
+        "exact": "15625/262144"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "expected": {
+        "decimal": 0.059604644775390625,
+        "exact": "15625/262144"
+      },
+      "family": "payload_scaling",
+      "instance": "8388608-100000000000-5000000",
+      "observed": {
+        "decimal": 0.059604644775390625,
+        "exact": "15625/262144"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "expected": {
+        "decimal": 0.11920928955078125,
+        "exact": "15625/131072"
+      },
+      "family": "payload_scaling",
+      "instance": "8388608-100000000000-10000000",
+      "observed": {
+        "decimal": 0.11920928955078125,
+        "exact": "15625/131072"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "expected": {
+        "decimal": 0.11920928955078125,
+        "exact": "15625/131072"
+      },
+      "family": "overhead_scaling",
+      "instance": "4194304-50000000000",
+      "observed": {
+        "decimal": 0.11920928955078125,
+        "exact": "15625/131072"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "expected": {
+        "decimal": 0.2384185791015625,
+        "exact": "15625/65536"
+      },
+      "family": "overhead_scaling",
+      "instance": "4194304-100000000000",
+      "observed": {
+        "decimal": 0.2384185791015625,
+        "exact": "15625/65536"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "expected": {
+        "decimal": 0.059604644775390625,
+        "exact": "15625/262144"
+      },
+      "family": "overhead_scaling",
+      "instance": "8388608-50000000000",
+      "observed": {
+        "decimal": 0.059604644775390625,
+        "exact": "15625/262144"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "expected": {
+        "decimal": 0.11920928955078125,
+        "exact": "15625/131072"
+      },
+      "family": "overhead_scaling",
+      "instance": "8388608-100000000000",
+      "observed": {
+        "decimal": 0.11920928955078125,
+        "exact": "15625/131072"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "expected": {
+        "decimal": 0.2,
+        "exact": "1/5"
+      },
+      "family": "phase_duration_scaling",
+      "instance": "2",
+      "observed": {
+        "decimal": 0.2,
+        "exact": "1/5"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "expected": {
+        "decimal": 0.4,
+        "exact": "2/5"
+      },
+      "family": "phase_duration_scaling",
+      "instance": "3",
+      "observed": {
+        "decimal": 0.4,
+        "exact": "2/5"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "expected": {
+        "decimal": 40000000.0,
+        "exact": "40000000"
+      },
+      "family": "phase_degree_scaling",
+      "instance": "100000000",
+      "observed": {
+        "decimal": 40000000.0,
+        "exact": "40000000"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "expected": {
+        "decimal": 40000000.0,
+        "exact": "40000000"
+      },
+      "family": "phase_degree_scaling",
+      "instance": "200000000",
+      "observed": {
+        "decimal": 40000000.0,
+        "exact": "40000000"
+      },
+      "verdict": "PASS"
+    }
+  ],
+  "behavioral_score": {
+    "passed": 16,
+    "total": 16
+  },
+  "closure_scope": "TRAF-91 inference correction only",
+  "evidence_class": "synthetic_inference_counterexample",
+  "exact_oracle_count": 20,
+  "exact_oracles": [
+    {
+      "kind": "packet_free_error_drop",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    },
+    {
+      "kind": "packet_free_error_drop",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    },
+    {
+      "kind": "packet_free_error_drop",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    },
+    {
+      "kind": "packet_free_error_drop",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    },
+    {
+      "kind": "packet_free_error_drop",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    },
+    {
+      "kind": "packet_free_error_drop",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    },
+    {
+      "kind": "packet_free_error_drop",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    },
+    {
+      "kind": "packet_free_error_drop",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    },
+    {
+      "kind": "packet_free_error_drop",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    },
+    {
+      "kind": "packet_free_error_drop",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    },
+    {
+      "kind": "packet_free_error_drop",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    },
+    {
+      "kind": "packet_free_error_drop",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    },
+    {
+      "kind": "common_phase_ps",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    },
+    {
+      "kind": "common_phase_ps",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    },
+    {
+      "kind": "common_phase_ps",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    },
+    {
+      "kind": "common_phase_ps",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    },
+    {
+      "kind": "common_phase_ps",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    },
+    {
+      "kind": "common_phase_ps",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    },
+    {
+      "kind": "common_phase_ps",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    },
+    {
+      "kind": "common_phase_ps",
+      "residual": {
+        "decimal": 0.0,
+        "exact": "0"
+      }
+    }
+  ],
+  "expectations_commit": "06a88dea7c4647aeb8eeb44f8628f743a8527397",
+  "false_packet_identification_pair_count": 4,
+  "fatal_findings": [],
+  "hardware_capture": false,
+  "historical_audit": {
+    "budget_reconstructions": [
+      {
+        "declared_budget_fraction": 0.0,
+        "degree": 1,
+        "repetition": 0,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.0,
+        "degree": 1,
+        "repetition": 1,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.0,
+        "degree": 1,
+        "repetition": 2,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.0,
+        "degree": 1,
+        "repetition": 3,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.0,
+        "degree": 1,
+        "repetition": 4,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.0,
+        "degree": 1,
+        "repetition": 5,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.0,
+        "degree": 1,
+        "repetition": 6,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.005290154471822857,
+        "degree": 2,
+        "repetition": 0,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.005395372794270574,
+        "degree": 2,
+        "repetition": 1,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.005407322766063445,
+        "degree": 2,
+        "repetition": 2,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.005371630941945728,
+        "degree": 2,
+        "repetition": 3,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.005371630941945728,
+        "degree": 2,
+        "repetition": 4,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.0054374302353232375,
+        "degree": 2,
+        "repetition": 5,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.005377546881354227,
+        "degree": 2,
+        "repetition": 6,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.011289739769680661,
+        "degree": 3,
+        "repetition": 0,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.011109926064675242,
+        "degree": 3,
+        "repetition": 1,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.011160713936941975,
+        "degree": 3,
+        "repetition": 2,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.011135262456087201,
+        "degree": 3,
+        "repetition": 3,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.011084704696511233,
+        "degree": 3,
+        "repetition": 4,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.011224856460436222,
+        "degree": 3,
+        "repetition": 5,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.011109926064675242,
+        "degree": 3,
+        "repetition": 6,
+        "size_bytes": 4194304,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.0,
+        "degree": 1,
+        "repetition": 0,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.0,
+        "degree": 1,
+        "repetition": 1,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.0,
+        "degree": 1,
+        "repetition": 2,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.0,
+        "degree": 1,
+        "repetition": 3,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.0,
+        "degree": 1,
+        "repetition": 4,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.0,
+        "degree": 1,
+        "repetition": 5,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.0,
+        "degree": 1,
+        "repetition": 6,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.0027263051115237716,
+        "degree": 2,
+        "repetition": 0,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.0027370025778562786,
+        "degree": 2,
+        "repetition": 1,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.002724783724038482,
+        "degree": 2,
+        "repetition": 2,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.0027339376028762265,
+        "degree": 2,
+        "repetition": 3,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.0027339376028762265,
+        "degree": 2,
+        "repetition": 4,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.0027293529875177377,
+        "degree": 2,
+        "repetition": 5,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.002746238698613284,
+        "degree": 2,
+        "repetition": 6,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.005737734889232073,
+        "degree": 3,
+        "repetition": 0,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.005724282106632968,
+        "degree": 3,
+        "repetition": 1,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.00573100040949488,
+        "degree": 3,
+        "repetition": 2,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.005744485218219692,
+        "degree": 3,
+        "repetition": 3,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.005734365673753107,
+        "degree": 3,
+        "repetition": 4,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.005700890234771524,
+        "degree": 3,
+        "repetition": 5,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      },
+      {
+        "declared_budget_fraction": 0.005737734889232073,
+        "degree": 3,
+        "repetition": 6,
+        "size_bytes": 8388608,
+        "source_start_observation": null
+      }
+    ],
+    "declared_budget_ps_per_additional_sender": 5000000,
+    "evidence_class": "post_specified_historical_inference_audit",
+    "hardware_behavioral_score": null,
+    "original_status": "VALID_0_PASS_6_MISS",
+    "producer_pacing_coordinates": [
+      {
+        "evidence_class": "derived_source_coordinate_not_measured_wait",
+        "first_message_address_index": 11975,
+        "nominal_deadline_ns": {
+          "decimal": 30656.0,
+          "exact": "30656"
+        },
+        "pattern": "one_source",
+        "size_bytes": 4194304
+      },
+      {
+        "evidence_class": "derived_source_coordinate_not_measured_wait",
+        "first_message_address_index": 12655,
+        "nominal_deadline_ns": {
+          "decimal": 32396.8,
+          "exact": "161984/5"
+        },
+        "pattern": "two_source_simultaneous",
+        "size_bytes": 4194304
+      },
+      {
+        "evidence_class": "derived_source_coordinate_not_measured_wait",
+        "first_message_address_index": 789,
+        "nominal_deadline_ns": {
+          "decimal": 2019.84,
+          "exact": "50496/25"
+        },
+        "pattern": "three_source_simultaneous",
+        "size_bytes": 4194304
+      },
+      {
+        "evidence_class": "derived_source_coordinate_not_measured_wait",
+        "first_message_address_index": 28359,
+        "nominal_deadline_ns": {
+          "decimal": 72599.04,
+          "exact": "1814976/25"
+        },
+        "pattern": "one_source",
+        "size_bytes": 8388608
+      },
+      {
+        "evidence_class": "derived_source_coordinate_not_measured_wait",
+        "first_message_address_index": 29039,
+        "nominal_deadline_ns": {
+          "decimal": 74339.84,
+          "exact": "1858496/25"
+        },
+        "pattern": "two_source_simultaneous",
+        "size_bytes": 8388608
+      },
+      {
+        "evidence_class": "derived_source_coordinate_not_measured_wait",
+        "first_message_address_index": 789,
+        "nominal_deadline_ns": {
+          "decimal": 2019.84,
+          "exact": "50496/25"
+        },
+        "pattern": "three_source_simultaneous",
+        "size_bytes": 8388608
+      }
+    ],
+    "qualification_verdict": "VOID_UNDECIDABLE_ALIGNMENT_PRECONDITION",
+    "responsible_mechanism": "unidentified",
+    "source_boundary_findings": [
+      "The scorer divides a declared start budget by a local device-event duration.",
+      "Maximum local duration is not a measured common first-release to last-completion span.",
+      "Pacing uses the shuffled message address, so pattern labels change offered timing.",
+      "The byte loop and access_width argument do not identify compiled memory instructions.",
+      "Final per-address values establish coverage, not temporal destination arrival order.",
+      "The host batch interval contains submission and synchronization work.",
+      "Device cycle counters are not an established common epoch across cards."
+    ],
+    "unchanged_capture_row_count": 42
+  },
+  "implementation_commit": "a6c29b6a6b0fca45f438b10852985d0fd0aa2648",
+  "packet_free_distinct_configuration_count": 18,
+  "packet_free_pairs": [
+    {
+      "base_size_bytes": 4194304,
+      "false_packet_identification": false,
+      "fixed_overhead_ps": 0,
+      "historical_labels": {
+        "1": "credit_round",
+        "2": "credit_round",
+        "3": "credit_round"
+      },
+      "packet_overhead_bytes": 0,
+      "rate_bytes_per_second": 50000000000,
+      "rows": [
+        {
+          "duration_ps": {
+            "decimal": 83886080.0,
+            "exact": "83886080"
+          },
+          "error": {
+            "decimal": 0.0,
+            "exact": "0"
+          },
+          "floor_ps": {
+            "decimal": 83886080.0,
+            "exact": "83886080"
+          },
+          "size_bytes": 4194304
+        },
+        {
+          "duration_ps": {
+            "decimal": 167772160.0,
+            "exact": "167772160"
+          },
+          "error": {
+            "decimal": 0.0,
+            "exact": "0"
+          },
+          "floor_ps": {
+            "decimal": 167772160.0,
+            "exact": "167772160"
+          },
+          "size_bytes": 8388608
+        }
+      ]
+    },
+    {
+      "base_size_bytes": 4194304,
+      "false_packet_identification": false,
+      "fixed_overhead_ps": 5000000,
+      "historical_labels": {
+        "1": "credit_round",
+        "2": "credit_round",
+        "3": "credit_round"
+      },
+      "packet_overhead_bytes": 0,
+      "rate_bytes_per_second": 50000000000,
+      "rows": [
+        {
+          "duration_ps": {
+            "decimal": 88886080.0,
+            "exact": "88886080"
+          },
+          "error": {
+            "decimal": 0.059604644775390625,
+            "exact": "15625/262144"
+          },
+          "floor_ps": {
+            "decimal": 83886080.0,
+            "exact": "83886080"
+          },
+          "size_bytes": 4194304
+        },
+        {
+          "duration_ps": {
+            "decimal": 172772160.0,
+            "exact": "172772160"
+          },
+          "error": {
+            "decimal": 0.029802322387695312,
+            "exact": "15625/524288"
+          },
+          "floor_ps": {
+            "decimal": 167772160.0,
+            "exact": "167772160"
+          },
+          "size_bytes": 8388608
+        }
+      ]
+    },
+    {
+      "base_size_bytes": 4194304,
+      "false_packet_identification": true,
+      "fixed_overhead_ps": 10000000,
+      "historical_labels": {
+        "1": "packetization",
+        "2": "packetization",
+        "3": "packetization"
+      },
+      "packet_overhead_bytes": 0,
+      "rate_bytes_per_second": 50000000000,
+      "rows": [
+        {
+          "duration_ps": {
+            "decimal": 93886080.0,
+            "exact": "93886080"
+          },
+          "error": {
+            "decimal": 0.11920928955078125,
+            "exact": "15625/131072"
+          },
+          "floor_ps": {
+            "decimal": 83886080.0,
+            "exact": "83886080"
+          },
+          "size_bytes": 4194304
+        },
+        {
+          "duration_ps": {
+            "decimal": 177772160.0,
+            "exact": "177772160"
+          },
+          "error": {
+            "decimal": 0.059604644775390625,
+            "exact": "15625/262144"
+          },
+          "floor_ps": {
+            "decimal": 167772160.0,
+            "exact": "167772160"
+          },
+          "size_bytes": 8388608
+        }
+      ]
+    },
+    {
+      "base_size_bytes": 4194304,
+      "false_packet_identification": false,
+      "fixed_overhead_ps": 0,
+      "historical_labels": {
+        "1": "credit_round",
+        "2": "credit_round",
+        "3": "credit_round"
+      },
+      "packet_overhead_bytes": 0,
+      "rate_bytes_per_second": 100000000000,
+      "rows": [
+        {
+          "duration_ps": {
+            "decimal": 41943040.0,
+            "exact": "41943040"
+          },
+          "error": {
+            "decimal": 0.0,
+            "exact": "0"
+          },
+          "floor_ps": {
+            "decimal": 41943040.0,
+            "exact": "41943040"
+          },
+          "size_bytes": 4194304
+        },
+        {
+          "duration_ps": {
+            "decimal": 83886080.0,
+            "exact": "83886080"
+          },
+          "error": {
+            "decimal": 0.0,
+            "exact": "0"
+          },
+          "floor_ps": {
+            "decimal": 83886080.0,
+            "exact": "83886080"
+          },
+          "size_bytes": 8388608
+        }
+      ]
+    },
+    {
+      "base_size_bytes": 4194304,
+      "false_packet_identification": true,
+      "fixed_overhead_ps": 5000000,
+      "historical_labels": {
+        "1": "packetization",
+        "2": "packetization",
+        "3": "packetization"
+      },
+      "packet_overhead_bytes": 0,
+      "rate_bytes_per_second": 100000000000,
+      "rows": [
+        {
+          "duration_ps": {
+            "decimal": 46943040.0,
+            "exact": "46943040"
+          },
+          "error": {
+            "decimal": 0.11920928955078125,
+            "exact": "15625/131072"
+          },
+          "floor_ps": {
+            "decimal": 41943040.0,
+            "exact": "41943040"
+          },
+          "size_bytes": 4194304
+        },
+        {
+          "duration_ps": {
+            "decimal": 88886080.0,
+            "exact": "88886080"
+          },
+          "error": {
+            "decimal": 0.059604644775390625,
+            "exact": "15625/262144"
+          },
+          "floor_ps": {
+            "decimal": 83886080.0,
+            "exact": "83886080"
+          },
+          "size_bytes": 8388608
+        }
+      ]
+    },
+    {
+      "base_size_bytes": 4194304,
+      "false_packet_identification": true,
+      "fixed_overhead_ps": 10000000,
+      "historical_labels": {
+        "1": "packetization",
+        "2": "packetization",
+        "3": "packetization"
+      },
+      "packet_overhead_bytes": 0,
+      "rate_bytes_per_second": 100000000000,
+      "rows": [
+        {
+          "duration_ps": {
+            "decimal": 51943040.0,
+            "exact": "51943040"
+          },
+          "error": {
+            "decimal": 0.2384185791015625,
+            "exact": "15625/65536"
+          },
+          "floor_ps": {
+            "decimal": 41943040.0,
+            "exact": "41943040"
+          },
+          "size_bytes": 4194304
+        },
+        {
+          "duration_ps": {
+            "decimal": 93886080.0,
+            "exact": "93886080"
+          },
+          "error": {
+            "decimal": 0.11920928955078125,
+            "exact": "15625/131072"
+          },
+          "floor_ps": {
+            "decimal": 83886080.0,
+            "exact": "83886080"
+          },
+          "size_bytes": 8388608
+        }
+      ]
+    },
+    {
+      "base_size_bytes": 8388608,
+      "false_packet_identification": false,
+      "fixed_overhead_ps": 0,
+      "historical_labels": {
+        "1": "credit_round",
+        "2": "credit_round",
+        "3": "credit_round"
+      },
+      "packet_overhead_bytes": 0,
+      "rate_bytes_per_second": 50000000000,
+      "rows": [
+        {
+          "duration_ps": {
+            "decimal": 167772160.0,
+            "exact": "167772160"
+          },
+          "error": {
+            "decimal": 0.0,
+            "exact": "0"
+          },
+          "floor_ps": {
+            "decimal": 167772160.0,
+            "exact": "167772160"
+          },
+          "size_bytes": 8388608
+        },
+        {
+          "duration_ps": {
+            "decimal": 335544320.0,
+            "exact": "335544320"
+          },
+          "error": {
+            "decimal": 0.0,
+            "exact": "0"
+          },
+          "floor_ps": {
+            "decimal": 335544320.0,
+            "exact": "335544320"
+          },
+          "size_bytes": 16777216
+        }
+      ]
+    },
+    {
+      "base_size_bytes": 8388608,
+      "false_packet_identification": false,
+      "fixed_overhead_ps": 5000000,
+      "historical_labels": {
+        "1": "credit_round",
+        "2": "credit_round",
+        "3": "credit_round"
+      },
+      "packet_overhead_bytes": 0,
+      "rate_bytes_per_second": 50000000000,
+      "rows": [
+        {
+          "duration_ps": {
+            "decimal": 172772160.0,
+            "exact": "172772160"
+          },
+          "error": {
+            "decimal": 0.029802322387695312,
+            "exact": "15625/524288"
+          },
+          "floor_ps": {
+            "decimal": 167772160.0,
+            "exact": "167772160"
+          },
+          "size_bytes": 8388608
+        },
+        {
+          "duration_ps": {
+            "decimal": 340544320.0,
+            "exact": "340544320"
+          },
+          "error": {
+            "decimal": 0.014901161193847656,
+            "exact": "15625/1048576"
+          },
+          "floor_ps": {
+            "decimal": 335544320.0,
+            "exact": "335544320"
+          },
+          "size_bytes": 16777216
+        }
+      ]
+    },
+    {
+      "base_size_bytes": 8388608,
+      "false_packet_identification": false,
+      "fixed_overhead_ps": 10000000,
+      "historical_labels": {
+        "1": "credit_round",
+        "2": "credit_round",
+        "3": "credit_round"
+      },
+      "packet_overhead_bytes": 0,
+      "rate_bytes_per_second": 50000000000,
+      "rows": [
+        {
+          "duration_ps": {
+            "decimal": 177772160.0,
+            "exact": "177772160"
+          },
+          "error": {
+            "decimal": 0.059604644775390625,
+            "exact": "15625/262144"
+          },
+          "floor_ps": {
+            "decimal": 167772160.0,
+            "exact": "167772160"
+          },
+          "size_bytes": 8388608
+        },
+        {
+          "duration_ps": {
+            "decimal": 345544320.0,
+            "exact": "345544320"
+          },
+          "error": {
+            "decimal": 0.029802322387695312,
+            "exact": "15625/524288"
+          },
+          "floor_ps": {
+            "decimal": 335544320.0,
+            "exact": "335544320"
+          },
+          "size_bytes": 16777216
+        }
+      ]
+    },
+    {
+      "base_size_bytes": 8388608,
+      "false_packet_identification": false,
+      "fixed_overhead_ps": 0,
+      "historical_labels": {
+        "1": "credit_round",
+        "2": "credit_round",
+        "3": "credit_round"
+      },
+      "packet_overhead_bytes": 0,
+      "rate_bytes_per_second": 100000000000,
+      "rows": [
+        {
+          "duration_ps": {
+            "decimal": 83886080.0,
+            "exact": "83886080"
+          },
+          "error": {
+            "decimal": 0.0,
+            "exact": "0"
+          },
+          "floor_ps": {
+            "decimal": 83886080.0,
+            "exact": "83886080"
+          },
+          "size_bytes": 8388608
+        },
+        {
+          "duration_ps": {
+            "decimal": 167772160.0,
+            "exact": "167772160"
+          },
+          "error": {
+            "decimal": 0.0,
+            "exact": "0"
+          },
+          "floor_ps": {
+            "decimal": 167772160.0,
+            "exact": "167772160"
+          },
+          "size_bytes": 16777216
+        }
+      ]
+    },
+    {
+      "base_size_bytes": 8388608,
+      "false_packet_identification": false,
+      "fixed_overhead_ps": 5000000,
+      "historical_labels": {
+        "1": "credit_round",
+        "2": "credit_round",
+        "3": "credit_round"
+      },
+      "packet_overhead_bytes": 0,
+      "rate_bytes_per_second": 100000000000,
+      "rows": [
+        {
+          "duration_ps": {
+            "decimal": 88886080.0,
+            "exact": "88886080"
+          },
+          "error": {
+            "decimal": 0.059604644775390625,
+            "exact": "15625/262144"
+          },
+          "floor_ps": {
+            "decimal": 83886080.0,
+            "exact": "83886080"
+          },
+          "size_bytes": 8388608
+        },
+        {
+          "duration_ps": {
+            "decimal": 172772160.0,
+            "exact": "172772160"
+          },
+          "error": {
+            "decimal": 0.029802322387695312,
+            "exact": "15625/524288"
+          },
+          "floor_ps": {
+            "decimal": 167772160.0,
+            "exact": "167772160"
+          },
+          "size_bytes": 16777216
+        }
+      ]
+    },
+    {
+      "base_size_bytes": 8388608,
+      "false_packet_identification": true,
+      "fixed_overhead_ps": 10000000,
+      "historical_labels": {
+        "1": "packetization",
+        "2": "packetization",
+        "3": "packetization"
+      },
+      "packet_overhead_bytes": 0,
+      "rate_bytes_per_second": 100000000000,
+      "rows": [
+        {
+          "duration_ps": {
+            "decimal": 93886080.0,
+            "exact": "93886080"
+          },
+          "error": {
+            "decimal": 0.11920928955078125,
+            "exact": "15625/131072"
+          },
+          "floor_ps": {
+            "decimal": 83886080.0,
+            "exact": "83886080"
+          },
+          "size_bytes": 8388608
+        },
+        {
+          "duration_ps": {
+            "decimal": 177772160.0,
+            "exact": "177772160"
+          },
+          "error": {
+            "decimal": 0.059604644775390625,
+            "exact": "15625/262144"
+          },
+          "floor_ps": {
+            "decimal": 167772160.0,
+            "exact": "167772160"
+          },
+          "size_bytes": 16777216
+        }
+      ]
+    }
+  ],
+  "packet_free_row_evaluation_count": 24,
+  "phase_cases": [
+    {
+      "common_phase_ps": 100000000,
+      "degree": 2,
+      "duration_ps": 100000000,
+      "finish_ps": [
+        100000000,
+        100000000
+      ],
+      "goodput_overstatement": {
+        "decimal": 1.0,
+        "exact": "1"
+      },
+      "maximum_local_duration_ps": 100000000,
+      "stagger_ps": 0,
+      "start_ps": [
+        0,
+        0
+      ]
+    },
+    {
+      "common_phase_ps": 120000000,
+      "degree": 2,
+      "duration_ps": 100000000,
+      "finish_ps": [
+        100000000,
+        120000000
+      ],
+      "goodput_overstatement": {
+        "decimal": 1.2,
+        "exact": "6/5"
+      },
+      "maximum_local_duration_ps": 100000000,
+      "stagger_ps": 20000000,
+      "start_ps": [
+        0,
+        20000000
+      ]
+    },
+    {
+      "common_phase_ps": 200000000,
+      "degree": 2,
+      "duration_ps": 200000000,
+      "finish_ps": [
+        200000000,
+        200000000
+      ],
+      "goodput_overstatement": {
+        "decimal": 1.0,
+        "exact": "1"
+      },
+      "maximum_local_duration_ps": 200000000,
+      "stagger_ps": 0,
+      "start_ps": [
+        0,
+        0
+      ]
+    },
+    {
+      "common_phase_ps": 220000000,
+      "degree": 2,
+      "duration_ps": 200000000,
+      "finish_ps": [
+        200000000,
+        220000000
+      ],
+      "goodput_overstatement": {
+        "decimal": 1.1,
+        "exact": "11/10"
+      },
+      "maximum_local_duration_ps": 200000000,
+      "stagger_ps": 20000000,
+      "start_ps": [
+        0,
+        20000000
+      ]
+    },
+    {
+      "common_phase_ps": 100000000,
+      "degree": 3,
+      "duration_ps": 100000000,
+      "finish_ps": [
+        100000000,
+        100000000,
+        100000000
+      ],
+      "goodput_overstatement": {
+        "decimal": 1.0,
+        "exact": "1"
+      },
+      "maximum_local_duration_ps": 100000000,
+      "stagger_ps": 0,
+      "start_ps": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "common_phase_ps": 140000000,
+      "degree": 3,
+      "duration_ps": 100000000,
+      "finish_ps": [
+        100000000,
+        120000000,
+        140000000
+      ],
+      "goodput_overstatement": {
+        "decimal": 1.4,
+        "exact": "7/5"
+      },
+      "maximum_local_duration_ps": 100000000,
+      "stagger_ps": 20000000,
+      "start_ps": [
+        0,
+        20000000,
+        40000000
+      ]
+    },
+    {
+      "common_phase_ps": 200000000,
+      "degree": 3,
+      "duration_ps": 200000000,
+      "finish_ps": [
+        200000000,
+        200000000,
+        200000000
+      ],
+      "goodput_overstatement": {
+        "decimal": 1.0,
+        "exact": "1"
+      },
+      "maximum_local_duration_ps": 200000000,
+      "stagger_ps": 0,
+      "start_ps": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "common_phase_ps": 240000000,
+      "degree": 3,
+      "duration_ps": 200000000,
+      "finish_ps": [
+        200000000,
+        220000000,
+        240000000
+      ],
+      "goodput_overstatement": {
+        "decimal": 1.2,
+        "exact": "6/5"
+      },
+      "maximum_local_duration_ps": 200000000,
+      "stagger_ps": 20000000,
+      "start_ps": [
+        0,
+        20000000,
+        40000000
+      ]
+    }
+  ],
+  "phase_configuration_count": 8,
+  "preserved_sha256": {
+    "examples/a100_nvlink_packet_v2/nvlink_packet_lane.cu": "78769f96498a3f88c0156978089fdf10b5a9f128241fd32107b3d7366c7338cd",
+    "examples/nvlink_incast_validation_v1/expectations_run2.json": "5465271e9909cebc214c153209316a6f266ec142d7e578b3279935b1c6a10a53",
+    "examples/nvlink_incast_validation_v1/results.json": "114c8f86c6df378f7afbc9e2a2d57cc665d71d9da017283810d30ed970f7ebfd",
+    "examples/nvlink_incast_validation_v1/results_run2.json": "08810b34551e04176ca17ac5338bdc8a6378cb55dd3c2ceecd2e57a16170981d",
+    "examples/nvlink_incast_validation_v1/run_campaign_run2.py": "6d08273319ce3dd21b5cee37add2b1de0e7e13b947e221ea9a5cfe4f5a6c8f09",
+    "examples/nvlink_incast_validation_v1/score_study.py": "e131f806ca2851baa7cb50c923bd24211136fccd2cf62630289ddcc8384f91cc"
+  },
+  "previous_execution": {
+    "correction": "24 evaluated rows were mislabeled as configurations; there are18distinctsettings. Synthetic values and historical reconstructions are identical.",
+    "implementation_commit": "230ab5f85d22f436a14e680fa1437df2bc1e4ede",
+    "raw_summary_sha256": "2559944aada65b8e07ea252d201a4d3bce9d1d6f89422b188f25f46adc8771ef",
+    "verdict": "PASS"
+  },
+  "raw_summary_sha256": "1547d3769ea46ff166fb5c23e60883793d0ac3931e1a8964dc1dff69405306e5",
+  "remaining_task": "TRAF-86",
+  "schema": "simllm-nvlink-measurement-boundary-result-v1",
+  "source_sha256": "a15987d40c1ac2431513d28682b60fa80561b48c1234475cb7eeb45c6f0be1b7",
+  "verdict": "PASS"
+}

@@ -183,7 +183,12 @@ def test_run2_report_leads_with_table_and_states_project_effect() -> None:
     report = (STUDY / "RESULTS_RUN2.md").read_text(encoding="utf-8")
     normalized = " ".join(report.split())
 
-    assert report == score_study.render_markdown(result)
+    original_body = report[report.index("## Hardware against simulation") :]
+    original = report.split("\n", 1)[0] + "\n\n" + original_body
+    assert original == score_study.render_markdown(result)
+    notice = report[: report.index("## Hardware against simulation")]
+    assert "../nvlink_measurement_boundary_v1/RESULTS.md" in notice
+    assert "alignment precondition is undecidable" in " ".join(notice.split())
     assert report.index("## Hardware against simulation") < report.index("## What ran")
     assert "Maximum launch skew" in report
     assert "0 of 6 cells pass and 6 miss" in normalized

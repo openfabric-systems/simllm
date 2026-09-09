@@ -579,3 +579,6 @@ examples/nvlink_causal_service_v1/*.py text eol=lf
 examples/nvlink_causal_service_v1/*.json text eol=lf
 simllm/backends/nvlink_runtime.py text eol=lf
 tests/test_nvlink_causal_runtime.py text eol=lf
+examples/nvlink_measurement_boundary_v1/*.md text eol=lf
+examples/nvlink_measurement_boundary_v1/*.py text eol=lf
+examples/nvlink_measurement_boundary_v1/*.json text eol=lf

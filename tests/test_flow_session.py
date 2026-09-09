@@ -514,7 +514,7 @@ def test_framed_eof_kills_stubborn_descendant_after_leader_exits(tmp_path):
     while time.monotonic() < deadline:
         try:
             stat = (Path("/proc") / str(pid) / "stat").read_text()
-        except FileNotFoundError:
+        except (FileNotFoundError, ProcessLookupError):
             break
         if stat[stat.rfind(")") + 2:].split()[0] == "Z":
             break

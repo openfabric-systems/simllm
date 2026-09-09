@@ -1,0 +1,74 @@
+{
+  "base_commit": "a900751",
+  "clock_boundary": {
+    "degrees": [
+      2,
+      3
+    ],
+    "duration_ps": [
+      100000000,
+      200000000
+    ],
+    "start_stagger_ps": [
+      0,
+      20000000
+    ]
+  },
+  "fatal_policy": "Any fatal finding voids the whole synthetic audit and removes the behavioral score.",
+  "hardware_capture": false,
+  "historical_review": "post-specified",
+  "new_study": "prospective synthetic counterexamples only",
+  "packet_free": {
+    "attribution_drop_threshold": "1/20",
+    "base_payload_bytes": [
+      4194304,
+      8388608
+    ],
+    "classifier_degree_labels": [
+      1,
+      2,
+      3
+    ],
+    "fixed_overhead_ps": [
+      0,
+      5000000,
+      10000000
+    ],
+    "paired_size_multiplier": 2,
+    "rates_bytes_per_second": [
+      50000000000,
+      100000000000
+    ]
+  },
+  "preserved_sha256": {
+    "examples/a100_nvlink_packet_v2/nvlink_packet_lane.cu": "78769f96498a3f88c0156978089fdf10b5a9f128241fd32107b3d7366c7338cd",
+    "examples/nvlink_incast_validation_v1/expectations_run2.json": "5465271e9909cebc214c153209316a6f266ec142d7e578b3279935b1c6a10a53",
+    "examples/nvlink_incast_validation_v1/results.json": "114c8f86c6df378f7afbc9e2a2d57cc665d71d9da017283810d30ed970f7ebfd",
+    "examples/nvlink_incast_validation_v1/results_run2.json": "08810b34551e04176ca17ac5338bdc8a6378cb55dd3c2ceecd2e57a16170981d",
+    "examples/nvlink_incast_validation_v1/run_campaign_run2.py": "6d08273319ce3dd21b5cee37add2b1de0e7e13b947e221ea9a5cfe4f5a6c8f09",
+    "examples/nvlink_incast_validation_v1/score_study.py": "e131f806ca2851baa7cb50c923bd24211136fccd2cf62630289ddcc8384f91cc"
+  },
+  "producer_source_probe": {
+    "first_warp_ordinal": 0,
+    "gap_ns": 0,
+    "offered_rate_percent": 100,
+    "patterns": [
+      "one_source",
+      "two_source_simultaneous",
+      "three_source_simultaneous"
+    ],
+    "payload_bytes": 256,
+    "sizes_bytes": [
+      4194304,
+      8388608
+    ]
+  },
+  "schema": "simllm-nvlink-measurement-boundary-expectations-v1",
+  "scored_relation_families": [
+    "overhead_scaling",
+    "payload_scaling",
+    "phase_duration_scaling",
+    "phase_degree_scaling"
+  ],
+  "task": "TRAF-91"
+}

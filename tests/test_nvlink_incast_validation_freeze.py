@@ -20,9 +20,7 @@ STUDY = ROOT / "examples" / "nvlink_incast_validation_v1"
 PROFILE = ROOT / "examples" / "a100_nvlink_packet_v1" / "candidate-profile.json"
 TRAFFIC_DOC = ROOT / "docs" / "modules" / "traffic.md"
 EXPECTATIONS_SHA256 = "9f50aadba0085a54e78c156d61837e4c7db19a498d8fef9c1aba7b32e0a163b4"
-EXPECTATIONS_MARKDOWN_SHA256 = (
-    "138bc56e9779549d3f2fae3c18d2b46060d21ce6c4ada89c65d842075f852f43"
-)
+EXPECTATIONS_MARKDOWN_SHA256 = "138bc56e9779549d3f2fae3c18d2b46060d21ce6c4ada89c65d842075f852f43"
 
 
 def _load(name: str, filename: str) -> ModuleType:
@@ -33,9 +31,7 @@ def _load(name: str, filename: str) -> ModuleType:
     return module
 
 
-build_expectations = _load(
-    "nvlink_incast_validation_build_expectations", "build_expectations.py"
-)
+build_expectations = _load("nvlink_incast_validation_build_expectations", "build_expectations.py")
 
 
 def _frozen() -> dict[str, object]:
@@ -53,9 +49,7 @@ def test_freeze_is_reproducible_from_its_recorded_inventory(
     monkeypatch.setattr(build_expectations, "_tracked_paths", fail_current_tree_access)
     monkeypatch.setattr(build_expectations, "_sha256", fail_current_tree_access)
     assert build_expectations.build() == frozen
-    assert build_expectations.build(
-        recorded_preservation=frozen["preservation_lock"]
-    ) == frozen
+    assert build_expectations.build(recorded_preservation=frozen["preservation_lock"]) == frozen
     assert frozen["schema"] == "simllm-nvlink-incast-validation-expectations-v1"
     assert frozen["study"]["task_id"] == build_expectations.FROZEN_TASK_ID
     assert build_expectations.FROZEN_TASK_ID == "TRAF-73"
@@ -69,8 +63,11 @@ def test_freeze_is_reproducible_from_its_recorded_inventory(
         EXPECTATIONS_MARKDOWN_SHA256
     )
     traffic = TRAFFIC_DOC.read_text(encoding="utf-8")
-    assert "TRAF-74 closes as a literal non-void validation" in traffic
-    assert "- TRAF-86 (Precision; P1; L): replace the NVLink" in traffic
+    assert "TRAF-74 closes as a literal non-void validation" not in traffic
+    assert "aligned model qualification is void because that fatal precondition is" in traffic
+    assert "undecidable. This does not establish that hardware alignment failed." in traffic
+    assert "qualification and packet-identification claims are withdrawn." in traffic
+    assert "- TRAF-86 (Precision; P1; L): identify and replace the NVLink" in traffic
     assert "frozen artifacts keep the\n  original string" in traffic
     encoded = json.dumps(frozen, sort_keys=True).lower()
     assert "hardware_result" not in encoded
@@ -101,9 +98,7 @@ def test_launch_skew_is_frozen_as_a_fatal_negligibility_guard() -> None:
     assert all(row["pre_run_negligible"] is True for row in launch["rows"])
     worst = max(row["maximum_launch_skew_fraction"] for row in launch["rows"])
     assert 0.095 < worst < 0.10
-    guard_ids = {
-        guard["id"] for guard in frozen["fatal_guards"]["study_specific"]
-    }
+    guard_ids = {guard["id"] for guard in frozen["fatal_guards"]["study_specific"]}
     assert "FG11_LAUNCH_SKEW_NEGLIGIBLE" in guard_ids
 
 
@@ -137,9 +132,7 @@ def test_predictions_recompute_through_the_scored_domain() -> None:
             for transfer in transfers
         ]
         assert completion == row["completion_ps_by_source"]
-        expected_aggregate = row["degree"] * row["size_bytes"] * 1000 / max(
-            completion
-        )
+        expected_aggregate = row["degree"] * row["size_bytes"] * 1000 / max(completion)
         assert expected_aggregate == row["aggregate_payload_gbps"]
 
 
@@ -147,9 +140,7 @@ def test_acceptance_band_and_attribution_are_literal() -> None:
     frozen = _frozen()
     comparison = frozen["comparison"]
 
-    assert comparison["signed_relative_error_formula"] == (
-        "(simulation - hardware) / hardware"
-    )
+    assert comparison["signed_relative_error_formula"] == ("(simulation - hardware) / hardware")
     assert comparison["acceptance_low"] == -0.15
     assert comparison["acceptance_high"] == 0.15
     assert [row["parameter"] for row in comparison["miss_attribution_order"]] == [
