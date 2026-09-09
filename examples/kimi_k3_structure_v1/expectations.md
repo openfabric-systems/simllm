@@ -150,16 +150,23 @@ Expected relations precede the run:
   by exactly 27,648 bytes per added cached token and sequence.
 - Changing the declared synthetic service from 1000 to 2000 ps per token
   doubles the graph and request completion time exactly. With one serialized
-  diagnostic compute resource, completion equals the sum of every bound
-  region's declared service. Prompt lengths 1 and 4 cross both service values.
+  diagnostic compute resource, selected explicitly on the existing device
+  runtime, completion equals the sum of every bound region's declared service.
+  Original graph edges and semantic queues remain unchanged. Prompt lengths
+  1 and 4 cross both service values.
   Published time to first token and time per output token must agree with
   the original graph's completions over a prefill and two decode steps.
-- A separate join control provides 64 diagnostic compute slots, 1,000 ps for
-  ordinary regions and 10,000 ps for each shared-expert region. Its shared
-  branch then controls each routed layer's join. Completion is exactly
+- A separate, unscored graph oracle grants independent regions without resource
+  contention, with 1,000 ps for ordinary regions and 10,000 ps for each shared
+  region. Its shared branch then controls each routed layer's join. The
+  longest-path completion is exactly
   3,652,000 ps for prefill and 3,700,000 ps for decode. These come from
   892 or 940 ordinary-depth units plus 276 shared-depth units. Missing the
   shared dependency or serializing independent branches fails this control.
+
+The graph oracle is not concurrent runtime evidence. CORE-12 retains admission
+of newly ready kernels into an active coarse compute batch. This study's serial
+runtime mode has no active concurrent batch and makes no claim to close CORE-12.
 
 Before reading each diagnostic completion, its floor is the longest causal
 path's declared service and its ceiling is the sum of all region services.
