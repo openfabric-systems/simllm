@@ -57,6 +57,14 @@ backend, allocating a GPU or importing a serving framework.
   distinct evidence classes. Supplying no source for an enabled term is an
   error, and supplied batch-service points must state their evidence class
   explicitly.
+- `ExternalQwen32BDeploymentBinding` joins an optional immutable
+  `ExternalServingComposition` to imported operation services. Its
+  `disaggregated_capacity` consumes the existing candidate and prefill/decode
+  estimates, validates their service and shape identities, and preserves
+  their stamps in the exact pool-capacity projection. `autoscaled_ttft`
+  applies the external first-token heuristic to its issued prefill service
+  with handoff outside the operator. Aggregate pricing shares only its three
+  operation factors. Omitting the record preserves the legacy parameter path.
 - `ScanInputs` supplies the feasibility bounds plus one `EstimatorInputs`
   record or a per-point resolver. `scan` retains candidate and batch
   declaration order, emits no points for rejected candidates, and records

@@ -1,0 +1,160 @@
+{
+  "accepted_attempt": {
+    "artifacts": {
+      "configuration.json": "f1b78af730930187bf46da0f7200277e6e162a662e92ce746045352ec4fce31a",
+      "evaluation-0.json": "dc48c2fec3670e32e398f40207eef710eac78f9f209601daa20d98d148e58893",
+      "evaluation-0.process.json": "dcecb1bebd79cf2dbdcae1610a0b5550a65252400020a6db93358ee39f3c0768",
+      "evaluation-1.json": "dc48c2fec3670e32e398f40207eef710eac78f9f209601daa20d98d148e58893",
+      "evaluation-1.process.json": "08a4d79ae86c718390ea6513395265fbae561103076c9f27f10038e95d861ee0",
+      "summary.json": "4a08dcb0330877da3d9545625c0ad0be685a0aa2067fb6409b5c7afb3157b4bc",
+      "worker-0.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "worker-0.stdout": "03e63a62eaf5f5d25888225f02898fba60d1aa138de1d142f5a9d6b2aa1e14c3",
+      "worker-1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "worker-1.stdout": "03e63a62eaf5f5d25888225f02898fba60d1aa138de1d142f5a9d6b2aa1e14c3"
+    },
+    "label": "frozen-v2",
+    "worker_process_ids": [
+      18844,
+      18845
+    ]
+  },
+  "baseline_record_sha256": "6f1dccd1444fdd947b978551218b2a46b13842436222fe11df0b79f0aae438f3",
+  "behavioral_instances_by_family": {
+    "autoscale-direction": 3,
+    "autoscale-first-token": 3,
+    "decode-engines": 8,
+    "decode-rate": 8,
+    "memory-bandwidth": 26,
+    "memory-constant": 26,
+    "pool-limiter-clipping": 22,
+    "prefill-engines": 8,
+    "prefill-rate": 8
+  },
+  "configuration_counts": {
+    "aggregate_active_controls": 3,
+    "aggregate_cells": 25,
+    "aggregate_legacy_interventions": 125,
+    "autoscale_cells": 6,
+    "capacity_cells": 16,
+    "memory_cells": 52
+  },
+  "expectations_commit": "483b31a0d98ec1c4f5fd0668026055e84e363456",
+  "fatal_guard_count": 715,
+  "fatal_guards_scored": false,
+  "first_attempt": {
+    "artifacts": {
+      "direct-pass-admission-audit.json": "d2bf0d4a8fd04a749d1a67556108bc4cd66e7a53dd303cee1f674586996f1efc",
+      "evaluation-0.json": "d52fd02d3dc2ee7d168875b20569f37768ff6398a0c565c1f7d2312ba7da35db",
+      "evaluation-1.json": "d52fd02d3dc2ee7d168875b20569f37768ff6398a0c565c1f7d2312ba7da35db",
+      "summary.json": "beac9cb1210fc4657b383848a23188fb014d26e113a4048a629522ce95801ad2"
+    },
+    "closure_score": null,
+    "finding": "Public pass calls accepted an independent phase factor and used the legacy omitted default while carrying a record digest. The retained post-specified audit reproduces both phases against the first source.",
+    "raw_harness_state": "PASS",
+    "reviewed_qualification": "VOID",
+    "source_commit": "d10957738e347943d976d52ea87d91d6daa9ddc0"
+  },
+  "first_token_decomposition": {
+    "attribution_ms": {
+      "autoscale_ttft_correction": 87.29934817548464,
+      "prefill_service_correction": 9.920380474486905,
+      "publication_reconciliation": -0.000533394840431356
+    },
+    "autoscaled_prefill_ms": 196.42353339484043,
+    "corrected_prefill_service_ms": 109.1241852193558,
+    "interpretation": "signed publication residual retained; not evidence of nearest three-decimal rounding",
+    "published_ttft_ms": 196.423,
+    "raw_prefill_pass_ms": 99.20380474486889
+  },
+  "historical_exact_oracle_classes": {
+    "active-remove-one": 30,
+    "first-token-decomposition": 1,
+    "quotient": 10,
+    "service": 13
+  },
+  "historical_files_preserved": 58,
+  "inactive_remove_one_disclosures": 50,
+  "maximum_behavioral_absolute_residual_ms": 1.2878587085651816e-14,
+  "physics": {
+    "decode": {
+      "minimum_ceiling_margin_ms": 4.929970242241878,
+      "minimum_floor_margin_ms": 3.6656976022418775,
+      "service_range_ms": [
+        4.321057602241877,
+        18.213081678878332
+      ]
+    },
+    "prefill": {
+      "minimum_ceiling_margin_ms": 74.95115969756093,
+      "minimum_floor_margin_ms": 66.89299808305469,
+      "service_range_ms": [
+        78.0255036442276,
+        180.8496656618289
+      ]
+    }
+  },
+  "qualification": "PASS",
+  "runtime_calls": {
+    "forbidden_import": 0,
+    "packet_subprocess": 0,
+    "simllm_roofline": 0
+  },
+  "schema": "simllm-external-composition-publication-v1",
+  "scope": {
+    "GPU_calibration_changed": false,
+    "closes": [
+      "COMP-88"
+    ],
+    "frontier_residual": "DEPLOY-13",
+    "historical_runs_rescored": false,
+    "large_model_qualification": "COMP-54",
+    "physical_model_validity_changed": false
+  },
+  "source_commit": "e968f9f0b484ab2eca645f1fddb822ba11685820",
+  "study": "external_composition_v1",
+  "summary": {
+    "GPU_calibration_changed": false,
+    "behavioral_families": [
+      "autoscale-direction",
+      "autoscale-first-token",
+      "decode-engines",
+      "decode-rate",
+      "memory-bandwidth",
+      "memory-constant",
+      "pool-limiter-clipping",
+      "prefill-engines",
+      "prefill-rate"
+    ],
+    "behavioral_score": {
+      "instances": 112,
+      "passed": 112
+    },
+    "deterministic_bytes_equal": true,
+    "evaluation_sha256": [
+      "dc48c2fec3670e32e398f40207eef710eac78f9f209601daa20d98d148e58893",
+      "dc48c2fec3670e32e398f40207eef710eac78f9f209601daa20d98d148e58893"
+    ],
+    "exact_oracle_classes": {
+      "active-remove-one": 30,
+      "first-token-decomposition": 1,
+      "quotient": 10,
+      "service": 13
+    },
+    "expectations_commit": "483b31a0d98ec1c4f5fd0668026055e84e363456",
+    "fatal_findings": [],
+    "fresh_worker_count": 2,
+    "historical_runs_rescored": false,
+    "schema": "simllm-external-composition-summary-v1",
+    "source_commit": "e968f9f0b484ab2eca645f1fddb822ba11685820",
+    "state": "PASS",
+    "worker_exit_codes": [
+      0,
+      0
+    ],
+    "worker_states": [
+      "PASS",
+      "PASS"
+    ]
+  },
+  "task": "COMP-88"
+}
