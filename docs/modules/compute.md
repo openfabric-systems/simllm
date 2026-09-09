@@ -1447,8 +1447,12 @@ The [authored suite](../../offline/calibration/suites/kimi-k3-text-v1-frameworks
 fixes text-only cold prefill and one-token decode at one rank. Vision,
 projection of images, multiple-token prediction, prefix prefill, mixed phases,
 padding and distributed rank projection require their own declared envelopes
-and reject at this boundary. COMP-54 owns structural qualification; COMP-59
-owns physical coverage and CORE-54 owns deployment curves.
+and reject at this boundary. The
+[fresh structural qualification](../../examples/kimi_k3_qualification_v1/RESULTS.md)
+publishes both native inventories and closes COMP-54. COMP-59 owns physical
+coverage, COMP-64 owns physical compute binding and CORE-54 owns deployment
+curves. The original study stays void; this separate prospective protocol
+qualifies the corrected existing graph without rewriting that history.
 
 ## Status
 
@@ -1486,12 +1490,18 @@ The nonvoid offline model-extraction studies publish the Granite, Qwen3.8-27B
 and comparison-specific Qwen3-32B-FP8 columns for both framework rows. Their
 structural denominators agree across vLLM and SGLang, each committed inventory
 is canonical at its content-addressed filename, and all physical implementation
-fields remain absent by design. No tracked second Qwen3-32B-FP8 extraction run
-exists, so the column makes no repeat-run claim.
+fields remain absent by design. The fresh K3 qualification re-extracts all
+four legacy suites in both frameworks and reproduces every accepted inventory
+address, including Qwen3-32B-FP8.
 The latest Qwen3-32B-FP8 column binds exact revision
 `aa55da1ecc13d006e8b8e4f54579b1ea8c3db2df`, covers all 15 declared cases and
-emits exactly 257 logical visits per case. COMP-54 stays open for independent
-qualification of the complete Kimi K3 logical structure.
+emits exactly 257 logical visits per case. The Kimi K3 column qualifies all
+12 declared cases per framework, with 3,244 prefill and 3,268 decode logical
+visits. All 24 shared-branch exact cells have zero picosecond oracle error,
+including the final addition in each of 92 expert layers. Both fresh native
+repetitions preserve their inventory bytes, and the complete graph, operation,
+resource, event and request joins pass the 78-stage protocol. These are logical
+structure and synthetic-runtime claims; physical demands remain unbound.
 
 The kernel-time determinism contract above is stated publicly and enforced. The
 pre-registered
@@ -1932,7 +1942,8 @@ one byte below the floor rejects. All five independent byte oracles have zero
 residual across 15 admission cases. Existing BF16 and FP8 identities preserve
 their canonical bytes. Generic uniform-attention compute rejects the packed
 K3 format; its heterogeneous logical graph carries explicitly unbound service
-and memory demands under COMP-54. These are metadata constraints, not
+and memory demands under the qualified logical boundary. COMP-59 and COMP-64
+own the physical evidence. These are metadata constraints, not
 verified weight contents, memory-traffic measurements or physical kernel timing.
 
 ## Open tasks
@@ -2820,40 +2831,6 @@ semantic comparison remains DEPLOY-12's scope.
   model hash, status, target basis and envelope, and an unsupported target
   fails closed. Disabling this path preserves the validated-anchor model and
   every accepted result byte exactly.
-- COMP-54 (Completeness; P1; L): extract a model's device workload from a
-  given inference framework offline. Given a declared framework identity at
-  its pinned version (vLLM or SGLang), an exact model checkpoint identity and
-  a declared phase and shape grid, drive the framework's capture seams
-  offline and emit one content-addressed
-  `simllm-model-kernel-inventory-v1` record per `(framework, model)`: the
-  execution-graph template identity, the ordered kernel families with typed
-  invocation shapes and per-phase launch counts, and the
-  implementation-identity envelope that declares the model's calibration
-  suite denominators and its column in the
-  [calibration coverage matrix](../design/calibration-coverage.md). The
-  structure half runs with no GPU present, through the flagged vLLM skeleton
-  and SGLang CPU engine paths; the physical-identity half (code objects,
-  observed launches) joins later on target silicon through VLLM-12, SGL-10
-  and COMP-6 and never enters the CPU-derived record, which marks those
-  fields absent by design rather than fabricating them. The hand-authored
-  `transformer-dag-v1` suite remains the explicit bypass and its accepted
-  bytes stay identical. An extraction that cannot produce a total inventory
-  rejects rather than emitting a partial column. COMP-50 owns the canonical
-  record rules this task reuses; this task owns the extraction
-  orchestration, the inventory schema, the per-framework drivers and the
-  coverage denominators it publishes. The Granite, Qwen3.8-27B and
-  comparison-specific Qwen3-32B-FP8 slices are published for both framework
-  rows with exact checkpoint identities and freeze-first shape grids. Complete
-  the Kimi K3 structural qualification beside the COMP-59 physical envelope.
-  The typed full-depth graph, native configuration projections and strict
-  unknown-demand boundary are supplied by `kimi_k3_structure_v1`. Its original
-  frozen slow-shared oracle omits one final addition in each of 92 expert
-  layers, so the study is void and its behavioral score is null. Keep that
-  refutation and its raw evidence. A corrected check is post-specified and does
-  not turn the original run into a closure. Finish an independently reviewed
-  qualification envelope and publish accepted content-addressed inventories
-  before closing this task. Physical launch counts, kernel timing and
-  distributed projections remain COMP-59, COMP-64 and CORE-54 work.
 - COMP-59 (Completeness; P1; L): fill coverage columns for models whose
   weights exceed the reachable fleet, with the Kimi K3 class (2.8T-parameter
   MXFP4 MoE against 1.6 TB of total A100 HBM and about 1.15 TB of GH200
@@ -2866,8 +2843,9 @@ semantic comparison remains DEPLOY-12's scope.
   modes, and sweep per-expert load grids that cover the deployment shape
   range. The envelope is its own declared identity: it never claims the
   full checkpoint's routing population, weights or end-to-end makespans,
-  and its records state that scope explicitly. Structure-half enumeration
-  of the full-depth column stays COMP-54 (configuration-only projection);
+  and its records state that scope explicitly. COMP-54 qualifies the full-depth
+  configuration-only column through the
+  [fresh K3 protocol](../../examples/kimi_k3_qualification_v1/RESULTS.md);
   this task owns the physical envelope, its distinct-envelope identity
   rules, the per-target numeric-format implementation split (a native
   MXFP4 checkpoint executes different implementations on SM80 than on

@@ -1,0 +1,370 @@
+{
+  "schema": "simllm-kimi-k3-qualification-expectations-v1",
+  "owning_task": "COMP-54",
+  "chronology": "Protocol frozen before fresh execution; existing implementation and corrected regression oracles are already known. The original VOID result is immutable.",
+  "inherited_contract": {
+    "path": "examples/kimi_k3_structure_v1/expectations.json",
+    "sha256": "861cd2201211a2cb75a20d282c92548e82ad851033f391a6af2accb3e27e46d0",
+    "freeze_commit": "727d78c68e38c4f0eecb6e0e75fe37f13932a0b3"
+  },
+  "suite": {
+    "id": "kimi-k3-text-v1-frameworks-2026-09-09",
+    "sha256": "90f3c5374a923ed7c9a607b6a38aad1352340b6918dda123ffde5ee3f83b287b",
+    "state": "authored-inputs-only",
+    "case_ids": [
+      "prefill-b1-n1",
+      "prefill-b1-n4",
+      "prefill-b1-n16",
+      "decode-b1-c1",
+      "decode-b1-c17",
+      "decode-b1-c257",
+      "prefill-b3-n1",
+      "prefill-b3-n4",
+      "prefill-b3-n16",
+      "decode-b3-c1",
+      "decode-b3-c17",
+      "decode-b3-c257"
+    ]
+  },
+  "model": {
+    "name": "moonshotai/Kimi-K3",
+    "revision": "f831ab66814297da540d832a5235f8e904f29d06",
+    "config_sha256": "9710e121a58d03ac92c8d6da287a19541994319afbbe6d6202af001ffd379213",
+    "text_layers": 93,
+    "kda_layers": 69,
+    "mla_layers": 24,
+    "dense_layers": 1,
+    "routed_layers": 92,
+    "hidden_size": 7168,
+    "latent_hidden_size": 3584,
+    "routed_intermediate_size": 3072,
+    "dense_intermediate_size": 33792,
+    "routed_experts": 896,
+    "selected_experts": 16,
+    "shared_experts": 2,
+    "vocab_size": 163840,
+    "parameter_count_full_checkpoint": 2779931837184
+  },
+  "frameworks": [
+    {
+      "id": "vllm",
+      "version": "0.27.1",
+      "source_commit": "6e448d0ea9bf3d88d898b65449ca6dc2aec170ac",
+      "source_tree": null,
+      "native_configuration": "ModelConfig-with-skip-tokenizer-init",
+      "final_norm_token_axis": "sampled_tokens"
+    },
+    {
+      "id": "sglang",
+      "version": "0.5.19.dev345+gbfeae4e79",
+      "source_commit": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
+      "source_tree": "9ffe149f40e1cd5bff7dadc6806ad1927d312e69",
+      "native_configuration": "DeviceConfig-cpu-plus-ModelConfig-with-multimodal-disabled",
+      "final_norm_token_axis": "new_tokens"
+    }
+  ],
+  "source_files": {
+    "config.json": "9710e121a58d03ac92c8d6da287a19541994319afbbe6d6202af001ffd379213",
+    "vllm-nvidia-model.py": "f620ecf1a542db1f4e684a6956143afb45d72fa1ff12bc6d3cc44f9957b1a3d4",
+    "vllm-nvidia-kda.py": "3663c3b273abf41e9727e2b1724e87628b64b6a9dc048a2c48d002b1f9085420",
+    "vllm-nvidia-mla.py": "034c634f93abc3d640e214b2971106489bf608289013c69f94c479f3792e2a93",
+    "vllm-linear-config.py": "896feb1fe65e391215ee60a49d945fb725f38a86a9abb28ffe77415b5bc7ed29",
+    "sglang-kimi-k3.py": "58c0c747b81ae4aa2cb1954ea6778d74b6556af4d7f3ed8d84a13a803c5e1f80",
+    "sglang-mamba-config.py": "820627a476130e36e8c9aeec2f1ded01d0c068369149e014cc0ef074f1e90808",
+    "sglang-residual.py": "a0586497dec4db2b7fd9e073ed0ad98ec2f9b1535a53e3b5e43f12c075662f11",
+    "vllm-kda-fused_recurrent.py": "bffe3fc24af947695fd278e62298eec7e00d89db1bbcc405bcb1768f4bc9af54",
+    "vllm-ops-attn_res.py": "40cc7242f49d532569c7f63bef1634be4bff5194e4f1777917bef5adfc414fe6",
+    "vllm-runner-latent_moe_runner.py": "37b732d691178db35deaf341585cfc6bce90d87a0a9389fc69ca690f39519808",
+    "vllm-gpu-model-runner.py": "993f2c926012241bcb8cc7f568c8e82968e4d81ca125641c831ecf501aac02ac"
+  },
+  "required_import_origins": {
+    "vllm": {
+      "vllm.config.model": "d14c60ce1b2a7d9c47983ef0df0c10c4f8083ced5bc45935e8ababfe59f22736",
+      "vllm.model_executor.models.registry": "f1dae30a951fda360151c8de9dd605d01c7138a69f70fe518286d57da69dc463",
+      "vllm.models.kimi_k3.nvidia.kda": "3663c3b273abf41e9727e2b1724e87628b64b6a9dc048a2c48d002b1f9085420",
+      "vllm.models.kimi_k3.nvidia.mla": "034c634f93abc3d640e214b2971106489bf608289013c69f94c479f3792e2a93",
+      "vllm.models.kimi_k3.nvidia.model": "f620ecf1a542db1f4e684a6956143afb45d72fa1ff12bc6d3cc44f9957b1a3d4",
+      "vllm.models.kimi_k3.nvidia.ops.attn_res": "40cc7242f49d532569c7f63bef1634be4bff5194e4f1777917bef5adfc414fe6",
+      "vllm.transformers_utils.configs.kimi_k3": "ca483a8d10f9114df7654ea0eb4aa7c5addccd842146759904d13c43eef7d693",
+      "vllm.transformers_utils.configs.kimi_linear": "896feb1fe65e391215ee60a49d945fb725f38a86a9abb28ffe77415b5bc7ed29"
+    },
+    "sglang": {
+      "sglang.srt.configs.kimi_k3": "e4e9adeccb746c358880e1734a98073ceea58acc21353dde2a33107ae76896ce",
+      "sglang.srt.configs.model_config": "52a4513fe385632f3744f08833f3979f031dedc7d808f813d5efd1535d00f9c4",
+      "sglang.srt.models.kimi_k3": "58c0c747b81ae4aa2cb1954ea6778d74b6556af4d7f3ed8d84a13a803c5e1f80"
+    }
+  },
+  "fresh_process_contract": {
+    "extractions_per_framework": 2,
+    "source_proof": "same-process-as-extraction",
+    "joins": [
+      "process-id",
+      "interpreter",
+      "framework",
+      "suite-sha256",
+      "config-sha256",
+      "inventory-sha256",
+      "step-record-bytes-sha256"
+    ],
+    "source_files": "exact semantic set; actual file bytes before and after extraction and at coordinator validation",
+    "origins": "required named modules with frozen hashes; all recorded origins inside installed package and rehashed",
+    "source_commit_status": "vllm declared by adapter; selected file hashes establish implementation coverage, not whole-tree cleanliness"
+  },
+  "causal_grid": {
+    "ordinary_region_ps": 1000,
+    "shared_region_ps": [
+      1000,
+      3000,
+      10000
+    ],
+    "final_add_ps": [
+      1000,
+      2000
+    ],
+    "frameworks": [
+      "vllm",
+      "sglang"
+    ],
+    "phases": [
+      "prefill",
+      "decode"
+    ],
+    "canonical_case": {
+      "prefill": "prefill-b1-n1",
+      "decode": "decode-b1-c1"
+    },
+    "outside_moe_regions": {
+      "prefill": 892,
+      "decode": 940
+    },
+    "routed_regions": 9,
+    "shared_serial_regions": 3,
+    "shared_visits": 4,
+    "expert_layers": 92,
+    "formula": "O*(4+3*93+6*69+A*24+3)+92*(max(9*O,3*S)+J); A=8 prefill, A=10 decode",
+    "evidence_class": "component-exact-oracles",
+    "expected_instances": 24,
+    "slow_shared_reference_ps": {
+      "prefill": 3744000,
+      "decode": 3792000
+    },
+    "double_final_add_increment_ps": 92000
+  },
+  "causal_guards": [
+    "each shared-routed join has exactly latent-up and shared-down parents",
+    "shared gate and up projections have the same sole MLP input parent",
+    "shared activation has exactly gate and up parents; down has exactly activation parent",
+    "join completion equals max(routed completion,shared completion)+J in every layer and grid cell",
+    "every join feeds its layer final residual add and is a transitive ancestor of the head",
+    "prefill cache commit absent from transitive attention ancestry; decode commit required",
+    "completion frontier exactly head followed by the 24 original-layer cache commits"
+  ],
+  "corruption_controls": [
+    "remove-routed-parent",
+    "remove-shared-parent",
+    "serialize-shared-projections",
+    "bypass-final-add",
+    "prefill-hidden-cache-wait",
+    "decode-remove-cache-wait",
+    "omit-cache-frontier"
+  ],
+  "coverage": {
+    "frameworks": [
+      "vllm",
+      "sglang"
+    ],
+    "graph_cells": 24,
+    "native_k3_extractions": 4,
+    "synthetic_request_cells": 8,
+    "synthetic_request_steps": 24,
+    "legacy_native_extractions": 8,
+    "behavioral_instances": 62,
+    "behavioral_families": [
+      "batch-linear-work-and-capacity",
+      "cold-prefill-inclusive-pairs",
+      "decode-history-growth",
+      "synthetic-request-service-scaling"
+    ],
+    "unscored_inherited_relations": [
+      "vllm:decode-prompt-independence",
+      "sglang:decode-prompt-independence"
+    ]
+  },
+  "historical_inputs": {
+    "frozen-v1/summary.json": "11a59db533fbaab49498b091cf29e49846e17e872b6990515f2fe8386d26fcd0",
+    "frozen-v1/guards.json": "d5466cf519ddc01878e657248ec13384543396f0938554a98d61cf4a52b3bd4b",
+    "frozen-v1/oracles.json": "b43703bc1a98030af6814f1efcc51fb2c88268fa7ac36c50f89716e23db985b0",
+    "frozen-v1/relations.json": "16f77be3db8a5095c630497a3d14ec5cb80cac31a63fed5be1539986aac5e131",
+    "retained-audit-v1/summary.json": "b8049cf1165169b3c3f1c62f4610b44dc14695ead502d229ebdcd1814fc732cf",
+    "retained-audit-v1/guards.json": "0db3f330daeed366c6b532b595aa06e739d760ee531a6b4d037f273915eaaa02",
+    "retained-audit-v1/oracles.json": "e2968b09b53c7292e6f0e9695e2220006ce7455ec5a1020469ecdfc65b263376"
+  },
+  "evidence_identity_contract": {
+    "inherited": "exact names and kinds from original guards/oracles/relations; reclassify only the two named decode identity relations as guards",
+    "audit": "retain names beginning vllm:, sglang:, vllm-p, sglang-p or reject-logical:; prefix audit:; omit only :post-specified-shared-addition oracle, replaced by causal grid",
+    "successor": "Exact successor_stage_ids, each completed once. Every stage expands successor_check_ids using only frozen framework/source/module/case/layer/grid domains. Evidence name is successor:STAGE:CHECK; completion-oracle is oracle, every other successor check is a fatal guard. Reject missing, duplicate or extra names and kinds.",
+    "historical_values": "used only to freeze identity manifests and preserve chronology; every successor actual value comes from new execution or re-read input"
+  },
+  "promotion": {
+    "objects": 2,
+    "destination": "offline/calibration/model-inventories",
+    "canonical_bytes": "unchanged native objects; filename is SHA-256",
+    "acceptance": "successor report, result and coverage links",
+    "physical_identities": "absent",
+    "suite_bytes": "unchanged"
+  },
+  "fatal_policy": "any failed or missing guard, oracle, relation, source join or discrimination control voids the entire run and sets behavioral_score to null",
+  "hardware_measurements": 0,
+  "limits": [
+    "logical data dependencies do not establish native stream scheduling or fusion",
+    "synthetic service and zero memory do not establish GPU performance",
+    "COMP-59 physical envelope",
+    "COMP-64 physical compute binding",
+    "CORE-54 distributed projection"
+  ],
+  "successor_stage_ids": [
+    "causal:sglang:decode:s10000:j1000",
+    "causal:sglang:decode:s10000:j2000",
+    "causal:sglang:decode:s1000:j1000",
+    "causal:sglang:decode:s1000:j2000",
+    "causal:sglang:decode:s3000:j1000",
+    "causal:sglang:decode:s3000:j2000",
+    "causal:sglang:prefill:s10000:j1000",
+    "causal:sglang:prefill:s10000:j2000",
+    "causal:sglang:prefill:s1000:j1000",
+    "causal:sglang:prefill:s1000:j2000",
+    "causal:sglang:prefill:s3000:j1000",
+    "causal:sglang:prefill:s3000:j2000",
+    "causal:vllm:decode:s10000:j1000",
+    "causal:vllm:decode:s10000:j2000",
+    "causal:vllm:decode:s1000:j1000",
+    "causal:vllm:decode:s1000:j2000",
+    "causal:vllm:decode:s3000:j1000",
+    "causal:vllm:decode:s3000:j2000",
+    "causal:vllm:prefill:s10000:j1000",
+    "causal:vllm:prefill:s10000:j2000",
+    "causal:vllm:prefill:s1000:j1000",
+    "causal:vllm:prefill:s1000:j2000",
+    "causal:vllm:prefill:s3000:j1000",
+    "causal:vllm:prefill:s3000:j2000",
+    "graph:sglang:decode-b1-c1",
+    "graph:sglang:decode-b1-c17",
+    "graph:sglang:decode-b1-c257",
+    "graph:sglang:decode-b3-c1",
+    "graph:sglang:decode-b3-c17",
+    "graph:sglang:decode-b3-c257",
+    "graph:sglang:prefill-b1-n1",
+    "graph:sglang:prefill-b1-n16",
+    "graph:sglang:prefill-b1-n4",
+    "graph:sglang:prefill-b3-n1",
+    "graph:sglang:prefill-b3-n16",
+    "graph:sglang:prefill-b3-n4",
+    "graph:vllm:decode-b1-c1",
+    "graph:vllm:decode-b1-c17",
+    "graph:vllm:decode-b1-c257",
+    "graph:vllm:decode-b3-c1",
+    "graph:vllm:decode-b3-c17",
+    "graph:vllm:decode-b3-c257",
+    "graph:vllm:prefill-b1-n1",
+    "graph:vllm:prefill-b1-n16",
+    "graph:vllm:prefill-b1-n4",
+    "graph:vllm:prefill-b3-n1",
+    "graph:vllm:prefill-b3-n16",
+    "graph:vllm:prefill-b3-n4",
+    "legacy",
+    "mutation:sglang:bypass-final-add",
+    "mutation:sglang:decode-remove-cache-wait",
+    "mutation:sglang:omit-cache-frontier",
+    "mutation:sglang:prefill-hidden-cache-wait",
+    "mutation:sglang:remove-routed-parent",
+    "mutation:sglang:remove-shared-parent",
+    "mutation:sglang:serialize-shared-projections",
+    "mutation:vllm:bypass-final-add",
+    "mutation:vllm:decode-remove-cache-wait",
+    "mutation:vllm:omit-cache-frontier",
+    "mutation:vllm:prefill-hidden-cache-wait",
+    "mutation:vllm:remove-routed-parent",
+    "mutation:vllm:remove-shared-parent",
+    "mutation:vllm:serialize-shared-projections",
+    "native-distinct-processes",
+    "native:sglang:0",
+    "native:sglang:1",
+    "native:vllm:0",
+    "native:vllm:1",
+    "protocol",
+    "rejections",
+    "request:sglang:p1:s1000",
+    "request:sglang:p1:s2000",
+    "request:sglang:p4:s1000",
+    "request:sglang:p4:s2000",
+    "request:vllm:p1:s1000",
+    "request:vllm:p1:s2000",
+    "request:vllm:p4:s1000",
+    "request:vllm:p4:s2000"
+  ],
+  "successor_check_ids": {
+    "protocol": [
+      "original-void",
+      "original-null-score",
+      "suite-hash",
+      "suite-state",
+      "suite-case-identities",
+      "frozen-grid",
+      "old-study-bytes",
+      "historical-input-hashes"
+    ],
+    "native": [
+      "capture-process",
+      "interpreter",
+      "framework",
+      "projection-geometry",
+      "suite-hash",
+      "config-hash",
+      "inventory-hash",
+      "steps-hash",
+      "canonical-inventory",
+      "exact-source-files",
+      "required-origins",
+      "all-origins-inside-package",
+      "all-origins-rehashed",
+      "source-stable",
+      "file:NAME (each frozen semantic source name for that framework)",
+      "origin:MODULE (each frozen required module for that framework)"
+    ],
+    "native-distinct-processes": [
+      "four-distinct-positive-pids"
+    ],
+    "graph": [
+      "operation-identity-set",
+      "logical-demand-boundary",
+      "completion-frontier",
+      "join-parents:LAYER (1..92)",
+      "shared-fork:LAYER (1..92)",
+      "shared-activation:LAYER (1..92)",
+      "shared-down:LAYER (1..92)",
+      "join-successor:LAYER (1..92)",
+      "join-head-ancestor:LAYER (1..92)",
+      "cache-ancestry:LAYER (3,7,...,91,92)"
+    ],
+    "causal": [
+      "completion-oracle",
+      "logical-floor",
+      "serial-ceiling",
+      "join-equation:LAYER (1..92)"
+    ],
+    "request": [
+      "three-retained-step-identities"
+    ],
+    "mutation": [
+      "operation-count-preserved",
+      "owning-guard-discriminates"
+    ],
+    "legacy": [
+      "eight-exact-native-controls"
+    ],
+    "rejections": [
+      "two-native-state-overrides",
+      "three-physical-consumer-rejections"
+    ]
+  }
+}
