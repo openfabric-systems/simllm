@@ -1746,3 +1746,10 @@ capture exists.
   serialized compatibility timing authority. CORE-68 separately owns
   independent-engine service; this feasibility task does not qualify physical
   cross-engine concurrency or a deployment frontier.
+  The first [target-scale campaign](../../examples/pd_session_target_scale_v1/RESULTS.md)
+  is VOID at its 1,200-second host limit: two engines were constructed, but
+  only 65 of 80 requests in the first serial cell completed after four
+  historical controls. No scale was admitted and the 56-engine target was
+  never attempted. Retain this run unchanged and diagnose host execution cost
+  before freezing a successor campaign; a smaller partial run cannot close
+  this task.
