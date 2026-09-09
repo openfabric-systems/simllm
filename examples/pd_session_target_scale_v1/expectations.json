@@ -1,0 +1,450 @@
+{
+  "accounting": {
+    "host_throughput": "Requests completed divided by measured native wall execution time. Report each complete scale and descriptive adjacent-scale change per added engine. This does not measure throughput after each individual addition.",
+    "request_identity": "The stable request ID joins distinct prefill-local and decode-local IDs to actual scheduled memberships.",
+    "routing": "Request i uses prefill i modulo P and decode i modulo D; all declared engines receive requests in every serial cell and burst. The four baseline-control requests occur only on p1-d1.",
+    "shared_work": "Never sum overlapping request record slices. Count each executor step exactly once.",
+    "simulated_throughput": "Completed requests or decode tokens divided by the actual virtual makespan, with exact rational units. A simultaneous burst has no finite offered-load rate.",
+    "step_identity": [
+      "engine_id",
+      "step_index"
+    ],
+    "virtual_time": "Retain clock advance observations and unique executor step intervals. Sum their interval union and separately justified idle gaps to the observed wall makespan.",
+    "wait_reductions": "Retain per-request TTFT causal decomposition, per-resource work sums and global wall-idle separately."
+  },
+  "as_of_commit": "e349232606f9ff099c749c2664484ebb56219486",
+  "baseline_control": {
+    "accepted_cells": [
+      {
+        "decode_first_token_service_ps": 77952000,
+        "handoff_ps": 100000000,
+        "kv_bytes": 393216,
+        "prefill_service_ps": 95424000,
+        "prompt_tokens": 8,
+        "tpot_ps": 77952000,
+        "ttft_ps": 273376000
+      },
+      {
+        "decode_first_token_service_ps": 77952000,
+        "handoff_ps": 200000000,
+        "kv_bytes": 393216,
+        "prefill_service_ps": 95424000,
+        "prompt_tokens": 8,
+        "tpot_ps": 77952000,
+        "ttft_ps": 373376000
+      },
+      {
+        "decode_first_token_service_ps": 77976000,
+        "handoff_ps": 100000000,
+        "kv_bytes": 786432,
+        "prefill_service_ps": 114936000,
+        "prompt_tokens": 16,
+        "tpot_ps": 77976000,
+        "ttft_ps": 292912000
+      },
+      {
+        "decode_first_token_service_ps": 77976000,
+        "handoff_ps": 200000000,
+        "kv_bytes": 786432,
+        "prefill_service_ps": 114936000,
+        "prompt_tokens": 16,
+        "tpot_ps": 77976000,
+        "ttft_ps": 392912000
+      }
+    ],
+    "comparison_schema": "simllm-vllm-pd-request-comparison-v1",
+    "comparisons": [
+      {
+        "cell": "prompt-8-handoff-100000000",
+        "comparison_sha256": "9ca1add59fb8f41d8afd40923cdeb16d94a35bb540f99228aa1a244644cc6ce3",
+        "projected_bytes_equal": true,
+        "raw_difference_paths": [
+          [
+            "decode_internal_request_id"
+          ],
+          [
+            "prefill_internal_request_id"
+          ]
+        ]
+      },
+      {
+        "cell": "prompt-8-handoff-200000000",
+        "comparison_sha256": "e653b93e25f83a3ef2b561afeab9d3073d1202a4c2a1ad436d678c82dde3d3a0",
+        "projected_bytes_equal": true,
+        "raw_difference_paths": [
+          [
+            "decode_internal_request_id"
+          ],
+          [
+            "prefill_internal_request_id"
+          ]
+        ]
+      },
+      {
+        "cell": "prompt-16-handoff-100000000",
+        "comparison_sha256": "fb7f30d87e90253d532909caf50482d27624b3ebe42cdb18c1c94483294a957c",
+        "projected_bytes_equal": true,
+        "raw_difference_paths": [
+          [
+            "decode_internal_request_id"
+          ],
+          [
+            "prefill_internal_request_id"
+          ]
+        ]
+      },
+      {
+        "cell": "prompt-16-handoff-200000000",
+        "comparison_sha256": "542e7085975048c96fe8232e6d0af69573e249b721dc123370c220c67200aed3",
+        "projected_bytes_equal": true,
+        "raw_difference_paths": [
+          [
+            "decode_internal_request_id"
+          ],
+          [
+            "prefill_internal_request_id"
+          ]
+        ]
+      }
+    ],
+    "excluded_root_fields": [
+      "prefill_internal_request_id",
+      "decode_internal_request_id"
+    ],
+    "position": "Before all serial and burst cells, using their original four labels and order.",
+    "scale": "p1-d1"
+  },
+  "behavioral_families": {
+    "handoff-response": {
+      "expectation": "For every matched serial request, adding 100000000 ps to handoff adds exactly 100000000 ps to TTFT and JCT, and adds 8000000000 ps to cell makespan. Fixed TPOT and pool-service equality are separate unscored guards.",
+      "instances": "Each scale and prompt, ten instances total."
+    },
+    "prompt-response": {
+      "expectation": "For every matched serial request, prompt 16 strictly raises prefill service, TTFT and JCT relative to prompt 8. Doubling KV bytes and nondecreasing TPOT are separate unscored guards. All 80 requests must satisfy the relation.",
+      "instances": "Each scale and handoff, ten instances total."
+    }
+  },
+  "burst": {
+    "admission": "All requests at the session clock immediately before the burst.",
+    "arrival_mode": "simultaneous-burst",
+    "decode_output_tokens": 4,
+    "deployment_curve_point": false,
+    "handoff_ps": 100000000,
+    "id": "burst-prompt-16-handoff-100000000",
+    "offered_rate_requests_per_second": null,
+    "prompt_tokens": 16,
+    "requests": 80
+  },
+  "chronology": {
+    "accepted_small_session_values_already_known": true,
+    "claim": "Prospective execution protocol for existing behavior; the old accepted values are regression oracles.",
+    "existing_session_implementation": true,
+    "fresh_scale_campaign_executed": false
+  },
+  "closure": {
+    "closes_if_complete_valid_and_reviewed": [
+      "CORE-52"
+    ],
+    "does_not_establish": [
+      "Parallel device service or a physical distributed throughput frontier",
+      "Physical GPU kernel or communication calibration",
+      "DeepSeek-V3 or Kimi K3 timing qualification",
+      "Global physical topology consumed by the live local sinks"
+    ],
+    "retains": [
+      "CORE-51",
+      "CORE-53",
+      "CORE-54",
+      "CORE-68",
+      "TRAF-64"
+    ]
+  },
+  "construction": {
+    "clock": "The same clock object for every engine. Construction changes it by exactly zero.",
+    "current_memory": "Resident bytes from the process status after import, after every engine, after construction and after requests.",
+    "engine_identity": "Session pool, frontend engine core model_executor and executor projections must refer to the same object.",
+    "failure_policy": "Preserve each completed observer row and exact stopping point. Incomplete target is VOID, CORE-52 stays open, and no target extrapolation is accepted.",
+    "observer": "Read-only scalar identity and weak-reference observations; never retain an engine or worker strongly on behalf of the session.",
+    "peak_memory": "Separate descriptive high-water mark; never substitute for current resident memory.",
+    "stop_rss_kib": 16777216,
+    "timeout_seconds_per_scale": 1200,
+    "worker_identity": "Obtain actual worker IDs, local ranks and config IDs through the frontend callable collective RPC and compare them to the retained executor workers."
+  },
+  "corruption_controls": [
+    "missing-engine",
+    "duplicate-worker",
+    "wrong-global-rank",
+    "foreign-scheduled-request",
+    "duplicate-step-identity",
+    "shift-step-completion",
+    "drop-clock-advance",
+    "drop-terminal-request",
+    "alter-baseline-member",
+    "missing-stage"
+  ],
+  "current_source_sha256": {
+    "simllm/adapters/vllm/executor.py": "7c572e9d0140c0185a9d5535a3e97a1b014a3aa10613cddb1c059347259e4332",
+    "simllm/adapters/vllm/pd_connector.py": "d2d5ca76b019a61023961e7ca26fc61ee750562f0a261fd76c6dfd3e6989c6de",
+    "simllm/adapters/vllm/pd_session.py": "60777c67a8c1f76fe73af4aacc98df074a0358dcecf46083f6606f0e4e1d28d4",
+    "simllm/core/clock.py": "5693cc845e4c3c7371b43abef6b10d66bf1af96f13a5401c48a64175fdc44516",
+    "simllm/core/pd_session.py": "7970d5573d683f94b96e8075a32a564646ccde34fea64e594aa7a26010592052",
+    "simllm/placement/disaggregated.py": "50f53e69a4c7b6201c01eb6228ddeddf2054cfa256a3d12841ca417f56ab71a3",
+    "simllm/placement/manifest.py": "f82f05b7277501bdc2c6993e2638a16f9a5631a08c7a13f5f24a34ecad8936c2"
+  },
+  "deployment": {
+    "collective_arm": "lower",
+    "collective_envelope": "intra-node-fixed-cost-v1",
+    "efficiency": 0.7,
+    "gpu": "b100",
+    "host_model": "ideal",
+    "max_model_len": 64,
+    "max_num_seqs": 8,
+    "num_gpu_blocks_override": 64,
+    "provider": "RooflineProvider",
+    "tensor_parallel_size": 8,
+    "token_id": 512
+  },
+  "evidence_classes": {
+    "baseline_comparison_oracles": 4,
+    "baseline_control_requests": 4,
+    "behavioral_families": 2,
+    "behavioral_instance_unit": "One joint outcome relation per scale and fixed prompt or handoff, twenty total. Multiple metrics or matched requests do not increase that denominator.",
+    "behavioral_instances": 20,
+    "burst_requests": 400,
+    "concurrent_burst_cells": 5,
+    "fatal_guards": "unscored",
+    "gpu_measurements": 0,
+    "host_measurements": "descriptive, not scored",
+    "native_scale_processes": 5,
+    "serial_cell_regression_oracles": 20,
+    "serial_request_cells": 20,
+    "serial_requests": 1600,
+    "simultaneously_retained_target_engines": 56,
+    "simultaneously_retained_target_workers": 448,
+    "total_native_requests": 2004
+  },
+  "evidence_domains": {
+    "construction_domain": "Prefill ordinals 0 through P-1, then decode ordinals 0 through D-1. One observer row and eight actual workers per engine.",
+    "request_domain": "Indices 0 through 79, in original order, in each scale/cell. One terminal result per request and four decode tokens.",
+    "required_cell_components": [
+      "id",
+      "requests",
+      "start_ps",
+      "end_ps",
+      "wall_seconds",
+      "engine_request_counts",
+      "step_identities",
+      "clock_advance_indices"
+    ],
+    "required_scale_components": [
+      "native_identity",
+      "construction_rows",
+      "retention_before",
+      "retention_after",
+      "worker_manifest_projection",
+      "serial_cells",
+      "burst_cell",
+      "unique_steps",
+      "clock_advances",
+      "host_measurements",
+      "source_before",
+      "source_after"
+    ],
+    "stage_policy": "Exactly this set, each once. Reject missing, duplicated or unexpected components, stages, identities, cell labels and behavioral family/instance names.",
+    "stages": [
+      "protocol",
+      "manifest-off-path",
+      "baseline-control",
+      "p1-d1:construction",
+      "p1-d1:serial",
+      "p1-d1:burst",
+      "p1-d1:retention",
+      "p1-d1:accounting",
+      "p2-d5:construction",
+      "p2-d5:serial",
+      "p2-d5:burst",
+      "p2-d5:retention",
+      "p2-d5:accounting",
+      "p4-d10:construction",
+      "p4-d10:serial",
+      "p4-d10:burst",
+      "p4-d10:retention",
+      "p4-d10:accounting",
+      "p8-d20:construction",
+      "p8-d20:serial",
+      "p8-d20:burst",
+      "p8-d20:retention",
+      "p8-d20:accounting",
+      "p16-d40:construction",
+      "p16-d40:serial",
+      "p16-d40:burst",
+      "p16-d40:retention",
+      "p16-d40:accounting"
+    ]
+  },
+  "exact_oracle_class": {
+    "baseline_control": "All four complete accepted comparison hashes remain identical, excluding only the declared opaque root IDs.",
+    "serial_cells": "All eighty requests in each of twenty cells reproduce the corresponding already-known accepted TTFT, TPOT and pool services. These are regression oracles, separate from behavioral scoring."
+  },
+  "fatal_guards": [
+    "Source, configuration, fixture or historical-file drift; wrong native origin, version, process or interpreter.",
+    "Missing, extra, duplicated, mistyped or incomplete frozen stage, scale, cell, engine, worker, request, token, step or evidence identity.",
+    "Any physical GPU initialization, real weights, packet backend or physical target-topology consumption.",
+    "Target construction incomplete or memory/timeout stop reached; retain stopping evidence and do not infer completion.",
+    "Strong observer ownership, dead weak reference, frontend/executor mismatch or duplicate actual worker object.",
+    "Any before/after retention, role, worker configuration, shared clock or global manifest projection disagreement.",
+    "Any off-path complete comparison hash or accepted placement byte mismatch.",
+    "Any routed engine without its declared requests, identity reuse, lost scheduled membership or foreign request output.",
+    "Any nonmonotonic timestamp, duplicate shared work, false interval partition, unexplained clock advance or violated causal decomposition.",
+    "Any nonfinite host value, wrong physical bound, exact regression oracle or behavioral relation failure.",
+    "Any corruption control fails to discriminate its specific guard."
+  ],
+  "frontend": {
+    "fixture_sha256": "36334f3aaa767c46d5f9c8498e02f6c2805a46e5000a57aea2747e17dd5d1341",
+    "model_config_sha256": "ca4bb3a5c1bdef988ab413e0d731640446da65316e4ed16de3666cd96ecc3a0b",
+    "model_id": "ibm-granite/granite-3.0-1b-a400m-instruct",
+    "model_revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
+    "name": "vllm",
+    "version": "0.27.1"
+  },
+  "historical_files_sha256": {
+    "examples/disaggregated_target_topology_v1/RESULTS.md": "d7f975a41e28b04fe5cb5c777361aa6e47613ac8939bbfad7c75d7e1d7cfdc0f",
+    "examples/disaggregated_target_topology_v1/expectations.json": "b1d0f73b1042e007725a359f524cbf93e68a3f1395bba54777837ebd07a2d0f0",
+    "examples/disaggregated_target_topology_v1/expectations.md": "c01b1b7f13d4b16404ee0230ad014327a254f3f22ea3e8cc794dedd787517400",
+    "examples/disaggregated_target_topology_v1/results.json": "45aa34874370c353d8c5a15a6b09939321cc1f4fafaed66d89529e8da37a7715",
+    "examples/disaggregated_target_topology_v1/run_study.py": "fbba036bd4aa35a82acd7317f148da0a50effbd58efc3b86c8fc5366b8afba70",
+    "examples/pd_session_identity_v1/RESULTS.md": "b8a8cc007d97fc4ccdc82c43de9110a4e07f0128d4bcb518b872ca9714af98d2",
+    "examples/pd_session_identity_v1/expectations.json": "b484cbed05db8c6e1a8157dc0633156d837bfe125f25e26947de0bfd831e7a65",
+    "examples/pd_session_identity_v1/expectations.md": "6e689b4f39181b9fb62c9ac830206a6503d8016c1945da30bb00ce44006b4f03",
+    "examples/pd_session_identity_v1/results.json": "fe4e8e3525747a6ad497f7e8494e13d07971cb0ad8bcd95c1759bec0583bb46f",
+    "examples/pd_session_identity_v1/run_study.py": "4441a73f4c172225271ef8e64bb2e30447d60ad2a4d049361aae7234132ba126",
+    "examples/pd_session_v1/RESULTS.md": "fea7a659879c0c1bf9a2a7a2751edb7ec84286a9e790f7a193ac8b2933f96276",
+    "examples/pd_session_v1/expectations.json": "064d48044820b673ff99c0fb2ea6d185e8caca1633314a3146fcc3cfb3ff0aba",
+    "examples/pd_session_v1/expectations.md": "12aa356846d9a0f316d47e48024db498dd71bd034c9ef1c589e96f55614bac82",
+    "examples/pd_session_v1/results.json": "9660a5bcd47706fe857694d68340aab9fdab2d7096632624e6f310118d4a435e",
+    "examples/pd_session_v1/run_study.py": "56d96ba0f1979ddf5160b93c19c4e93b57406c6ebf76d61e4a5661f9b317410b"
+  },
+  "manifest_only_off_path": {
+    "one_plus_one": {
+      "bytes": 15772,
+      "sha256": "019f818e02252407e560b37415da12151c8f6ca0ff01bcb7ff8aabfead47f286"
+    },
+    "target": {
+      "bytes": 2639042,
+      "sha256": "48029d871293762007ab33082d59a7b5a4efb22583394e718c97e733717fd709"
+    }
+  },
+  "native_source_sha256": {
+    "vllm/config/kv_transfer.py": "64bde41204a5eea02cf2bb886e3479de90d5aab238e0d8a50de488d27edae4be",
+    "vllm/distributed/kv_transfer/kv_connector/v1/base.py": "ec3e461a802fdbc0d324d8cb200a161042da0614cfc0cb342accdd9d58dca31d",
+    "vllm/entrypoints/llm.py": "3bb98c9bff8d018902f4352bb5f81f1b4d13276ba1c3f18a9ec11d9a5aa5a57a",
+    "vllm/outputs.py": "44e2ea5d8a34403a99a867b42806e8102b3d9e7b1a0f735af26e6650cc482342",
+    "vllm/v1/core/sched/scheduler.py": "c67bda2886b52865ddafabaae7d797c359e930752f374421a33e537d94a5f45a",
+    "vllm/v1/engine/core.py": "6fdd067f54e5d42c57ff413e292685f5bdf6f343498d85c9262567f1eb746916",
+    "vllm/v1/engine/llm_engine.py": "46caab7b8a09d74321ef7a64683e8019b2187810725c80a15298cf9f51f1df03"
+  },
+  "physical_bounds": {
+    "b100_hbm_bytes_per_second": 8000000000000,
+    "burst_makespan_ceiling": "Unique service sum plus the sum of every declared handoff, since every request arrives at the same time.",
+    "burst_makespan_floor": "Largest single request dependent service chain and the unique globally serialized service sum, interpreted only under the explicit compatibility authority.",
+    "decode_service_floor_ps": 40108032,
+    "handoff_bounds_ps": {
+      "16": {
+        "ceiling": 679145600,
+        "floor": 15728640
+      },
+      "8": {
+        "ceiling": 364572800,
+        "floor": 7864320
+      }
+    },
+    "host_scaling": "No linear, monotonic, per-engine memory or speedup bound is inferred from the earlier two- and four-engine measurements.",
+    "kv_bytes_per_prompt_token": 49152,
+    "nonempty_step_service_ps": {
+      "ceiling": 100000000000,
+      "floor": 1000000
+    },
+    "per_rank_active_weight_bytes": 320864256,
+    "serial_request_ceiling": "Five times the nonempty-step service ceiling plus declared handoff.",
+    "serial_request_floor": "Prefill service plus declared handoff plus four positive decode services. Each serial decode service exceeds the active-weight byte floor."
+  },
+  "scales": [
+    {
+      "decode_engines": 1,
+      "engines": 2,
+      "id": "p1-d1",
+      "prefill_engines": 1,
+      "workers": 16
+    },
+    {
+      "decode_engines": 5,
+      "engines": 7,
+      "id": "p2-d5",
+      "prefill_engines": 2,
+      "workers": 56
+    },
+    {
+      "decode_engines": 10,
+      "engines": 14,
+      "id": "p4-d10",
+      "prefill_engines": 4,
+      "workers": 112
+    },
+    {
+      "decode_engines": 20,
+      "engines": 28,
+      "id": "p8-d20",
+      "prefill_engines": 8,
+      "workers": 224
+    },
+    {
+      "decode_engines": 40,
+      "engines": 56,
+      "id": "p16-d40",
+      "prefill_engines": 16,
+      "workers": 448
+    }
+  ],
+  "schema": "simllm-pd-session-target-scale-expectations-v1",
+  "scope": {
+    "gpu_measurements": 0,
+    "live_frontend": "vLLM over simulated workers",
+    "packet_backend_runs": 0,
+    "physical_cross_engine_concurrency": false,
+    "placement": "Read-only role, engine ordinal and local-rank join to a declared global manifest; the live sinks keep their existing local placements.",
+    "residual_owner": "CORE-68",
+    "timing_authority": "existing globally serialized shared-clock compatibility model"
+  },
+  "serial_cells": [
+    {
+      "decode_output_tokens": 4,
+      "handoff_ps": 100000000,
+      "id": "prompt-8-handoff-100000000",
+      "prompt_tokens": 8,
+      "requests": 80
+    },
+    {
+      "decode_output_tokens": 4,
+      "handoff_ps": 200000000,
+      "id": "prompt-8-handoff-200000000",
+      "prompt_tokens": 8,
+      "requests": 80
+    },
+    {
+      "decode_output_tokens": 4,
+      "handoff_ps": 100000000,
+      "id": "prompt-16-handoff-100000000",
+      "prompt_tokens": 16,
+      "requests": 80
+    },
+    {
+      "decode_output_tokens": 4,
+      "handoff_ps": 200000000,
+      "id": "prompt-16-handoff-200000000",
+      "prompt_tokens": 16,
+      "requests": 80
+    }
+  ],
+  "task": "CORE-52",
+  "void_policy": "Any fatal guard, exact oracle or behavioral relation failure makes the entire run VOID with behavioral_score null. Preserve raw partial evidence, exception and stopping point. No partial score, silent fallback or result-dependent freeze amendment."
+}

@@ -596,3 +596,5 @@ tests/fixtures/kimi_k3_config.json text eol=lf
 tests/test_kimi_k3*.py text eol=lf
 examples/external_composition_v1/* text eol=lf
 offline/calibration/external-compositions/*.json text eol=lf
+
+examples/pd_session_target_scale_v1/** text eol=lf
