@@ -35,6 +35,7 @@ from simllm.compute import (
 )
 from simllm.core import (
     KV_HANDOFF_AUTHORITY,
+    DeclaredKvHandoffPolicy,
     DisaggregatedRequestTimeline,
     KvHandoffEvent,
     KvHandoffGeometry,
@@ -111,6 +112,7 @@ class VllmPdSessionConfig:
     decode_provider: ComputeProvider | None = None
     gpu: GpuSpec = GPU_ENVELOPES["b100"]
     host_model: HostInitiationModel = field(default_factory=HostInitiationModel.ideal)
+    engine_timing: str = "serialized"
 
     def __post_init__(self) -> None:
         if not isinstance(self.model, str) or not self.model.strip():
@@ -144,6 +146,13 @@ class VllmPdSessionConfig:
         if not isinstance(self.host_model, HostInitiationModel):
             raise TypeError("host_model must be HostInitiationModel")
         self.host_model.validate_device(self.gpu)
+        if self.engine_timing not in ("serialized", "independent"):
+            raise ValueError("engine_timing must be serialized or independent")
+        if (self.engine_timing == "independent"
+                and (self.max_num_seqs != 1 or type(self.handoff_policy) is not DeclaredKvHandoffPolicy)):
+            raise NotImplementedError(
+                "independent sessions require one sequence per engine and declared handoff (CORE-70)"
+            )
 
     def provider_for_role(self, role: ServingPoolRole) -> ComputeProvider:
         """Resolve an optional pool-specific provider without changing defaults."""
@@ -456,11 +465,14 @@ class VllmDisaggregatedSession:
         *,
         clock: VirtualClock | None = None,
         construction_observer: Callable[[VllmPoolEngine], None] | None = None,
+        completion_observer: Callable[[str, VllmPoolEngine, dict], None] | None = None,
     ) -> None:
         if not isinstance(config, VllmPdSessionConfig):
             raise TypeError("config must be VllmPdSessionConfig")
         if clock is not None and not isinstance(clock, VirtualClock):
             raise TypeError("clock must be a VirtualClock")
+        if completion_observer is not None and config.engine_timing != "independent":
+            raise ValueError("completion_observer requires independent engine timing")
         self.config = config
         self.clock = VirtualClock() if clock is None else clock
         self.construction_observer = construction_observer
@@ -471,7 +483,33 @@ class VllmDisaggregatedSession:
         self._next_prefill = 0
         self._next_decode = 0
         self._closed = False
+        self.engine_runtime = None
+        self._completion_bridges = {}
+        if self.config.engine_timing == "independent":
+            from simllm.core.engine_steps import EngineStepRuntime
+
+            # Reserve the sole clock authority before allocating native pools.
+            self.engine_runtime = EngineStepRuntime(self.clock)
         self._build_pools()
+        if self.engine_runtime is not None:
+            from simllm.adapters.vllm.independent import NativeEngineCompletion
+
+            try:
+                for engine in (*self.prefill_engines, *self.decode_engines):
+                    self._completion_bridges[engine.engine_id] = NativeEngineCompletion(
+                        engine, self.engine_runtime, observer=completion_observer)
+            except BaseException:
+                self.shutdown()
+                raise
+
+    @property
+    def timing_authority(self) -> str:
+        from simllm.core.engine_steps import (
+            INDEPENDENT_ENGINE_AUTHORITY,
+            SERIALIZED_ENGINE_AUTHORITY,
+        )
+
+        return INDEPENDENT_ENGINE_AUTHORITY if self.engine_runtime is not None else SERIALIZED_ENGINE_AUTHORITY
 
     def _build_pools(self) -> None:
         try:
@@ -821,6 +859,16 @@ class VllmDisaggregatedSession:
             raise RuntimeError("one vLLM step did not emit one SimLLM record")
         record = engine.executor.step_records[-1]
         batch = self._stable_batch(engine, states, record)
+        self._consume_concurrent_outputs(engine, states, policy, outputs)
+        return batch
+
+    def _consume_concurrent_outputs(
+        self,
+        engine: VllmPoolEngine,
+        states: Sequence[_ConcurrentRequestState],
+        policy: KvHandoffPolicy,
+        outputs: Sequence[Any],
+    ) -> None:
         state_by_id = {state.request.request_id: state for state in states}
         for output in outputs:
             state = state_by_id.get(output.request_id)
@@ -844,7 +892,6 @@ class VllmDisaggregatedSession:
             state.decode_token_ids = current
             if output.finished:
                 state.decode_record_stop = len(engine.executor.step_records)
-        return batch
 
     @staticmethod
     def _ready_time_candidates(
@@ -858,6 +905,59 @@ class VllmDisaggregatedSession:
             elif state.handoff is not None and state.decode_internal_id is None:
                 candidates.append(state.handoff.completed_at_ps)
         return tuple(value for value in candidates if value > now_ps)
+
+    def _drive_independent(
+        self, states: Sequence[_ConcurrentRequestState], policy: KvHandoffPolicy,
+        prefill_batches: list[tuple[str, ...]], decode_batches: list[tuple[str, ...]],
+    ) -> None:
+        runtime = self.engine_runtime
+        if runtime is None:
+            raise RuntimeError("independent engine authority is absent")
+        driver_order = (*self.prefill_engines, *self.decode_engines)
+        try:
+            while True:
+                runtime.complete_due()
+                if all(state.decode_record_stop is not None for state in states):
+                    if runtime.next_completion_ps is not None:
+                        raise RuntimeError("completed requests leave unexplained pending engine service")
+                    if not any(bridge.has_work for bridge in self._completion_bridges.values()):
+                        return
+                # Existing completions at this timestamp have all retired.
+                for state in states:
+                    if state.prefill_internal_id is None and state.request.admitted_at_ps <= self.clock.now_ps:
+                        self._admit_prefill(state)
+                for state in states:
+                    if (state.handoff is not None and state.decode_internal_id is None
+                            and state.handoff.completed_at_ps <= self.clock.now_ps):
+                        self._admit_decode(state)
+                for engine in driver_order:
+                    bridge = self._completion_bridges[engine.engine_id]
+                    if bridge.pending is not None or not bridge.has_work:
+                        continue
+
+                    def consume(outputs, record, engine=engine):
+                        self._consume_concurrent_outputs(engine, states, policy, outputs)
+
+                    bridge.submit(consume)
+                    record = engine.executor.step_records[-1]
+                    if record.scheduled:
+                        batch = self._stable_batch(engine, states, record)
+                        target = prefill_batches if engine.role is ServingPoolRole.PREFILL else decode_batches
+                        target.append(batch)
+                    if runtime.next_completion_ps == self.clock.now_ps:
+                        break
+                due = runtime.next_completion_ps
+                if due == self.clock.now_ps:
+                    continue
+                candidates = list(self._ready_time_candidates(states, self.clock.now_ps))
+                if due is not None:
+                    candidates.append(due)
+                if not candidates:
+                    raise RuntimeError("independent native session made no progress")
+                runtime.advance_to(min(candidates))
+        except Exception as error:
+            runtime.invalidate(str(error))
+            raise
 
     def run_requests(
         self,
@@ -885,6 +985,8 @@ class VllmDisaggregatedSession:
         policy = self.config.handoff_policy if handoff_policy is None else handoff_policy
         if not isinstance(policy, KvHandoffPolicy):
             raise TypeError("handoff_policy must implement KvHandoffPolicy")
+        if self.engine_runtime is not None and type(policy) is not DeclaredKvHandoffPolicy:
+            raise NotImplementedError("independent packet handoff composition remains CORE-70")
 
         states = tuple(
             _ConcurrentRequestState(
@@ -910,49 +1012,51 @@ class VllmDisaggregatedSession:
         driver_cursor = 0
         prefill_batches: list[tuple[str, ...]] = []
         decode_batches: list[tuple[str, ...]] = []
-        while any(state.decode_record_stop is None for state in states):
-            for state in states:
-                if (
-                    state.prefill_internal_id is None
-                    and state.request.admitted_at_ps <= self.clock.now_ps
-                ):
-                    self._admit_prefill(state)
-            for state in states:
-                if (
-                    state.handoff is not None
-                    and state.decode_internal_id is None
-                    and state.handoff.completed_at_ps <= self.clock.now_ps
-                ):
-                    self._admit_decode(state)
+        if self.engine_runtime is not None:
+            self._drive_independent(states, policy, prefill_batches, decode_batches)
+        else:
+            while any(state.decode_record_stop is None for state in states):
+                for state in states:
+                    if (
+                        state.prefill_internal_id is None
+                        and state.request.admitted_at_ps <= self.clock.now_ps
+                    ):
+                        self._admit_prefill(state)
+                for state in states:
+                    if (
+                        state.handoff is not None
+                        and state.decode_internal_id is None
+                        and state.handoff.completed_at_ps <= self.clock.now_ps
+                    ):
+                        self._admit_decode(state)
 
-            active: VllmPoolEngine | None = None
-            for offset in range(len(driver_order)):
-                index = (driver_cursor + offset) % len(driver_order)
-                candidate = driver_order[index]
-                if candidate.llm.llm_engine.has_unfinished_requests():
-                    active = candidate
-                    driver_cursor = (index + 1) % len(driver_order)
-                    break
-            if active is not None:
-                batch = self._step_concurrent_engine(active, states, policy)
-                target = (
-                    prefill_batches
-                    if active.role is ServingPoolRole.PREFILL
-                    else decode_batches
-                )
-                target.append(batch)
-                continue
+                active: VllmPoolEngine | None = None
+                for offset in range(len(driver_order)):
+                    index = (driver_cursor + offset) % len(driver_order)
+                    candidate = driver_order[index]
+                    if candidate.llm.llm_engine.has_unfinished_requests():
+                        active = candidate
+                        driver_cursor = (index + 1) % len(driver_order)
+                        break
+                if active is not None:
+                    batch = self._step_concurrent_engine(active, states, policy)
+                    target = (
+                        prefill_batches
+                        if active.role is ServingPoolRole.PREFILL
+                        else decode_batches
+                    )
+                    target.append(batch)
+                    continue
 
-            candidates = self._ready_time_candidates(states, self.clock.now_ps)
-            if not candidates:
-                unfinished = [
-                    state.request.request_id
-                    for state in states
-                    if state.decode_record_stop is None
-                ]
-                raise RuntimeError(f"concurrent session made no progress: {unfinished}")
-            self.clock.advance_to(min(candidates))
-
+                candidates = self._ready_time_candidates(states, self.clock.now_ps)
+                if not candidates:
+                    unfinished = [
+                        state.request.request_id
+                        for state in states
+                        if state.decode_record_stop is None
+                    ]
+                    raise RuntimeError(f"concurrent session made no progress: {unfinished}")
+                self.clock.advance_to(min(candidates))
         results = []
         for state in states:
             if None in (
@@ -1056,6 +1160,9 @@ class VllmDisaggregatedSession:
             raise TypeError("admitted_at_ps must be an integer")
         if admitted < self.clock.now_ps:
             raise ValueError("admitted_at_ps cannot precede the session clock")
+        if self.engine_runtime is not None:
+            return self.run_requests((VllmPdRequest(request_id, prompt, decode_output_tokens, admitted),),
+                                     handoff_policy=handoff_policy).requests[0]
         self.clock.advance_to(admitted)
         policy = self.config.handoff_policy if handoff_policy is None else handoff_policy
         if not isinstance(policy, KvHandoffPolicy):
@@ -1179,6 +1286,25 @@ class VllmDisaggregatedSession:
 
     def shutdown(self) -> None:
         if self._closed:
+            return
+        if self.engine_runtime is not None:
+            # Pending work rejects before any native teardown mutates state.
+            self.engine_runtime.close()
+            failures = []
+            for bridge in self._completion_bridges.values():
+                try:
+                    bridge.close()
+                except Exception as error:  # noqa: BLE001, complete cleanup before reporting collected errors.
+                    failures.append(str(error))
+            self._closed = True
+            for engine in (*self.prefill_engines, *self.decode_engines):
+                try:
+                    engine.llm.llm_engine.engine_core.shutdown()
+                except Exception as error:  # noqa: BLE001, complete cleanup before reporting collected errors.
+                    failures.append(engine.engine_id + ": " + str(error))
+            reset_configuration()
+            if failures:
+                raise RuntimeError("independent session cleanup failed: " + "; ".join(failures))
             return
         self._closed = True
         for engine in (*self.prefill_engines, *self.decode_engines):

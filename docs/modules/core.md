@@ -64,6 +64,19 @@ own modules.
   packet backend, and completes at the last required arrival. TRAF-62 and
   TRAF-64 retain the PLACE-5-dependent target-topology qualification.
 
+- `simllm.core.engine_steps.EngineStepRuntime` owns independent whole-engine
+  service on one `VirtualClock`. A receipt binds its engine, input record,
+  private prepared price and completion sequence. Each engine has one pending
+  slot; its five completion events, queue visit and step result are read-only
+  projections joined by engine and step identity. A zero-service drain requires
+  a real finished or preempted native request.
+- Submission publishes the input record. Only the due retirement callback may
+  consume a bound publisher's exact prepared payload. Typed snapshots include
+  every resolved configuration field, provider value and existing publication
+  row. A failed guard poisons the owner and prevents retry. Whole-engine visits
+  describe declared service; their summed work remains distinct from elapsed
+  request time. CORE-68 owns the live independent-completion qualification.
+
 ### Execution and completion boundary
 
 `simllm.core` publishes four versioned contracts:
@@ -1509,10 +1522,13 @@ capture exists.
 
 ### Completeness
 
-- CORE-70 (Completeness; P2; L): compose independent native engine completion
-  with shared fabric or peer-packet service, collective registration and the
-  request-metric sink reducer. CORE-68 admits isolated declared local service
-  and rejects these combinations before native scheduling mutates state.
+- CORE-70 (Completeness; P2; L): extend independent native engine completion
+  beyond its isolated synchronous single-sequence envelope. Compose shared
+  fabric or peer-packet service, collective registration and the request-metric
+  sink reducer. Add explicitly admitted paced/replay, multi-sequence and native
+  version/request extensions with their existing framework owners (including
+  VLLM-8 and VLLM-10). CORE-68 admits in-process vLLM 0.27.1 with declared local
+  service and rejects these combinations before native scheduling mutates state.
   Preserve that explicit rejection and the serialized compatibility path.
   Join each shared resource's sole timing authority to the engine's due event,
   including late completion, registration visibility and critical-path metric

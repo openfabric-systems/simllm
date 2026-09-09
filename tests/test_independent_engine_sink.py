@@ -184,3 +184,22 @@ def test_instance_source_shadow_invalidates_pending_price(tmp_path, monkeypatch)
     monkeypatch.setattr(sink, "_publish_result", lambda simulation, record=None: simulation.result)
     with pytest.raises(RuntimeError, match="source binding changed"):
         price.validate()
+
+
+def test_replaced_binding_helper_cannot_hide_changed_publication(tmp_path, monkeypatch):
+    sink, runtime = make_sink(tmp_path), EngineStepRuntime(VirtualClock())
+    price = sink.prepare_deferred(record())
+    bind_price(sink, runtime, price)
+    original = sink._publish
+
+    def changed(simulation, record=None):
+        return original(replace(simulation, outcome=replace(
+            simulation.outcome, makespan_ps=simulation.outcome.makespan_ps + 1)), record)
+
+    monkeypatch.setattr(sink, "_deferred_bindings", lambda: price.bindings)
+    monkeypatch.setattr(sink, "_publish", changed)
+    price.validate()
+    runtime.advance_to(price.result.completed_at_ps)
+    with pytest.raises(ValueError, match="publication values changed"):
+        runtime.complete_due()
+    assert runtime.failure and sink.outcomes == [] and runtime.results == ()

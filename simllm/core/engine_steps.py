@@ -137,8 +137,12 @@ class EngineStepRuntime:
             self._reject("engine clock advanced outside its completion authority")
         active = [item for item in self._pending.values() if item is not self._retiring]
         for item in self._pending.values():
-            if value_snapshot(item.receipt) != item.receipt_state:
-                self._reject("pending engine receipt values changed")
+            try:
+                if value_snapshot(item.receipt) != item.receipt_state:
+                    self._reject("pending engine receipt values changed")
+            except Exception as error:
+                self.invalidate(str(error))
+                raise
         earliest = min((item.receipt.completed_at_ps for item in active), default=None)
         if len(self.clock) != len(active) or self.clock.peek_next_time() != earliest:
             self._reject("engine event queue changed outside its completion authority")
@@ -313,6 +317,14 @@ class EngineStepRuntime:
         return tuple(due)
 
     def close(self) -> None:
+        if self._failure is not None and not self._pending and not len(self.clock):
+            # A failed installation with no reservations can release its own
+            # clock claim. The failure remains recorded and cannot be retried.
+            owner = getattr(self.clock, "_engine_step_owner", None)
+            if callable(owner) and owner() is self:
+                self._closed = True
+                del self.clock._engine_step_owner
+                return
         self._check_action()
         if self._pending:
             self._reject("pending engine work cannot be cancelled or reset (CORE-69)")

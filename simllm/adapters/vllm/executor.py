@@ -1867,6 +1867,12 @@ class SimExecutor(_ExecutorBase):
         output = self._run_step(scheduler_output)
         return _completed_future(output) if non_block else output
 
+    def prepare_independent(self, scheduler_output: Any) -> Any:
+        """Prepare a private price/output for the shared engine completion owner."""
+        from simllm.adapters.vllm.independent import prepare_executor_step
+
+        return prepare_executor_step(self, scheduler_output)
+
     def sample_tokens(self, grammar_output: Any = None, non_block: bool = False) -> Any:
         """Return the output stashed by :meth:`execute_model`, exactly once.
 

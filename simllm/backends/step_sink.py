@@ -2478,20 +2478,12 @@ class HtsimStepSink:
         bindings = []
         for name in ("_plan_step", "_execute_plan", "_simulate_step", "_publish", "_publish_result",
                      "_deferred_state", "_deferred_publications", "_deferred_bindings",
-                     "_deferred_actual_values", "prepare_deferred", "publish_deferred",
+                     "deferred_publication", "prepare_deferred", "publish_deferred",
                      "validate_deferred_mode"):
             method = getattr(self, name)
             function = getattr(method, "__func__", method)
             bindings.append((getattr(method, "__self__", None), function, getattr(function, "__code__", None)))
         return tuple(bindings)
-
-    @staticmethod
-    def _deferred_actual_values(price: DeferredStepPrice) -> tuple:
-        """Read actual values, never the replaceable expected fields on a price."""
-        sink = price.sink
-        return (id(sink), id(sink.config), id(sink.config.provider), price.record, price.simulation,
-                sink._deferred_state(), sink._deferred_publications(),
-                tuple(tuple(id(part) for part in binding) for binding in sink._deferred_bindings()))
 
     def deferred_publication(self, price: DeferredStepPrice):
         """Let the core privately freeze the exact price and its full payload."""
@@ -2500,7 +2492,19 @@ class HtsimStepSink:
         if not isinstance(price, DeferredStepPrice) or price.sink is not self:
             raise ValueError("deferred price belongs to another sink")
         price.validate()
-        return PublicationBinding(self, price, HtsimStepSink._deferred_actual_values)
+        # Capture implementations before submission; an instance shadow cannot
+        # replace the authority's reader with a fabricated self-report.
+        state_reader = HtsimStepSink._deferred_state
+        publication_reader = HtsimStepSink._deferred_publications
+        binding_reader = HtsimStepSink._deferred_bindings
+
+        def actual_values(payload: DeferredStepPrice) -> tuple:
+            sink = payload.sink
+            return (id(sink), id(sink.config), id(sink.config.provider), payload.record, payload.simulation,
+                    state_reader(sink), publication_reader(sink),
+                    tuple(tuple(id(part) for part in binding) for binding in binding_reader(sink)))
+
+        return PublicationBinding(self, price, actual_values)
 
     def prepare_deferred(self, record: StepRecord) -> DeferredStepPrice:
         """Price deterministic local service without publishing any sink row."""

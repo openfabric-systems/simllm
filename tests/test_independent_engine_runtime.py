@@ -226,3 +226,16 @@ def test_publication_binding_is_copied_privately_and_must_be_consumed():
     with pytest.raises(ValueError, match="omitted a bound publication"):
         runtime.complete_due()
     assert runtime.failure and runtime.results == ()
+
+
+def test_unsupported_receipt_value_poisoning_prevents_repaired_retry():
+    runtime = EngineStepRuntime(VirtualClock())
+    receipt, _, _ = step(runtime, "a", 1000)
+    object.__setattr__(receipt, "sequence", object())
+    with pytest.raises(TypeError, match="unsupported deferred value"):
+        runtime.advance_to(1000)
+    assert runtime.failure and runtime.clock.now_ps == 0
+    object.__setattr__(receipt, "sequence", 0)
+    with pytest.raises(RuntimeError, match="poisoned"):
+        runtime.advance_to(1000)
+    assert runtime.results == ()

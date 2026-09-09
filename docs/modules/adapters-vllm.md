@@ -157,6 +157,22 @@ Disaggregated session driver (`simllm/adapters/vllm/pd_session.py`):
   Pool-local request IDs stay distinct and one stable session request ID is
   carried in connector metadata. Simulated workers have no paged KV tensors,
   so worker tensor transfer is explicitly false rather than fabricated.
+- `VllmPdSessionConfig.engine_timing` selects `serialized` by default or
+  `independent` explicitly. Independent service reserves one native step per
+  engine, records its input at submission and keeps its price and generated
+  tokens private until the shared clock reaches completion. The unchanged
+  native frontend processes that due output; equal-time completions retire in
+  insertion order before new admissions. Native finished-only steps drain at
+  zero service. `timing_authority` names the selected owner without changing
+  the accepted request-result wire schema.
+- Independent mode uses in-process vLLM 0.27.1, synchronous scheduling,
+  `max_num_seqs=1`, virtual time, isolated local collective service and the
+  declared handoff policy. An optional `completion_observer` receives read-only
+  request/cache state and emitted frontend outputs at the submission and
+  retirement boundaries. Pending input, provider, configuration, prepared
+  price or publication changes poison the session. Pending cancellation and
+  reset are rejected before mutation (CORE-69); shared-resource and broader
+  native-mode composition are explicit rejected paths owned by CORE-70.
 - Each engine's scheduler remains its only batching authority. The delivered
   concurrent path admits several stable session requests, releases each decode
   consumer from its own completed producer handoff and records the pool-local

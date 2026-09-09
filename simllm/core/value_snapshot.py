@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from dataclasses import fields, is_dataclass
 from enum import Enum
 from fractions import Fraction
 from pathlib import PurePath
 
 
-def value_snapshot(value: object) -> tuple:
+def value_snapshot(value: object, *, project: Callable[[object], object] | None = None) -> tuple:
     """Include every dataclass field, including fields excluded from equality.
 
     Unknown objects require an explicit caller projection. Object identity and
@@ -46,6 +47,10 @@ def value_snapshot(value: object) -> tuple:
                 return (*tag, tuple(visit(child) for child in item))
             if kind in (set, frozenset):
                 return (*tag, frozenset(visit(child) for child in item))
+            if project is not None:
+                projected = project(item)
+                if projected is not NotImplemented:
+                    return (*tag, visit(projected))
             raise TypeError("unsupported deferred value type: " + ".".join(tag))
         finally:
             active.remove(identity)
