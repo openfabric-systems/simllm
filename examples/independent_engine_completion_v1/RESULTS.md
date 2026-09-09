@@ -1,96 +1,71 @@
 # Independent-engine completion
 
-The fresh native campaign is **VOID at its 1,800-second host limit**. Three
-serialized reference processes qualify, but its first independent process
-times out before admission. CORE-68 remains open; no native independent-engine
-qualification or deployment frontier follows from a partial run.
+The latest native campaign is **VOID at the frozen 1,800-second host limit**.
+Its three serialized controls qualify 58 requests. The first independent
+process retains 18 complete request rows but does not finish its required
+20-request workload. No independent process is admitted, so CORE-68 stays open.
 
-## Fresh run and stopping point
+## Latest run and result
 
-The campaign executes the same frozen component, service, arrival, engine-width
-and handoff grid after the representation repair described below. The executed
-source is `ce8bf357e7477291d2a3cfc55b8a6875dd789c06`; the representation
-amendment is `7d756ad7cefdd8270c2a6b28e2b74dbe84139e6e`. That amendment follows
-the first failure and is explicitly a post-specified encoding check. The
-original prospective behavior freeze remains
-`73270f6699440aa4a17ec7b2af5155698ab643b2`.
+The campaign runs the unchanged component, service, arrival, engine-count and
+handoff grid from source `72a395677ec56e9814a85518473940f2f95313c3`.
+The original prospective behavior freeze is
+`73270f6699440aa4a17ec7b2af5155698ab643b2`. The representation amendment
+`7d756ad7cefdd8270c2a6b28e2b74dbe84139e6e` follows the first failure;
+`1d7f5a9c1f1908f55e065f5d8ca77339bc5d17cb` freezes complete process-exit receipt
+retention after the second failure. Neither changes the workload or time cap.
 
-The three serialized processes retain one, two and four engines per pool and
-qualify 24, 18 and 16 native requests respectively. Their host execution times
-are 446.117, 355.278 and 315.006 seconds. The first independent process reaches
-1,800.159 seconds and 2,119,672 KiB sampled maximum current resident memory
-before the parent enforces the frozen time cap. The memory limit is not reached.
+The serialized one-, two- and four-engine-per-pool processes exit successfully
+in 362.541, 278.331 and 253.289 seconds, respectively. The first independent
+process is killed at 1,800.254 seconds, with sampled maximum current resident
+memory of 1,608,264 KiB, below the 16-GiB limit. The wall limit decides the
+verdict. These are process diagnostics, not a source-paired speedup claim.
 
-The failed process retains eight full request-result rows from two complete
-cells and 249 native checkpoints. Eleven finished decode outputs appear in
-those checkpoints, including three from the incomplete third cell. These
-observations are not eleven complete admitted request results. The last
-checkpoint is before submission of decode step 47 at 4,213,936,000 ps. No
-independent process is admitted; the remaining two processes never start.
+The independent process retains five complete cells, 18 complete request rows
+and 438 checkpoints. Its sixth cell is incomplete. The last checkpoint follows
+submission of decode step 82 at 7,414,640,000 ps, with 83 input records and 82
+completed results. A submitted step is not a completed request. The remaining
+two independent processes never start.
 
-Nine of eighteen required stages finish. The retained evidence inventories
-contain 249,340 unscored guards, 21 exact oracle rows and eight component
-behavioral instances in two families. The timeout makes the whole campaign
-VOID with a null behavioral score. The empty violated-guard array does not
-override the fatal process exception or turn the earlier rows into a score.
+Nine of eighteen required stages finish. The retained evidence includes
+249,340 unscored guards, 21 exact oracle rows and eight component behavioral
+instances in two families. The campaign's behavioral score is null. The empty
+violated-guard array does not override the fatal process exception, and the
+partial native observations do not qualify concurrency.
 
-The [portable publication](results.json) retains 56 raw process-file receipts
-totaling 83,200,537 bytes, plus the root evidence receipts. The failed process
-has a final raw receipt after termination; execution never reaches its initial
-pre-admission lock. This distinction is retained rather than reconstructed.
-The fresh summary SHA-256 is
-`0f06303326204d3b455c366049b9a054bc80899a7ffc08b06538c14751b3de5e`.
+The [portable publication](results.json) retains 59 raw process-file receipts,
+totaling 83,866,110 bytes, plus root evidence receipts. Every started process,
+including the timed-out process, has an initial receipt taken after exit and
+before admission. All four initial inventories match their final inventories
+and the retained files exactly. Earlier missing initial receipts are not
+reconstructed. The latest raw summary SHA-256 is
+`7279b687ec33f8ee394ca37c174f69bdd16713f96249eaf8b7d08b3b386aa3b1`.
 
-Source inspection identifies repeated encoding in the sink's private
-publication reader: state and prior publications are already typed snapshots
-when the core snapshots the enclosing value again. This is a candidate for a
-separately frozen host-work experiment. It is not measured attribution of the
-timeout, and removing it does not by itself qualify native completion. A fresh
-campaign must retain all existing timing relations and process limits.
+The separately qualified [publication reader study](../publication_snapshot_v1/RESULTS.md)
+removes repeated snapshot encoding and preserves exact model records and
+rejections. The native campaign still exceeds its cap with that repair and the
+qualified dependency lookup changes. This result does not identify the
+remaining hot path; further host-work investigation precedes another attempt.
 
-## First retained failure
+## Earlier retained attempts
 
-The first native campaign is **VOID**. Its first serialized process completes
-24 requests, but no process is admitted because the checker treats an integer
-physical bound and the numerically identical floating-point profile value as
-different evidence. CORE-68 remains open.
+| Attempt | Executed source | Fatal finding | Retained publication |
+|---|---|---|---|
+| First | `594fdfb001dc056b93fca5bef0595d548e754034` | Float/integer profile comparison mismatch after 24 requests; no process admitted | [Original record](void-frozen-v1.json) |
+| Second | `ce8bf357e7477291d2a3cfc55b8a6875dd789c06` | 1,800-second timeout after eight complete independent request rows; three serialized processes admitted | [Original record](void-frozen-v2.json) |
 
-The campaign runs the frozen component cases followed by the first native
-one-prefill, one-decode process, with eight simulated workers per engine.
-The source is `594fdfb001dc056b93fca5bef0595d548e754034`; the prospective
-behavior contract is `73270f6699440aa4a17ec7b2af5155698ab643b2`.
-
-The native process exits successfully in 425.15 host seconds and reaches
-1,214,396 KiB sampled resident memory. Admission stops at
-`serialized-p1-d1:simllm-prefill-0:memory-bandwidth`. The captured source
-configuration uses floating-point `8000000000000.0` bytes per second; the
-physical bound uses integer `8000000000000`. Both describe the same declared
-8-TB/s memory interface. Exact type-aware JSON comparison refutes this checker
-assumption. It does not refute the bandwidth bound or establish the accuracy
-of the modeled service.
-
-Three of eighteen stages finish before the fatal guard. The retained check
-records contain 2,066 unscored guards, two component exact-oracle rows and eight
-component behavioral instances. These are separate evidence inventories,
-not an admitted score. The behavioral score is null. The native output contains
-24 requests, but the admitted request and process counts are both zero. The
-remaining five native processes are never started.
-
-The [first machine-readable record](void-frozen-v1.json) retains initial receipts for all
-fourteen raw process files, totaling 33,973,445 bytes, and the root evidence
-receipts. Raw evidence stays under the configured external output root. Its
-summary SHA256 is
-`3464b261b79964cec73a0739d07f4c64e7eaefc9556fb390736b15f1ff1aaa0b`.
-The run stays immutable and unrescored.
-
-The representation amendment and repair address this checker mismatch before
-the fresh run. They do not rescore the failed attempt or change its original
-service, arrival, width and handoff sweep.
+Both earlier publications and their raw receipts remain unchanged and
+unrescored. The first failure concerns exact checker representation, not the
+8-TB/s memory bound. The second process's eleven finished decode observations
+include three from an incomplete cell and are not eleven complete request
+results. It has a final raw receipt but no initial pre-admission lock; that
+chronology remains explicit in its archived publication.
 
 ## Project effect and limits
 
-CORE-68 needs a qualified host-work repair and a complete fresh native campaign.
-CORE-68 and CORE-54 gain no native concurrency qualification. CORE-52 target
-feasibility, CORE-69 cancellation and CORE-70 shared-resource composition also
-remain open. No GPU, model weights or packet backend runs in this attempt,
-and no deployment frontier or serving-throughput claim follows from it.
+CORE-68 needs a complete fresh native campaign within the existing limits.
+The repair does not close independent-engine timing qualification, CORE-52's
+large retained session, CORE-51 or CORE-54's deployment frontier, CORE-69's
+cancellation path, or CORE-70's resource compositions. Shared cache-transfer
+work may proceed independently, but its native qualification depends on
+CORE-68. No GPU, model weights or packet backend runs in these attempts.

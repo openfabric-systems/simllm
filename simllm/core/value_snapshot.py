@@ -20,6 +20,22 @@ def value_snapshot(value: object, *, project: Callable[[object], object] | None 
 
     def visit(item: object) -> tuple:
         kind = type(item)
+        # Exact builtins have immutable type tags. Keep all other dispatch in
+        # the original order, including virtual subclasses and custom types.
+        if kind is str:
+            return ("builtins", "str", item)
+        if kind is int:
+            return ("builtins", "int", item)
+        if kind is bool:
+            return ("builtins", "bool", item)
+        if kind is bytes:
+            return ("builtins", "bytes", item)
+        if item is None:
+            return ("builtins", "NoneType", item)
+        if kind is float:
+            if not math.isfinite(item):
+                raise ValueError("deferred values must be finite")
+            return ("builtins", "float", item.hex())
         tag = (kind.__module__, kind.__qualname__)
         if isinstance(item, Enum):
             return (*tag, visit(item.value))
