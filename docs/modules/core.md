@@ -1509,6 +1509,18 @@ capture exists.
 
 ### Completeness
 
+- CORE-69 (Completeness; P2; L): support cancellation, reset and recovery
+  while an independent native engine step is pending. CORE-68's initial
+  envelope rejects these operations before they mutate native request or
+  cache ownership; keep that explicit rejection and its serialized off path
+  exact. Define one cancellation authority that resolves the pending receipt,
+  native in-flight reservation, cache references and event exactly once,
+  including same-time completion races and runtime failures. Freeze late
+  cancellation, duplicate cancellation, reset and failure-recovery sweeps;
+  require no early cache release, leaked pending work or duplicate completion
+  through the native request metric path. Do not retry partially mutated
+  scheduler state as recovery. Depends on CORE-68.
+
 - CORE-3 (Completeness; P1; L): widen the KV lifecycle case matrix, sweep and
   reporting surface. The accounting itself has landed: `KvLifecycleLedger`
   consumes all thirteen vocabulary members before resource contention, enforces
