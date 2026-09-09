@@ -331,6 +331,15 @@ backend submodules.
   operations. Explicit framework observations bypass the fallback schedule and
   are enveloped without reconstructing framework policy. JSON-round-tripped
   graphs replay through `render_serial_execution_graph_goal`.
+- `SerialStepLowererConfig.routed_compute` explicitly selects the causal routed
+  schedule: attention, dispatch, per-owner expert projections, combine and
+  output. `DeviceRuntimeStepSink` executes this graph through its existing
+  runtime and request reducer. The selected path has no scalar layer timing;
+  callers consume operation service from the graph. Conflicting observed
+  schedules and unsupported host/parallel composition reject before execution.
+  An absent option preserves complete serial and observed results. The
+  [mechanism study](../../examples/routed_compute_v1/RESULTS.md) qualifies
+  declared service, while COMP-7 and COMP-43 retain calibration.
 - `attribute_step_detail` + `HtsimRequestMetricReducer`: the read-only
   projection from executed steps to per-request TTFT and TPOT. Artifacts run
   serially and each composes as registration plus base plus the maximum of its

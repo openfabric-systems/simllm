@@ -6,6 +6,15 @@ the flow-level work the GOAL emitter renders.
 
 ## Interface
 
+`step_routed_moe_work` retains every selected expert row, including local
+assignments and several experts on one destination, together with the existing
+deduplicated dispatch/combine tables. The same immutable projection supplies
+the compute histogram and placement epoch. The
+[routed compute qualification](../../examples/routed_compute_v1/RESULTS.md)
+uses it through actual runtime and request-metric completion. Ordinary
+traffic-only calls preserve their existing projections and skip the added
+assignment inventory.
+
 `HtsimStepSinkConfig.peer_packet` binds the checked locality segments to the
 fabric manifest's declared GPU attachments. The local phase executes through
 one retained packet calendar, with source feed, directed links, switch ports,
