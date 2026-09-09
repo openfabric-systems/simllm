@@ -1,47 +1,793 @@
 {
-  "admitted_arms": 0,
-  "behavioral_score": null,
-  "completed_stages": [
-    "protocol",
-    "uninstrumented:capture"
-  ],
-  "evidence": {
-    "behavioral_instances": 0,
-    "exact_oracle_rows_retained_without_campaign_admission": 18,
-    "unscored_guard_rows_retained": 49832
-  },
-  "failure": {
-    "reason": "noncanonical or duplicate-member JSON: engine-work/simllm-prefill-0/step-records.jsonl",
-    "type": "GuardFailure"
-  },
-  "freeze_commit": "8f06648d26bbfb2bfff4751d29a2e2bf232b440d",
-  "instrumented_arm_attempted": false,
-  "limits": [
-    "CORE-52 remains open.",
-    "Original target-scale VOID is unchanged.",
-    "No host hotspot attribution, GPU timing or deployment-frontier claim."
-  ],
-  "native_process": {
-    "arm": "uninstrumented",
-    "clock_advances": 98,
-    "complete_requests": 14,
-    "exit_code": 0,
-    "sampled_max_current_rss_kib": 1147248,
-    "unique_steps": 70,
-    "wall_seconds": 260.0170595552772
-  },
-  "raw_bytes": 24977530,
-  "raw_file_count": 16,
-  "raw_files": [
+  "admitted_arms": 2,
+  "arms": [
     {
-      "bytes": 1068,
-      "path": "exception.txt",
-      "sha256": "226ec6db46133d46bf1d78df7d788f4cbd0efb1d49809bec36b9c08a6f8730e1"
+      "arm": "uninstrumented",
+      "cells": [
+        {
+          "host_call": {
+            "process_cpu_ns": 16269128007,
+            "wall_ns": 16284239030
+          },
+          "id": "prompt-8-requests-1",
+          "phase_counters": {},
+          "profile": null,
+          "request_wall_ns": 16283731516
+        },
+        {
+          "host_call": {
+            "process_cpu_ns": 64390113385,
+            "wall_ns": 64427346612
+          },
+          "id": "prompt-8-requests-4",
+          "phase_counters": {},
+          "profile": null,
+          "request_wall_ns": 64426505089
+        },
+        {
+          "host_call": {
+            "process_cpu_ns": 16353197555,
+            "wall_ns": 16361962027
+          },
+          "id": "prompt-16-requests-1",
+          "phase_counters": {},
+          "profile": null,
+          "request_wall_ns": 16361333456
+        },
+        {
+          "host_call": {
+            "process_cpu_ns": 67448138699,
+            "wall_ns": 67491670108
+          },
+          "id": "prompt-16-requests-4",
+          "phase_counters": {},
+          "profile": null,
+          "request_wall_ns": 67490961630
+        }
+      ],
+      "clock_advances": 98,
+      "complete_requests": 14,
+      "equal_time_admission_advances": 14,
+      "native_sha256": "d618018e7a82e510c57137ddeca32b00dfbf97cc456cc0c4c06bdce6adbee010",
+      "process": {
+        "exit_code": 0,
+        "pid": 3105,
+        "sampled_max_current_rss_kib": 1085304,
+        "stopping_reason": null,
+        "wall_seconds": 253.9136511310935
+      },
+      "unique_steps": 70
     },
     {
-      "bytes": 1145,
+      "arm": "instrumented",
+      "cells": [
+        {
+          "host_call": {
+            "process_cpu_ns": 32433961165,
+            "wall_ns": 32448141866
+          },
+          "id": "prompt-8-requests-1",
+          "phase_counters": {
+            "goal-check": {
+              "calls": 5,
+              "child_cpu_ns": 1792341102,
+              "child_wall_ns": 1793136000,
+              "cpu_ns": 14608693872,
+              "exclusive_cpu_ns": 12816352770,
+              "exclusive_wall_ns": 12820739652,
+              "wall_ns": 14613875652
+            },
+            "goal-project": {
+              "calls": 5,
+              "child_cpu_ns": 16451657452,
+              "child_wall_ns": 16457441390,
+              "cpu_ns": 21986949969,
+              "exclusive_cpu_ns": 5535292517,
+              "exclusive_wall_ns": 5537430039,
+              "wall_ns": 21994871429
+            },
+            "graph-check": {
+              "calls": 730,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 3635304682,
+              "exclusive_cpu_ns": 3635304682,
+              "exclusive_wall_ns": 3636701738,
+              "wall_ns": 3636701738
+            },
+            "locality-check": {
+              "calls": 5,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 4408729366,
+              "exclusive_cpu_ns": 4408729366,
+              "exclusive_wall_ns": 4410242811,
+              "wall_ns": 4410242811
+            },
+            "locality-plan": {
+              "calls": 5,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 4311632006,
+              "exclusive_cpu_ns": 4311632006,
+              "exclusive_wall_ns": 4313105129,
+              "wall_ns": 4313105129
+            },
+            "native-output": {
+              "calls": 5,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 342057,
+              "exclusive_cpu_ns": 342057,
+              "exclusive_wall_ns": 341840,
+              "wall_ns": 341840
+            },
+            "native-schedule": {
+              "calls": 5,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 1046841,
+              "exclusive_cpu_ns": 1046841,
+              "exclusive_wall_ns": 1050306,
+              "wall_ns": 1050306
+            },
+            "native-update": {
+              "calls": 5,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 851666,
+              "exclusive_cpu_ns": 851666,
+              "exclusive_wall_ns": 852113,
+              "wall_ns": 852113
+            },
+            "progress-persist": {
+              "calls": 1,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 179558,
+              "exclusive_cpu_ns": 179558,
+              "exclusive_wall_ns": 2754783,
+              "wall_ns": 2754783
+            },
+            "sink-execute": {
+              "calls": 5,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 65721173,
+              "exclusive_cpu_ns": 65721173,
+              "exclusive_wall_ns": 65737663,
+              "wall_ns": 65737663
+            },
+            "sink-plan": {
+              "calls": 5,
+              "child_cpu_ns": 32256703776,
+              "child_wall_ns": 32268178415,
+              "cpu_ns": 32354581229,
+              "exclusive_cpu_ns": 97877453,
+              "exclusive_wall_ns": 97957061,
+              "wall_ns": 32366135476
+            },
+            "sink-publish": {
+              "calls": 5,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 50926,
+              "exclusive_cpu_ns": 50926,
+              "exclusive_wall_ns": 51238,
+              "wall_ns": 51238
+            },
+            "step-lowering": {
+              "calls": 5,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 1549392435,
+              "exclusive_cpu_ns": 1549392435,
+              "exclusive_wall_ns": 1549959046,
+              "wall_ns": 1549959046
+            }
+          },
+          "profile": {
+            "cell_id": "prompt-8-requests-1",
+            "export_path": "profiles/prompt-8-requests-1.json",
+            "export_sha256": "0a33a78466fb990f608bd9e724013784ccaaccdfe3884e2d5fd2a0b5ea927583",
+            "functions": 810,
+            "raw_path": "profiles/prompt-8-requests-1.pstats",
+            "raw_sha256": "c39fd49f58a36e88048647bfde122b334490841e6306f46a8eded2cad6e4281a"
+          },
+          "request_wall_ns": 32447512796
+        },
+        {
+          "host_call": {
+            "process_cpu_ns": 64327540799,
+            "wall_ns": 64359058484
+          },
+          "id": "prompt-8-requests-4",
+          "phase_counters": {
+            "goal-check": {
+              "calls": 20,
+              "child_cpu_ns": 3937585022,
+              "child_wall_ns": 3939003510,
+              "cpu_ns": 27157635202,
+              "exclusive_cpu_ns": 23220050180,
+              "exclusive_wall_ns": 23226880101,
+              "wall_ns": 27165883611
+            },
+            "goal-project": {
+              "calls": 20,
+              "child_cpu_ns": 31039849384,
+              "child_wall_ns": 31049447616,
+              "cpu_ns": 42464084771,
+              "exclusive_cpu_ns": 11424235387,
+              "exclusive_wall_ns": 11428123064,
+              "wall_ns": 42477570680
+            },
+            "graph-check": {
+              "calls": 2920,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 7819799204,
+              "exclusive_cpu_ns": 7819799204,
+              "exclusive_wall_ns": 7822567515,
+              "wall_ns": 7822567515
+            },
+            "locality-check": {
+              "calls": 20,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 8898608406,
+              "exclusive_cpu_ns": 8898608406,
+              "exclusive_wall_ns": 8901299554,
+              "wall_ns": 8901299554
+            },
+            "locality-plan": {
+              "calls": 20,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 8727848226,
+              "exclusive_cpu_ns": 8727848226,
+              "exclusive_wall_ns": 8730646082,
+              "wall_ns": 8730646082
+            },
+            "native-output": {
+              "calls": 20,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 1137088,
+              "exclusive_cpu_ns": 1137088,
+              "exclusive_wall_ns": 1135864,
+              "wall_ns": 1135864
+            },
+            "native-schedule": {
+              "calls": 20,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 3028624,
+              "exclusive_cpu_ns": 3028624,
+              "exclusive_wall_ns": 3027785,
+              "wall_ns": 3027785
+            },
+            "native-update": {
+              "calls": 20,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 2601296,
+              "exclusive_cpu_ns": 2601296,
+              "exclusive_wall_ns": 2602988,
+              "wall_ns": 2602988
+            },
+            "progress-persist": {
+              "calls": 4,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 705385,
+              "exclusive_cpu_ns": 705385,
+              "exclusive_wall_ns": 10857740,
+              "wall_ns": 10857740
+            },
+            "sink-execute": {
+              "calls": 20,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 118722479,
+              "exclusive_cpu_ns": 118722479,
+              "exclusive_wall_ns": 118741228,
+              "wall_ns": 118741228
+            },
+            "sink-plan": {
+              "calls": 20,
+              "child_cpu_ns": 63827653777,
+              "child_wall_ns": 63848501974,
+              "cpu_ns": 64165401832,
+              "exclusive_cpu_ns": 337748055,
+              "exclusive_wall_ns": 338136566,
+              "wall_ns": 64186638540
+            },
+            "sink-publish": {
+              "calls": 20,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 137753,
+              "exclusive_cpu_ns": 137753,
+              "exclusive_wall_ns": 139128,
+              "wall_ns": 139128
+            },
+            "step-lowering": {
+              "calls": 20,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 3737112374,
+              "exclusive_cpu_ns": 3737112374,
+              "exclusive_wall_ns": 3738985658,
+              "wall_ns": 3738985658
+            }
+          },
+          "profile": null,
+          "request_wall_ns": 64358386485
+        },
+        {
+          "host_call": {
+            "process_cpu_ns": 32229518574,
+            "wall_ns": 32241810324
+          },
+          "id": "prompt-16-requests-1",
+          "phase_counters": {
+            "goal-check": {
+              "calls": 5,
+              "child_cpu_ns": 1788997656,
+              "child_wall_ns": 1789526156,
+              "cpu_ns": 14542604952,
+              "exclusive_cpu_ns": 12753607296,
+              "exclusive_wall_ns": 12757302582,
+              "wall_ns": 14546828738
+            },
+            "goal-project": {
+              "calls": 5,
+              "child_cpu_ns": 16351550864,
+              "child_wall_ns": 16356361321,
+              "cpu_ns": 21843233360,
+              "exclusive_cpu_ns": 5491682496,
+              "exclusive_wall_ns": 5493433609,
+              "wall_ns": 21849794930
+            },
+            "graph-check": {
+              "calls": 730,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 3597943568,
+              "exclusive_cpu_ns": 3597943568,
+              "exclusive_wall_ns": 3599058739,
+              "wall_ns": 3599058739
+            },
+            "locality-check": {
+              "calls": 5,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 4362636096,
+              "exclusive_cpu_ns": 4362636096,
+              "exclusive_wall_ns": 4363999119,
+              "wall_ns": 4363999119
+            },
+            "locality-plan": {
+              "calls": 5,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 4297359956,
+              "exclusive_cpu_ns": 4297359956,
+              "exclusive_wall_ns": 4298726180,
+              "wall_ns": 4298726180
+            },
+            "native-output": {
+              "calls": 5,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 332418,
+              "exclusive_cpu_ns": 332418,
+              "exclusive_wall_ns": 331790,
+              "wall_ns": 331790
+            },
+            "native-schedule": {
+              "calls": 5,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 1094839,
+              "exclusive_cpu_ns": 1094839,
+              "exclusive_wall_ns": 1098375,
+              "wall_ns": 1098375
+            },
+            "native-update": {
+              "calls": 5,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 805179,
+              "exclusive_cpu_ns": 805179,
+              "exclusive_wall_ns": 805675,
+              "wall_ns": 805675
+            },
+            "progress-persist": {
+              "calls": 1,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 190847,
+              "exclusive_cpu_ns": 190847,
+              "exclusive_wall_ns": 2615078,
+              "wall_ns": 2615078
+            },
+            "sink-execute": {
+              "calls": 5,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 64449527,
+              "exclusive_cpu_ns": 64449527,
+              "exclusive_wall_ns": 64468534,
+              "wall_ns": 64468534
+            },
+            "sink-plan": {
+              "calls": 5,
+              "child_cpu_ns": 32051251745,
+              "child_wall_ns": 32060992112,
+              "cpu_ns": 32151539688,
+              "exclusive_cpu_ns": 100287943,
+              "exclusive_wall_ns": 100356081,
+              "wall_ns": 32161348193
+            },
+            "sink-publish": {
+              "calls": 5,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 46719,
+              "exclusive_cpu_ns": 46719,
+              "exclusive_wall_ns": 47160,
+              "wall_ns": 47160
+            },
+            "step-lowering": {
+              "calls": 5,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 1548022333,
+              "exclusive_cpu_ns": 1548022333,
+              "exclusive_wall_ns": 1548471883,
+              "wall_ns": 1548471883
+            }
+          },
+          "profile": {
+            "cell_id": "prompt-16-requests-1",
+            "export_path": "profiles/prompt-16-requests-1.json",
+            "export_sha256": "bd80a12b7f659626319e263a5d9f4a097bac33340694e5b9c49c16d7bf88b9d5",
+            "functions": 819,
+            "raw_path": "profiles/prompt-16-requests-1.pstats",
+            "raw_sha256": "2aa067a29503796957ecd75d282690755f4fad6ae66a3a00157144d1e3f87907"
+          },
+          "request_wall_ns": 32240934991
+        },
+        {
+          "host_call": {
+            "process_cpu_ns": 72111928301,
+            "wall_ns": 72208597779
+          },
+          "id": "prompt-16-requests-4",
+          "phase_counters": {
+            "goal-check": {
+              "calls": 20,
+              "child_cpu_ns": 4185913022,
+              "child_wall_ns": 4190702479,
+              "cpu_ns": 29702195383,
+              "exclusive_cpu_ns": 25516282361,
+              "exclusive_wall_ns": 25547292550,
+              "wall_ns": 29737995029
+            },
+            "goal-project": {
+              "calls": 20,
+              "child_cpu_ns": 34505856455,
+              "child_wall_ns": 34544837108,
+              "cpu_ns": 47193494168,
+              "exclusive_cpu_ns": 12687637713,
+              "exclusive_wall_ns": 12701488963,
+              "wall_ns": 47246326071
+            },
+            "graph-check": {
+              "calls": 2920,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 8989574094,
+              "exclusive_cpu_ns": 8989574094,
+              "exclusive_wall_ns": 8997544558,
+              "wall_ns": 8997544558
+            },
+            "locality-check": {
+              "calls": 20,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 10198626954,
+              "exclusive_cpu_ns": 10198626954,
+              "exclusive_wall_ns": 10206705240,
+              "wall_ns": 10206705240
+            },
+            "locality-plan": {
+              "calls": 20,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 9921035285,
+              "exclusive_cpu_ns": 9921035285,
+              "exclusive_wall_ns": 9937927586,
+              "wall_ns": 9937927586
+            },
+            "native-output": {
+              "calls": 20,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 1198173,
+              "exclusive_cpu_ns": 1198173,
+              "exclusive_wall_ns": 1197504,
+              "wall_ns": 1197504
+            },
+            "native-schedule": {
+              "calls": 20,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 3222716,
+              "exclusive_cpu_ns": 3222716,
+              "exclusive_wall_ns": 3220521,
+              "wall_ns": 3220521
+            },
+            "native-update": {
+              "calls": 20,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 2706086,
+              "exclusive_cpu_ns": 2706086,
+              "exclusive_wall_ns": 2711824,
+              "wall_ns": 2711824
+            },
+            "progress-persist": {
+              "calls": 4,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 654566,
+              "exclusive_cpu_ns": 654566,
+              "exclusive_wall_ns": 11165709,
+              "wall_ns": 11165709
+            },
+            "sink-execute": {
+              "calls": 20,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 138523742,
+              "exclusive_cpu_ns": 138523742,
+              "exclusive_wall_ns": 138546319,
+              "wall_ns": 138546319
+            },
+            "sink-plan": {
+              "calls": 20,
+              "child_cpu_ns": 71543820639,
+              "child_wall_ns": 71629209515,
+              "cpu_ns": 71917023657,
+              "exclusive_cpu_ns": 373203018,
+              "exclusive_wall_ns": 373787036,
+              "wall_ns": 72002996551
+            },
+            "sink-publish": {
+              "calls": 20,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 207325,
+              "exclusive_cpu_ns": 207325,
+              "exclusive_wall_ns": 214214,
+              "wall_ns": 214214
+            },
+            "step-lowering": {
+              "calls": 20,
+              "child_cpu_ns": 0,
+              "child_wall_ns": 0,
+              "cpu_ns": 4230664232,
+              "exclusive_cpu_ns": 4230664232,
+              "exclusive_wall_ns": 4238250618,
+              "wall_ns": 4238250618
+            }
+          },
+          "profile": null,
+          "request_wall_ns": 72207949799
+        }
+      ],
+      "clock_advances": 98,
+      "complete_requests": 14,
+      "equal_time_admission_advances": 14,
+      "native_sha256": "3f99c9ef53bdac0fed6aafd21df7989bbfdb6edc1a3f30ddf06a26cd71e6a397",
+      "process": {
+        "exit_code": 0,
+        "pid": 14177,
+        "sampled_max_current_rss_kib": 1087864,
+        "stopping_reason": null,
+        "wall_seconds": 294.19289194606245
+      },
+      "unique_steps": 70
+    }
+  ],
+  "behavioral_score": null,
+  "completed_stages": [
+    "final-identities",
+    "instrumented:admission",
+    "instrumented:capture",
+    "pair-comparison",
+    "profile-attribution",
+    "protocol",
+    "semantic-corruptions",
+    "uninstrumented:admission",
+    "uninstrumented:capture"
+  ],
+  "corruption_controls": [
+    {
+      "guard": "pair:requests",
+      "name": "changed-nonopaque-request-member",
+      "rejected": true
+    },
+    {
+      "guard": "steps:complete",
+      "name": "missing-native-step",
+      "rejected": true
+    },
+    {
+      "guard": "foreign engine-qualified step identity",
+      "name": "foreign-normalized-step-id",
+      "rejected": true
+    },
+    {
+      "guard": "pair:sinks",
+      "name": "changed-sink-outcome",
+      "rejected": true
+    },
+    {
+      "guard": "total-counters:sink-plan:wall",
+      "name": "incoherent-phase-time",
+      "rejected": true
+    },
+    {
+      "guard": "profile:prompt-8-requests-1:function-table",
+      "name": "missing-profile-function-table",
+      "rejected": true
+    },
+    {
+      "guard": "probe:0:restored",
+      "name": "unrestored-wrapper",
+      "rejected": true
+    },
+    {
+      "guard": "identity:source-after",
+      "name": "wrong-source-receipt",
+      "rejected": true
+    },
+    {
+      "guard": "mutation:raw-reread:native.json",
+      "name": "disk-only-raw-change",
+      "rejected": true
+    },
+    {
+      "guard": "foreign engine-qualified step identity",
+      "name": "same-public-request-opposite-role-id",
+      "rejected": true
+    }
+  ],
+  "encoding_chronology": "Post-specified source-writer regression contract after retained VOID, before repair and fresh run.",
+  "evidence": {
+    "behavioral_instances": 0,
+    "exact_oracle_rows": 37,
+    "semantic_corruption_controls": 10,
+    "unscored_guards": 114208
+  },
+  "failure": null,
+  "freeze_commit": "11d7bb0c28a166939ebab0ec0367430afa57f2a8",
+  "limits": [
+    "CORE-52 remains open; original target-scale VOID unchanged.",
+    "Host attribution only; no measured speedup or fitted host correction.",
+    "No GPU timing, independent-engine completion or deployment-frontier claim."
+  ],
+  "original_protocol_freeze_commit": "8f06648d26bbfb2bfff4751d29a2e2bf232b440d",
+  "profile_exports": [
+    {
+      "cell": "prompt-8-requests-1",
+      "function_count": 810
+    },
+    {
+      "cell": "prompt-16-requests-1",
+      "function_count": 819
+    }
+  ],
+  "raw_bytes": 52299757,
+  "raw_file_count": 33,
+  "raw_files": [
+    {
+      "bytes": 2797,
       "path": "first-raw-receipts.json",
-      "sha256": "765b9e3d437a4b2788859efcd730317a30ef4c84351704f0c7495d3a541dcf16"
+      "sha256": "f65117c1e0b3e7c361e68bf7c1b3615b397116cd46b471cd155030b614912b0e"
+    },
+    {
+      "bytes": 7321,
+      "path": "instrumented/construction-progress.jsonl",
+      "sha256": "d6d13d8579e26f014253a15c428dce31b4ce2e03d4ef020139454db9e9725378"
+    },
+    {
+      "bytes": 18635,
+      "path": "instrumented/engine-work/simllm-decode-0/step-records.jsonl",
+      "sha256": "0a8a8b35de04393259fd3cf876571774773ad604f76b1993fb3dc35c2588d245"
+    },
+    {
+      "bytes": 5039,
+      "path": "instrumented/engine-work/simllm-prefill-0/step-records.jsonl",
+      "sha256": "7f05b3ed7eafa867e253901d85ba788c709dd0d0d58b6cfe21f76be8d9657e98"
+    },
+    {
+      "bytes": 19746859,
+      "path": "instrumented/native.json",
+      "sha256": "3f99c9ef53bdac0fed6aafd21df7989bbfdb6edc1a3f30ddf06a26cd71e6a397"
+    },
+    {
+      "bytes": 17645,
+      "path": "instrumented/native.log",
+      "sha256": "5f27a60181482dfa4d0cb934891102e70d21128a7d87e6b109974e755b665fce"
+    },
+    {
+      "bytes": 5685,
+      "path": "instrumented/probe-restoration.json",
+      "sha256": "21b3302b78e4e705bf689f701a64fd479b3391aaa42f809ff7ea38e994769787"
+    },
+    {
+      "bytes": 468,
+      "path": "instrumented/process.json",
+      "sha256": "dc0669991e388dbe665a5575d1a3849bd0089f3b19638f3c8b0de362d3b8aaa3"
+    },
+    {
+      "bytes": 433360,
+      "path": "instrumented/profiles/prompt-16-requests-1.json",
+      "sha256": "bd80a12b7f659626319e263a5d9f4a097bac33340694e5b9c49c16d7bf88b9d5"
+    },
+    {
+      "bytes": 113699,
+      "path": "instrumented/profiles/prompt-16-requests-1.pstats",
+      "sha256": "2aa067a29503796957ecd75d282690755f4fad6ae66a3a00157144d1e3f87907"
+    },
+    {
+      "bytes": 429063,
+      "path": "instrumented/profiles/prompt-8-requests-1.json",
+      "sha256": "0a33a78466fb990f608bd9e724013784ccaaccdfe3884e2d5fd2a0b5ea927583"
+    },
+    {
+      "bytes": 112529,
+      "path": "instrumented/profiles/prompt-8-requests-1.pstats",
+      "sha256": "c39fd49f58a36e88048647bfde122b334490841e6306f46a8eded2cad6e4281a"
+    },
+    {
+      "bytes": 2084,
+      "path": "instrumented/prompt-16-requests-1.json",
+      "sha256": "d9fb21eb82771a5b6e233b3743706c2b054fd917ae2de88cfe67c16476b82e86"
+    },
+    {
+      "bytes": 7264,
+      "path": "instrumented/prompt-16-requests-4.json",
+      "sha256": "25666b50f8048ee1256a8347c2d3b6963680148b549464b0a516eb1ed7054aba"
+    },
+    {
+      "bytes": 2076,
+      "path": "instrumented/prompt-8-requests-1.json",
+      "sha256": "fe7a737fcba7a961ea45ac116182cf8bcadff42ce4ef015bfcc8ae826e751e38"
+    },
+    {
+      "bytes": 7227,
+      "path": "instrumented/prompt-8-requests-4.json",
+      "sha256": "f23129546e9f65fe3712a5fad62a43f60b571ba39f16114a946c27b223cdea75"
+    },
+    {
+      "bytes": 96,
+      "path": "instrumented/receipt.json",
+      "sha256": "17aadd14757c2831e0173eaa38ce6f0c6db910f856a74017fef8785174dc99c1"
+    },
+    {
+      "bytes": 28565,
+      "path": "instrumented/request-progress.jsonl",
+      "sha256": "88d50bf0fa0cc1ae2dd8ea3db39339794a2f015d69e0044a2375173cba7dcd72"
+    },
+    {
+      "bytes": 829,
+      "path": "process-caches/instrumented/vllm_cache_root/modelinfos/vllm-model_executor-models-granitemoe-GraniteMoeForCausalLM.json",
+      "sha256": "2a5f0a2f4dd6f84b326700312ae713b923f90a67c89d9287854e27ad3f13fe89"
     },
     {
       "bytes": 829,
@@ -49,80 +795,278 @@
       "sha256": "2a5f0a2f4dd6f84b326700312ae713b923f90a67c89d9287854e27ad3f13fe89"
     },
     {
-      "bytes": 5151388,
+      "bytes": 11534211,
       "path": "summary.json",
-      "sha256": "ae25e0fdf6f75cf14a66bffc50ce080e15f276b2766a9538ee74e5cf2019779b"
+      "sha256": "b0705dfe482c0cc83e0e8a99079c03dcfa05d1e199a054d059f1790685ab5be2"
     },
     {
       "bytes": 7321,
       "path": "uninstrumented/construction-progress.jsonl",
-      "sha256": "7d065a19e60b2076c2bb59db5518513108f9cc1647dd8a9d4f607c89dc0fc61e"
+      "sha256": "45372b5ee031200f01b98f097891910c1b43ae82e1e93d33f33560c66a3b5488"
     },
     {
       "bytes": 18635,
       "path": "uninstrumented/engine-work/simllm-decode-0/step-records.jsonl",
-      "sha256": "309266c76c614431935baad4c8c0d95debfe3902cbe325daef41579c33f14d38"
+      "sha256": "984887fa9b67d71123c4d23330ae029c9a24b4b213f2e1a2869c47d4dfe18fc7"
     },
     {
       "bytes": 5039,
       "path": "uninstrumented/engine-work/simllm-prefill-0/step-records.jsonl",
-      "sha256": "e9d385ba83dc6cc25e9d472fbf55b62e61afc17bd8e72129492ff6a63fc09921"
+      "sha256": "99473e5db8801d2988e25440b9fd60da10e8318787748d6166c165bc53b3b57b"
     },
     {
-      "bytes": 19726677,
+      "bytes": 19727057,
       "path": "uninstrumented/native.json",
-      "sha256": "e3d8c986a60d8f45370c6dfbff14a9962655ee65e47504036b118b6e963466c8"
+      "sha256": "d618018e7a82e510c57137ddeca32b00dfbf97cc456cc0c4c06bdce6adbee010"
     },
     {
-      "bytes": 17645,
+      "bytes": 17644,
       "path": "uninstrumented/native.log",
-      "sha256": "eb9297d0332b5d84e30ed0578f314714f509f6e6cb6e83ebfc4bcedb3ad32342"
+      "sha256": "c4698ee73bbb1422d8d2c9d9affa4fa8698d5faea94e10552e43ebf193428334"
     },
     {
-      "bytes": 471,
+      "bytes": 470,
       "path": "uninstrumented/process.json",
-      "sha256": "528994f54e1ce09907ad5ab5a4ece5b49e23f97ccb8c50bc5e6f779e122ef101"
+      "sha256": "e4b241a1275d269e88a4f7e0d9ca0036a13b2e1d72d299640d148b6477f3436a"
     },
     {
       "bytes": 2084,
       "path": "uninstrumented/prompt-16-requests-1.json",
-      "sha256": "3a6704500c4cf8c36937cd1fa3ee6e7dba193b039aad94f098c9e60ab88df936"
+      "sha256": "ea4bff725c849a779ddc25834a64483a09d17de96f51eb053f547fb9864eb39e"
     },
     {
-      "bytes": 7264,
+      "bytes": 7263,
       "path": "uninstrumented/prompt-16-requests-4.json",
-      "sha256": "fe60703047cb1b281c482c56ba3de1cf5454be1cbe8141a58072fc38326f767c"
+      "sha256": "9cd1d6034ccc6c16f1591d06d7e76b1a615403f155bc012aad2fe9bce5415ec4"
     },
     {
       "bytes": 2076,
       "path": "uninstrumented/prompt-8-requests-1.json",
-      "sha256": "82df5e2080874d02234307266de24e843fc82790341bc98f7193a760e73450e5"
+      "sha256": "9ed5cea4b7c98568419e20d02e61746e4a9cd491fef2df764f2862e4c5d659db"
     },
     {
       "bytes": 7227,
       "path": "uninstrumented/prompt-8-requests-4.json",
-      "sha256": "658e4cdee23d75d9c913dc325081124323440ae5ebd1d985c0ad9da997102e21"
+      "sha256": "1937900dff3873efce7abc21b68312e343fbf7c6b8b9728cef25d0acb578fef7"
     },
     {
-      "bytes": 96,
+      "bytes": 95,
       "path": "uninstrumented/receipt.json",
-      "sha256": "ac346915dcea5f5f9dabd477e2db49e097c6805cae54a31a1e931da6a3c91709"
+      "sha256": "dd16b63a95d1e802618a995ddf9da7e451d69551c162cd4f79cb36a8ef2c33e7"
     },
     {
       "bytes": 28565,
       "path": "uninstrumented/request-progress.jsonl",
-      "sha256": "2541c0cf9fb50e2edfdc4adb6e2156f5317fefc3bda21c9b032b1a95a764c713"
+      "sha256": "d863fbdc46cb35b6f6c51651a3568954900c6d33e5fcae479545852cd2172f11"
+    }
+  ],
+  "retained_prior_attempts": [
+    {
+      "admitted_arms": 0,
+      "behavioral_score": null,
+      "completed_stages": [
+        "protocol",
+        "uninstrumented:capture"
+      ],
+      "evidence": {
+        "behavioral_instances": 0,
+        "exact_oracle_rows_retained_without_campaign_admission": 18,
+        "unscored_guard_rows_retained": 49832
+      },
+      "failure": {
+        "reason": "noncanonical or duplicate-member JSON: engine-work/simllm-prefill-0/step-records.jsonl",
+        "type": "GuardFailure"
+      },
+      "freeze_commit": "8f06648d26bbfb2bfff4751d29a2e2bf232b440d",
+      "instrumented_arm_attempted": false,
+      "limits": [
+        "CORE-52 remains open.",
+        "Original target-scale VOID is unchanged.",
+        "No host hotspot attribution, GPU timing or deployment-frontier claim."
+      ],
+      "native_process": {
+        "arm": "uninstrumented",
+        "clock_advances": 98,
+        "complete_requests": 14,
+        "exit_code": 0,
+        "sampled_max_current_rss_kib": 1147248,
+        "unique_steps": 70,
+        "wall_seconds": 260.0170595552772
+      },
+      "raw_bytes": 24977530,
+      "raw_file_count": 16,
+      "raw_files": [
+        {
+          "bytes": 1068,
+          "path": "exception.txt",
+          "sha256": "226ec6db46133d46bf1d78df7d788f4cbd0efb1d49809bec36b9c08a6f8730e1"
+        },
+        {
+          "bytes": 1145,
+          "path": "first-raw-receipts.json",
+          "sha256": "765b9e3d437a4b2788859efcd730317a30ef4c84351704f0c7495d3a541dcf16"
+        },
+        {
+          "bytes": 829,
+          "path": "process-caches/uninstrumented/vllm_cache_root/modelinfos/vllm-model_executor-models-granitemoe-GraniteMoeForCausalLM.json",
+          "sha256": "2a5f0a2f4dd6f84b326700312ae713b923f90a67c89d9287854e27ad3f13fe89"
+        },
+        {
+          "bytes": 5151388,
+          "path": "summary.json",
+          "sha256": "ae25e0fdf6f75cf14a66bffc50ce080e15f276b2766a9538ee74e5cf2019779b"
+        },
+        {
+          "bytes": 7321,
+          "path": "uninstrumented/construction-progress.jsonl",
+          "sha256": "7d065a19e60b2076c2bb59db5518513108f9cc1647dd8a9d4f607c89dc0fc61e"
+        },
+        {
+          "bytes": 18635,
+          "path": "uninstrumented/engine-work/simllm-decode-0/step-records.jsonl",
+          "sha256": "309266c76c614431935baad4c8c0d95debfe3902cbe325daef41579c33f14d38"
+        },
+        {
+          "bytes": 5039,
+          "path": "uninstrumented/engine-work/simllm-prefill-0/step-records.jsonl",
+          "sha256": "e9d385ba83dc6cc25e9d472fbf55b62e61afc17bd8e72129492ff6a63fc09921"
+        },
+        {
+          "bytes": 19726677,
+          "path": "uninstrumented/native.json",
+          "sha256": "e3d8c986a60d8f45370c6dfbff14a9962655ee65e47504036b118b6e963466c8"
+        },
+        {
+          "bytes": 17645,
+          "path": "uninstrumented/native.log",
+          "sha256": "eb9297d0332b5d84e30ed0578f314714f509f6e6cb6e83ebfc4bcedb3ad32342"
+        },
+        {
+          "bytes": 471,
+          "path": "uninstrumented/process.json",
+          "sha256": "528994f54e1ce09907ad5ab5a4ece5b49e23f97ccb8c50bc5e6f779e122ef101"
+        },
+        {
+          "bytes": 2084,
+          "path": "uninstrumented/prompt-16-requests-1.json",
+          "sha256": "3a6704500c4cf8c36937cd1fa3ee6e7dba193b039aad94f098c9e60ab88df936"
+        },
+        {
+          "bytes": 7264,
+          "path": "uninstrumented/prompt-16-requests-4.json",
+          "sha256": "fe60703047cb1b281c482c56ba3de1cf5454be1cbe8141a58072fc38326f767c"
+        },
+        {
+          "bytes": 2076,
+          "path": "uninstrumented/prompt-8-requests-1.json",
+          "sha256": "82df5e2080874d02234307266de24e843fc82790341bc98f7193a760e73450e5"
+        },
+        {
+          "bytes": 7227,
+          "path": "uninstrumented/prompt-8-requests-4.json",
+          "sha256": "658e4cdee23d75d9c913dc325081124323440ae5ebd1d985c0ad9da997102e21"
+        },
+        {
+          "bytes": 96,
+          "path": "uninstrumented/receipt.json",
+          "sha256": "ac346915dcea5f5f9dabd477e2db49e097c6805cae54a31a1e931da6a3c91709"
+        },
+        {
+          "bytes": 28565,
+          "path": "uninstrumented/request-progress.jsonl",
+          "sha256": "2541c0cf9fb50e2edfdc4adb6e2156f5317fefc3bda21c9b032b1a95a764c713"
+        }
+      ],
+      "schema": "simllm-pd-host-execution-diagnostic-publication-v1",
+      "software_validation": {
+        "pre_run_focused_seconds": 13.85,
+        "pre_run_focused_tests": 152,
+        "ruff": "PASS",
+        "status": "PENDING_FULL_GATE"
+      },
+      "source_commit": "51ed0d1ef5fb86a2fc643dfba3949f67627c3659",
+      "summary_sha256": "ae25e0fdf6f75cf14a66bffc50ce080e15f276b2766a9538ee74e5cf2019779b",
+      "task": "CORE-52",
+      "verdict": "VOID"
     }
   ],
   "schema": "simllm-pd-host-execution-diagnostic-publication-v1",
+  "selected_profile_functions": [
+    {
+      "cell": "prompt-16-requests-1",
+      "complete_function_count": 819,
+      "functions": [
+        {
+          "calls": 5520,
+          "cumulative_seconds": 18.727152930000003,
+          "function": "_validate_collective_plan",
+          "line": 436,
+          "primitive_calls": 5520,
+          "self_seconds": 7.024702524,
+          "source_file": "simllm/core/execution_io.py"
+        },
+        {
+          "calls": 1513185,
+          "cumulative_seconds": 6.172577899,
+          "function": "_goal_edge",
+          "line": 59,
+          "primitive_calls": 1513185,
+          "self_seconds": 1.273086897,
+          "source_file": "simllm/traffic/execution_goal.py"
+        },
+        {
+          "calls": 5,
+          "cumulative_seconds": 14.545770763,
+          "function": "verify_execution_goal_projection",
+          "line": 777,
+          "primitive_calls": 5,
+          "self_seconds": 0.084236774,
+          "source_file": "simllm/traffic/execution_goal.py"
+        }
+      ]
+    },
+    {
+      "cell": "prompt-8-requests-1",
+      "complete_function_count": 810,
+      "functions": [
+        {
+          "calls": 5520,
+          "cumulative_seconds": 18.922350181000002,
+          "function": "_validate_collective_plan",
+          "line": 436,
+          "primitive_calls": 5520,
+          "self_seconds": 7.070868374000001,
+          "source_file": "simllm/core/execution_io.py"
+        },
+        {
+          "calls": 1513185,
+          "cumulative_seconds": 6.234355022000001,
+          "function": "_goal_edge",
+          "line": 59,
+          "primitive_calls": 1513185,
+          "self_seconds": 1.2822427900000002,
+          "source_file": "simllm/traffic/execution_goal.py"
+        },
+        {
+          "calls": 5,
+          "cumulative_seconds": 14.612095386000002,
+          "function": "verify_execution_goal_projection",
+          "line": 777,
+          "primitive_calls": 5,
+          "self_seconds": 0.08231716,
+          "source_file": "simllm/traffic/execution_goal.py"
+        }
+      ]
+    }
+  ],
   "software_validation": {
-    "pre_run_focused_seconds": 13.85,
-    "pre_run_focused_tests": 152,
+    "pre_run_focused_seconds": 4.34,
+    "pre_run_focused_tests": 87,
     "ruff": "PASS",
     "status": "PENDING_FULL_GATE"
   },
-  "source_commit": "51ed0d1ef5fb86a2fc643dfba3949f67627c3659",
-  "summary_sha256": "ae25e0fdf6f75cf14a66bffc50ce080e15f276b2766a9538ee74e5cf2019779b",
+  "source_commit": "3abec1cb91679f8582130fd067b70ad4412d94fa",
+  "summary_sha256": "b0705dfe482c0cc83e0e8a99079c03dcfa05d1e199a054d059f1790685ab5be2",
   "task": "CORE-52",
-  "verdict": "VOID"
+  "verdict": "COMPLETE"
 }

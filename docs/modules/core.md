@@ -1753,9 +1753,12 @@ capture exists.
   never attempted. Retain this run unchanged and diagnose host execution cost
   before freezing a successor campaign; a smaller partial run cannot close
   this task.
-  The first [host diagnostic](../../examples/pd_host_execution_diagnostic_v1/RESULTS.md)
-  is also VOID: its uninstrumented process completed 14 requests, but the
-  checker incorrectly required compact JSON from the existing spaced native
-  step writer. Retain that failure, freeze the source writer's exact encoding
-  before the parser repair, and execute a fresh paired diagnostic. No host
-  hotspot has been attributed and no diagnostic arm is admitted.
+  The fresh [host diagnostic](../../examples/pd_host_execution_diagnostic_v1/RESULTS.md)
+  completes all 28 requests with exact compatibility. Dependency checking
+  consumes 35.4 to 36.1 percent of enclosing process CPU time as exclusive
+  main-thread work in its passive four-request cells. Freeze an optimization
+  separately before changing that source, preserve all rejection semantics,
+  and then freeze a fresh target campaign. The first diagnostic remains VOID
+  after its checker rejected the native writer's unchanged JSON encoding;
+  the repaired encoding contract is explicitly post-specified. Host attribution
+  closes neither target feasibility nor independent-engine timing.
