@@ -196,3 +196,24 @@ def test_code_identity_ignores_reference_bookkeeping_and_keeps_values():
     assert code_hash(code_a, "source.py") == code_hash(code_b, "source.py")
     altered = code_b.replace(co_consts=tuple(0.0 if type(value) is float else value for value in code_b.co_consts))
     assert code_hash(code_a, "source.py") != code_hash(altered, "source.py")
+
+
+def test_process_and_data_admission_share_one_unique_check_registry(captured):
+    from examples.publication_snapshot_v1.common import study_sources, write
+    from examples.snapshot_dispatch_v1.common import runtime_identity
+
+    output, frozen, old, reference, data = captured
+    monitor = {"pid": data["pid"], "exit_code": 0, "failure": None, "wall_seconds": 1, "rss_kib": 1}
+    process, log = output / "process.json", output / "process.log"
+    assert not process.exists() and not log.exists()
+    try:
+        write(process, monitor)
+        log.write_bytes(b"")
+        evidence = checks.Evidence([])
+        source = packages(checks.ROOT)
+        run_study.admit_process(output, data, checks.ROOT, "after", "main", frozen, old, source, monitor,
+                                receipts(output), study_sources(checks.ROOT), runtime_identity(), evidence)
+        checks.admit(data, "after", checks.ROOT, output, frozen, old, source, reference, evidence)
+    finally:
+        process.unlink(missing_ok=True)
+        log.unlink(missing_ok=True)

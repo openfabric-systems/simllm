@@ -79,7 +79,7 @@ def capture(root, path, arm, mode, frozen, monitors, raw, root_receipts):
 
 
 def admit_process(path, data, root, arm, mode, frozen, old, source, monitor, first, study, runtime, evidence):
-    key = path.name
+    key = path.name + ":process"
     evidence.equal(key + ":first-receipt", receipts(path), first)
     evidence.equal(key + ":monitor", read(path / "process.json"), monitor)
     evidence.equal(key + ":successful-process", [monitor["exit_code"], monitor["failure"]], [0, None])

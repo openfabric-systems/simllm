@@ -1410,8 +1410,11 @@ capture exists.
   same host limit, retaining 18 complete independent request rows from five
   cells before its sixth cell finishes. Its failed process has matching first
   and final raw receipts; no independent process is admitted. Retain all three
-  attempts unchanged. Further host-work investigation and a complete fresh
-  native campaign remain required; the timing sweep and limits are unchanged.
+  attempts unchanged. The first [primitive dispatch study](../../examples/snapshot_dispatch_v1/RESULTS.md)
+  is also VOID: a duplicate checker name rejects admission of its completed
+  before-source process. Preserve those receipts and qualify a fresh source
+  pair after the naming repair. A complete fresh native campaign remains
+  required; the timing sweep and limits are unchanged.
   No native concurrency claim closes here.
 
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
