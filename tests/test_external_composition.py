@@ -567,3 +567,40 @@ def test_study_capacity_setup_supplies_a_valid_exact_selection(binding):
     result = binding.disaggregated_capacity(candidate, prefill, decode, 26, prefix=500, stride=32)
     assert result.decode.step_ps == d[1].service_ps
     assert result.service_keys == (p.entry_key_sha256, d[1].entry_key_sha256)
+
+
+@pytest.mark.parametrize(
+    "alteration",
+    ["list-pid", "dict-pid", "missing-score", "false-exit", "missing-worker", "changed-source"],
+)
+def test_coordinator_retains_void_for_malformed_or_inconsistent_workers(alteration):
+    from examples.external_composition_v1.run_study import Evaluation, aggregate_workers
+
+    evaluation = Evaluation()
+    evaluation.guard("synthetic-source", True)
+    evaluation.exact("reference", "one", 1, 1)
+    evaluation.relation("scaling", "one", 2.0, 2.0)
+    first = evaluation.finish()
+    values = [copy.deepcopy(first), copy.deepcopy(first)]
+    metadata = [{"process_identity": 101}, {"process_identity": 102}]
+    codes = [0, 0]
+    assert (
+        aggregate_workers(values, metadata, codes, equal=True, source_unchanged=True)["state"]
+        == "PASS"
+    )
+    if alteration == "list-pid":
+        metadata[0]["process_identity"] = []
+    elif alteration == "dict-pid":
+        metadata[0]["process_identity"] = {}
+    elif alteration == "missing-score":
+        del values[0]["behavioral_score"]
+    elif alteration == "false-exit":
+        codes[0] = 1
+    elif alteration == "missing-worker":
+        values[0] = None
+    result = aggregate_workers(
+        values, metadata, codes, equal=True, source_unchanged=alteration != "changed-source"
+    )
+    assert result["state"] == "VOID"
+    assert result["behavioral_score"] is None
+    assert result["fatal_findings"]

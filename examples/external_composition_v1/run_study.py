@@ -1202,6 +1202,113 @@ def git(*arguments):
     ).stdout.strip()
 
 
+def valid_worker_summary(value):
+    """Admit typed retained summaries before reading their aggregate fields."""
+
+    if (
+        not isinstance(value, dict)
+        or type(value.get("state")) is not str
+        or value["state"] not in {"PASS", "FAIL", "VOID"}
+    ):
+        return False
+    for name in ("fatal_guards", "exact_oracles", "behavioral_relations"):
+        rows = value.get(name)
+        if not isinstance(rows, list) or any(
+            not isinstance(row, dict)
+            or type(row.get("passed")) is not bool
+            or not isinstance(row.get("id"), str)
+            or (name != "fatal_guards" and not isinstance(row.get("family"), str))
+            for row in rows
+        ):
+            return False
+    classes = value.get("exact_oracle_classes")
+    if not isinstance(classes, dict) or any(
+        type(count) is not int or count < 0 for count in classes.values()
+    ):
+        return False
+    supplied_score = value.get("behavioral_score")
+    if supplied_score is not None and (
+        not isinstance(supplied_score, dict)
+        or set(supplied_score) != {"passed", "instances"}
+        or any(type(count) is not int or count < 0 for count in supplied_score.values())
+    ):
+        return False
+    fatal = [row["id"] for row in value["fatal_guards"] if not row["passed"]]
+    exact, behavioral = value["exact_oracles"], value["behavioral_relations"]
+    state = (
+        "VOID"
+        if fatal
+        else "FAIL"
+        if any(not row["passed"] for row in [*exact, *behavioral])
+        else "PASS"
+    )
+    score = (
+        None
+        if fatal
+        else {"passed": sum(row["passed"] for row in behavioral), "instances": len(behavioral)}
+    )
+    return (
+        value.get("state") == state
+        and value.get("fatal_findings") == fatal
+        and "behavioral_score" in value
+        and value["behavioral_score"] == score
+        and value.get("exact_oracle_classes")
+        == {
+            name: sum(row["family"] == name for row in exact)
+            for name in sorted({row["family"] for row in exact})
+        }
+        and value.get("behavioral_families") == sorted({row["family"] for row in behavioral})
+    )
+
+
+def aggregate_workers(values, metadata, codes, *, equal, source_unchanged):
+    """Convert malformed, incomplete or inconsistent process evidence to VOID."""
+
+    findings = []
+    valid = [valid_worker_summary(value) for value in values]
+    identities = [value.get("process_identity") for value in metadata if isinstance(value, dict)]
+    typed_ids = [value for value in identities if type(value) is int and value > 0]
+    if not equal:
+        findings.append("complete-evaluation-byte-identity")
+    if len(metadata) != 2 or len(typed_ids) != 2 or len(set(typed_ids)) != 2:
+        findings.append("two-fresh-worker-identities")
+    if len(values) != 2 or len(codes) != 2:
+        findings.append("two-complete-worker-results")
+    for index, (value, accepted) in enumerate(zip(values, valid, strict=True)):
+        if not accepted:
+            findings.append(f"worker-summary-invalid:{index}")
+            continue
+        if value["state"] == "VOID":
+            findings.append(f"worker-fatal-guard:{index}")
+        expected_code = 0 if value["state"] == "PASS" else 1
+        if index >= len(codes) or type(codes[index]) is not int or codes[index] != expected_code:
+            findings.append(f"worker-process-state:{index}")
+    if not source_unchanged:
+        findings.append("source-changed-during-run")
+    state = (
+        "VOID"
+        if findings
+        else "PASS"
+        if all(value["state"] == "PASS" for value in values)
+        else "FAIL"
+    )
+    first = values[0] if valid and valid[0] else {}
+    return {
+        "state": state,
+        "fatal_findings": findings,
+        "worker_exit_codes": codes,
+        "worker_states": [
+            value.get("state", "MALFORMED") if isinstance(value, dict) else "MISSING"
+            for value in values
+        ],
+        "deterministic_bytes_equal": equal,
+        "fresh_worker_count": len(set(typed_ids)),
+        "behavioral_score": None if findings else first["behavioral_score"],
+        "exact_oracle_classes": first.get("exact_oracle_classes", {}),
+        "behavioral_families": first.get("behavioral_families", []),
+    }
+
+
 def coordinator(output_root):
     output_root = output_root.resolve()
     if output_root == ROOT or ROOT in output_root.parents:
@@ -1266,49 +1373,28 @@ def coordinator(output_root):
         and outputs[0].read_bytes() == outputs[1].read_bytes()
     )
     metadata = [retained_json(path.with_suffix(".process.json")) for path in outputs]
-    identities = [value.get("process_identity") for value in metadata if value]
-    fatal_findings = []
-    if not equal:
-        fatal_findings.append("complete-evaluation-byte-identity")
-    if len(set(identities)) != 2 or any(type(value) is not int for value in identities):
-        fatal_findings.append("two-fresh-worker-identities")
-    if any(value is None or value.get("state") not in {"PASS", "FAIL"} for value in values):
-        fatal_findings.append("worker-fatal-guard")
-    if any(code not in (0, 1) for code in codes):
-        fatal_findings.append("worker-process-failed")
-    if git("rev-parse", "HEAD") != source_commit or git(
-        "status", "--porcelain", "--untracked-files=normal"
-    ):
-        fatal_findings.append("source-changed-during-run")
-    state = (
-        "VOID"
-        if fatal_findings
-        else "PASS"
-        if all(value["state"] == "PASS" for value in values)
-        else "FAIL"
+    aggregation = aggregate_workers(
+        values,
+        metadata,
+        codes,
+        equal=equal,
+        source_unchanged=(
+            git("rev-parse", "HEAD") == source_commit
+            and not git("status", "--porcelain", "--untracked-files=normal")
+        ),
     )
     summary = {
         "schema": "simllm-external-composition-summary-v1",
-        "state": state,
+        **aggregation,
         "source_commit": source_commit,
         "expectations_commit": FREEZE_COMMIT,
-        "fatal_findings": fatal_findings,
-        "worker_exit_codes": codes,
-        "worker_states": [
-            value.get("state", "MALFORMED") if value else "MISSING" for value in values
-        ],
         "evaluation_sha256": [digest(path) if path.exists() else None for path in outputs],
-        "deterministic_bytes_equal": equal,
-        "fresh_worker_count": len(set(identities)),
-        "behavioral_score": None if fatal_findings else values[0]["behavioral_score"],
-        "exact_oracle_classes": values[0].get("exact_oracle_classes", {}) if values[0] else {},
-        "behavioral_families": values[0].get("behavioral_families", []) if values[0] else [],
         "historical_runs_rescored": False,
         "GPU_calibration_changed": False,
     }
     write_new(output_root / "summary.json", summary)
     print(json.dumps(summary, indent=2), flush=True)
-    return 0 if state == "PASS" else 1
+    return 0 if summary["state"] == "PASS" else 1
 
 
 def main():
