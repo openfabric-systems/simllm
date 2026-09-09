@@ -1,0 +1,32 @@
+{
+  "schema": "simllm-peer-critical-path-expectations-v1",
+  "baseline_commit": "861d7a45ff2e3b8b8ed438d79ca514960d52e438",
+  "topologies": ["direct", "switched"],
+  "rate_bytes_per_second": [12500000000, 25000000000],
+  "donors": [1, 3],
+  "payload_bytes": [256, 1024],
+  "propagation_ps": 1000,
+  "buffer_capacity_bytes": 65536,
+  "credit_units": 256,
+  "packet_payload_bytes": 256,
+  "packet_wire_bytes": 272,
+  "fixed_compute_ps": 37000,
+  "steps_per_session": 3,
+  "python_arms": ["baseline-off", "candidate-off", "candidate-on"],
+  "native_switched_arm": "candidate-native-on",
+  "component_configurations": 16,
+  "live_configurations": 16,
+  "component_runs": 56,
+  "serving_sessions": 56,
+  "actual_step_calls": 168,
+  "exact_oracle_vectors": 32,
+  "behavioral_instances": 24,
+  "behavioral_families": {
+    "rate": 8,
+    "payload": 8,
+    "donors": 8
+  },
+  "failure_verdict": "VOID",
+  "failure_behavioral_score": null,
+  "hardware_measurements": false
+}
