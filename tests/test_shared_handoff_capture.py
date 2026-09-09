@@ -273,3 +273,46 @@ def test_component_catalog_requires_every_exact_unskipped_fixture(tmp_path, kind
     retain()
     with pytest.raises(GuardFailure):
         components.admit(path, frozen, aliases, Evidence([]))
+
+
+@pytest.mark.parametrize("kind", ["success", "nonzero", "timeout"])
+@pytest.mark.parametrize("capture_failure", [False, True])
+def test_runtime_probe_retains_output_and_preserves_primary_failure(tmp_path, monkeypatch, kind, capture_failure):
+    protocol = run_study.protocol
+    primary = subprocess.TimeoutExpired("runtime identity", 60, output=b"partial output", stderr=b"partial diagnostic")
+    stdout = b'{"identity":"retained"}\n' if kind != "timeout" else primary.output
+    stderr = b"probe diagnostic" if kind != "timeout" else primary.stderr
+    real_write_bytes = type(tmp_path).write_bytes
+
+    def write_bytes(path, value):
+        if capture_failure and path.name == "runtime-probe.stdout":
+            raise OSError("stdout storage failed")
+        return real_write_bytes(path, value)
+
+    def launch(command, **kwargs):
+        assert read(tmp_path / "runtime-probe-command.json") == command
+        assert kwargs["check"] is False and kwargs["timeout"] == 60
+        if kind == "timeout":
+            raise primary
+        return subprocess.CompletedProcess(command, 7 if kind == "nonzero" else 0, stdout, stderr)
+
+    monkeypatch.setattr(type(tmp_path), "write_bytes", write_bytes)
+    monkeypatch.setattr(protocol.subprocess, "run", launch)
+    args = NS(native_python="scripted-runtime-no-executable", output_root=tmp_path)
+    if kind == "success" and not capture_failure:
+        assert protocol.runtime_probe(args) == {"identity": "retained"}
+    else:
+        expected = subprocess.TimeoutExpired if kind == "timeout" else subprocess.CalledProcessError if kind == "nonzero" else OSError
+        with pytest.raises(expected) as error:
+            protocol.runtime_probe(args)
+        if kind == "timeout":
+            assert error.value is primary
+        elif kind == "nonzero":
+            assert error.value.returncode == 7 and error.value.output == stdout
+        if capture_failure:
+            assert error.value.receipt_failure[0]["surface"] == "stdout"
+    assert (tmp_path / "runtime-probe.stderr").read_bytes() == stderr
+    outcome = read(tmp_path / "runtime-probe-outcome.json")
+    assert outcome["exit_code"] == (None if kind == "timeout" else 7 if kind == "nonzero" else 0)
+    if not capture_failure:
+        assert (tmp_path / "runtime-probe.stdout").read_bytes() == stdout

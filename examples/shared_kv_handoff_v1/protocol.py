@@ -69,6 +69,39 @@ def tracked_clean(root):
         raise ValueError("untracked campaign source remains")
 
 
+def runtime_probe(args):
+    """Capture runtime identity or its failed output before checking success."""
+    command = [str(args.native_python), "-c", "import json; from examples.snapshot_dispatch_v1.common import runtime_identity; print(json.dumps(runtime_identity(), sort_keys=True, separators=(',', ':')))"]
+    write(args.output_root / "runtime-probe-command.json", command)
+    result, primary, capture_errors = None, None, []
+    stdout = stderr = b""
+    try:
+        result = subprocess.run(command, cwd=ROOT, env=dict(os.environ, PYTHONPATH=str(ROOT), PYTHONDONTWRITEBYTECODE="1"),
+                                capture_output=True, timeout=60, check=False)
+        stdout, stderr = result.stdout, result.stderr
+        result.check_returncode()
+    except BaseException as error:  # noqa: BLE001, preserve failed and interrupted probe output.
+        primary = error
+        if isinstance(error, subprocess.TimeoutExpired):
+            stdout, stderr = error.output or b"", error.stderr or b""
+    outcome = {"exit_code": None if result is None else result.returncode,
+               "failure": None if primary is None else {"type": type(primary).__name__, "message": str(primary)}}
+    surfaces = (("stdout", lambda: (args.output_root / "runtime-probe.stdout").write_bytes(stdout)),
+                ("stderr", lambda: (args.output_root / "runtime-probe.stderr").write_bytes(stderr)),
+                ("outcome", lambda: write(args.output_root / "runtime-probe-outcome.json", outcome)))
+    for name, callback in surfaces:
+        try:
+            callback()
+        except BaseException as error:  # noqa: BLE001, attempt every independent evidence surface.
+            capture_errors.append({"surface": name, "type": type(error).__name__, "message": str(error)})
+            primary = primary or error
+    if primary is not None:
+        if capture_errors:
+            primary.__dict__["receipt_failure"] = capture_errors
+        raise primary
+    return read(args.output_root / "runtime-probe.stdout")
+
+
 def locks(args, frozen, sources, evidence, label):
     for arm, root in roots(args).items():
         tracked_clean(root)
@@ -131,13 +164,7 @@ def freeze(args, frozen, deadline, aliases, dependency, evidence):
         ("interpreter", args.native_python), ("model-config", config), ("htsim-rnic", args.htsim_rnic),
         ("known-native-receipt", args.known_native_receipt), ("known-backend-receipt", args.known_backend_receipt))}
     sources["backend_tree"] = git(args.backend_repository, "rev-parse", "HEAD^{tree}")
-    probe = [str(args.native_python), "-c", "import json; from examples.snapshot_dispatch_v1.common import runtime_identity; print(json.dumps(runtime_identity(), sort_keys=True, separators=(',', ':')))"]
-    result = subprocess.run(probe, cwd=ROOT, env=dict(os.environ, PYTHONPATH=str(ROOT), PYTHONDONTWRITEBYTECODE="1"),
-                            capture_output=True, timeout=60, check=True)
-    (args.output_root / "runtime-probe.stdout").write_bytes(result.stdout)
-    (args.output_root / "runtime-probe.stderr").write_bytes(result.stderr)
-    write(args.output_root / "runtime-probe-command.json", probe)
-    sources["runtime"] = read(args.output_root / "runtime-probe.stdout")
+    sources["runtime"] = runtime_probe(args)
     evidence.equal("freeze:runtime-executable", sources["runtime"]["executable_sha256"], sources["external"]["interpreter"]["sha256"])
     for name, row in sources["runtime"]["libraries"].items():
         sources["external"]["runtime-library:" + name] = row
