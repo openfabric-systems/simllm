@@ -124,9 +124,19 @@
   "raw_summary_sha256": "75a67c30b8d76bea7f06db61c0dfa8942151b38ba863b771f09d73364adb07c4",
   "schema": "simllm-pd-session-target-scale-publication-v1",
   "software_validation": {
-    "focused_tests_passed_before_native_run": 108,
-    "ruff_before_native_run": "PASS",
-    "status": "PENDING"
+    "ci_policy": "All six pull-request checks must succeed before merge.",
+    "pre_run_focused_checks": {
+      "focused_tests_passed_before_native_run": 108,
+      "ruff_before_native_run": "PASS",
+      "status": "PENDING"
+    },
+    "pytest_log_sha256": "64a9e157842201f85a19ff5794c66e3c334e09fb02b2d03fd35ec6f65fcdf6b9",
+    "pytest_passed": 5844,
+    "pytest_seconds": 1622.57,
+    "pytest_skipped": 31,
+    "ruff": "PASS",
+    "source_commit": "fba9436f1de1a93d016dd9abfdccb3022b1f3e84",
+    "status": "PASS"
   },
   "source_commit": "c0f529c87c4f573cc580d53f223abe09b815a5aa",
   "stopping_observations": {

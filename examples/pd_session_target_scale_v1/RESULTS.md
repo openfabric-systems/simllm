@@ -102,3 +102,9 @@ python -m examples.pd_session_target_scale_v1.run_study \
 
 Keep the original outputs immutable. A successor campaign has a separate
 freeze, source identity, output directory and verdict.
+
+The publication software gate at source
+`fba9436f1de1a93d016dd9abfdccb3022b1f3e84` passes: 5,844 tests passed,
+31 skipped and Ruff clean. This validates the software publication without
+rescoring the retained VOID campaign. All six pull-request CI checks are
+required before merge.

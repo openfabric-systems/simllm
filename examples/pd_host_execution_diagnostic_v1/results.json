@@ -1060,10 +1060,20 @@
     }
   ],
   "software_validation": {
-    "pre_run_focused_seconds": 4.34,
-    "pre_run_focused_tests": 87,
+    "ci_policy": "All six pull-request checks must succeed before merge.",
+    "pre_run_focused_checks": {
+      "pre_run_focused_seconds": 4.34,
+      "pre_run_focused_tests": 87,
+      "ruff": "PASS",
+      "status": "PENDING_FULL_GATE"
+    },
+    "pytest_log_sha256": "64a9e157842201f85a19ff5794c66e3c334e09fb02b2d03fd35ec6f65fcdf6b9",
+    "pytest_passed": 5844,
+    "pytest_seconds": 1622.57,
+    "pytest_skipped": 31,
     "ruff": "PASS",
-    "status": "PENDING_FULL_GATE"
+    "source_commit": "fba9436f1de1a93d016dd9abfdccb3022b1f3e84",
+    "status": "PASS"
   },
   "source_commit": "3abec1cb91679f8582130fd067b70ad4412d94fa",
   "summary_sha256": "b0705dfe482c0cc83e0e8a99079c03dcfa05d1e199a054d059f1790685ab5be2",

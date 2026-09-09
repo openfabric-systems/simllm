@@ -113,5 +113,8 @@ This result closes no deployment task, calibrates no GPU service and supports
 no extrapolated 56-engine throughput claim.
 
 Before the fresh execution, 87 focused software checks passed in 4.34 seconds
-and Ruff passed. Complete software and continuous-integration gates remain
-pending for publication.
+and Ruff passed. The complete publication gate at source
+`fba9436f1de1a93d016dd9abfdccb3022b1f3e84` then passes with 5,844 tests passed,
+31 skipped and Ruff clean. The test run takes 1,622.57 seconds. All six
+pull-request CI checks are required before merge. These software checks remain
+separate from the diagnostic's exact oracles and unscored guards.
