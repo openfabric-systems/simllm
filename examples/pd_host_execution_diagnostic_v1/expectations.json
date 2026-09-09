@@ -1,0 +1,447 @@
+{
+  "arms": [
+    "uninstrumented",
+    "instrumented"
+  ],
+  "as_of_commit": "4e0a3ec965f7db9db37d83ce288b03212f50bea9",
+  "baseline_control": {
+    "accepted_cells": [
+      {
+        "decode_first_token_service_ps": 77952000,
+        "handoff_ps": 100000000,
+        "kv_bytes": 393216,
+        "prefill_service_ps": 95424000,
+        "prompt_tokens": 8,
+        "tpot_ps": 77952000,
+        "ttft_ps": 273376000
+      },
+      {
+        "decode_first_token_service_ps": 77952000,
+        "handoff_ps": 200000000,
+        "kv_bytes": 393216,
+        "prefill_service_ps": 95424000,
+        "prompt_tokens": 8,
+        "tpot_ps": 77952000,
+        "ttft_ps": 373376000
+      },
+      {
+        "decode_first_token_service_ps": 77976000,
+        "handoff_ps": 100000000,
+        "kv_bytes": 786432,
+        "prefill_service_ps": 114936000,
+        "prompt_tokens": 16,
+        "tpot_ps": 77976000,
+        "ttft_ps": 292912000
+      },
+      {
+        "decode_first_token_service_ps": 77976000,
+        "handoff_ps": 200000000,
+        "kv_bytes": 786432,
+        "prefill_service_ps": 114936000,
+        "prompt_tokens": 16,
+        "tpot_ps": 77976000,
+        "ttft_ps": 392912000
+      }
+    ],
+    "comparison_schema": "simllm-vllm-pd-request-comparison-v1",
+    "comparisons": [
+      {
+        "cell": "prompt-8-handoff-100000000",
+        "comparison_sha256": "9ca1add59fb8f41d8afd40923cdeb16d94a35bb540f99228aa1a244644cc6ce3",
+        "projected_bytes_equal": true,
+        "raw_difference_paths": [
+          [
+            "decode_internal_request_id"
+          ],
+          [
+            "prefill_internal_request_id"
+          ]
+        ]
+      },
+      {
+        "cell": "prompt-8-handoff-200000000",
+        "comparison_sha256": "e653b93e25f83a3ef2b561afeab9d3073d1202a4c2a1ad436d678c82dde3d3a0",
+        "projected_bytes_equal": true,
+        "raw_difference_paths": [
+          [
+            "decode_internal_request_id"
+          ],
+          [
+            "prefill_internal_request_id"
+          ]
+        ]
+      },
+      {
+        "cell": "prompt-16-handoff-100000000",
+        "comparison_sha256": "fb7f30d87e90253d532909caf50482d27624b3ebe42cdb18c1c94483294a957c",
+        "projected_bytes_equal": true,
+        "raw_difference_paths": [
+          [
+            "decode_internal_request_id"
+          ],
+          [
+            "prefill_internal_request_id"
+          ]
+        ]
+      },
+      {
+        "cell": "prompt-16-handoff-200000000",
+        "comparison_sha256": "542e7085975048c96fe8232e6d0af69573e249b721dc123370c220c67200aed3",
+        "projected_bytes_equal": true,
+        "raw_difference_paths": [
+          [
+            "decode_internal_request_id"
+          ],
+          [
+            "prefill_internal_request_id"
+          ]
+        ]
+      }
+    ],
+    "excluded_root_fields": [
+      "prefill_internal_request_id",
+      "decode_internal_request_id"
+    ],
+    "position": "Before all serial and burst cells, using their original four labels and order.",
+    "scale": "p1-d1"
+  },
+  "cells": [
+    {
+      "decode_output_tokens": 4,
+      "handoff_ps": 100000000,
+      "id": "prompt-8-requests-1",
+      "profile_in_instrumented_arm": true,
+      "prompt_tokens": 8,
+      "requests": 1
+    },
+    {
+      "decode_output_tokens": 4,
+      "handoff_ps": 100000000,
+      "id": "prompt-8-requests-4",
+      "profile_in_instrumented_arm": false,
+      "prompt_tokens": 8,
+      "requests": 4
+    },
+    {
+      "decode_output_tokens": 4,
+      "handoff_ps": 100000000,
+      "id": "prompt-16-requests-1",
+      "profile_in_instrumented_arm": true,
+      "prompt_tokens": 16,
+      "requests": 1
+    },
+    {
+      "decode_output_tokens": 4,
+      "handoff_ps": 100000000,
+      "id": "prompt-16-requests-4",
+      "profile_in_instrumented_arm": false,
+      "prompt_tokens": 16,
+      "requests": 4
+    }
+  ],
+  "evidence_classes": {
+    "behavioral_instances": 0,
+    "behavioral_score": null,
+    "cross_arm_request_comparisons": 14,
+    "descriptive_host_cells": 8,
+    "detailed_profiles": 2,
+    "exact_historical_request_controls": 8,
+    "fatal_guards": "unscored"
+  },
+  "fatal_guards": [
+    "finite-case-arm-stage-and-source-domains",
+    "canonical-complete-typed-native-records",
+    "exact-source-import-config-interpreter-identities",
+    "complete-raw-receipts-before-after",
+    "actual-retained-native-engine-worker-clock-joins",
+    "no-construction-time-advance",
+    "no-gpu-weights-or-backend-execution",
+    "complete-history-hashes",
+    "exact-per-request-serial-service-token-and-clock-joins",
+    "full-cross-arm-request-comparison",
+    "full-bijective-step-identity-comparison",
+    "full-sink-outcome-equality",
+    "counter-count-and-nested-time-arithmetic",
+    "exact-wrapper-bindings-and-restoration",
+    "uninstrumented-arm-has-no-hooks",
+    "profile-files-and-complete-call-table-domain",
+    "host-limit-and-complete-process",
+    "semantic-corruption-rejection"
+  ],
+  "frontend": {
+    "fixture_sha256": "36334f3aaa767c46d5f9c8498e02f6c2805a46e5000a57aea2747e17dd5d1341",
+    "model_config_sha256": "ca4bb3a5c1bdef988ab413e0d731640446da65316e4ed16de3666cd96ecc3a0b",
+    "model_id": "ibm-granite/granite-3.0-1b-a400m-instruct",
+    "model_revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
+    "name": "vllm",
+    "version": "0.27.1"
+  },
+  "historical_control_specs": [
+    {
+      "decode_output_tokens": 4,
+      "handoff_ps": 100000000,
+      "id": "prompt-8-handoff-100000000",
+      "prompt_tokens": 8,
+      "requests": 80
+    },
+    {
+      "decode_output_tokens": 4,
+      "handoff_ps": 200000000,
+      "id": "prompt-8-handoff-200000000",
+      "prompt_tokens": 8,
+      "requests": 80
+    },
+    {
+      "decode_output_tokens": 4,
+      "handoff_ps": 100000000,
+      "id": "prompt-16-handoff-100000000",
+      "prompt_tokens": 16,
+      "requests": 80
+    },
+    {
+      "decode_output_tokens": 4,
+      "handoff_ps": 200000000,
+      "id": "prompt-16-handoff-200000000",
+      "prompt_tokens": 16,
+      "requests": 80
+    }
+  ],
+  "historical_files_sha256": {
+    "examples/disaggregated_target_topology_v1/RESULTS.md": "d7f975a41e28b04fe5cb5c777361aa6e47613ac8939bbfad7c75d7e1d7cfdc0f",
+    "examples/disaggregated_target_topology_v1/expectations.json": "b1d0f73b1042e007725a359f524cbf93e68a3f1395bba54777837ebd07a2d0f0",
+    "examples/disaggregated_target_topology_v1/expectations.md": "c01b1b7f13d4b16404ee0230ad014327a254f3f22ea3e8cc794dedd787517400",
+    "examples/disaggregated_target_topology_v1/results.json": "45aa34874370c353d8c5a15a6b09939321cc1f4fafaed66d89529e8da37a7715",
+    "examples/disaggregated_target_topology_v1/run_study.py": "fbba036bd4aa35a82acd7317f148da0a50effbd58efc3b86c8fc5366b8afba70",
+    "examples/pd_session_identity_v1/RESULTS.md": "b8a8cc007d97fc4ccdc82c43de9110a4e07f0128d4bcb518b872ca9714af98d2",
+    "examples/pd_session_identity_v1/expectations.json": "b484cbed05db8c6e1a8157dc0633156d837bfe125f25e26947de0bfd831e7a65",
+    "examples/pd_session_identity_v1/expectations.md": "6e689b4f39181b9fb62c9ac830206a6503d8016c1945da30bb00ce44006b4f03",
+    "examples/pd_session_identity_v1/results.json": "fe4e8e3525747a6ad497f7e8494e13d07971cb0ad8bcd95c1759bec0583bb46f",
+    "examples/pd_session_identity_v1/run_study.py": "4441a73f4c172225271ef8e64bb2e30447d60ad2a4d049361aae7234132ba126",
+    "examples/pd_session_target_scale_v1/RESULTS.md": "1c739292117f85b5a7b7400e2452c2cb33c8b5ff923e9447d84018ff6d3fc9dd",
+    "examples/pd_session_target_scale_v1/expectations.json": "44054d46a1fcb6959ff4746041b03a8e29be3163011d861cfe3cf9e9ab28e2a5",
+    "examples/pd_session_target_scale_v1/expectations.md": "41b475f48d5aa6f3dd8066b45d7d2286913bfa23df38eb6e0934253a30a17e84",
+    "examples/pd_session_target_scale_v1/results.json": "4d4a692036222d48cc82394e5d865d4efb235b9851b240434515ca9facc60001",
+    "examples/pd_session_v1/RESULTS.md": "fea7a659879c0c1bf9a2a7a2751edb7ec84286a9e790f7a193ac8b2933f96276",
+    "examples/pd_session_v1/expectations.json": "064d48044820b673ff99c0fb2ea6d185e8caca1633314a3146fcc3cfb3ff0aba",
+    "examples/pd_session_v1/expectations.md": "12aa356846d9a0f316d47e48024db498dd71bd034c9ef1c589e96f55614bac82",
+    "examples/pd_session_v1/results.json": "9660a5bcd47706fe857694d68340aab9fdab2d7096632624e6f310118d4a435e",
+    "examples/pd_session_v1/run_study.py": "56d96ba0f1979ddf5160b93c19c4e93b57406c6ebf76d61e4a5661f9b317410b"
+  },
+  "instrumentation": {
+    "cpu_process_timer": "time.process_time_ns",
+    "cpu_timer": "time.thread_time_ns",
+    "entries": [
+      {
+        "binding": "native-instance",
+        "phase": "native-schedule",
+        "target": "scheduler.schedule"
+      },
+      {
+        "binding": "native-instance",
+        "phase": "native-update",
+        "target": "scheduler.update_from_output"
+      },
+      {
+        "binding": "native-instance",
+        "phase": "native-output",
+        "target": "output_processor.process_outputs"
+      },
+      {
+        "binding": "python-class",
+        "phase": "step-lowering",
+        "target": "simllm.backends.step_lowerer:SerialStepLowerer.lower_with_timing"
+      },
+      {
+        "binding": "python-class",
+        "phase": "sink-plan",
+        "target": "simllm.backends.step_sink:HtsimStepSink._plan_step"
+      },
+      {
+        "binding": "python-class",
+        "phase": "sink-execute",
+        "target": "simllm.backends.step_sink:HtsimStepSink._execute_plan"
+      },
+      {
+        "binding": "python-class",
+        "phase": "sink-publish",
+        "target": "simllm.backends.step_sink:HtsimStepSink._publish"
+      },
+      {
+        "binding": "python-module",
+        "phase": "locality-plan",
+        "target": "simllm.backends.step_sink:plan_execution_graph_locality"
+      },
+      {
+        "binding": "python-module",
+        "phase": "locality-check",
+        "target": "simllm.backends.step_sink:validate_execution_graph_locality_projection"
+      },
+      {
+        "binding": "python-module",
+        "phase": "goal-project",
+        "target": "simllm.backends.step_sink:project_execution_graph_goal"
+      },
+      {
+        "binding": "python-module",
+        "phase": "goal-check",
+        "target": "simllm.traffic.execution_goal:verify_execution_goal_projection"
+      },
+      {
+        "binding": "python-module",
+        "phase": "graph-check",
+        "target": "simllm.traffic.execution_goal:validate_execution_graph"
+      },
+      {
+        "binding": "python-module",
+        "phase": "progress-persist",
+        "target": "examples.pd_session_target_scale_v1.native:append_progress"
+      }
+    ],
+    "phase_semantics": "Inclusive call totals plus direct instrumented-child totals; exclusive=inclusive-child. Only declared bindings are covered.",
+    "profile_export": "Complete function and caller table plus raw pstats.",
+    "profile_scope": "Two single-request cells only in instrumented arm, including progress persistence.",
+    "restore_on_failure": true,
+    "return_identity": "Same object and same exception; preserve args, kwargs, call count and source binding.",
+    "thread_scope": "main-thread-only",
+    "wall_timer": "time.perf_counter_ns"
+  },
+  "known_services_ps": {
+    "16": {
+      "decode": [
+        77976000,
+        77976000,
+        77976000,
+        77976000
+      ],
+      "prefill": 114936000
+    },
+    "8": {
+      "decode": [
+        77952000,
+        77952000,
+        77952000,
+        77952000
+      ],
+      "prefill": 95424000
+    }
+  },
+  "limits": {
+    "fresh_output_root": true,
+    "rss_cap_kib": 16777216,
+    "sample_seconds": 0.25,
+    "timeout_seconds": 1200
+  },
+  "native_requests_per_process": 14,
+  "native_requests_total": 28,
+  "native_source_sha256": {
+    "vllm/config/kv_transfer.py": "64bde41204a5eea02cf2bb886e3479de90d5aab238e0d8a50de488d27edae4be",
+    "vllm/distributed/kv_transfer/kv_connector/v1/base.py": "ec3e461a802fdbc0d324d8cb200a161042da0614cfc0cb342accdd9d58dca31d",
+    "vllm/entrypoints/llm.py": "3bb98c9bff8d018902f4352bb5f81f1b4d13276ba1c3f18a9ec11d9a5aa5a57a",
+    "vllm/outputs.py": "44e2ea5d8a34403a99a867b42806e8102b3d9e7b1a0f735af26e6650cc482342",
+    "vllm/v1/core/sched/scheduler.py": "c67bda2886b52865ddafabaae7d797c359e930752f374421a33e537d94a5f45a",
+    "vllm/v1/engine/core.py": "6fdd067f54e5d42c57ff413e292685f5bdf6f343498d85c9262567f1eb746916",
+    "vllm/v1/engine/core_client.py": "7f5e1ac1a999faf36eab7d0c184bea7c93ae5e92234c39a148a809fd6e89840c",
+    "vllm/v1/engine/llm_engine.py": "46caab7b8a09d74321ef7a64683e8019b2187810725c80a15298cf9f51f1df03",
+    "vllm/v1/engine/output_processor.py": "7cd99f14e0c0dc5f8cd69100d12489abfddee21d5fb3d6594a713beeefe3cdb0"
+  },
+  "physical_bounds": {
+    "b100_hbm_bytes_per_second": 8000000000000,
+    "burst_makespan_ceiling": "Unique service sum plus the sum of every declared handoff, since every request arrives at the same time.",
+    "burst_makespan_floor": "Largest single request dependent service chain and the unique globally serialized service sum, interpreted only under the explicit compatibility authority.",
+    "compatibility_resident_streaming_floor_ps": 40108032,
+    "compute_bound_scope": "The existing roofline streams all 32 resident experts, while a token activates top_k=8. The 40108032 ps floor is conditional on that all-resident streaming surrogate, not a hardware byte floor for one routed token. COMP-7 owns routed expert demand.",
+    "handoff_bounds_ps": {
+      "16": {
+        "ceiling": 679145600,
+        "floor": 15728640
+      },
+      "8": {
+        "ceiling": 364572800,
+        "floor": 7864320
+      }
+    },
+    "host_scaling": "No linear, monotonic, per-engine memory or speedup bound is inferred from the earlier two- and four-engine measurements.",
+    "kv_bytes_per_prompt_token": 49152,
+    "nonempty_step_service_ps": {
+      "ceiling": 100000000000,
+      "floor": 1000000
+    },
+    "per_rank_resident_compatibility_weight_bytes": 320864256,
+    "serial_request_ceiling": "Five times the nonempty-step service ceiling plus declared handoff.",
+    "serial_request_floor": "Prefill service plus declared handoff plus four positive decode services. Each serial decode service exceeds the frozen compatibility all-resident weight-streaming bound."
+  },
+  "purpose": "Describe host execution cost without changing model behavior or qualifying target scale.",
+  "required_stages": [
+    "protocol",
+    "uninstrumented:capture",
+    "uninstrumented:admission",
+    "instrumented:capture",
+    "instrumented:admission",
+    "pair-comparison",
+    "profile-attribution",
+    "semantic-corruptions",
+    "final-identities"
+  ],
+  "schema": "simllm-pd-host-execution-diagnostic-expectations-v1",
+  "semantic_mutations": [
+    "changed-nonopaque-request-member",
+    "missing-native-step",
+    "foreign-normalized-step-id",
+    "changed-sink-outcome",
+    "incoherent-phase-time",
+    "missing-profile-function-table",
+    "unrestored-wrapper",
+    "wrong-source-receipt",
+    "disk-only-raw-change"
+  ],
+  "session": {
+    "collective_arm": "lower",
+    "collective_envelope": "intra-node-fixed-cost-v1",
+    "decode_engines": 1,
+    "gpu": "b100",
+    "host_model": "ideal",
+    "max_num_seqs": 8,
+    "prefill_engines": 1,
+    "provider": "RooflineProvider(efficiency=0.7)",
+    "tensor_parallel_size": 8,
+    "timing_authority": "simllm-serialized-engine-service-v1",
+    "worker_mode": "simulated-only"
+  },
+  "sink_collections": [
+    "outcomes",
+    "locality_outcomes",
+    "collective_timing_outcomes",
+    "collective_floor_timing_outcomes",
+    "dependency_cross_check_reports",
+    "collective_registration_outcomes",
+    "packet_breakdowns",
+    "bottleneck_reports",
+    "session_evidence",
+    "peer_evidence"
+  ],
+  "source_sha256": {
+    "examples/pd_session_identity_v1/run_study.py": "4441a73f4c172225271ef8e64bb2e30447d60ad2a4d049361aae7234132ba126",
+    "examples/pd_session_target_scale_v1/checks.py": "3766c1b99f78eff23365cde65e18204bacfc44e786930b77d6babacddb8461a2",
+    "examples/pd_session_target_scale_v1/native.py": "77b95c6cea120aaaf37b9a4d56d7a21bf800d12756073c4c78b42a302e9cca81",
+    "examples/pd_session_v1/run_study.py": "56d96ba0f1979ddf5160b93c19c4e93b57406c6ebf76d61e4a5661f9b317410b",
+    "simllm/adapters/vllm/executor.py": "7c572e9d0140c0185a9d5535a3e97a1b014a3aa10613cddb1c059347259e4332",
+    "simllm/adapters/vllm/pd_connector.py": "d2d5ca76b019a61023961e7ca26fc61ee750562f0a261fd76c6dfd3e6989c6de",
+    "simllm/adapters/vllm/pd_session.py": "60777c67a8c1f76fe73af4aacc98df074a0358dcecf46083f6606f0e4e1d28d4",
+    "simllm/backends/step_lowerer.py": "bd1530fb5faffefc4c4113b528557b80c39f07f21de4925a57807c84da4aac57",
+    "simllm/backends/step_sink.py": "3cdb1084b40800be654959a60cd6107106f0ffb55334842691cae22adc9623c3",
+    "simllm/core/clock.py": "5693cc845e4c3c7371b43abef6b10d66bf1af96f13a5401c48a64175fdc44516",
+    "simllm/core/execution_io.py": "cc249b79cbd4164ebb36a5618f6c8893584bbf3b1453b6be9a1dda59b69f4326",
+    "simllm/core/pd_session.py": "7970d5573d683f94b96e8075a32a564646ccde34fea64e594aa7a26010592052",
+    "simllm/placement/disaggregated.py": "50f53e69a4c7b6201c01eb6228ddeddf2054cfa256a3d12841ca417f56ab71a3",
+    "simllm/placement/manifest.py": "f82f05b7277501bdc2c6993e2638a16f9a5631a08c7a13f5f24a34ecad8936c2",
+    "simllm/traffic/execution_goal.py": "88aecaddaf4aad9b732fc763675db226d04b9fd60586591993eeac113ee2100d",
+    "simllm/traffic/step_comm.py": "680779b03b1e6d0f1ba3842a3cd4e3ec38f2c5096c32d0bb3da6c77d1d809c1c"
+  },
+  "task": "CORE-52",
+  "verdict_policy": {
+    "complete": "COMPLETE, behavioral_score=null, only after all stages and fatal guards.",
+    "failure": "VOID, behavioral_score=null, with retained stopping point and traceback.",
+    "no_closure": "CORE-52 remains open; original target VOID is immutable.",
+    "no_performance_threshold": "No hotspot, monotonic wall scaling or speedup is assumed."
+  }
+}
