@@ -15,7 +15,7 @@ from simllm.core.step import step_record_from_json, step_record_to_json
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-FREEZE_COMMIT = "7d756ad7cefdd8270c2a6b28e2b74dbe84139e6e"
+FREEZE_COMMIT = "1d7f5a9c1f1908f55e065f5d8ca77339bc5d17cb"
 PUBLICATIONS = (
     "outcomes", "locality_outcomes", "collective_timing_outcomes", "collective_floor_timing_outcomes",
     "dependency_cross_check_reports", "collective_registration_outcomes", "packet_breakdowns",

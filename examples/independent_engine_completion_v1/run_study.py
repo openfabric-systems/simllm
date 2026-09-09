@@ -116,7 +116,7 @@ def protocol(args, frozen, evidence):
     return sources, config, references
 
 
-def launch(args, spec, frozen):
+def launch(args, spec, frozen, monitors):
     path = args.output_root / spec["id"]
     path.mkdir()
     env = os.environ.copy()
@@ -133,12 +133,14 @@ def launch(args, spec, frozen):
                "--source-manifest", str(args.output_root / "source-manifest.json"), "--output-root", str(path)]
     monitor = {"command": command, "pid": None, "sampled_max_current_rss_kib": 0,
                "exit_code": None, "stopping_reason": None}
+    monitors[spec["id"]] = monitor
     limits = frozen["limits"]
     started = time.monotonic()
-    with (path / "native.log").open("wb") as log:
-        process = subprocess.Popen(command, cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
-        monitor["pid"] = process.pid
-        try:
+    process = None
+    try:
+        with (path / "native.log").open("wb") as log:
+            process = subprocess.Popen(command, cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
+            monitor["pid"] = process.pid
             while process.poll() is None:
                 try:
                     rows = Path(f"/proc/{process.pid}/status").read_text().splitlines()
@@ -154,18 +156,32 @@ def launch(args, spec, frozen):
                     process.wait(timeout=limits["native_rss_sample_seconds"])
                 except subprocess.TimeoutExpired:
                     pass
-        except BaseException as error:
-            monitor["stopping_reason"] = str(error)
+            if process.returncode:
+                raise GuardFailure("native process failed: " + spec["id"])
+    except BaseException as error:
+        monitor["stopping_reason"] = str(error)
+        if process is not None and process.poll() is None:
             process.kill()
             process.wait()
-            raise
-        finally:
-            monitor["exit_code"] = process.returncode
-            monitor["wall_seconds"] = time.monotonic() - started
-            write(path / "process.json", monitor)
-    if process.returncode:
-        raise GuardFailure("native process failed: " + spec["id"])
+        raise
+    finally:
+        monitor["exit_code"] = None if process is None else process.returncode
+        monitor["wall_seconds"] = time.monotonic() - started
+        write(path / "process.json", monitor)
     return monitor
+
+
+def capture_native(args, spec, frozen, monitors, raw_receipts, root_receipts):
+    """Lock the first complete receipt before any native output is admitted."""
+    try:
+        launch(args, spec, frozen, monitors)
+    finally:
+        name, path = spec["id"], args.output_root / spec["id"]
+        if path.exists():
+            raw_receipts[name] = file_receipts(path)
+            receipt_path = args.output_root / (name + "-raw-receipts.json")
+            write(receipt_path, raw_receipts[name])
+            root_receipts[receipt_path.name] = {"sha256": sha(receipt_path.read_bytes()), "bytes": receipt_path.stat().st_size}
 
 
 def admit(data, spec, frozen, sources, args, monitor, references, evidence):
@@ -395,12 +411,7 @@ def execute(args):
         for spec in frozen["native_processes"]:
             name, path = spec["id"], args.output_root / spec["id"]
             print("Starting " + name, flush=True)
-            monitors[name] = launch(args, spec, frozen)
-            # Lock all raw files immediately after process exit, before parsing or admission.
-            raw_receipts[name] = file_receipts(path)
-            write(args.output_root / (name + "-raw-receipts.json"), raw_receipts[name])
-            receipt_path = args.output_root / (name + "-raw-receipts.json")
-            root_receipts[receipt_path.name] = {"sha256": sha(receipt_path.read_bytes()), "bytes": receipt_path.stat().st_size}
+            capture_native(args, spec, frozen, monitors, raw_receipts, root_receipts)
             evidence.finish(name + ":capture")
             data = read(path / "native.json")
             evidence.equal(name + ":config-path", data["identity"]["config_path"], str(config))
@@ -437,7 +448,7 @@ def execute(args):
     retained = {spec["id"]: file_receipts(args.output_root / spec["id"]) for spec in frozen["native_processes"]
                 if (args.output_root / spec["id"]).exists()}
     result.update(source_commit=source, admitted_processes=list(all_data), monitors=monitors,
-                  raw_receipts=retained, root_receipts=root_receipts, corruption_controls=controls,
+                  initial_raw_receipts=raw_receipts, raw_receipts=retained, root_receipts=root_receipts, corruption_controls=controls,
                   cells=[{"process": name, "id": cell["id"], "makespan_ps": cell["end_ps"] - cell["start_ps"],
                           "requests": len(cell["requests"])}
                          for name, data in all_data.items() for cell in data["cells"]])

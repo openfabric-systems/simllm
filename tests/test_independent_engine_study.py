@@ -4,10 +4,12 @@ import json
 from copy import deepcopy
 from dataclasses import asdict
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from test_independent_native_bridge import bridge_fixture  # noqa: F401
 
+from examples.independent_engine_completion_v1 import run_study as campaign
 from examples.independent_engine_completion_v1.checks import (
     check_checkpoints,
     check_component_checkpoints,
@@ -43,6 +45,63 @@ from simllm.core import StepRecord
 from simllm.core.step import step_record_to_json
 
 FROZEN = json.loads((HERE / "expectations.json").read_bytes())
+
+
+@pytest.mark.parametrize("mode,expected_exit,reason", [
+    ("startup", None, "process construction failed"),
+    ("timeout", -9, "frozen native timeout reached"),
+    ("exit", 7, "native process failed"),
+])
+def test_failed_native_attempt_retains_monitor_and_first_receipts(tmp_path, monkeypatch, mode, expected_exit, reason):
+    args = SimpleNamespace(output_root=tmp_path, native_python=tmp_path / "python",
+                           vllm_source=tmp_path / "source", hf_hub_cache=tmp_path / "cache")
+    spec = FROZEN["native_processes"][0]
+    monitors, initial, root_receipts = {}, {}, {}
+    times = iter((0, FROZEN["limits"]["native_timeout_seconds"] + 1,
+                  FROZEN["limits"]["native_timeout_seconds"] + 2))
+    monkeypatch.setattr(campaign.time, "monotonic", lambda: next(times))
+
+    class Process:
+        pid = 1_000_000_000
+
+        def __init__(self):
+            self.returncode = 7 if mode == "exit" else None
+
+        def poll(self):
+            return self.returncode
+
+        def kill(self):
+            self.returncode = -9
+
+        def wait(self, timeout=None):
+            return self.returncode
+
+    def start(*args, **kwargs):
+        assert spec["id"] in monitors and monitors[spec["id"]]["pid"] is None
+        kwargs["stdout"].write(b"retained native output\n")
+        if mode == "startup":
+            raise OSError("process construction failed")
+        return Process()
+
+    monkeypatch.setattr(campaign.subprocess, "Popen", start)
+    with pytest.raises((OSError, GuardFailure), match=reason):
+        campaign.capture_native(args, spec, FROZEN, monitors, initial, root_receipts)
+    path = tmp_path / spec["id"]
+    monitor = read(path / "process.json")
+    assert monitors == {spec["id"]: monitor}
+    assert monitor["exit_code"] == expected_exit and reason in monitor["stopping_reason"]
+    assert monitor["pid"] == (None if mode == "startup" else Process.pid)
+    assert monitor["sampled_max_current_rss_kib"] == 0 and monitor["wall_seconds"] > 0
+    assert (path / "native.log").read_bytes() == b"retained native output\n"
+    first = deepcopy(initial[spec["id"]])
+    assert first == file_receipts(path)
+    receipt_path = tmp_path / (spec["id"] + "-raw-receipts.json")
+    assert read(receipt_path) == first
+    assert root_receipts[receipt_path.name] == {"sha256": sha(receipt_path.read_bytes()), "bytes": receipt_path.stat().st_size}
+    (path / "native.log").write_bytes(b"changed later\n")
+    with pytest.raises(GuardFailure, match="raw-bytes-and-domain"):
+        reread_tree(path, first, Evidence([]), "failed-capture")
+    assert initial[spec["id"]] == read(receipt_path) == first
 
 
 def source_selection_fixture():
