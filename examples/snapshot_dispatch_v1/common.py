@@ -5,6 +5,7 @@ import dataclasses
 import enum
 import fractions
 import hashlib
+import importlib.machinery
 import json
 import math
 import pathlib
@@ -62,14 +63,50 @@ def code_hash(code, filename):
     return hashlib.sha256(canonical(structure(code)).encode()).hexdigest()
 
 
+def _windows_runtime_path():
+    """Resolve the loaded Python image, never a guessed DLL or launcher path."""
+    import ctypes
+    from ctypes import wintypes
+
+    handle = getattr(sys, "dllhandle", None)
+    maximum = 2 ** (8 * ctypes.sizeof(ctypes.c_void_p)) - 1
+    if type(handle) is not int or not 0 < handle <= maximum or not hasattr(ctypes, "WinDLL"):
+        raise ValueError("built-in module provenance requires a loaded Windows Python DLL handle")
+    lookup = ctypes.WinDLL("kernel32", use_last_error=True).GetModuleFileNameW
+    lookup.argtypes = [wintypes.HMODULE, wintypes.LPWSTR, wintypes.DWORD]
+    lookup.restype = wintypes.DWORD
+    for capacity in (260, 520, 1040, 2080, 4160, 8320, 16640, 32768):
+        buffer = ctypes.create_unicode_buffer(capacity)
+        length = lookup(handle, buffer, capacity)
+        if length == 0:
+            raise OSError("GetModuleFileNameW failed for the loaded Python runtime")
+        if length < capacity:
+            if length != len(buffer.value.encode("utf-16-le")) // 2:
+                raise ValueError("loaded runtime path length disagrees with the operating system")
+            return pathlib.Path(buffer.value).resolve(strict=True)
+    raise ValueError("loaded runtime path remains truncated")
+
+
+def library_identity(module):
+    """Keep file-backed receipts exact and identify real built-in module bytes."""
+    filename = getattr(module, "__file__", None)
+    if filename is not None:
+        return {"path": str(pathlib.Path(filename).resolve()), "sha256": sha(filename)}
+    spec = getattr(module, "__spec__", None)
+    if (module.__name__ not in sys.builtin_module_names or sys.modules.get(module.__name__) is not module
+            or spec is None or spec.origin != "built-in" or spec.loader is not importlib.machinery.BuiltinImporter):
+        raise ValueError("module has neither a source file nor verified built-in provenance")
+    path = _windows_runtime_path()
+    return {"path": str(path), "sha256": sha(path), "origin": "built-in"}
+
+
 def runtime_identity():
     executable = pathlib.Path(sys.executable).resolve()
     modules = (dataclasses, enum, fractions, pathlib, math, cProfile, pstats)
     return {"executable": str(executable), "executable_sha256": sha(executable),
             "implementation": platform.python_implementation(), "version": sys.version,
             "version_info": list(sys.version_info), "cache_tag": sys.implementation.cache_tag,
-            "libraries": {module.__name__: {"path": str(pathlib.Path(module.__file__).resolve()),
-                          "sha256": sha(module.__file__)} for module in modules},
+            "libraries": {module.__name__: library_identity(module) for module in modules},
             "dataclass_functions": dataclass_functions()}
 
 
