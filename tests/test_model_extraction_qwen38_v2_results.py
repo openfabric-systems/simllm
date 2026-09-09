@@ -82,7 +82,8 @@ def test_qwen38_v2_is_the_only_published_state_in_the_qwen_coverage_cell() -> No
     assert "model_extraction_qwen38_v2" in rows[0]
     assert "model_extraction_qwen38_v1" not in rows[0]
     assert all(record_id in rows[0] for record_id in INVENTORIES.values())
-    assert "COMP-54 stays open for the Kimi K3 structure half" in rows[0]
+    assert "kimi_k3_qualification_v1" in rows[0]
+    assert "completes COMP-54" in rows[0]
 
 
 def test_comp62_closure_is_recorded_once() -> None:
