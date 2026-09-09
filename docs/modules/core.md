@@ -1509,6 +1509,18 @@ capture exists.
 
 ### Completeness
 
+- CORE-70 (Completeness; P2; L): compose independent native engine completion
+  with shared fabric or peer-packet service, collective registration and the
+  request-metric sink reducer. CORE-68 admits isolated declared local service
+  and rejects these combinations before native scheduling mutates state.
+  Preserve that explicit rejection and the serialized compatibility path.
+  Join each shared resource's sole timing authority to the engine's due event,
+  including late completion, registration visibility and critical-path metric
+  attribution; never preprice shared contention as an isolated constant.
+  Freeze overlapping-engine load and message-size sweeps with exact byte,
+  request and completion conservation and a live TTFT/TPOT effect. Depends on
+  CORE-68 and each enabled resource's owning runtime.
+
 - CORE-69 (Completeness; P2; L): support cancellation, reset and recovery
   while an independent native engine step is pending. CORE-68's initial
   envelope rejects these operations before they mutate native request or
