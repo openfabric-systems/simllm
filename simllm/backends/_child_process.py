@@ -16,6 +16,7 @@ import sys
 import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -670,6 +671,10 @@ class OwnedBinaryProcess:
             raise RuntimeError("owned binary streams require POSIX waitid/WNOWAIT or Windows Jobs")
         self.timeout_s = timeout_s
         self._deadline = time.monotonic() + timeout_s
+        self._io_deadline: float | None = None
+        self._io_owner: int | None = None
+        self._active_io_calls = 0
+        self._cleanup_failure: BaseException | None = None
         self._lock = threading.RLock()
         self._closed = False
         self._failure: BaseException | None = None
@@ -760,12 +765,17 @@ class OwnedBinaryProcess:
             return
 
     def _call(self, function: Callable[[], Any]) -> Any:
+        with self._lock:
+            if self._io_owner is not None and self._io_owner != threading.get_ident():
+                raise RuntimeError("another thread owns the active binary exchange")
+            deadline = self._deadline if self._io_deadline is None else self._io_deadline
+            self._active_io_calls += 1
         try:
             if self._failure is not None:
                 raise self._failure
             if self._closed:
                 raise RuntimeError("owned binary process is closed")
-            remaining = self._deadline - time.monotonic()
+            remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise subprocess.TimeoutExpired(self.command, self.timeout_s)
             result: queue.Queue[Any] = queue.Queue(maxsize=1)
@@ -780,8 +790,53 @@ class OwnedBinaryProcess:
                 raise value
             return value
         except BaseException:
-            self.abort()
+            self._abort_after_failure()
             raise
+        finally:
+            with self._lock:
+                self._active_io_calls -= 1
+
+    def _abort_after_failure(self) -> None:
+        try:
+            self.abort()
+        except BaseException as error:  # noqa: BLE001, preserve the first I/O failure.
+            self._cleanup_failure = error
+
+    @contextmanager
+    def io_deadline(self, timeout_s: float):
+        """Bound one owner-thread exchange without refreshing its lifetime.
+
+        Every blocking write and read consumes the same remaining allowance.
+        Idle client work outside this context consumes only the fixed lifetime.
+        """
+        if (isinstance(timeout_s, bool) or not isinstance(timeout_s, (int, float))
+                or not math.isfinite(timeout_s) or timeout_s <= 0):
+            raise ValueError("exchange timeout must be finite and positive")
+        with self._lock:
+            if self._io_owner is not None or self._active_io_calls:
+                raise RuntimeError("binary exchange contexts cannot overlap or nest")
+            if self._failure is not None:
+                raise self._failure
+            if self._closed:
+                raise RuntimeError("owned binary process is closed")
+            deadline = min(self._deadline, time.monotonic() + timeout_s)
+            self._io_owner = threading.get_ident()
+            self._io_deadline = deadline
+        try:
+            if time.monotonic() >= deadline:
+                raise subprocess.TimeoutExpired(self.command, timeout_s)
+            yield self
+            if self._failure is not None:
+                raise self._failure
+            if time.monotonic() >= deadline:
+                raise subprocess.TimeoutExpired(self.command, timeout_s)
+        except BaseException:
+            self._abort_after_failure()
+            raise
+        finally:
+            with self._lock:
+                self._io_deadline = None
+                self._io_owner = None
 
     def write(self, data: bytes) -> None:
         def write_all() -> None:

@@ -4,11 +4,14 @@ import os
 import signal
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
+from simllm.backends import _child_process
 from simllm.backends._child_process import (
     OwnedBinaryProcess,
     _windows_job_diagnostics_for_test,
@@ -364,6 +367,110 @@ def test_binary_stream_rejects_trailing_output():
           pytest.raises(RuntimeError, match="trailing protocol bytes")):
         process.finish()
     _wait_until_not_live(process.pid)
+
+
+@pytest.mark.parametrize("allowance", [1, 2])
+@pytest.mark.parametrize("idle", [3, 6])
+def test_exchange_budget_is_fixed_and_excludes_prior_client_idle(monkeypatch, allowance, idle):
+    now, aborted = [0], []
+    process = OwnedBinaryProcess.__new__(OwnedBinaryProcess)
+    process._deadline, process._io_deadline, process._io_owner = 30, None, None
+    process._active_io_calls = 0
+    process._closed, process._failure = False, None
+    process._lock, process.command = threading.RLock(), ("controlled-clock",)
+    process.abort = lambda: aborted.append(True)
+    monkeypatch.setattr(_child_process, "time", SimpleNamespace(monotonic=lambda: now[0]))
+    now[0] = idle
+    with process.io_deadline(allowance):
+        assert process._io_deadline == idle + allowance
+        now[0] += allowance / 4
+        deadline = process._io_deadline
+        with pytest.raises(RuntimeError, match="overlap or nest"), process.io_deadline(10):
+            pytest.fail("nested exchange was entered")
+        assert process._io_deadline == deadline
+        now[0] += allowance / 4
+    assert process._io_deadline is None and process._io_owner is None and not aborted
+    now[0] = 29.5
+    with process.io_deadline(allowance):
+        assert process._io_deadline == 30
+    assert process._deadline == 30
+
+
+def test_exchange_deadline_is_cumulative_across_multiple_reads_and_reaps():
+    code = "import os,time; os.write(1,b'R'); os.read(0,1); time.sleep(.2); os.write(1,b'A'); time.sleep(.6); os.write(1,b'B')"
+    with OwnedBinaryProcess((sys.executable, "-c", code), timeout_s=10) as process:
+        assert process.read_exact(1) == b"R"
+        with pytest.raises(subprocess.TimeoutExpired), process.io_deadline(.5):
+            process.write(b"x")
+            assert process.read_exact(1) == b"A"
+            process.read_exact(1)
+        _wait_until_not_live(process.pid)
+        with pytest.raises(RuntimeError, match="closed"), process.io_deadline(1):
+            pytest.fail("timed-out exchange was retried")
+
+
+def test_exchange_rejects_other_threads_without_aborting_the_owner():
+    code = "import os; os.write(1,b'R'); os.write(1,os.read(0,1)); assert os.read(0,1)==b''"
+    with OwnedBinaryProcess((sys.executable, "-c", code), timeout_s=10) as process:
+        assert process.read_exact(1) == b"R"
+        errors = []
+
+        def intrude():
+            for action in (lambda: process.write(b"wrong"), lambda: process.io_deadline(1).__enter__()):
+                try:
+                    action()
+                except RuntimeError as error:
+                    errors.append(str(error))
+
+        with process.io_deadline(2):
+            thread = threading.Thread(target=intrude)
+            thread.start()
+            thread.join(timeout=1)
+            assert not thread.is_alive() and len(errors) == 2
+            process.write(b"x")
+            assert process.read_exact(1) == b"x"
+        with process.io_deadline(2):
+            assert process.finish() == 0
+
+
+def test_exchange_error_survives_abort_failure(monkeypatch):
+    process = OwnedBinaryProcess((sys.executable, "-c", "import time; time.sleep(30)"), timeout_s=10)
+    abort, original = process.abort, ValueError("first error")
+
+    def fail_abort():
+        abort()
+        raise OSError("cleanup error")
+
+    monkeypatch.setattr(process, "abort", fail_abort)
+    with pytest.raises(ValueError) as error, process.io_deadline(1):
+        raise original
+    assert error.value is original and str(process._cleanup_failure) == "cleanup error"
+    _wait_until_not_live(process.pid)
+
+
+def test_exchange_cannot_begin_over_an_unscoped_inflight_read():
+    code = "import os,time; os.write(1,b'R'); time.sleep(.5); os.write(1,b'X'); assert os.read(0,1)==b''"
+    with OwnedBinaryProcess((sys.executable, "-c", code), timeout_s=10) as process:
+        assert process.read_exact(1) == b"R"
+        received = []
+        thread = threading.Thread(target=lambda: received.append(process.read_exact(1)))
+        thread.start()
+        deadline = time.monotonic() + 1
+        while not process._active_io_calls and time.monotonic() < deadline:
+            time.sleep(.001)
+        assert process._active_io_calls == 1
+        with pytest.raises(RuntimeError, match="overlap or nest"), process.io_deadline(1):
+            pytest.fail("inflight I/O was given a replacement deadline")
+        thread.join(timeout=2)
+        assert not thread.is_alive() and received == [b"X"]
+        assert process.finish() == 0
+
+
+def test_exchange_allowance_cannot_extend_the_child_lifetime():
+    with OwnedBinaryProcess((sys.executable, "-c", "import time; time.sleep(30)"), timeout_s=.3) as process:
+        with pytest.raises(subprocess.TimeoutExpired), process.io_deadline(10):
+            process.read_exact(1)
+        _wait_until_not_live(process.pid)
 
 
 @pytest.mark.skipif(os.name != "nt", reason="Windows Job Object control")

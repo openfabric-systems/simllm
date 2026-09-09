@@ -1375,35 +1375,48 @@ class VllmDisaggregatedSession:
             return
         if self._shared_handoff is not None:
             failures = []
+            interrupt = None
             try:
                 if self.engine_runtime.next_completion_ps is not None:
                     raise RuntimeError("cannot close a shared session with pending engine work")
                 self._shared_handoff.close()
-            except Exception as error:  # noqa: BLE001, a failed owner still must reap its child.
+            except BaseException as error:  # noqa: BLE001, a failed owner still must reap its child.
                 failures.append(str(error))
+                if not isinstance(error, Exception):
+                    interrupt = error
                 self.engine_runtime.invalidate(str(error))
             try:
                 self.engine_runtime.close()
-            except Exception as error:  # noqa: BLE001, release an empty poisoned clock owner independently.
+            except BaseException as error:  # noqa: BLE001, release an empty poisoned clock owner independently.
                 failures.append(str(error))
+                if interrupt is None and not isinstance(error, Exception):
+                    interrupt = error
                 self.engine_runtime.invalidate(str(error))
             if failures:
                 try:
                     self._shared_handoff.abort()
-                except Exception as error:  # noqa: BLE001, finish the remaining terminal cleanup.
+                except BaseException as error:  # noqa: BLE001, finish the remaining terminal cleanup.
                     failures.append(str(error))
+                    if interrupt is None and not isinstance(error, Exception):
+                        interrupt = error
             for bridge in self._completion_bridges.values():
                 try:
                     bridge.close()
-                except Exception as error:  # noqa: BLE001, finish all terminal cleanup.
+                except BaseException as error:  # noqa: BLE001, finish all terminal cleanup.
                     failures.append(str(error))
+                    if interrupt is None and not isinstance(error, Exception):
+                        interrupt = error
             self._closed = True
             for engine in (*self.prefill_engines, *self.decode_engines):
                 try:
                     engine.llm.llm_engine.engine_core.shutdown()
-                except Exception as error:  # noqa: BLE001, finish all terminal cleanup.
+                except BaseException as error:  # noqa: BLE001, finish all terminal cleanup.
                     failures.append(engine.engine_id + ": " + str(error))
+                    if interrupt is None and not isinstance(error, Exception):
+                        interrupt = error
             reset_configuration()
+            if interrupt is not None:
+                raise interrupt
             if failures:
                 raise RuntimeError("shared session cleanup failed: " + "; ".join(failures))
             return

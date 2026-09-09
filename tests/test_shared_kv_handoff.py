@@ -324,6 +324,30 @@ def test_shared_session_pending_engine_work_remains_uncancellable(shared):
         EngineStepRuntime(shared.clock)
 
 
+@pytest.mark.parametrize("entry", ["direct", "body-failure"])
+def test_interrupted_shared_teardown_finishes_every_owner_and_preserves_first_failure(shared, monkeypatch, entry):
+    session = bare_serving_session(shared)
+    interrupt, original, calls = KeyboardInterrupt("cleanup interrupted"), ValueError("serving failed"), []
+
+    def stop_close():
+        raise interrupt
+
+    monkeypatch.setattr(shared.runtime, "close", stop_close)
+    session._completion_bridges = {"bridge": NS(close=lambda: calls.append("bridge"))}
+    session.prefill_engines = [NS(engine_id="native", llm=NS(llm_engine=NS(
+        engine_core=NS(shutdown=lambda: calls.append("native")))))]
+    if entry == "direct":
+        with pytest.raises(KeyboardInterrupt) as error:
+            session.shutdown()
+        assert error.value is interrupt
+    else:
+        with pytest.raises(ValueError) as error, session:
+            raise original
+        assert error.value is original
+    assert calls == ["bridge", "native"] and session._closed and shared.stream.aborted
+    EngineStepRuntime(shared.clock).close()
+
+
 def test_composed_engine_packet_arrival_and_prior_eligibility_tie(shared):
     """Actual driver and owners, with finite frontend admissions and framed packets."""
     session = bare_serving_session(shared)
@@ -381,8 +405,17 @@ def test_composed_engine_packet_arrival_and_prior_eligibility_tie(shared):
     session._completion_bridges = {key: NS(pending=None, has_work=False) for key in PREFILL}
     session._completion_bridges[DECODE[0]] = draining
     session._admit_prefill, session._admit_decode = admit_prefill, admit_decode
+    publish = session._publish_handoff
+
+    def publish_join(value, join):
+        assert order and order[0] == ("engine-completed", 100)
+        order.append(("join-" + join.request_id, shared.clock.now_ps))
+        publish(value, join)
+
+    session._publish_handoff = publish_join
     session._drive_independent(states, shared.runtime, [], [])
-    assert order == [("engine-completed", 100), ("arrival", 100), ("decode-request-a", 100),
+    assert order == [("engine-completed", 100), ("join-request-a", 100), ("join-request-b", 100),
+                     ("arrival", 100), ("decode-request-a", 100),
                      ("decode-request-b", 100), ("drain", 100)]
     assert [join.completed_at_ps for join in session.handoffs] == [100, 100]
     assert len(shared.runtime.native_events) == 16 and len(shared.runtime.native_rows) == 4

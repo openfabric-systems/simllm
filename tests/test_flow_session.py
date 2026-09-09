@@ -4,6 +4,7 @@ import os
 import struct
 import sys
 import time
+from contextlib import contextmanager
 from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
 
@@ -225,6 +226,52 @@ def test_owned_session_exact_continuation_and_full_evidence(fixture):
     assert peer.requests[3]["verb"] == "inject_at_boundary"
     assert peer.requests[4]["boundary_id"] == peer.requests[3]["boundary_id"]
     assert peer.requests[2]["max_time_ps"] == 10_000_000_000
+
+
+def test_optional_exchange_deadline_wraps_complete_frames_and_finish(fixture, monkeypatch):
+    client, peer, stream, calls = fixture
+    client.config = replace(CONFIG, wall_timeout_s=1800, exchange_timeout_s=60)
+    actions, active = [], []
+
+    @contextmanager
+    def budget(seconds):
+        assert not active and seconds == 60
+        active.append(seconds)
+        actions.append(["begin"])
+        try:
+            yield stream
+        finally:
+            active.clear()
+            actions[-1].append("end")
+
+    monkeypatch.setattr(stream, "io_deadline", budget, raising=False)
+    for name in ("write", "read_exact", "finish"):
+        original = getattr(stream, name)
+
+        def observe(*args, _name=name, _original=original):
+            assert active == [60]
+            actions[-1].append(_name)
+            return _original(*args)
+
+        monkeypatch.setattr(stream, name, observe)
+    with client:
+        pass
+    assert calls[0][1]["timeout_s"] == 1800
+    assert actions[:-1] == [["begin", "write", "read_exact", "read_exact", "end"]] * 4
+    assert actions[-1] == ["begin", "finish", "end"]
+    assert [row["verb"] for row in peer.requests] == ["open", "await_completion", "drain", "close"]
+
+
+@pytest.mark.parametrize("invalid", [0, -1, True, float("nan"), float("inf"), "60"])
+def test_optional_exchange_deadline_rejects_invalid_configuration(invalid):
+    with pytest.raises(ValueError, match="exchange_timeout_s"):
+        replace(CONFIG, exchange_timeout_s=invalid)
+
+
+def test_optional_exchange_field_preserves_legacy_positional_configuration():
+    config = FlowSessionConfig("rnic-nn", 2, 400_000_000_000, "a" * 64, 9001, 7, 15, 50, 100)
+    assert (config.seed, config.wall_timeout_s, config.max_events, config.simulation_budget_ps,
+            config.exchange_timeout_s) == (7, 15, 50, 100, None)
 
 
 def test_zero_time_boundary_has_no_inclusive_prefix(fixture):

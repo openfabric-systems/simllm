@@ -116,6 +116,7 @@ class FlowSessionConfig:
     wall_timeout_s: float = 60.0
     max_events: int = 1_000_000
     simulation_budget_ps: int = 10_000_000_000
+    exchange_timeout_s: float | None = None
 
     def __post_init__(self) -> None:
         if self.profile not in {"rnic-nn", "rnic-cn"}:
@@ -136,6 +137,11 @@ class FlowSessionConfig:
                 not isinstance(self.wall_timeout_s, (int, float)) or
                 not math.isfinite(self.wall_timeout_s) or self.wall_timeout_s <= 0):
             raise ValueError("wall_timeout_s must be finite and positive")
+        if self.exchange_timeout_s is not None and (
+                isinstance(self.exchange_timeout_s, bool)
+                or not isinstance(self.exchange_timeout_s, (int, float))
+                or not math.isfinite(self.exchange_timeout_s) or self.exchange_timeout_s <= 0):
+            raise ValueError("exchange_timeout_s must be finite and positive when supplied")
         if self.profile == "rnic-cn":
             radix = math.isqrt(2 * self.node_count)
             if radix % 2 or radix * radix != 2 * self.node_count:
@@ -272,6 +278,15 @@ class FlowSession:
         return FlowSessionError(str(error))
 
     def _exchange(self, verb: str, fields: dict[str, Any], expected: set[str]) -> dict[str, Any]:
+        if self.config.exchange_timeout_s is None:
+            return self._exchange_frame(verb, fields, expected)
+        self._guard()
+        if self._stream is None:
+            raise FlowSessionError("flow session has not been opened")
+        with self._stream.io_deadline(self.config.exchange_timeout_s):
+            return self._exchange_frame(verb, fields, expected)
+
+    def _exchange_frame(self, verb: str, fields: dict[str, Any], expected: set[str]) -> dict[str, Any]:
         self._guard()
         if self._stream is None:
             raise FlowSessionError("flow session has not been opened")
@@ -642,7 +657,12 @@ class FlowSession:
                     closed["terminal"] is not True):
                 raise FlowSessionError("close response changed its terminal cursor")
             assert self._stream is not None and self._quiesced_at is not None
-            if self._stream.finish() != 0:
+            if self.config.exchange_timeout_s is None:
+                status = self._stream.finish()
+            else:
+                with self._stream.io_deadline(self.config.exchange_timeout_s):
+                    status = self._stream.finish()
+            if status != 0:
                 raise FlowSessionError("native session exited unsuccessfully after close")
             self._drain = FlowSessionDrain(self._quiesced_at, self.completion_rows, counters, high_water)
             self._closed = True
