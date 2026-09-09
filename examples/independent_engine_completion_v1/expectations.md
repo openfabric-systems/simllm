@@ -274,3 +274,33 @@ No opaque identity normalization can change the selected configuration.
 Retain the first VOID, its initial raw receipts and null score unchanged.
 A fresh source-bound campaign must complete the entire original finite domain
 before any native concurrency claim closes.
+
+## Process-exit retention amendment
+
+This post-specified retention contract precedes its harness repair and a
+fresh campaign. The original behavioral protocol remains frozen at
+`73270f6699440aa4a17ec7b2af5155698ab643b2`; the source-representation amendment
+remains identified by `7d756ad7cefdd8270c2a6b28e2b74dbe84139e6e`.
+No workload cell, service, arrival, width, handoff, physical bound, native
+source domain, process limit, behavioral family or exact oracle changes.
+All retained VOID attempts and their original receipts remain unchanged.
+
+Register each process monitor before attempting to start its native process.
+Record an absent process identity explicitly if construction fails. On every
+terminal path, persist the final monitor with exit status, stop reason,
+elapsed time and sampled resident-memory observation. A timeout, startup
+failure or nonzero exit cannot omit the monitor from the campaign summary.
+
+Immediately after every launch attempt exits, take the first complete raw
+file-domain and byte-hash receipt, including a failed attempt. Write that
+receipt before parsing or admitting any output. Keep the initial receipt map
+separate from the retained final map; later file changes must never replace
+or retroactively establish the first receipt. A failed launch never completes
+its capture/admission stage and never contributes admitted requests.
+
+Use software failure controls for process construction, timeout and nonzero
+exit, as well as a failed capture followed by changed raw bytes. They must
+retain the failing monitor, original log and first receipt and reject a
+changed final receipt. These are fatal integrity checks and software gates,
+not added behavioral instances or native workload cells. A fresh passing run
+still requires every original stage and the complete native finite domain.
