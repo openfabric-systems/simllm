@@ -3,7 +3,8 @@
   "task": "CORE-58",
   "as_of_commit": "9335169ae0d9215cd4a021b909c3c98a2346561e",
   "chronology": {
-    "comparison_projection_exists": false,
+    "complete_vllm_request_projection_exists": false,
+    "older_restricted_study_projection_exists": true,
     "study_executed": false,
     "previous_core53_run_remains": "VOID"
   },

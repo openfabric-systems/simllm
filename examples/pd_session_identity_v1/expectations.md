@@ -5,6 +5,12 @@ prefill/decode sessions. The existing CORE-53 run stays void: this new study
 never replaces or rescores it. The new boundary precedes its implementation
 and every run that claims acceptance against it.
 
+An older study helper, `deployment_curve_v1.flagship_tools.stable_request_projection`,
+already selects a restricted field set and removes process identities from
+join metadata. Some earlier reports call that helper a CORE-58 projection.
+This freeze introduces the complete vLLM result boundary described below;
+it does not reuse that helper or claim the older studies met this contract.
+
 ## Authority and projection
 
 The native session continues to own request execution, identifiers and timing.
