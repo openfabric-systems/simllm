@@ -2651,6 +2651,29 @@ class ExternalQwen32BPassModel:
         batch_size: int,
         isl: int,
         prefix: int = 0,
+        latency_correction_scale: object = COMPOSITION_UNSET,
+    ) -> ExternalPassResult:
+        """Evaluate a public prefill pass with the selected phase authority."""
+
+        if self._composition_record is not None:
+            latency_correction_scale = self._composition_record.resolve(
+                "prefill_latency_correction", latency_correction_scale
+            )
+        elif latency_correction_scale is COMPOSITION_UNSET:
+            latency_correction_scale = 1.0
+        return self._run_context(
+            batch_size=batch_size,
+            isl=isl,
+            prefix=prefix,
+            latency_correction_scale=latency_correction_scale,
+        )
+
+    def _run_context(
+        self,
+        *,
+        batch_size: int,
+        isl: int,
+        prefix: int = 0,
         latency_correction_scale: float = 1.0,
     ) -> ExternalPassResult:
         """Evaluate one frozen static-context pass."""
@@ -2688,6 +2711,33 @@ class ExternalQwen32BPassModel:
         )
 
     def run_generation(
+        self,
+        *,
+        batch_size: int,
+        isl: int,
+        osl: int,
+        stride: int = 32,
+        beam_width: int = 1,
+        latency_correction_scale: object = COMPOSITION_UNSET,
+    ) -> ExternalPassResult:
+        """Evaluate a public decode pass with the selected phase authority."""
+
+        if self._composition_record is not None:
+            latency_correction_scale = self._composition_record.resolve(
+                "decode_latency_correction", latency_correction_scale
+            )
+        elif latency_correction_scale is COMPOSITION_UNSET:
+            latency_correction_scale = 1.0
+        return self._run_generation(
+            batch_size=batch_size,
+            isl=isl,
+            osl=osl,
+            stride=stride,
+            beam_width=beam_width,
+            latency_correction_scale=latency_correction_scale,
+        )
+
+    def _run_generation(
         self,
         *,
         batch_size: int,

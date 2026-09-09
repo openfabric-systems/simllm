@@ -604,3 +604,51 @@ def test_coordinator_retains_void_for_malformed_or_inconsistent_workers(alterati
     assert result["state"] == "VOID"
     assert result["behavioral_score"] is None
     assert result["fatal_findings"]
+
+
+@pytest.mark.parametrize("phase", ["prefill", "decode"])
+@pytest.mark.parametrize("mode", ["omitted", "matching", "conflicting", "derived"])
+def test_public_pass_phase_factor_belongs_to_the_record(database, composition, phase, mode):
+    from simllm.calibration.external_db import ExternalQwen32BPassModel
+
+    factor_name = f"{phase}_latency_correction"
+    selected = (
+        composition.derive({factor_name: 2.0}, reason="direct pass factor control")
+        if mode == "derived"
+        else composition
+    )
+    common = {
+        "tensor_parallel": 4,
+        "kv_cache_quant_mode": "fp8",
+        "fmha_quant_mode": "fp8",
+        "communication_quant_mode": "half",
+    }
+    model = ExternalQwen32BPassModel(database, **common, composition_record=selected)
+    legacy_model = ExternalQwen32BPassModel(database, **common)
+    kwargs = {"batch_size": 1, "isl": 4000}
+    if phase == "prefill":
+        kwargs["prefix"] = 500
+        run, legacy_run = model.run_context, legacy_model.run_context
+    else:
+        kwargs.update(batch_size=26, osl=500, stride=32)
+        run, legacy_run = model.run_generation, legacy_model.run_generation
+    if mode == "matching":
+        kwargs["latency_correction_scale"] = selected.number(factor_name)
+    elif mode == "conflicting":
+        kwargs["latency_correction_scale"] = 2.0
+        with pytest.raises(ValueError, match="conflicts"):
+            run(**kwargs)
+        return
+    actual = run(**kwargs)
+    expected = legacy_run(**{**kwargs, "latency_correction_scale": selected.number(factor_name)})
+    assert actual.total.latency_ms.hex() == expected.total.latency_ms.hex()
+    assert selected.record_sha256 in actual.total.rule
+    assert [entry.latency_ms.hex() for entry in actual.operations] == [
+        entry.latency_ms.hex() for entry in expected.operations
+    ]
+    assert (
+        legacy_run(**{**kwargs, "latency_correction_scale": 1.0}).total.latency_ms.hex()
+        == legacy_run(
+            **{key: value for key, value in kwargs.items() if key != "latency_correction_scale"}
+        ).total.latency_ms.hex()
+    )

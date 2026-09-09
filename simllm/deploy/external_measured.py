@@ -1008,7 +1008,7 @@ class ExternalQwen32BDeploymentBinding:
             context_attention_extra_latency_correction=(context_attention_extra_latency_correction),
         )
         combined_prefix = prefix * math.floor(context_tokens / isl)
-        combined = model.run_context(
+        combined = model._run_context(
             batch_size=1,
             isl=context_tokens + mix_generation_tokens,
             prefix=combined_prefix,
@@ -1020,7 +1020,7 @@ class ExternalQwen32BDeploymentBinding:
                 mix_operations.append((operation.operation, operation.latency_ms))
                 mix_step_ms += operation.latency_ms
 
-        context = model.run_context(
+        context = model._run_context(
             batch_size=math.ceil(context_tokens / isl),
             isl=isl,
             prefix=prefix,
@@ -1033,7 +1033,7 @@ class ExternalQwen32BDeploymentBinding:
         mix_operations.append(("context_attention (scaled)", context_attention))
         mix_step_ms += context_attention
 
-        mixed_generation = model.run_generation(
+        mixed_generation = model._run_generation(
             batch_size=mix_generation_tokens,
             isl=isl + osl // 2,
             osl=2,
@@ -1047,7 +1047,7 @@ class ExternalQwen32BDeploymentBinding:
         mix_operations.append(("generation_attention", generation_attention))
         mix_step_ms += generation_attention
 
-        genonly = model.run_generation(
+        genonly = model._run_generation(
             batch_size=genonly_tokens,
             isl=isl + osl // 2,
             osl=2,

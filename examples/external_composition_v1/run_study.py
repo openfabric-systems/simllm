@@ -329,6 +329,66 @@ class Evaluation:
         finally:
             self.database.system_spec["gpu"]["mem_bw_empirical_scaling_factor"] = original
 
+    def direct_pass_controls(self):
+        self.data["direct_pass_controls"] = []
+        for phase in ("prefill", "decode"):
+            method = "run_context" if phase == "prefill" else "run_generation"
+            factor_name = f"{phase}_latency_correction"
+            oracle = (
+                self.config["oracles"]["prefill"][1]
+                if phase == "prefill"
+                else next(
+                    row for row in self.config["oracles"]["decode"] if row["id"] == "decode-tp4-b26"
+                )
+            )
+            arguments = {"batch_size": oracle["batch_size"], "isl": oracle["isl"]}
+            if phase == "prefill":
+                arguments["prefix"] = oracle["prefix"]
+            else:
+                arguments.update(osl=oracle["osl"], stride=oracle["stride"])
+            run = getattr(self.baseline_binding._model(4), method)
+            self.reject(
+                f"direct-conflicting-phase:{phase}",
+                lambda run=run, arguments=arguments: run(**arguments, latency_correction_scale=2.0),
+            )
+            omitted = run(**arguments)
+            matching = run(**arguments, latency_correction_scale=self.baseline.number(factor_name))
+            expected_hex = oracle.get(
+                "expected_total_ms_hex", oracle.get("expected_service_ms_hex")
+            )
+            self.guard(
+                f"direct-default-phase:{phase}", omitted.total.latency_ms.hex() == expected_hex
+            )
+            self.guard(
+                f"direct-matching-phase:{phase}",
+                omitted == matching and self.baseline.record_sha256 in omitted.total.rule,
+            )
+            derived = self.derived({factor_name: 2.0}, f"direct {phase} phase authority control")
+            changed = getattr(self.binding(derived)._model(4), method)(**arguments)
+            legacy_run = getattr(self.legacy_binding._model(4), method)
+            expected = legacy_run(**arguments, latency_correction_scale=2.0)
+            self.guard(
+                f"direct-derived-phase:{phase}",
+                changed.total.latency_ms.hex() == expected.total.latency_ms.hex()
+                and derived.record_sha256 in changed.total.rule,
+            )
+            legacy_omitted = legacy_run(**arguments)
+            legacy_matching = legacy_run(**arguments, latency_correction_scale=1.0)
+            self.guard(f"direct-legacy-default:{phase}", legacy_omitted == legacy_matching)
+            self.data["direct_pass_controls"].append(
+                {
+                    "phase": phase,
+                    "configuration": arguments,
+                    "omitted_total_ms_hex": omitted.total.latency_ms.hex(),
+                    "matching_total_ms_hex": matching.total.latency_ms.hex(),
+                    "derived_total_ms_hex": changed.total.latency_ms.hex(),
+                    "legacy_derived_total_ms_hex": expected.total.latency_ms.hex(),
+                    "legacy_omitted_total_ms_hex": legacy_omitted.total.latency_ms.hex(),
+                    "record_sha256": self.baseline.record_sha256,
+                    "derived_record_sha256": derived.record_sha256,
+                }
+            )
+
     def historical_oracles(self):
         self.services = {}
         self.old_services = {}
@@ -951,6 +1011,12 @@ class Evaluation:
             )
 
     def completeness(self):
+        self.guard(
+            "direct-pass-control-completeness",
+            {row["phase"] for row in self.data.get("direct_pass_controls", [])}
+            == {"prefill", "decode"}
+            and len(self.data.get("direct_pass_controls", [])) == 2,
+        )
         oracle_shapes = [
             row for phase in ("decode", "prefill") for row in self.config["oracles"][phase]
         ]
@@ -1108,6 +1174,7 @@ class Evaluation:
         self.preservation("before")
         for name in (
             "admission",
+            "direct_pass_controls",
             "historical_oracles",
             "memory",
             "capacity",
