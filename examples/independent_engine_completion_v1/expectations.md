@@ -69,10 +69,17 @@ fails before the first native scheduler mutation.
 
 Reject early or duplicate retirement, a foreign receipt, replacement of the
 bound core/executor/sink, an occupied engine slot, changed input or changed
-selected configuration. A runtime error poisons the pending session. Do not
+selected configuration. Typed value snapshots cover every input field, provider
+state, resolved configuration and selected precision level, including dataclass
+fields excluded from ordinary equality. Same-object provider mutation and a
+coherently altered prepared payload must reject under an unchanged receipt ID.
+At submission and immediately before due, all sink publication state, including
+existing row contents, remains exact. A named early-publication corruption
+control must prove this boundary. A runtime error poisons the pending session. Do not
 retry half-mutated native state. Supported abort/reset entry points reject
 while a step is pending, before releasing native cache or request state.
-Mid-flight cancellation and recovery are a separate completeness obligation.
+CORE-69 owns mid-flight cancellation and recovery as a separate completeness
+obligation.
 
 A genuine zero-service drain must carry native finished or preempted identities
 and retire exactly once at the current time. An empty phantom step cannot
@@ -96,7 +103,8 @@ just before a due event and just after retirement. No early completion is
 permitted at any checkpoint.
 
 The native sweep uses the accepted config-only Granite checkpoint, eight
-simulated workers per engine, one request scheduled per engine step and four
+simulated workers per engine, first-in-first-out scheduling (`policy="fcfs"`), one request scheduled per
+engine step and four
 output tokens per request. It runs six fresh processes: serialized or
 independent timing, crossed with equal prefill/decode pool sizes 1, 2 and 4.
 Every process retains its actual native engines for all of its cells. It runs
@@ -202,7 +210,10 @@ authority. Join every completed step to its input, sole receipt and native
 retirement. Capture scheduler/frontend token and finished state before submit,
 after submit, before retirement and after retirement. No request output,
 completion-driven cache release or producer handoff may appear before due time.
-Native scheduling reservations at submission are explicitly allowed.
+Native scheduling reservations at submission are explicitly allowed. Retain
+request-to-block ownership, relevant block reference counts and free-queue
+identities at these checkpoints; block counts alone do not distinguish allowed
+allocation from an early completion-driven release.
 
 Every declared engine is the actual session-owned object, bound to the actual
 frontend executor and shared clock. Observer references do not keep engines

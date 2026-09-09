@@ -7,6 +7,8 @@
     "native_boundary": "Pinned EngineCore instance step_fn bridge; unchanged InprocClient.get_output and LLMEngine.step.",
     "ordering": "At each time complete all due receipts in insertion order, then admit requests and handoffs, then submit ready free engines in prefill/decode ordinal order; settle zero drains before advancing time.",
     "projections": "QueueVisit and CompletionEvent are read-only projections; no secondary timing ledger.",
+    "publication_integrity": "Complete sink publication state stays byte-exact at submit and immediately before due, including existing row contents. Publish one prepared result only on due retirement.",
+    "receipt_integrity": "Typed value snapshots include every input field, provider state, resolved sink configuration and selected precision levels, even compare=False dataclass fields. Bind actual engine/executor/sink/clock owners, source identity and exact private prepared payload; object identity and ordinary dataclass equality are insufficient.",
     "resource_identity": "Engine-qualified, with stable engine_id and step_index join.",
     "resource_kind": "gpu-work-queue",
     "sink_publication": "Private deterministic prepared price; consume and publish once only at due event.",
@@ -397,6 +399,11 @@
     "native_rss_sample_seconds": 0.25,
     "native_timeout_seconds": 1800
   },
+  "native_cache_observations": {
+    "allowed_at_submit": "Native scheduler allocation and in-flight token reservations.",
+    "forbidden_before_due": "Completion-driven cache release, finished-request state, emitted token or producer handoff.",
+    "required_identity": "Per-request block ownership, relevant block reference counts and free-queue identities, before/after submit and before/after due retirement."
+  },
   "native_cell_total_including_baseline": 34,
   "native_environment": {
     "async_scheduling": false,
@@ -417,6 +424,7 @@
     "num_gpu_blocks_override": 64,
     "pipeline_parallel_size": 1,
     "provider": "RooflineProvider(efficiency=0.7)",
+    "scheduling_policy": "fcfs",
     "tensor_parallel_size": 8,
     "token_id": 512,
     "vllm_version": "0.27.1",
@@ -1027,14 +1035,24 @@
   "native_request_total": 112,
   "native_source_sha256": {
     "vllm/config/kv_transfer.py": "64bde41204a5eea02cf2bb886e3479de90d5aab238e0d8a50de488d27edae4be",
+    "vllm/config/scheduler.py": "3cf5d41a5d662ab0eada6f3128e2538abc0a250d6aef82acab7df7dd84e498bc",
     "vllm/config/vllm.py": "66e82e95c5cdbb88715e25feb65f4cc2be83cd67bff5b5f703d52dea43a0815e",
     "vllm/distributed/kv_transfer/kv_connector/v1/base.py": "ec3e461a802fdbc0d324d8cb200a161042da0614cfc0cb342accdd9d58dca31d",
     "vllm/entrypoints/llm.py": "3bb98c9bff8d018902f4352bb5f81f1b4d13276ba1c3f18a9ec11d9a5aa5a57a",
     "vllm/outputs.py": "44e2ea5d8a34403a99a867b42806e8102b3d9e7b1a0f735af26e6650cc482342",
+    "vllm/v1/core/block_pool.py": "51cad2fd425128a0ff433ca4685acfc022e40659153ea5d7180fc586e1eebb6c",
+    "vllm/v1/core/kv_cache_coordinator.py": "cf1a92db18d079403d8d4c8c9e5b0b615d2a116e3e8ffb5ffb39352a01c04b29",
+    "vllm/v1/core/kv_cache_manager.py": "70f7f608c0963af155540630a5633483e5c19c0c0280dfd621760d5db2a419a6",
+    "vllm/v1/core/kv_cache_utils.py": "0ab5385925f660395612e3f69030cad3b18c2e0bd6fb61d3ff43072a6cefb74f",
+    "vllm/v1/core/sched/request_queue.py": "4b8d938e5fb8152fe61030b8aa991f983fcac9a405c37ed8908045e05e82ae5e",
     "vllm/v1/core/sched/scheduler.py": "c67bda2886b52865ddafabaae7d797c359e930752f374421a33e537d94a5f45a",
+    "vllm/v1/core/single_type_kv_cache_manager.py": "8c9030040cbc3b7176e228e10ff6491c3cf6c3e95bdfb573532fcf75f5385ebd",
     "vllm/v1/engine/core.py": "6fdd067f54e5d42c57ff413e292685f5bdf6f343498d85c9262567f1eb746916",
     "vllm/v1/engine/core_client.py": "7f5e1ac1a999faf36eab7d0c184bea7c93ae5e92234c39a148a809fd6e89840c",
-    "vllm/v1/engine/llm_engine.py": "46caab7b8a09d74321ef7a64683e8019b2187810725c80a15298cf9f51f1df03"
+    "vllm/v1/engine/detokenizer.py": "213d71cf6eefcea061b28b656cf8a08af60c9f3513403e724b16876995f3de93",
+    "vllm/v1/engine/llm_engine.py": "46caab7b8a09d74321ef7a64683e8019b2187810725c80a15298cf9f51f1df03",
+    "vllm/v1/engine/output_processor.py": "7cd99f14e0c0dc5f8cd69100d12489abfddee21d5fb3d6594a713beeefe3cdb0",
+    "vllm/v1/request.py": "6085b0668f41d56cd81ef483c06456f4ebe88bc1d46c8131d7134182d7893012"
   },
   "preimplementation_source_sha256": {
     "simllm/adapters/vllm/executor.py": "7c572e9d0140c0185a9d5535a3e97a1b014a3aa10613cddb1c059347259e4332",
@@ -1052,6 +1070,7 @@
     "CORE-51": "Whole disaggregated deployment.",
     "CORE-52": "Actual target host retention and routing.",
     "CORE-54": "Public large-model frontier.",
+    "CORE-69": "Safe pending-step cancellation/reset and failure recovery, with explicit rejected initial off path.",
     "VLLM-10": "Pipeline-parallel execution.",
     "VLLM-8": "Structured output and speculative native work."
   },
@@ -1088,7 +1107,11 @@
     "unexplained-wall-idle",
     "wrong-baseline-comparison",
     "wrong-native-source-receipt",
-    "disk-only-raw-receipt-change"
+    "disk-only-raw-receipt-change",
+    "same-object-provider-mutation",
+    "resolved-configuration-field-mutation",
+    "coherent-prepared-payload-mutation",
+    "early-sink-publication"
   ],
   "task": "CORE-68",
   "verdict_policy": {
