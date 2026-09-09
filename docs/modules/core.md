@@ -70,7 +70,10 @@ own modules.
   completion time. The join gates decode step release and its existing
   completion/result metric chain. Native lifecycle rows remain complete flow
   observations; the join does not invent a resource-release timestamp or sum
-  parallel shard durations into request wall time. CORE-71 owns qualification.
+  parallel shard durations into request wall time. The
+  [shared packet qualification](../../examples/shared_kv_handoff_v1/RESULTS.md)
+  closes CORE-71 with forty native requests, exact downstream decode schedules
+  and complete declared off/constant source-pair compatibility.
 
 - `simllm.core.engine_steps.EngineStepRuntime` owns independent whole-engine
   service on one `VirtualClock`. A receipt binds its engine, input record,
@@ -1515,32 +1518,6 @@ capture exists.
 
 ### Completeness
 
-- CORE-71 (Completeness; P0; L): connect independent native serving engines to
-  one persistent packet runtime for shared key/value-cache handoffs. Replace
-  isolated handoff pricing on this enabled path with actual global endpoint
-  bindings, future-dated shard injection, complete native lifecycle evidence
-  and exact all-shard decode gating. The
-  [prospective contract](../../examples/shared_kv_handoff_v1/expectations.md)
-  freezes 200/400G endpoint rates, eight/sixteen-token prompts, shared and
-  disjoint receivers, repeated request batches, packet/compute bounds, and
-  complete source-paired declared off/constant compatibility. Require all
-  native processes, twelve behavioral relation instances in three families,
-  independent decode schedule oracles and fatal ownership/failure controls.
-  The [first campaign is VOID](../../examples/shared_kv_handoff_v1/VOID_RESULTS.md):
-  ten packet-backed processes admitted 24 requests, then a serialized
-  compatibility guard incorrectly counted another engine's work as request
-  service. Preserve that failed execution, correct the service-vector
-  interpretation prospectively and repeat the complete forty-request
-  campaign. This validation failure precedes precision work. The separate
-  [complete exchange deadline qualification](../../examples/shared_kv_handoff_v1/DEADLINE_RESULTS.md)
-  admits all sixteen replies from eight local echo children and preserves the
-  original lifetime bound, partial failure receipts and first cleanup error.
-  It is component evidence, with no native serving or packet-to-token claim.
-  Scope is modeled
-  cache bytes on the ideal packetized endpoint profile, with no physical Clos
-  or tensor-buffer-retention claim. Depends on CORE-68's complete qualification;
-  other shared resources and native buffer retention remain CORE-70.
-
 - CORE-70 (Completeness; P2; L): extend independent native engine completion
   beyond its isolated synchronous single-sequence envelope. Compose shared
   collective fabric or peer-packet service, collective registration and the request-metric
@@ -1554,8 +1531,8 @@ capture exists.
   attribution; never preprice shared contention as an isolated constant.
   Freeze overlapping-engine load and message-size sweeps with exact byte,
   request and completion conservation and a live TTFT/TPOT effect. Depends on
-  CORE-68 and each enabled resource's owning runtime. CORE-71 owns shared modeled
-  cache-transfer timing; native producer-buffer retention during that transfer
+  CORE-68 and each enabled resource's owning runtime. CORE-71 qualifies shared
+  modeled cache-transfer timing; native producer-buffer retention during that transfer
   remains here and must not be inferred from the tensor-free connector.
 
 - CORE-69 (Completeness; P2; L): support cancellation, reset and recovery
