@@ -1,0 +1,169 @@
+{
+  "admitted_behavioral_relations": 0,
+  "admitted_exact_oracles": 0,
+  "admitted_scales": [],
+  "artifact_manifest": [
+    {
+      "bytes": 495,
+      "path": "exception.txt",
+      "sha256": "8ec30d8723e4087b6ccca6310b405fa962bb86fdce2cade9f1dc9661f9ced71d"
+    },
+    {
+      "bytes": 8204,
+      "path": "manifest-controls/p1-d1/fabric.json",
+      "sha256": "f3950a9593817adbba344fa1d91a752b5d44a0d066b0f29163a5add448b84841"
+    },
+    {
+      "bytes": 15772,
+      "path": "manifest-controls/p1-d1/placement.json",
+      "sha256": "019f818e02252407e560b37415da12151c8f6ca0ff01bcb7ff8aabfead47f286"
+    },
+    {
+      "bytes": 224192,
+      "path": "manifest-controls/p16-d40/fabric.json",
+      "sha256": "7d16025ea0b3a7441b67694581f641e25fc75e2f61e3f5e2b5052d46c869b007"
+    },
+    {
+      "bytes": 2639042,
+      "path": "manifest-controls/p16-d40/placement.json",
+      "sha256": "48029d871293762007ab33082d59a7b5a4efb22583394e718c97e733717fd709"
+    },
+    {
+      "bytes": 28045,
+      "path": "manifest-controls/p2-d5/fabric.json",
+      "sha256": "19232a39a6f085f659372092c88d3a7e2ef6010f7892ce032c6e116cdac826ba"
+    },
+    {
+      "bytes": 80598,
+      "path": "manifest-controls/p2-d5/placement.json",
+      "sha256": "81cdae4bab2c9a77496b9d6c1b27fad77d31c1a39dfc8cabcbcd3e47833cf87b"
+    },
+    {
+      "bytes": 55862,
+      "path": "manifest-controls/p4-d10/fabric.json",
+      "sha256": "56c7e3743dab22340fb97d013efe5f682b53d0e269df89fa140aec77487d99d7"
+    },
+    {
+      "bytes": 229194,
+      "path": "manifest-controls/p4-d10/placement.json",
+      "sha256": "79f66e53bcd9a2e16b54380f8d8f37865a2d046c7c83a40bd4da1e50094ec94a"
+    },
+    {
+      "bytes": 111922,
+      "path": "manifest-controls/p8-d20/fabric.json",
+      "sha256": "9306516fca0c9a3c9acaecf28264286cf9e254b7519a8b1d15e3df2c88705fdb"
+    },
+    {
+      "bytes": 747014,
+      "path": "manifest-controls/p8-d20/placement.json",
+      "sha256": "6e37bbf3ce382914328e236241fb82978984dfd48da42d02488ebd7527eea953"
+    },
+    {
+      "bytes": 7295,
+      "path": "p1-d1/construction-progress.jsonl",
+      "sha256": "486f2b95143c1391c4d2ed1d4f5c30ed152ade6af0024b627821ea5e52354b7b"
+    },
+    {
+      "bytes": 95715,
+      "path": "p1-d1/engine-work/simllm-decode-0/step-records.jsonl",
+      "sha256": "ae681e3757fa80133275584f82851da0dc5afbdc9a64e57a9ec7002a421853f8"
+    },
+    {
+      "bytes": 26482,
+      "path": "p1-d1/engine-work/simllm-prefill-0/step-records.jsonl",
+      "sha256": "f530bcb88dd918ddf2eef39d88188c114ad477fcad85d5cd06d480a6f5d8e9a8"
+    },
+    {
+      "bytes": 17645,
+      "path": "p1-d1/native.log",
+      "sha256": "05d1f822e3af82659a078c826a2b4ea6417b17985bc044e9f451a14f5b3fb71f"
+    },
+    {
+      "bytes": 474,
+      "path": "p1-d1/process.json",
+      "sha256": "57bf3e70b611c9142e0512d6616efbd3abc5f8f80ba2e4fa002a391cd229e2c5"
+    },
+    {
+      "bytes": 118910,
+      "path": "p1-d1/request-progress.jsonl",
+      "sha256": "a31119a96c5008ab0d57aa47ef6ada9b66689d54795ec7a219bb35f13c92d4d8"
+    },
+    {
+      "bytes": 829,
+      "path": "process-caches/p1-d1/vllm_cache_root/modelinfos/vllm-model_executor-models-granitemoe-GraniteMoeForCausalLM.json",
+      "sha256": "2a5f0a2f4dd6f84b326700312ae713b923f90a67c89d9287854e27ad3f13fe89"
+    },
+    {
+      "bytes": 4255,
+      "path": "summary.json",
+      "sha256": "75a67c30b8d76bea7f06db61c0dfa8942151b38ba863b771f09d73364adb07c4"
+    }
+  ],
+  "behavioral_score": null,
+  "completed_stages": [
+    "manifest-off-path",
+    "protocol"
+  ],
+  "diagnostic_only_findings": [
+    "All four persisted historical request comparison bytes reproduce the frozen CORE-58 hashes on a retained post-run inspection. They are not admitted campaign evidence.",
+    "The first serial cell is incomplete. No complete cell, burst or scale was admitted.",
+    "Construction retained two native engines and sixteen worker objects at observation time. Final retention and source checks were not reached.",
+    "The hard stop is a host runtime limit; it is not a measured memory-capacity failure or a simulated GPU completion bound."
+  ],
+  "failure": {
+    "reason": "frozen native timeout reached",
+    "type": "GuardFailure"
+  },
+  "freeze_commit": "416fe5ba0386f2770ccd9fc4d0b1ac09a098ef0c",
+  "owning_task_status": {
+    "CORE-51": "OPEN: disaggregated deployment umbrella.",
+    "CORE-52": "OPEN: target host-scale qualification incomplete.",
+    "CORE-54": "OPEN: large-model frontier qualification.",
+    "CORE-68": "OPEN: independent engine timing remains a separate mechanism."
+  },
+  "raw_summary_sha256": "75a67c30b8d76bea7f06db61c0dfa8942151b38ba863b771f09d73364adb07c4",
+  "schema": "simllm-pd-session-target-scale-publication-v1",
+  "software_validation": {
+    "ci_policy": "All six pull-request checks must succeed before merge.",
+    "pre_run_focused_checks": {
+      "focused_tests_passed_before_native_run": 108,
+      "ruff_before_native_run": "PASS",
+      "status": "PENDING"
+    },
+    "pytest_log_sha256": "64a9e157842201f85a19ff5794c66e3c334e09fb02b2d03fd35ec6f65fcdf6b9",
+    "pytest_passed": 5844,
+    "pytest_seconds": 1622.57,
+    "pytest_skipped": 31,
+    "ruff": "PASS",
+    "source_commit": "fba9436f1de1a93d016dd9abfdccb3022b1f3e84",
+    "status": "PASS"
+  },
+  "source_commit": "c0f529c87c4f573cc580d53f223abe09b815a5aa",
+  "stopping_observations": {
+    "completed_progress_rows": 69,
+    "constructed_engines": 2,
+    "construction_clock_ps": [
+      0,
+      0
+    ],
+    "exit_code": -9,
+    "final_source_retention_and_gpu_checks_completed": false,
+    "first_serial_cell_completed_request_indices": [
+      0,
+      64
+    ],
+    "first_serial_cell_completed_requests": 65,
+    "first_serial_cell_required_requests": 80,
+    "historical_control_rows": 4,
+    "last_construction_elapsed_ns": 12600725666,
+    "native_receipt_written": false,
+    "next_request_has_partial_step_records": 65,
+    "observed_distinct_workers": 16,
+    "pid": 21286,
+    "sampled_max_current_rss_kib": 1068044,
+    "scale": "p1-d1",
+    "target_scale_started": false,
+    "wall_seconds": 1200.1433350946754
+  },
+  "verdict": "VOID"
+}

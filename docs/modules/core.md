@@ -1802,3 +1802,23 @@ capture exists.
   serialized compatibility timing authority. CORE-68 separately owns
   independent-engine service; this feasibility task does not qualify physical
   cross-engine concurrency or a deployment frontier.
+  The first [target-scale campaign](../../examples/pd_session_target_scale_v1/RESULTS.md)
+  is VOID at its 1,200-second host limit: two engines were constructed, but
+  only 65 of 80 requests in the first serial cell completed after four
+  historical controls. No scale was admitted and the 56-engine target was
+  never attempted. Retain this run unchanged and diagnose host execution cost
+  before freezing a successor campaign; a smaller partial run cannot close
+  this task.
+  The fresh [host diagnostic](../../examples/pd_host_execution_diagnostic_v1/RESULTS.md)
+  completes all 28 requests with exact compatibility. Dependency checking
+  consumes 35.4 to 36.1 percent of enclosing process CPU time as exclusive
+  main-thread work in its passive four-request cells. The separately frozen
+  [dependency index study](../../examples/dependency_index_v1/RESULTS.md)
+  reduces direct-verifier conversions from 8,976 to 272 in its largest case,
+  exactly the predicted factor of 33, with identical modeled outcomes and
+  rejection semantics. Freeze a fresh native target campaign using the
+  qualified optimization; its operation counts do not establish host-time
+  speedup or target feasibility. The first diagnostic remains VOID
+  after its checker rejected the native writer's unchanged JSON encoding;
+  the repaired encoding contract is explicitly post-specified. Host attribution
+  closes neither target feasibility nor independent-engine timing.
