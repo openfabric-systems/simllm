@@ -1060,6 +1060,9 @@
   ],
   "software_validation": {
     "combined_source_commit": "4475eec5ab5ed0dbb8c61984bc5f32c6f1c68b74",
+    "failed": 0,
+    "log_sha256": "b7f3c9c0fedb655d00a06207d0452d17b4434d3c7e24365c2846085f5bf6c686",
+    "passed": 5707,
     "retained_attempts": [
       {
         "failed": 2,
@@ -1071,7 +1074,10 @@
         "status": "FAIL"
       }
     ],
-    "status": "PENDING"
+    "skipped": 31,
+    "source_commit": "c8a272f42a8a294b8c327071ab140f775cc58f7e",
+    "status": "PASS",
+    "wall_seconds": 1718.99
   },
   "storage_and_state_oracles": {
     "dense_values_first_layer": 726663168,

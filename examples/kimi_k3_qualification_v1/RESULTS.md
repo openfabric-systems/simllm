@@ -162,10 +162,14 @@ evidence, family reassignment, source drift and disk-only receipt changes.
 Ordinary execution errors retain their traceback and produce a VOID record
 with a null score.
 
-The full combined software gate is recorded in [results.json](results.json)
-after integration with the accepted frontier publication. It is independent
-of the native structural result and does not turn synthetic times into
-physical calibration.
+The full combined software gate passes 5,707 tests, with 31 skipped, at
+`c8a272f42a8a294b8c327071ab140f775cc58f7e`, after integration with the accepted
+frontier publication. [results.json](results.json) records its log identity
+and retains the first software attempt: two forward coverage assertions still
+required COMP-54 to stay open. Those assertions now require the qualified K3
+structure; historical reports and native evidence stay exact. Software
+validation is independent of the native structural result and does not turn
+synthetic times into physical calibration.
 
 ## Reproduction
 
