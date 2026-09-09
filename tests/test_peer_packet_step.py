@@ -102,11 +102,25 @@ def test_packet_and_analytic_compositions_keep_compute_identical(tmp_path):
 
 
 @pytest.mark.parametrize("field", ("emit_packet_breakdown", "emit_bottleneck_report"))
-def test_detailed_packet_reporting_rejects_before_workdir_creation(tmp_path, field):
-    path = tmp_path / "not-created"
-    with pytest.raises(ValueError, match="BACK-73"):
-        config(path, **{field: True})
-    assert not path.exists()
+def test_detailed_packet_reporting_uses_executed_service_and_preserves_timing(tmp_path, field):
+    from simllm.backends.peer_critical_path import validate_packet_projection
+    baseline = HtsimStepSink(config(tmp_path / "baseline"))
+    reported = HtsimStepSink(config(tmp_path / "reported", **{field: True}))
+    cursor = 0
+    for index in range(3):
+        expected = baseline(record(index, cursor))
+        result = reported(record(index, cursor))
+        assert result == expected
+        reported.packet_breakdowns[-1].validate_result(result)
+        if field == "emit_bottleneck_report":
+            reported.bottleneck_reports[-1].validate_result(result)
+        raw = reported.peer_evidence[-1].session_observations[0]
+        _, phases = validate_packet_projection(raw)
+        assert len(phases) == 2 * (index + 1)
+        assert {key: value for key, value in raw.items() if key != "critical_path"} == baseline.peer_evidence[-1].session_observations[0]
+        cursor = result.completed_at_ps
+    baseline.close_peer_packets()
+    reported.close_peer_packets()
 
 
 def test_parallel_preparation_cannot_clone_retained_packet_state(tmp_path):

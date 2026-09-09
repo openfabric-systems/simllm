@@ -17,6 +17,17 @@ backend submodules.
   observations, physical resource visits, reservations and unfinished transport
   state; `close_peer_packets()` drains that state at the final request boundary.
   Absent selection preserves the analytic artifacts exactly.
+- `emit_packet_breakdown` and `emit_bottleneck_report` select exact local
+  packet explanations on that retained path. The existing step breakdown uses
+  executed local duration; the `simllm-peer-critical-path-v1` sidecar records
+  actual source pacing, resource grants, capacity returns and ordered consumer
+  visibility. `validate_packet_projection` joins every event and selected
+  interval to the original packet, physical path and phase. Selected intervals
+  cover phase wall time exactly; overlapping visit sums stay separate. Native
+  switch state remains native-owned, and absent reporting preserves the
+  original serialized observations and request metrics. The
+  [causal qualification](../../examples/peer_critical_path_v1/RESULTS.md)
+  establishes that contract under BACK-73.
 
 - `HtsimRnicConfig` + `build_htsim_rnic_command` + `run_htsim_rnic`: direct
   GOAL-driven `htsim_rnic` runs (profiles `rnic-nn`, `rnic-nn-fluid`,
@@ -1497,24 +1508,10 @@ created" statement stands and refers to different, never-registered work.
   live peer path. Product forwarding mode, depths and arbitration remain
   declared until identified under TRAF-92; public patent embodiments alone
   do not establish deployed A100/H100 behavior. TRAF-54 owns collective
-  protocol and BACK-73 critical-path reporting. The user's C-model-first
+  protocol; the retained causal reporter supplies the BACK-73 boundary.
+  The user's C-model-first
   direction makes reference RTL optional under BACK-75, not a prerequisite
   for this P1 workstream or a claim of NVIDIA RTL equivalence.
-
-- BACK-73 (Completeness; P1; M): project the retained local packet calendar's
-  realized blocker predecessors into packet-level critical-path reporting.
-  The initial TRAF-45 path retains every resource visit and projects total
-  local completion into request latency, but explicitly rejects detailed packet
-  breakdown selection. Build an acyclic causal predecessor chain that joins
-  graph eligibility, finite-buffer and credit release, link grants and consumer
-  visibility. Acceptance: selected intervals exactly cover the local critical
-  duration and conserve the step/request attribution without summing overlapping
-  waits; a converging phase has a different per-resource work sum from its
-  wall duration; and disabled reporting preserves all packet timestamps,
-  completion order, bytes and serialized accepted outputs exactly. TRAF-54
-  retains collective protocol work and does not own this reporting surface.
-  P1 since 2026-09-09: TRAF-92 requires the exposed switch, receiver and
-  collective waits to explain one-node tensor/expert-parallel request latency.
 
 - BACK-75 (Completeness; P2; L): add an optional executable NVSwitch
   reference register-transfer-level (RTL) model for the frozen native switch

@@ -91,6 +91,7 @@ class GpuPeerPacketSession:
         binding: NvlinkPhysicalBinding, *, options: NvlinkAlignedOptions | None = None,
         ports: Sequence[GpuPacketPortBinding] | None = None,
         native_switch_library: str | None = None,
+        capture_critical_path: bool = False,
     ) -> None:
         if not isinstance(session_id, str) or not session_id.strip():
             raise ValueError("GPU packet session identity must be nonblank")
@@ -131,7 +132,9 @@ class GpuPeerPacketSession:
         }
         self._engine = NvlinkCausalEngine(profile, options or NvlinkAlignedOptions(),
                                           physical=binding, on_packet_event=self._observe,
-                                          native_switch_library=native_switch_library)
+                                          native_switch_library=native_switch_library,
+                                          capture_critical_path=capture_critical_path)
+        self._critical_phases = [] if capture_critical_path else None
         self._next_token = 1
         self._extents: dict[str, GpuPacketExtent] = {}
         self._packets: dict[str, PacketAttemptEvent] = {}
@@ -280,6 +283,11 @@ class GpuPeerPacketSession:
             self._extents[extent.transfer.extent_id] = extent
             self._emit(extent, EventPhase.SUBMITTED, self.now_ps)
             self._emit(extent, EventPhase.QUEUED, self.now_ps)
+        if self._critical_phases is not None:
+            self._critical_phases.append((
+                execution_id, operation_id, self.now_ps,
+                tuple(packet_id for extent in extents for packet_id in extent.packet_ids),
+            ))
         return extents
 
     def _emit(self, extent: GpuPacketExtent, phase: EventPhase, at_ps: int) -> None:
@@ -323,7 +331,27 @@ class GpuPeerPacketSession:
 
     def evidence(self) -> dict:
         """A partial or final observation, with no hidden scalar timing owner."""
-        return {
+        causal = {}
+        if self._critical_phases is not None:
+            from simllm.backends.peer_critical_path import (
+                critical_path,
+                observation,
+                validate_packet_projection,
+            )
+            nodes = self._engine.causal_nodes
+            phases = tuple(
+                critical_path(nodes, execution_id=execution_id, operation_id=operation_id,
+                              packet_ids=packet_ids, released_at_ps=release)
+                for execution_id, operation_id, release, packet_ids in self._critical_phases
+                if set(packet_ids) <= self._visible
+            )
+            causal["critical_path"] = observation(nodes, phases, service_rates={
+                "feed": self._engine.profile.tx.endpoint_egress_rate_bytes_per_second,
+                "switch": self._engine.profile.switch.service_rate_bytes_per_second,
+                "receive": self._engine.profile.rx.ingress_rate_bytes_per_second,
+            })
+        result = {
+            **causal,
             **({"switch_implementation": "native-cmodel-v1",
                 "switch_library_sha256": self._engine._native_switch.library_sha256}
                if self._engine._native_switch is not None else {}),
@@ -348,3 +376,6 @@ class GpuPeerPacketSession:
             "buffer_ownership": self._engine.buffer_ownership,
             "drained_result": None if self._drained_result is None else asdict(self._drained_result),
         }
+        if causal:
+            validate_packet_projection(result)
+        return result

@@ -1,0 +1,1026 @@
+{
+  "baseline_commit": "861d7a45ff2e3b8b8ed438d79ca514960d52e438",
+  "behavioral": {
+    "families": {
+      "donors": 8,
+      "payload": 8,
+      "rate": 8
+    },
+    "score": {
+      "passed": 24,
+      "total": 24
+    }
+  },
+  "cells": [
+    {
+      "donors": 1,
+      "job_completion_ps": 378120,
+      "payload": 256,
+      "rate": 12500000000,
+      "request_totals": {
+        "arrived_at_ps": 0,
+        "decode_attribution": {
+          "collective_ps": 178080,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 74000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "decode_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 74000,
+          "nvlink_ps": 178080,
+          "queue_ps": 0
+        },
+        "first_token_at_ps": 126040,
+        "last_token_at_ps": 378120,
+        "request_id": "peer-star",
+        "token_count": 3,
+        "tpot_ps": {
+          "denominator": 1,
+          "numerator": 126040
+        },
+        "ttft_attribution": {
+          "collective_ps": 89040,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 37000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "ttft_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 37000,
+          "nvlink_ps": 89040,
+          "queue_ps": 0
+        },
+        "ttft_ps": 126040
+      },
+      "topology": "direct"
+    },
+    {
+      "donors": 1,
+      "job_completion_ps": 769800,
+      "payload": 1024,
+      "rate": 12500000000,
+      "request_totals": {
+        "arrived_at_ps": 0,
+        "decode_attribution": {
+          "collective_ps": 439200,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 74000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "decode_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 74000,
+          "nvlink_ps": 439200,
+          "queue_ps": 0
+        },
+        "first_token_at_ps": 256600,
+        "last_token_at_ps": 769800,
+        "request_id": "peer-star",
+        "token_count": 3,
+        "tpot_ps": {
+          "denominator": 1,
+          "numerator": 256600
+        },
+        "ttft_attribution": {
+          "collective_ps": 219600,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 37000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "ttft_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 37000,
+          "nvlink_ps": 219600,
+          "queue_ps": 0
+        },
+        "ttft_ps": 256600
+      },
+      "topology": "direct"
+    },
+    {
+      "donors": 3,
+      "job_completion_ps": 639240,
+      "payload": 256,
+      "rate": 12500000000,
+      "request_totals": {
+        "arrived_at_ps": 0,
+        "decode_attribution": {
+          "collective_ps": 352160,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 74000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "decode_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 74000,
+          "nvlink_ps": 352160,
+          "queue_ps": 0
+        },
+        "first_token_at_ps": 213080,
+        "last_token_at_ps": 639240,
+        "request_id": "peer-star",
+        "token_count": 3,
+        "tpot_ps": {
+          "denominator": 1,
+          "numerator": 213080
+        },
+        "ttft_attribution": {
+          "collective_ps": 176080,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 37000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "ttft_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 37000,
+          "nvlink_ps": 176080,
+          "queue_ps": 0
+        },
+        "ttft_ps": 213080
+      },
+      "topology": "direct"
+    },
+    {
+      "donors": 3,
+      "job_completion_ps": 1814280,
+      "payload": 1024,
+      "rate": 12500000000,
+      "request_totals": {
+        "arrived_at_ps": 0,
+        "decode_attribution": {
+          "collective_ps": 1135520,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 74000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "decode_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 74000,
+          "nvlink_ps": 1135520,
+          "queue_ps": 0
+        },
+        "first_token_at_ps": 604760,
+        "last_token_at_ps": 1814280,
+        "request_id": "peer-star",
+        "token_count": 3,
+        "tpot_ps": {
+          "denominator": 1,
+          "numerator": 604760
+        },
+        "ttft_attribution": {
+          "collective_ps": 567760,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 37000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "ttft_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 37000,
+          "nvlink_ps": 567760,
+          "queue_ps": 0
+        },
+        "ttft_ps": 604760
+      },
+      "topology": "direct"
+    },
+    {
+      "donors": 1,
+      "job_completion_ps": 247560,
+      "payload": 256,
+      "rate": 25000000000,
+      "request_totals": {
+        "arrived_at_ps": 0,
+        "decode_attribution": {
+          "collective_ps": 91040,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 74000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "decode_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 74000,
+          "nvlink_ps": 91040,
+          "queue_ps": 0
+        },
+        "first_token_at_ps": 82520,
+        "last_token_at_ps": 247560,
+        "request_id": "peer-star",
+        "token_count": 3,
+        "tpot_ps": {
+          "denominator": 1,
+          "numerator": 82520
+        },
+        "ttft_attribution": {
+          "collective_ps": 45520,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 37000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "ttft_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 37000,
+          "nvlink_ps": 45520,
+          "queue_ps": 0
+        },
+        "ttft_ps": 82520
+      },
+      "topology": "direct"
+    },
+    {
+      "donors": 1,
+      "job_completion_ps": 443400,
+      "payload": 1024,
+      "rate": 25000000000,
+      "request_totals": {
+        "arrived_at_ps": 0,
+        "decode_attribution": {
+          "collective_ps": 221600,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 74000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "decode_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 74000,
+          "nvlink_ps": 221600,
+          "queue_ps": 0
+        },
+        "first_token_at_ps": 147800,
+        "last_token_at_ps": 443400,
+        "request_id": "peer-star",
+        "token_count": 3,
+        "tpot_ps": {
+          "denominator": 1,
+          "numerator": 147800
+        },
+        "ttft_attribution": {
+          "collective_ps": 110800,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 37000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "ttft_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 37000,
+          "nvlink_ps": 110800,
+          "queue_ps": 0
+        },
+        "ttft_ps": 147800
+      },
+      "topology": "direct"
+    },
+    {
+      "donors": 3,
+      "job_completion_ps": 378120,
+      "payload": 256,
+      "rate": 25000000000,
+      "request_totals": {
+        "arrived_at_ps": 0,
+        "decode_attribution": {
+          "collective_ps": 178080,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 74000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "decode_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 74000,
+          "nvlink_ps": 178080,
+          "queue_ps": 0
+        },
+        "first_token_at_ps": 126040,
+        "last_token_at_ps": 378120,
+        "request_id": "peer-star",
+        "token_count": 3,
+        "tpot_ps": {
+          "denominator": 1,
+          "numerator": 126040
+        },
+        "ttft_attribution": {
+          "collective_ps": 89040,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 37000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "ttft_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 37000,
+          "nvlink_ps": 89040,
+          "queue_ps": 0
+        },
+        "ttft_ps": 126040
+      },
+      "topology": "direct"
+    },
+    {
+      "donors": 3,
+      "job_completion_ps": 965640,
+      "payload": 1024,
+      "rate": 25000000000,
+      "request_totals": {
+        "arrived_at_ps": 0,
+        "decode_attribution": {
+          "collective_ps": 569760,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 74000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "decode_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 74000,
+          "nvlink_ps": 569760,
+          "queue_ps": 0
+        },
+        "first_token_at_ps": 321880,
+        "last_token_at_ps": 965640,
+        "request_id": "peer-star",
+        "token_count": 3,
+        "tpot_ps": {
+          "denominator": 1,
+          "numerator": 321880
+        },
+        "ttft_attribution": {
+          "collective_ps": 284880,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 37000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "ttft_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 37000,
+          "nvlink_ps": 284880,
+          "queue_ps": 0
+        },
+        "ttft_ps": 321880
+      },
+      "topology": "direct"
+    },
+    {
+      "donors": 1,
+      "job_completion_ps": 514680,
+      "payload": 256,
+      "rate": 12500000000,
+      "request_totals": {
+        "arrived_at_ps": 0,
+        "decode_attribution": {
+          "collective_ps": 269120,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 74000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "decode_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 74000,
+          "nvlink_ps": 269120,
+          "queue_ps": 0
+        },
+        "first_token_at_ps": 171560,
+        "last_token_at_ps": 514680,
+        "request_id": "peer-star",
+        "token_count": 3,
+        "tpot_ps": {
+          "denominator": 1,
+          "numerator": 171560
+        },
+        "ttft_attribution": {
+          "collective_ps": 134560,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 37000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "ttft_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 37000,
+          "nvlink_ps": 134560,
+          "queue_ps": 0
+        },
+        "ttft_ps": 171560
+      },
+      "topology": "switched"
+    },
+    {
+      "donors": 1,
+      "job_completion_ps": 906360,
+      "payload": 1024,
+      "rate": 12500000000,
+      "request_totals": {
+        "arrived_at_ps": 0,
+        "decode_attribution": {
+          "collective_ps": 530240,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 74000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "decode_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 74000,
+          "nvlink_ps": 530240,
+          "queue_ps": 0
+        },
+        "first_token_at_ps": 302120,
+        "last_token_at_ps": 906360,
+        "request_id": "peer-star",
+        "token_count": 3,
+        "tpot_ps": {
+          "denominator": 1,
+          "numerator": 302120
+        },
+        "ttft_attribution": {
+          "collective_ps": 265120,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 37000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "ttft_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 37000,
+          "nvlink_ps": 265120,
+          "queue_ps": 0
+        },
+        "ttft_ps": 302120
+      },
+      "topology": "switched"
+    },
+    {
+      "donors": 3,
+      "job_completion_ps": 775800,
+      "payload": 256,
+      "rate": 12500000000,
+      "request_totals": {
+        "arrived_at_ps": 0,
+        "decode_attribution": {
+          "collective_ps": 443200,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 74000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "decode_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 74000,
+          "nvlink_ps": 443200,
+          "queue_ps": 0
+        },
+        "first_token_at_ps": 258600,
+        "last_token_at_ps": 775800,
+        "request_id": "peer-star",
+        "token_count": 3,
+        "tpot_ps": {
+          "denominator": 1,
+          "numerator": 258600
+        },
+        "ttft_attribution": {
+          "collective_ps": 221600,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 37000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "ttft_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 37000,
+          "nvlink_ps": 221600,
+          "queue_ps": 0
+        },
+        "ttft_ps": 258600
+      },
+      "topology": "switched"
+    },
+    {
+      "donors": 3,
+      "job_completion_ps": 1950840,
+      "payload": 1024,
+      "rate": 12500000000,
+      "request_totals": {
+        "arrived_at_ps": 0,
+        "decode_attribution": {
+          "collective_ps": 1226560,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 74000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "decode_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 74000,
+          "nvlink_ps": 1226560,
+          "queue_ps": 0
+        },
+        "first_token_at_ps": 650280,
+        "last_token_at_ps": 1950840,
+        "request_id": "peer-star",
+        "token_count": 3,
+        "tpot_ps": {
+          "denominator": 1,
+          "numerator": 650280
+        },
+        "ttft_attribution": {
+          "collective_ps": 613280,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 37000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "ttft_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 37000,
+          "nvlink_ps": 613280,
+          "queue_ps": 0
+        },
+        "ttft_ps": 650280
+      },
+      "topology": "switched"
+    },
+    {
+      "donors": 1,
+      "job_completion_ps": 318840,
+      "payload": 256,
+      "rate": 25000000000,
+      "request_totals": {
+        "arrived_at_ps": 0,
+        "decode_attribution": {
+          "collective_ps": 138560,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 74000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "decode_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 74000,
+          "nvlink_ps": 138560,
+          "queue_ps": 0
+        },
+        "first_token_at_ps": 106280,
+        "last_token_at_ps": 318840,
+        "request_id": "peer-star",
+        "token_count": 3,
+        "tpot_ps": {
+          "denominator": 1,
+          "numerator": 106280
+        },
+        "ttft_attribution": {
+          "collective_ps": 69280,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 37000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "ttft_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 37000,
+          "nvlink_ps": 69280,
+          "queue_ps": 0
+        },
+        "ttft_ps": 106280
+      },
+      "topology": "switched"
+    },
+    {
+      "donors": 1,
+      "job_completion_ps": 514680,
+      "payload": 1024,
+      "rate": 25000000000,
+      "request_totals": {
+        "arrived_at_ps": 0,
+        "decode_attribution": {
+          "collective_ps": 269120,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 74000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "decode_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 74000,
+          "nvlink_ps": 269120,
+          "queue_ps": 0
+        },
+        "first_token_at_ps": 171560,
+        "last_token_at_ps": 514680,
+        "request_id": "peer-star",
+        "token_count": 3,
+        "tpot_ps": {
+          "denominator": 1,
+          "numerator": 171560
+        },
+        "ttft_attribution": {
+          "collective_ps": 134560,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 37000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "ttft_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 37000,
+          "nvlink_ps": 134560,
+          "queue_ps": 0
+        },
+        "ttft_ps": 171560
+      },
+      "topology": "switched"
+    },
+    {
+      "donors": 3,
+      "job_completion_ps": 449400,
+      "payload": 256,
+      "rate": 25000000000,
+      "request_totals": {
+        "arrived_at_ps": 0,
+        "decode_attribution": {
+          "collective_ps": 225600,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 74000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "decode_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 74000,
+          "nvlink_ps": 225600,
+          "queue_ps": 0
+        },
+        "first_token_at_ps": 149800,
+        "last_token_at_ps": 449400,
+        "request_id": "peer-star",
+        "token_count": 3,
+        "tpot_ps": {
+          "denominator": 1,
+          "numerator": 149800
+        },
+        "ttft_attribution": {
+          "collective_ps": 112800,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 37000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "ttft_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 37000,
+          "nvlink_ps": 112800,
+          "queue_ps": 0
+        },
+        "ttft_ps": 149800
+      },
+      "topology": "switched"
+    },
+    {
+      "donors": 3,
+      "job_completion_ps": 1036920,
+      "payload": 1024,
+      "rate": 25000000000,
+      "request_totals": {
+        "arrived_at_ps": 0,
+        "decode_attribution": {
+          "collective_ps": 617280,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 74000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "decode_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 74000,
+          "nvlink_ps": 617280,
+          "queue_ps": 0
+        },
+        "first_token_at_ps": 345640,
+        "last_token_at_ps": 1036920,
+        "request_id": "peer-star",
+        "token_count": 3,
+        "tpot_ps": {
+          "denominator": 1,
+          "numerator": 345640
+        },
+        "ttft_attribution": {
+          "collective_ps": 308640,
+          "control_ps": 0,
+          "dma_ps": 0,
+          "kernel_ps": 37000,
+          "kv_ps": 0,
+          "nic_ps": 0,
+          "queue_ps": 0
+        },
+        "ttft_media": {
+          "co_critical_ps": 0,
+          "collective_base_ps": 0,
+          "collective_floor_ps": 0,
+          "collective_registration_ps": 0,
+          "control_ps": 0,
+          "fabric_ps": 0,
+          "kernel_ps": 37000,
+          "nvlink_ps": 308640,
+          "queue_ps": 0
+        },
+        "ttft_ps": 345640
+      },
+      "topology": "switched"
+    }
+  ],
+  "configurations": {
+    "component": 16,
+    "live": 16
+  },
+  "evidence_kind": "declared_synthetic",
+  "exact_oracles": {
+    "all_passed": true,
+    "vectors": 32
+  },
+  "execution_counts": {
+    "actual_step_calls": 168,
+    "capture_processes": 56,
+    "component_runs": 56,
+    "native_build_stages": 2,
+    "serving_sessions": 56
+  },
+  "expectations_commit": "2919cf2dbf2811647b3c0e43a677586899f2b4eb",
+  "failure": null,
+  "fatal_guards": {
+    "all_held": true,
+    "count": 13756,
+    "scored": false
+  },
+  "hardware_measurements": false,
+  "native": {
+    "compiler_binary_sha256": "99bf2e4df9fc8e622ba2fb317bbf8055dd0c8fdb301c77a630c4a499d75474e7",
+    "compiler_id": "GNU",
+    "compiler_version": "12.2.1",
+    "library_sha256": "d5b93bdf57c061a2b42678f48dea3a25c4ba2fc6a85b5906cec64aa8f0c527f4"
+  },
+  "receipts": {
+    "checks.json": {
+      "bytes": 1649259,
+      "sha256": "9aadd62fe1451bfe51413f7b253894579b616c7aa4bbef427df63a829bebc9cc"
+    },
+    "expectations.json": {
+      "bytes": 834,
+      "sha256": "01a537196705da7b5263d97746ac9fbbd86b4fbe2e35954e3b0567977a0f7b37"
+    },
+    "native-binding.json": {
+      "bytes": 892,
+      "sha256": "29df2cba8c2485a019984f06e1c6fcece2793746a0c7b96f36c71657f6fc7da0"
+    },
+    "source-before.json": {
+      "bytes": 604317,
+      "sha256": "e1e48cc44454d75c1e3c1adbcd0868b27916cab859d3456492bb5eea0a8f4634"
+    },
+    "summary.json": {
+      "bytes": 222786,
+      "sha256": "01b3b18f249b1f153eacf9b240643ed52de10503cb0ffa22fa8e639bfedd569f"
+    }
+  },
+  "residual_tasks": [
+    "TRAF-92",
+    "BACK-74",
+    "TRAF-54"
+  ],
+  "retained_raw_inventory": {
+    "bytes": 83546550,
+    "complete_inventory_rehashed": true,
+    "files": 1197
+  },
+  "schema": "simllm-peer-critical-path-qualification-v1",
+  "source_commit": "7293b6018b73ef3949bd6a5b186e8cccd5db0d1d",
+  "task_closed": "BACK-73",
+  "verdict": "PASS"
+}

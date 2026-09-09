@@ -1281,8 +1281,9 @@ The next transport-calibration priority after P0 correctness work is the
 single-node tensor-parallel (TP) and expert-parallel (EP) workstream:
 PLACE-6 binds captured physical topology, BACK-74 extends native switch
 service, and TRAF-92 identifies the product and closes live precision.
-TRAF-54 supplies collective protocol, BACK-73 critical-path attribution and
-TRAF-44 selectable direct-mesh profiles. These P1 slices precede further
+TRAF-54 supplies collective protocol and TRAF-44 selectable direct-mesh profiles.
+The [retained causal report](../../examples/peer_critical_path_v1/RESULTS.md)
+supplies the qualified BACK-73 attribution boundary. These P1 slices precede further
 multi-node transport calibration and optional P2 expansion. Merlin endpoint
 qualification under TRAF-65, TRAF-73 and TRAF-86 can proceed without an
 NVSwitch allocation; it does not qualify an eight-GPU switched board.
@@ -2496,8 +2497,8 @@ NVSwitch allocation; it does not qualify an eight-GPU switched board.
   protocol remains the exact bypass. The next reviewable consumer is TRAF-92's
   one-node TP and balanced/skewed EP on PLACE-6's topology. The closed TRAF-45
   already supplies live physical packet service, so extend that implementation
-  rather than rebuilding it; BACK-74 extends native queue ownership and BACK-73
-  explains its critical path. Keep NVIDIA Collective Communications Library
+  rather than rebuilding it; BACK-74 extends native queue ownership and the
+  retained BACK-73 reporter explains its critical path. Keep NVIDIA Collective Communications Library
   (NCCL) channels distinct from the six physical switch planes. Capture
   algorithm and protocol selection, GPU reduction work and synchronization;
   semantic ring steps or aggregate constants alone do not qualify the protocol.

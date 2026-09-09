@@ -40,6 +40,7 @@ from .htsim_nvlink import (
     _NvlinkVoqHead,
     _serialize_ps,
 )
+from .peer_critical_path import PeerCausalRecorder
 
 CreditKey = tuple[object, ...]
 VoqKey = tuple[int, str, int]
@@ -127,6 +128,7 @@ class NvlinkCausalEngine:
         *, on_packet_event: Callable[[str, NvlinkFlitPacket, int], None] | None = None,
         physical: NvlinkPhysicalBinding | None = None,
         native_switch_library: str | None = None,
+        capture_critical_path: bool = False,
     ) -> None:
         if not isinstance(profile, NvlinkCandidateProfile):
             raise TypeError("profile must be an NvlinkCandidateProfile")
@@ -136,6 +138,11 @@ class NvlinkCausalEngine:
             raise TypeError("packet observer must be callable")
         if physical is not None and not isinstance(physical, NvlinkPhysicalBinding):
             raise TypeError("physical must be an NvlinkPhysicalBinding")
+        if type(capture_critical_path) is not bool:
+            raise TypeError("capture_critical_path must be a boolean")
+        if capture_critical_path and physical is None:
+            raise ValueError("critical reporting requires the physical retained peer-write path")
+        self._causal = PeerCausalRecorder() if capture_critical_path else None
         self.profile = profile
         self.options = options
         self.flow_control = options.flow_control or (
@@ -240,6 +247,10 @@ class NvlinkCausalEngine:
     @property
     def now_ps(self) -> int:
         return self._now
+
+    @property
+    def causal_nodes(self):
+        return () if self._causal is None else self._causal.observed_through(self._now)
 
     @property
     def has_pending_physical_work(self) -> bool:
@@ -348,6 +359,16 @@ class NvlinkCausalEngine:
             )
         self._queued_switch = probe._queued_switch
         self._used = self._streaming = True
+        if self._causal is not None:
+            submissions = {transfer.extent_id: transfer.released_at_ps for transfer in transfers}
+            for packet in probe._packets:
+                resource = f"gpu:{packet.source}:submission"
+                submitted = submissions[packet.extent_id]
+                paced = packet.released_at_ps > submitted
+                parent = self._causal.add(packet.packet_id, "submitted", submitted,
+                                          resource_id=resource) if paced else None
+                self._causal.add(packet.packet_id, "eligible", packet.released_at_ps, (parent,),
+                                 resource_id=resource, interval_kind="source_pacing" if paced else None)
         for release in sorted({packet.released_at_ps for packet in probe._packets}):
             self._schedule(release, "wake", -1)
 
@@ -586,6 +607,13 @@ class NvlinkCausalEngine:
             assert link is not None
             return_delay = link.propagation_delay_ps + self.physical.credit_return_processing_ps
         claim.credit_available_at_ps = self._now + return_delay
+        if self._causal is not None:
+            recorder = self._causal
+            point = "input-credit" if claim.credit_key is not None else "receiver-credit"
+            service = "switch-finish" if self._queued_switch and claim.credit_key is not None else "rx-finish"
+            recorder.add(packet.packet_id, point + "-return", claim.credit_available_at_ps,
+                         (recorder.point(packet.packet_id, service),),
+                         resource_id=claim.buffer_id, interval_kind="credit_return")
         self._schedule(claim.credit_available_at_ps, "return", claim_index)
         if claim.credit_key is not None:
             assert packet.link_index is not None
@@ -622,6 +650,12 @@ class NvlinkCausalEngine:
             if self._credits[key] > self.flow_control.credits_per_pool:
                 raise AssertionError("NVLink returned more link credits than exist")
         claim.returned = True
+        if self._causal is not None:
+            point = "input-credit" if claim.credit_key is not None else "receiver-credit"
+            event = self._causal.point(packet.packet_id, point + "-return")
+            self._causal.mark("buffer-return", claim.buffer_id, event)
+            if claim.credit_key is not None:
+                self._causal.mark("credit-return", claim.credit_key, event)
 
     def _eligible_at(self, index: int) -> int | None:
         packet = self._packets[index]
@@ -654,10 +688,16 @@ class NvlinkCausalEngine:
         for link in range(link_count):
             buffer_id = (self._switch_buffer_id(packet, link) if self._queued_switch
                          else self._rx_buffer_id(packet))
-            if self._buffer(buffer_id, capacity).available < packet.wire_bytes:
+            buffer_ready = self._buffer(buffer_id, capacity).available >= packet.wire_bytes
+            if self._causal is not None:
+                self._causal.capacity(packet.packet_id, "buffer-return", buffer_id, buffer_ready)
+            if not buffer_ready:
                 continue
             credit_key = self._credit_key(packet, link)
             credits = self._credits.get(credit_key, self.flow_control.credits_per_pool)
+            if self._causal is not None:
+                self._causal.capacity(packet.packet_id, "credit-return", credit_key,
+                                      credits >= packet.credit_units)
             cursor = self._links.get(self._link_key(packet, link), 0)
             if cursor <= self._now and credits >= packet.credit_units:
                 legal_links.append((cursor, link, buffer_id))
@@ -665,6 +705,35 @@ class NvlinkCausalEngine:
             return None
         _, link, buffer_id = min(legal_links)
         return ready, link, buffer_id, capacity
+
+    def _record_tx(self, packet, link, buffer_id, link_service, endpoint_service, finished):
+        recorder = self._causal
+        path = self._packet_paths[packet.packet_id]
+        key = self._credit_key(packet, link)
+        resource = f"link:{path.input_link.link_id}:{path.source_port_id}"
+        start = recorder.add(
+            packet.packet_id, "tx-grant", self._now,
+            (recorder.point(packet.packet_id, "eligible"),
+             recorder.previous("feed", packet.source),
+             recorder.previous("link", path.input_resource),
+             recorder.previous("tx-fifo", packet.extent_id),
+             recorder.capacity_parent(packet.packet_id, "buffer-return", buffer_id),
+             recorder.capacity_parent(packet.packet_id, "credit-return", key)),
+            resource_id=resource,
+        )
+        feed = recorder.add(
+            packet.packet_id, "source-feed", self._now + endpoint_service, (start,),
+            resource_id=f"gpu:{packet.source}:feed", interval_kind="source_feed",
+        )
+        wire = recorder.add(
+            packet.packet_id, "input-wire", self._now + link_service, (start,),
+            resource_id=resource, interval_kind="input_link",
+        )
+        end = recorder.add(packet.packet_id, "tx-finish", finished, (feed, wire),
+                           resource_id=resource)
+        recorder.mark("feed", packet.source, feed)
+        recorder.mark("link", path.input_resource, end)
+        recorder.mark("tx-fifo", packet.extent_id, start)
 
     def _grant_tx(self) -> bool:
         changed = False
@@ -729,12 +798,47 @@ class NvlinkCausalEngine:
                 replay_wire_bytes=replay_count * packet.wire_bytes,
                 replay_time_ps=duration - base_duration,
             )
+            if self._causal is not None:
+                self._record_tx(packet, link, buffer_id, link_service, endpoint_service, finished)
             self._observe("packet_tx_started", index)
             self._schedule(endpoint_finished, "wake", -1)
             self._schedule(finished, "tx_finish", index)
             self._schedule(acknowledgement, "ack", index)
             changed = True
         return changed
+
+    def _record_switch(self, packet, finished):
+        recorder = self._causal
+        path = self._packet_paths[packet.packet_id]
+        input_port, output_port = self._switch_ports(packet)
+        resource = f"switch:{path.switch_id}"
+        start = recorder.add(
+            packet.packet_id, "switch-grant", self._now,
+            (recorder.point(packet.packet_id, "input-arrival"),
+             recorder.previous("switch-input", input_port),
+             recorder.previous("switch-output", output_port),
+             recorder.previous("link", path.output_resource),
+             recorder.previous("switch-fifo", self._voq_key(packet)),
+             recorder.capacity_parent(packet.packet_id, "buffer-return", self._rx_buffer_id(packet))),
+            resource_id=resource,
+        )
+        crossbar = recorder.add(
+            packet.packet_id, "switch-service",
+            self._now + _serialize_ps(packet.wire_bytes, int(self.profile.switch.service_rate_bytes_per_second)),
+            (start,), resource_id=resource, interval_kind="switch_forward",
+        )
+        wire = recorder.add(
+            packet.packet_id, "output-wire",
+            self._now + self._physical_serialize(packet.wire_bytes, path.output_link.link_rate_bps),
+            (start,), resource_id=f"link:{path.output_link.link_id}:{path.switch_output_port_id}",
+            interval_kind="output_link",
+        )
+        end = recorder.add(packet.packet_id, "switch-finish", finished, (crossbar, wire),
+                           resource_id=resource)
+        recorder.mark("switch-input", input_port, end)
+        recorder.mark("switch-output", output_port, end)
+        recorder.mark("link", path.output_resource, end)
+        recorder.mark("switch-fifo", self._voq_key(packet), start)
 
     def _grant_switch(self) -> bool:
         if not self._queued_switch:
@@ -755,6 +859,9 @@ class NvlinkCausalEngine:
                 if self._links.get(output_resource, 0) > self._now:
                     continue
             pool = self._buffer(self._rx_buffer_id(packet), self.profile.rx.buffer_capacity_bytes)
+            if self._causal is not None:
+                self._causal.capacity(packet.packet_id, "buffer-return", self._rx_buffer_id(packet),
+                                      pool.available >= packet.wire_bytes)
             if pool.available < packet.wire_bytes:
                 continue
             # The policy sees actual port conflicts. Semantic ranks stay intact
@@ -826,6 +933,8 @@ class NvlinkCausalEngine:
                 switch_started_at_ps=self._now,
                 switch_finished_at_ps=finished,
             )
+            if self._causal is not None:
+                self._record_switch(packet, finished)
             if self.physical is not None:
                 acknowledgement = finished + 2 * path.output_link.propagation_delay_ps + self.physical.acknowledgement_processing_ps
                 self._update(index, acknowledged_at_ps=max(packet.acknowledged_at_ps, acknowledgement),
@@ -848,6 +957,14 @@ class NvlinkCausalEngine:
     def _rx_arrival(self, index: int) -> None:
         self._arrive(self._rx_claims[index])
         packet = self._update(index, rx_buffer_accepted_at_ps=self._now)
+        if self._causal is not None:
+            parent = "switch-finish" if self._queued_switch else "input-arrival"
+            self._causal.add(
+                packet.packet_id, "rx-arrival", self._now,
+                (self._causal.point(packet.packet_id, parent),),
+                resource_id=self._rx_buffer_id(packet),
+                interval_kind="output_propagation" if self._queued_switch else None,
+            )
         self._observe("packet_rx_arrived", index)
         queue = self._rx_queues.setdefault(packet.destination, [])
         heappush(queue, (self._now, index))
@@ -864,6 +981,17 @@ class NvlinkCausalEngine:
             )
             self._rx_cursors[destination] = finished
             self._update(index, rx_started_at_ps=self._now, rx_finished_at_ps=finished)
+            if self._causal is not None:
+                recorder = self._causal
+                resource = f"gpu:{destination}:receive"
+                start = recorder.add(
+                    packet.packet_id, "rx-grant", self._now,
+                    (recorder.point(packet.packet_id, "rx-arrival"),
+                     recorder.previous("receive", destination)), resource_id=resource,
+                )
+                end = recorder.add(packet.packet_id, "rx-finish", finished, (start,),
+                                   resource_id=resource, interval_kind="receive_ingress")
+                recorder.mark("receive", destination, end)
             self._schedule(finished, "rx_finish", index)
             changed = True
         return changed
@@ -879,6 +1007,16 @@ class NvlinkCausalEngine:
             if visible_packet.rx_finished_at_ps is None:
                 raise AssertionError("NVLink visible packet has no completed receive")
             self._visible.add(visible_index)
+            if self._causal is not None:
+                recorder = self._causal
+                key = (visible_packet.destination, visible_packet.ordering_domain)
+                event = recorder.add(
+                    visible_packet.packet_id, "visible", self._now,
+                    (recorder.point(visible_packet.packet_id, "rx-finish"),
+                     recorder.previous("visibility", key)),
+                    resource_id=f"gpu:{visible_packet.destination}:visibility:{visible_packet.ordering_domain}",
+                )
+                recorder.mark("visibility", key, event)
             self._visibility.append(
                 NvlinkVisibilityEvent(
                     packet_id=visible_packet.packet_id,
@@ -937,6 +1075,15 @@ class NvlinkCausalEngine:
             raise AssertionError(f"unknown NVLink event kind {kind!r}")
 
     def _first_hop_arrival(self, index: int) -> None:
+        if self._causal is not None:
+            packet = self._packets[index]
+            path = self._packet_paths[packet.packet_id]
+            self._causal.add(
+                packet.packet_id, "input-arrival", self._now,
+                (self._causal.point(packet.packet_id, "tx-finish"),),
+                resource_id=f"link:{path.input_link.link_id}:{path.source_port_id}",
+                interval_kind="input_propagation",
+            )
         if self._queued_switch:
             self._arrive(self._first_hop_claims[index])
             packet = self._packets[index]
