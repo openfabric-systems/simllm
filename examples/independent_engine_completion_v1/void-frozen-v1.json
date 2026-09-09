@@ -1,0 +1,138 @@
+{
+  "schema": "simllm-independent-engine-completion-summary-v1",
+  "task": "CORE-68",
+  "verdict": "VOID",
+  "expectations_commit": "73270f6699440aa4a17ec7b2af5155698ab643b2",
+  "source_commit": "594fdfb001dc056b93fca5bef0595d548e754034",
+  "failure": "serialized-p1-d1:simllm-prefill-0:memory-bandwidth",
+  "fatal_guards_violated": [
+    {
+      "name": "serialized-p1-d1:simllm-prefill-0:memory-bandwidth",
+      "passed": false
+    }
+  ],
+  "unscored_guard_count": 2066,
+  "exact_oracle_count": 2,
+  "behavioral_instance_count": 8,
+  "behavioral_family_count": 2,
+  "behavioral_score": null,
+  "finished_stages": [
+    "component-cases",
+    "protocol",
+    "serialized-p1-d1:capture"
+  ],
+  "required_stage_count": 18,
+  "admitted_processes": [],
+  "run_label": "frozen-v1",
+  "summary_sha256": "3464b261b79964cec73a0739d07f4c64e7eaefc9556fb390736b15f1ff1aaa0b",
+  "raw_receipts": {
+    "serialized-p1-d1": {
+      "arrival-190848000.json": {
+        "bytes": 3878,
+        "sha256": "f12fe669d2baac2614860aac01794c9350b15faebc1f5738e5220725781e2a74"
+      },
+      "arrival-47712000.json": {
+        "bytes": 3840,
+        "sha256": "85c214214f6f57ba7b286faf8c3d05f328dd5e00d5246cd837b669dcdf18c966"
+      },
+      "burst-prompt16-handoff100000000.json": {
+        "bytes": 8033,
+        "sha256": "478a4c13f75b9b431870c7b6c0aeaa445257f6f2eee7920ddc02411f6148eeff"
+      },
+      "burst-prompt16-handoff200000000.json": {
+        "bytes": 8041,
+        "sha256": "eb3e045ff2f0cc48dfbaff3ec4fe897d5695fda6ab1d24d85aa61a04c672db4b"
+      },
+      "burst-prompt8-handoff100000000.json": {
+        "bytes": 7977,
+        "sha256": "bf5ff3cdafa555660d17504930c503185eb8ddaf6f196d692041ea95a18c8305"
+      },
+      "burst-prompt8-handoff200000000.json": {
+        "bytes": 7977,
+        "sha256": "ea87c41fb18fc1157a29a41c44b4b876055a1a993c43a73725c914ae9d8620d3"
+      },
+      "construction-progress.jsonl": {
+        "bytes": 7163,
+        "sha256": "0648a5ab0a3098cb994746d11d24bb701a9ef1e180cd0fb70f8dcb065bdc639e"
+      },
+      "engine-work/simllm-decode-0/step-records.jsonl": {
+        "bytes": 32857,
+        "sha256": "b91bcb061ace1f26998a76f249b787659ff63d7b970025bb90b999afe739f8db"
+      },
+      "engine-work/simllm-prefill-0/step-records.jsonl": {
+        "bytes": 9026,
+        "sha256": "9880a63aa220796c6d01e4769861335afee6c8b10493d6fdf6eddfc4be5f59c9"
+      },
+      "native.json": {
+        "bytes": 33820496,
+        "sha256": "c95ea438db0faf8bbed96928b7590a1991926cefdd501b1229759ec72b239a6c"
+      },
+      "native.log": {
+        "bytes": 17643,
+        "sha256": "e124e8400b77c9d1ec6acbb199c3f4b74458e1fdd44d97172dc42d36f4f051fe"
+      },
+      "process.json": {
+        "bytes": 605,
+        "sha256": "7b769e35d680c4d5b18b65705ebb440a8626520dd0271d1c3c2f289d402beb03"
+      },
+      "receipt.json": {
+        "bytes": 96,
+        "sha256": "6e21471edd67a591bd5dc36e2f4fa6fd37d93e0da65f863cacd0680b6814c949"
+      },
+      "request-progress.jsonl": {
+        "bytes": 45813,
+        "sha256": "9277a1bd1b88aa1a2ef67b281cfa372562cc0f812d80855961bf0cfb697cb363"
+      }
+    }
+  },
+  "root_receipts": {
+    "component-cases.json": {
+      "bytes": 92554,
+      "sha256": "c46158ff95c91858d222b86d420f0665d5e6ee0d848fb06594edbcc7d5cdd12a"
+    },
+    "physical-bounds.json": {
+      "bytes": 213,
+      "sha256": "8d9f1a83510d82e3c28adadb7ea041b4252dbfe8080da25abc8a0f4f58e7e76e"
+    },
+    "reference-timelines.json": {
+      "bytes": 107473,
+      "sha256": "beafe7a70db7138cd32d4c99c0341148b6b63952d7f9f1e1fb670a273751f546"
+    },
+    "serialized-p1-d1-raw-receipts.json": {
+      "bytes": 1693,
+      "sha256": "85a02db8d32451d7af7b2cf8988287b23f782386797abb6ee3b2f647eca65178"
+    },
+    "source-manifest.json": {
+      "bytes": 2531,
+      "sha256": "92db2074cd0b16ecf78a6d030280b2701b8d691674fbca242a4210753e5ddea8"
+    }
+  },
+  "native_capture": {
+    "process": "serialized-p1-d1",
+    "exit_code": 0,
+    "wall_seconds": 425.1476488728076,
+    "sampled_max_current_rss_kib": 1214396,
+    "captured_requests": 24,
+    "admitted_requests": 0,
+    "admitted_scales": 0
+  },
+  "finding": {
+    "source_representation": "float",
+    "source_value": 8000000000000.0,
+    "physical_bound_representation": "integer",
+    "physical_bound_value": 8000000000000,
+    "same_numeric_value": true,
+    "source": "simllm/compute/transformer.py",
+    "classification": "checker representation mismatch"
+  },
+  "closure": {
+    "closed_tasks": [],
+    "open_tasks": [
+      "CORE-68",
+      "CORE-52",
+      "CORE-69",
+      "CORE-70",
+      "CORE-54"
+    ]
+  }
+}

@@ -1402,8 +1402,14 @@ capture exists.
   is VOID at a checker representation mismatch: the declared bandwidth is
   captured as a float but compared against an integer physical bound. Its first
   process completes 24 requests, but no process is admitted and the independent
-  arms never start. Preserve that evidence and freeze the corrected source
-  representation before a fresh campaign; no concurrency claim closes here.
+  arms never start. A post-specified representation repair admits all three
+  serialized processes in the fresh campaign, totaling 58 requests, but that
+  run is also VOID: its first independent process reaches the 1,800-second host
+  limit with eight full request-result rows and a partial third cell. Retain
+  both attempts unchanged. Qualify the repeated publication-snapshot encoding
+  as a separate host-work optimization before another fresh campaign; the
+  existing timing sweep and process limits remain the acceptance bar. No
+  native concurrency claim closes here.
 
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
   queue-visit contract above before residual-driven calibration. Define one
