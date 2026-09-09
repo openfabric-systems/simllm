@@ -316,3 +316,37 @@ def test_execution_contract_exceptions_leave_void_evidence(tmp_path, monkeypatch
     result = json.loads((output / "summary.json").read_bytes())
     assert result["verdict"] == "VOID" and result["behavioral_score"] is None
     assert error.__name__ in (output / "exception.txt").read_text()
+
+
+@pytest.mark.parametrize("framework,digest", [
+    ("vllm", "825cb7628cc6635ae77c9d200992189f166c55621ee7ec00d2658d5e21f59bb8"),
+    ("sglang", "7668beca110dc9418636996057be9349fb79e0b481f293347375dd069f809f3a"),
+])
+def test_qualified_inventory_bytes_preserve_unknown_physical_demand(framework, digest):
+    from simllm.calibration.model_inventory import ModelKernelInventory
+
+    raw = (ROOT / "offline/calibration/model-inventories" / f"{digest}.json").read_bytes()
+    payload = json.loads(raw)
+    inventory = ModelKernelInventory.from_obj(payload)
+    assert canonical_bytes(inventory.to_obj()) == raw
+    assert study.digest(raw) == digest
+    assert inventory.framework.framework_id == framework
+    assert len(inventory.cases) == 12
+    suite_raw = (ROOT / "offline/calibration/suites" / SUITE_ID / "suite.json").read_bytes()
+    assert inventory.suite.suite_sha256 == study.digest(suite_raw)
+    assert json.loads(suite_raw)["state"] == "authored-inputs-only"
+    for case in payload["cases"]:
+        projections = case["kernel_projections"]
+        assert sum(row["logical_launch_count"] for row in projections) == (
+            3244 if case["phase"] == "prefill" else 3268
+        )
+        for row in projections:
+            assert row["scope"] == "logical-operator"
+            if row["logical_launch_count"]:
+                assert row["aggregate_hbm_bytes"] is None
+            else:
+                assert row["aggregate_hbm_bytes"] == 0
+    for field in ("code_object_hashes", "observed_launches"):
+        assert payload["implementation_identity"][field] == {
+            "state": "absent-by-design", "value": None,
+        }
