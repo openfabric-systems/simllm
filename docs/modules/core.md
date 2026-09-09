@@ -1406,10 +1406,14 @@ capture exists.
   serialized processes in the fresh campaign, totaling 58 requests, but that
   run is also VOID: its first independent process reaches the 1,800-second host
   limit with eight full request-result rows and a partial third cell. Retain
-  both attempts unchanged. Qualify the repeated publication-snapshot encoding
-  as a separate host-work optimization before another fresh campaign; the
-  existing timing sweep and process limits remain the acceptance bar. No
-  native concurrency claim closes here.
+  both attempts unchanged. The source-paired
+  [publication reader study](../../examples/publication_snapshot_v1/RESULTS.md)
+  qualifies removal of repeated snapshot encoding: the largest input visits
+  1,523 values instead of 7,030, all six model jobs preserve byte-identical
+  source-paired records, and the complete corruption controls retain their
+  rejection behavior. The existing native timing sweep and process limits
+  remain the acceptance bar for a fresh campaign. No native concurrency claim
+  closes here.
 
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
   queue-visit contract above before residual-driven calibration. Define one
