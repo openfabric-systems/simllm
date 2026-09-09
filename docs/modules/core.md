@@ -1756,9 +1756,13 @@ capture exists.
   The fresh [host diagnostic](../../examples/pd_host_execution_diagnostic_v1/RESULTS.md)
   completes all 28 requests with exact compatibility. Dependency checking
   consumes 35.4 to 36.1 percent of enclosing process CPU time as exclusive
-  main-thread work in its passive four-request cells. Freeze an optimization
-  separately before changing that source, preserve all rejection semantics,
-  and then freeze a fresh target campaign. The first diagnostic remains VOID
+  main-thread work in its passive four-request cells. The separately frozen
+  [dependency index study](../../examples/dependency_index_v1/RESULTS.md)
+  reduces direct-verifier conversions from 8,976 to 272 in its largest case,
+  exactly the predicted factor of 33, with identical modeled outcomes and
+  rejection semantics. Freeze a fresh native target campaign using the
+  qualified optimization; its operation counts do not establish host-time
+  speedup or target feasibility. The first diagnostic remains VOID
   after its checker rejected the native writer's unchanged JSON encoding;
   the repaired encoding contract is explicitly post-specified. Host attribution
   closes neither target feasibility nor independent-engine timing.
