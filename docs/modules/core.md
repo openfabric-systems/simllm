@@ -1515,7 +1515,7 @@ capture exists.
 
 ### Completeness
 
-- CORE-71 (Completeness; P1; L): connect independent native serving engines to
+- CORE-71 (Completeness; P0; L): connect independent native serving engines to
   one persistent packet runtime for shared key/value-cache handoffs. Replace
   isolated handoff pricing on this enabled path with actual global endpoint
   bindings, future-dated shard injection, complete native lifecycle evidence
@@ -1526,8 +1526,12 @@ capture exists.
   complete source-paired declared off/constant compatibility. Require all
   native processes, twelve behavioral relation instances in three families,
   independent decode schedule oracles and fatal ownership/failure controls.
-  The pending capability and serving-loop integration have component evidence;
-  the native acceptance harness and campaign remain required. The separate
+  The [first campaign is VOID](../../examples/shared_kv_handoff_v1/VOID_RESULTS.md):
+  ten packet-backed processes admitted 24 requests, then a serialized
+  compatibility guard incorrectly counted another engine's work as request
+  service. Preserve that failed execution, correct the service-vector
+  interpretation prospectively and repeat the complete forty-request
+  campaign. This validation failure precedes precision work. The separate
   [complete exchange deadline qualification](../../examples/shared_kv_handoff_v1/DEADLINE_RESULTS.md)
   admits all sixteen replies from eight local echo children and preserves the
   original lifetime bound, partial failure receipts and first cleanup error.

@@ -1,0 +1,36 @@
+{
+  "admitted_processes": [
+    "shared-p2-d1-t8-r200",
+    "shared-p2-d1-t8-r400",
+    "shared-p2-d1-t16-r200",
+    "shared-p2-d1-t16-r400",
+    "shared-p2-d2-t8-r200",
+    "shared-p2-d2-t8-r400",
+    "shared-p2-d2-t16-r200",
+    "shared-p2-d2-t16-r400",
+    "persistent-p2-d1-t8-r200",
+    "persistent-p2-d1-t8-r400"
+  ],
+  "admitted_requests": 24,
+  "behavioral_score": null,
+  "checks_sha256": "1da456d4e966d2e38505c2fccc3eabb4dba79d00498d4e0dcaeaa0219a43f48b",
+  "completed_native_processes": 11,
+  "failed_guards": [
+    "before-serialized-off:cells:0:request:0:native-step-vector:decode"
+  ],
+  "first_final_raw_receipts_equal": true,
+  "first_final_root_receipts_equal": true,
+  "freeze_commit": "2ad72f72d947e636ea384bfa40f365da27e1ec5a",
+  "preservation": "Immutable first attempt; no corrected checker may rescore this execution.",
+  "raw_bytes": 243387916,
+  "raw_files": 1283,
+  "raw_summary_sha256": "9ceb06c0cadb1d538f05a8c70ebea6062f8c648ac1356bf44f62b164af5ea1b4",
+  "reporting_failures": [],
+  "root_receipts": 22,
+  "schema": "simllm-shared-kv-handoff-void-receipt-v1",
+  "source_commit": "a09cbf27d54d8da8ff9bf6abdb82a64c713bb9bf",
+  "source_manifest_sha256": "dd8a1fe059edf69cfe206933ffa09c86f4cfdd28ebde837b713c525d2ba68a47",
+  "task": "CORE-71",
+  "task_closed": false,
+  "verdict": "VOID"
+}
