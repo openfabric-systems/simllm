@@ -40,6 +40,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from .external_composition import COMPOSITION_UNSET, ExternalServingComposition
+
 EXTERNAL_DATABASE_SCHEMA = "simllm-external-operation-database-v1"
 EXTERNAL_DATABASE_ROW_SCHEMA = "simllm-external-operation-row-v1"
 EXTERNAL_DATABASE_CONVERTER_SCHEMA = "simllm-external-database-converter-v1"
@@ -2224,9 +2226,33 @@ class ExternalQwen32BPassModel:
         communication_quant_mode: str = "half",
         memory_bandwidth_empirical_scale: float | None = None,
         memory_empirical_constant_latency_s: float | None = None,
-        context_attention_extra_latency_correction: float = 1.1,
+        context_attention_extra_latency_correction: object = COMPOSITION_UNSET,
+        composition_record: ExternalServingComposition | None = None,
     ) -> None:
         self.database = database
+        if composition_record is not None:
+            if not isinstance(composition_record, ExternalServingComposition):
+                raise TypeError("composition_record must be ExternalServingComposition")
+            composition_record.validate_database(database)
+            memory_bandwidth_empirical_scale = composition_record.resolve(
+                "memory_bandwidth_empirical_scale",
+                COMPOSITION_UNSET
+                if memory_bandwidth_empirical_scale is None
+                else memory_bandwidth_empirical_scale,
+            )
+            memory_empirical_constant_latency_s = composition_record.resolve(
+                "memory_empirical_constant_latency",
+                COMPOSITION_UNSET
+                if memory_empirical_constant_latency_s is None
+                else memory_empirical_constant_latency_s,
+            )
+            context_attention_extra_latency_correction = composition_record.resolve(
+                "context_attention_extra_latency_correction",
+                context_attention_extra_latency_correction,
+            )
+        elif context_attention_extra_latency_correction is COMPOSITION_UNSET:
+            context_attention_extra_latency_correction = 1.1
+        self._composition_record = composition_record
         if tensor_parallel not in {2, 4, 8}:
             raise ValueError("tensor_parallel must be one of 2, 4 or 8")
         if kv_cache_quant_mode not in {"bfloat16", "fp8"}:
@@ -2239,6 +2265,9 @@ class ExternalQwen32BPassModel:
         self.kv_cache_quant_mode = kv_cache_quant_mode
         self.fmha_quant_mode = fmha_quant_mode
         self.communication_quant_mode = communication_quant_mode
+        self._composition_shape = (
+            tensor_parallel, kv_cache_quant_mode, fmha_quant_mode, communication_quant_mode,
+        )
         gpu = database.system_spec["gpu"]
         self.memory_bandwidth_empirical_scale = (
             float(gpu["mem_bw_empirical_scaling_factor"])
@@ -2250,23 +2279,17 @@ class ExternalQwen32BPassModel:
             if memory_empirical_constant_latency_s is None
             else memory_empirical_constant_latency_s
         )
-        self.context_attention_extra_latency_correction = (
-            context_attention_extra_latency_correction
-        )
+        self.context_attention_extra_latency_correction = context_attention_extra_latency_correction
         if (
             not math.isfinite(self.memory_bandwidth_empirical_scale)
             or self.memory_bandwidth_empirical_scale <= 0
         ):
-            raise ValueError(
-                "memory_bandwidth_empirical_scale must be finite and positive"
-            )
+            raise ValueError("memory_bandwidth_empirical_scale must be finite and positive")
         if (
             not math.isfinite(self.memory_empirical_constant_latency_s)
             or self.memory_empirical_constant_latency_s < 0
         ):
-            raise ValueError(
-                "memory_empirical_constant_latency_s must be finite and non-negative"
-            )
+            raise ValueError("memory_empirical_constant_latency_s must be finite and non-negative")
         if (
             not math.isfinite(self.context_attention_extra_latency_correction)
             or self.context_attention_extra_latency_correction <= 0
@@ -2294,7 +2317,36 @@ class ExternalQwen32BPassModel:
             )
 
     def _result(self, latency: float, operation: str, rule: str) -> ExternalLatency:
+        if self._composition_record is not None:
+            rule += f";composition-sha256:{self._composition_record.record_sha256}"
         return self.database._result(latency, operation, rule)
+
+    def _validate_composition(self) -> None:
+        record = self._composition_record
+        if record is not None:
+            record.validate_database(self.database)
+            if self._composition_shape != (
+                self.tensor_parallel, self.kv_cache_quant_mode,
+                self.fmha_quant_mode, self.communication_quant_mode,
+            ):
+                raise ExternalDatabaseIdentityError("cached composition shape or quantization changed")
+            record.resolve(
+                "memory_bandwidth_empirical_scale", self.memory_bandwidth_empirical_scale
+            )
+            record.resolve(
+                "memory_empirical_constant_latency", self.memory_empirical_constant_latency_s
+            )
+            record.resolve(
+                "context_attention_extra_latency_correction",
+                self.context_attention_extra_latency_correction,
+            )
+
+    def _memory_latency(self, mem_bytes: int) -> float:
+        gpu = self.database.system_spec["gpu"]
+        return (
+            mem_bytes / (float(gpu["mem_bw"]) * self.memory_bandwidth_empirical_scale)
+            + self.memory_empirical_constant_latency_s
+        ) * 1000
 
     def _memory_operation(
         self,
@@ -2305,11 +2357,7 @@ class ExternalQwen32BPassModel:
     ) -> ExternalLatency:
         gpu = self.database.system_spec["gpu"]
         latency = (
-            mem_bytes
-            / (
-                float(gpu["mem_bw"])
-                * self.memory_bandwidth_empirical_scale
-            )
+            mem_bytes / (float(gpu["mem_bw"]) * self.memory_bandwidth_empirical_scale)
             + self.memory_empirical_constant_latency_s
         ) * 1000
         latency *= scale_factor
@@ -2374,18 +2422,22 @@ class ExternalQwen32BPassModel:
         query_elements = num_heads * self._HEAD_SIZE
         key_elements = num_kv_heads * self._HEAD_SIZE
         value_elements = num_kv_heads * self._HEAD_SIZE
-        qk_norm_latency = (
-            2 * self.database.query_memory_operation(query_elements * 2)
-            + 2 * self.database.query_memory_operation(key_elements * 2)
+        # The legacy route retains the database defaults. A selected record
+        # owns all auxiliary memory factors, just as it owns the main visits.
+        memory_latency = (
+            self.database.query_memory_operation
+            if self._composition_record is None
+            else self._memory_latency
+        )
+        qk_norm_latency = 2 * memory_latency(query_elements * 2) + 2 * memory_latency(
+            key_elements * 2
         )
         extra_latency = qk_norm_latency * 2
-        apply_rope_latency = 2 * self.database.query_memory_operation(
-            query_elements * 2 + key_elements * 2
-        )
+        apply_rope_latency = 2 * memory_latency(query_elements * 2 + key_elements * 2)
         kv_element_bytes = 1 if self.fmha_quant_mode == "fp8" else 2
-        kv_write_latency = self.database.query_memory_operation(
-            key_elements * kv_element_bytes
-        ) + self.database.query_memory_operation(value_elements * kv_element_bytes)
+        kv_write_latency = memory_latency(key_elements * kv_element_bytes) + memory_latency(
+            value_elements * kv_element_bytes
+        )
         extra_latency += apply_rope_latency + kv_write_latency
         result += extra_latency * self.context_attention_extra_latency_correction
         return self._result(
@@ -2599,10 +2651,34 @@ class ExternalQwen32BPassModel:
         batch_size: int,
         isl: int,
         prefix: int = 0,
+        latency_correction_scale: object = COMPOSITION_UNSET,
+    ) -> ExternalPassResult:
+        """Evaluate a public prefill pass with the selected phase authority."""
+
+        if self._composition_record is not None:
+            latency_correction_scale = self._composition_record.resolve(
+                "prefill_latency_correction", latency_correction_scale
+            )
+        elif latency_correction_scale is COMPOSITION_UNSET:
+            latency_correction_scale = 1.0
+        return self._run_context(
+            batch_size=batch_size,
+            isl=isl,
+            prefix=prefix,
+            latency_correction_scale=latency_correction_scale,
+        )
+
+    def _run_context(
+        self,
+        *,
+        batch_size: int,
+        isl: int,
+        prefix: int = 0,
         latency_correction_scale: float = 1.0,
     ) -> ExternalPassResult:
         """Evaluate one frozen static-context pass."""
 
+        self._validate_composition()
         effective_isl = isl - prefix
         if batch_size <= 0:
             raise ValueError("batch_size must be positive")
@@ -2642,10 +2718,38 @@ class ExternalQwen32BPassModel:
         osl: int,
         stride: int = 32,
         beam_width: int = 1,
+        latency_correction_scale: object = COMPOSITION_UNSET,
+    ) -> ExternalPassResult:
+        """Evaluate a public decode pass with the selected phase authority."""
+
+        if self._composition_record is not None:
+            latency_correction_scale = self._composition_record.resolve(
+                "decode_latency_correction", latency_correction_scale
+            )
+        elif latency_correction_scale is COMPOSITION_UNSET:
+            latency_correction_scale = 1.0
+        return self._run_generation(
+            batch_size=batch_size,
+            isl=isl,
+            osl=osl,
+            stride=stride,
+            beam_width=beam_width,
+            latency_correction_scale=latency_correction_scale,
+        )
+
+    def _run_generation(
+        self,
+        *,
+        batch_size: int,
+        isl: int,
+        osl: int,
+        stride: int = 32,
+        beam_width: int = 1,
         latency_correction_scale: float = 1.0,
     ) -> ExternalPassResult:
         """Evaluate the frozen sampled static-generation pass."""
 
+        self._validate_composition()
         if batch_size <= 0 or isl <= 0:
             raise ValueError("batch_size and isl must be positive")
         if osl <= 1:
