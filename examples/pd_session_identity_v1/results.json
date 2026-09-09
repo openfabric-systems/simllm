@@ -170,6 +170,21 @@
     "verdict": "VOID"
   },
   "schema": "simllm-pd-session-identity-publication-v1",
+  "software_validation": {
+    "combined_source_tree_commit": "9f85b4b",
+    "docs_format": "PASS",
+    "first_gate": {
+      "failed": 1,
+      "finding": "Historical freeze test included new study paths; the corrected test checks the original frozen path set against current blob identities.",
+      "passed": 5428,
+      "skipped": 31
+    },
+    "focused_passed": 43,
+    "pytest_passed": 5487,
+    "pytest_skipped": 31,
+    "ruff": "PASS",
+    "task_progress": "PASS"
+  },
   "task": "CORE-58",
   "verdict": "PASS"
 }

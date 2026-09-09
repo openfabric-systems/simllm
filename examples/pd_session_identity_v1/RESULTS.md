@@ -95,3 +95,12 @@ python -m examples.pd_session_identity_v1.run_study \
 
 The coordinator enforces offline native workers and returns status 2 with a
 void record when an admission, fatal, oracle or behavioral condition fails.
+
+## Software validation
+
+The combined mainline regression passes 5,487 tests with 31 skips; Ruff and
+the documentation and registry checks pass. The first regression exposed a
+historical freeze test that included later session-study paths. Its corrected
+test selects the original frozen paths while checking their current blob
+identities. All 43 focused session and freeze checks pass. The old generator
+and frozen artifacts remain unchanged.
