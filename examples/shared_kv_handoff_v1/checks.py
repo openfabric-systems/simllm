@@ -121,12 +121,32 @@ def native_schedule(cell, spec, frozen, flows):
     return rows
 
 
+def check_service_vector(owned, expected, reference, *, request_index, role, engine, admission, label, evidence):
+    """Compare service intervals without assigning another engine's work to them."""
+    if reference is None:
+        starts = ([expected["prefill_eligible_at_ps"]] if role == "prefill" else
+                  [expected["decode_eligible_at_ps"], *expected["decode_token_completed_at_ps"][:-1]])
+        ends = [expected["prefill_completed_at_ps"]] if role == "prefill" else expected["decode_token_completed_at_ps"]
+        predicted = [[start, end, end - start] for start, end in zip(starts, ends, strict=True)]
+    else:
+        selected = [row for row in reference["service_steps"] if row["request_index"] == request_index and row["role"] == role]
+        evidence.equal(label + ":reference-engine:" + role, [row["engine_id"] for row in selected],
+                       [engine] * (1 if role == "prefill" else 4))
+        predicted = [[admission + row["start_ps"], admission + row["end_ps"], row["end_ps"] - row["start_ps"]]
+                     for row in selected]
+    evidence.equal(label + ":native-step-owner:" + role, [step["engine_id"] for step in owned], [engine] * len(predicted))
+    evidence.equal(label + ":native-step-vector:" + role,
+        [[step["record"]["virtual_time_ps"], step["result"]["completed_at_ps"], step["result"]["step_latency_ps"]]
+         for step in owned], predicted)
+
+
 def check_cells(data, spec, frozen, steps, owners, evidence):
     label = spec["id"] + ":cells"
     evidence.equal(label + ":count", len(data["cells"]), len(spec["admission_times_ps"]))
     evidence.equal(label + ":no-controls", data["controls"], [])
     service = frozen["known_services_ps"][str(spec["prompt_tokens"])]
     for ordinal, (cell, admission) in enumerate(zip(data["cells"], spec["admission_times_ps"], strict=True)):
+        reference = None
         name = label + ":" + str(ordinal)
         prefix = (spec["id"].split("-", 1)[1] if spec["kind"] == "compatibility" else spec["id"]) + f":batch-{ordinal}"
         evidence.fields(name + ":fields", cell, "id start_ps admission_ps end_ps observation_start observation_stop inputs requests comparisons record_starts record_stops "
@@ -170,11 +190,8 @@ def check_cells(data, spec, frozen, steps, owners, evidence):
                 evidence.equal(tag + ":slice-count:" + role, raw[role + "_step_count"], len(indices))
                 owned = [step for (owner, _), step in steps.items() if owner == engine and any(
                     item["request_id"] == raw[role + "_internal_request_id"] for item in step["record"]["scheduled"])]
-                starts = [expected["prefill_eligible_at_ps"]] if role == "prefill" else [expected["decode_eligible_at_ps"], *expected["decode_token_completed_at_ps"][:-1]]
-                ends = [expected["prefill_completed_at_ps"]] if role == "prefill" else expected["decode_token_completed_at_ps"]
-                evidence.equal(tag + ":native-step-vector:" + role,
-                    [[step["record"]["virtual_time_ps"], step["result"]["completed_at_ps"], step["result"]["step_latency_ps"]] for step in owned],
-                    [[start, end, end - start] for start, end in zip(starts, ends, strict=True)])
+                check_service_vector(owned, expected, reference, request_index=index, role=role, engine=engine,
+                                     admission=admission, label=tag, evidence=evidence)
     evidence.equal(label + ":final-clock", data["final_clock_ps"], data["cells"][-1]["end_ps"])
     check_native_memberships(data, spec, steps, owners, evidence)
 

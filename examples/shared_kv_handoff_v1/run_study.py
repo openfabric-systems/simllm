@@ -272,6 +272,8 @@ def finalize(output, frozen, stages, evidence, monitors, first, root_receipts, c
     summary = {"schema": "simllm-shared-kv-handoff-study-v1", "verdict": "VOID" if failure else "PASS",
         "failure": failure, "reporting_failures": reporting_failures, "task": "CORE-71",
         "freeze_commit": FREEZE, "source_commit": source_commit, "source_manifest_sha256": manifest_sha,
+        "amendment_commits": {"deadline": protocol.DEADLINE_FREEZE, "identity": protocol.ALIAS_FREEZE,
+                              "service_vector": protocol.SERVICE_VECTOR_FREEZE},
         "finished_stages": sorted(evidence.finished_stages), "required_stages": stages,
         "monitors": monitors, "first_receipts": first, "final_receipts": final,
         "root_receipts": root_receipts, "final_root_receipts": final_root,

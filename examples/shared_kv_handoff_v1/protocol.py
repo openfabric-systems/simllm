@@ -25,6 +25,7 @@ from .common import (
 from .network_checks import geometry
 
 ALIAS_FREEZE = "4c0cf5f4494d4534f4cdd481543827bbb3528032"
+SERVICE_VECTOR_FREEZE = "9b520748dfe9a7ba9d17c72a98e71148fa0660be"
 
 
 def inputs():
@@ -122,12 +123,21 @@ def locks(args, frozen, sources, evidence, label):
 
 def freeze(args, frozen, deadline, aliases, dependency, evidence):
     relative = HERE.relative_to(ROOT)
-    for commit, stem in ((FREEZE, "expectations"), (DEADLINE_FREEZE, "deadline-expectations"), (ALIAS_FREEZE, "alias-expectations")):
+    for commit, stem in ((FREEZE, "expectations"), (DEADLINE_FREEZE, "deadline-expectations"),
+                         (ALIAS_FREEZE, "alias-expectations"), (SERVICE_VECTOR_FREEZE, "service-vector-expectations")):
         git(ROOT, "merge-base", "--is-ancestor", commit, "HEAD")
         for extension in ("json", "md"):
             name = stem + "." + extension
             raw = subprocess.check_output(["git", "show", commit + ":" + (relative / name).as_posix()], cwd=ROOT)
             evidence.equal("freeze:" + name, sha(HERE / name), hashlib.sha256(raw).hexdigest())
+    service_vector = json.loads((HERE / "service-vector-expectations.json").read_bytes())
+    for name, digest in service_vector["preservation_sha256"].items():
+        evidence.equal("freeze:service-vector-preservation:" + name, sha(ROOT / name), digest)
+    for name, actual in (("native_processes", frozen["native_process_count"]), ("native_requests", frozen["native_request_count"]),
+                         ("exact_oracle_vectors", sum(frozen["exact_oracle_vectors"].values())),
+                         ("behavioral_instances", frozen["behavioral_instance_total"]),
+                         ("behavioral_families", len(frozen["behavioral_families"]))):
+        evidence.equal("freeze:service-vector-inventory:" + name, actual, service_vector[name])
     evidence.equal("freeze:before-commit", git(args.before_repository, "rev-parse", "HEAD"), frozen["as_of_commit"])
     for name, digest in frozen["input_dependencies_sha256"].items():
         evidence.equal("freeze:dependency:" + name, sha(ROOT / name), digest)
@@ -156,8 +166,9 @@ def freeze(args, frozen, deadline, aliases, dependency, evidence):
                         "tests": {name: sha(root / name) for name in git(root, "ls-files", "tests").splitlines()}}
         write(args.output_root / (arm + "-packages.json"), sources[arm]["packages"])
     sources["inputs"] = {name: sha(ROOT / name) for name in (
-        *frozen["input_dependencies_sha256"], *(str(relative / (stem + "." + extension)) for stem in
-        ("expectations", "deadline-expectations", "alias-expectations") for extension in ("json", "md")),
+        *frozen["input_dependencies_sha256"], *service_vector["preservation_sha256"],
+        *(str(relative / (stem + "." + extension)) for stem in
+        ("expectations", "deadline-expectations", "alias-expectations", "service-vector-expectations") for extension in ("json", "md")),
         "examples/pd_session_v1/expectations.json", "examples/preplay_trace_v1/granite_length_cap.jsonl",
         "examples/independent_engine_completion_v1/results.json")}
     sources["external"] = {name: {"path": str(path.resolve()), "sha256": sha(path)} for name, path in (

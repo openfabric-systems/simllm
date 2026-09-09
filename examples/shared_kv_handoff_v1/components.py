@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
+from itertools import product
 
-from .common import ROOT, read, receipts, write
+from .common import HERE, ROOT, read, receipts, write
 
 CASES = {
     "visibility-before-exact-after": ["all_shards_join_without_early_visibility_or_fabricated_queue_fields", "reused_publication_and_late_publication_are_terminal"],
@@ -36,6 +38,15 @@ CASES = {
         "interrupted_shared_teardown_finishes_every_owner_and_preserves_first_failure[body-failure]"],
     "same-owner-across-batches": ["repeated_batches_preserve_native_owner_history_and_prior_evidence"],
 }
+
+
+def service_cases():
+    controls = json.loads((HERE / "service-vector-expectations.json").read_bytes())["software_controls"]
+    names = ["test_compatibility_service_vectors_separate_waiting_from_service[" + "-".join(map(str, values)) + "]"
+             for values in product(controls["admission_ps"], controls["decode_service_ps"], controls["handoff_ps"], controls["timing"])]
+    names.extend("test_service_vector_corruptions_remain_fatal[" + name + "]" for name in controls["fatal_mutations"])
+    names.append("test_service_vector_rejects_reference_engine_misbinding")
+    return names
 
 
 def capture(path):
@@ -82,6 +93,9 @@ def admit(path, frozen, aliases, evidence):
     alias_cases = [row.attrib["name"] for row in cases if row.attrib["classname"].endswith("test_shared_handoff_study") and not row.findall("skipped")]
     for case in aliases["fatal_controls"]:
         evidence.check("component:alias-control:" + case, "test_alias_fatal_controls_reject_before_comparison[" + case + "]" in alias_cases)
+    for case in service_cases():
+        evidence.equal("component:service-vector:" + case, alias_cases.count(case), 1)
     return {"component_contracts": catalog, "software_cases": len(cases),
         "software_skips": sum(bool(row.findall("skipped")) for row in cases), "alias_fatal_controls": aliases["fatal_controls"],
+        "service_vector_regressions": service_cases(),
         "behavioral_instances": 0, "behavioral_score": None}

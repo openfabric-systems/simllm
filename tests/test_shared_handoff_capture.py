@@ -237,7 +237,7 @@ def test_protocol_failure_keeps_initial_root_receipts(tmp_path, monkeypatch):
     assert "protocol-first-receipts.json" in retained
 
 
-@pytest.mark.parametrize("kind", ["missing-sequence", "skipped-endpoint", "missing-cleanup", "duplicate-identity"])
+@pytest.mark.parametrize("kind", ["missing-sequence", "skipped-endpoint", "missing-cleanup", "duplicate-identity", "missing-service-vector"])
 def test_component_catalog_requires_every_exact_unskipped_fixture(tmp_path, kind):
     path = tmp_path / "components"
     path.mkdir()
@@ -250,6 +250,8 @@ def test_component_catalog_requires_every_exact_unskipped_fixture(tmp_path, kind
     for name in aliases["fatal_controls"]:
         ET.SubElement(suite, "testcase", classname="tests.test_shared_handoff_study",
                       name="test_alias_fatal_controls_reject_before_comparison[" + name + "]")
+    for name in components.service_cases():
+        ET.SubElement(suite, "testcase", classname="tests.test_shared_handoff_study", name=name)
     components.write(path / "process.json", {"exit_code": 0})
 
     def retain():
@@ -264,7 +266,8 @@ def test_component_catalog_requires_every_exact_unskipped_fixture(tmp_path, kind
     else:
         suffix = {"missing-sequence": "poison_and_reap[sequence]",
                   "skipped-endpoint": "before_native_launch[endpoint-count]",
-                  "missing-cleanup": "preserves_first_failure[body-failure]"}[kind]
+                  "missing-cleanup": "preserves_first_failure[body-failure]",
+                  "missing-service-vector": "test_service_vector_rejects_reference_engine_misbinding"}[kind]
         case = next(row for row in suite if row.attrib["name"].endswith(suffix))
         if kind == "skipped-endpoint":
             ET.SubElement(case, "skipped")
