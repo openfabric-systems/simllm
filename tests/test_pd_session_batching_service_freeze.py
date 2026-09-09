@@ -6,6 +6,8 @@ import sys
 from fractions import Fraction
 from pathlib import Path
 
+import pytest
+
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 STUDY_DIR = REPOSITORY_ROOT / "examples" / "pd_session_batching_service_v1"
 
@@ -101,7 +103,9 @@ def test_preservation_manifest_covers_queue_onset_and_earlier_sessions() -> None
     )
 
 
-def test_builder_reproduces_committed_freeze() -> None:
+def test_builder_reproduces_committed_freeze(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     previous = sys.modules.get("service_model")
     sys.modules["service_model"] = _module(
         STUDY_DIR / "service_model.py",
@@ -122,5 +126,22 @@ def test_builder_reproduces_committed_freeze() -> None:
     )
     markdown = (STUDY_DIR / "EXPECTATIONS.md").read_text(encoding="utf-8")
 
+    # Later session studies are outside this historical freeze. Keep the
+    # original path selection while checking today's blob identities, so
+    # changing or removing a frozen artifact still fails reproduction.
+    frozen_paths = {row["path"] for row in committed["preservation"]["rows"]}
+    git_lines = builder._git_lines
+
+    def original_artifact_lines(*args: str) -> tuple[str, ...]:
+        assert args == ("ls-files", "-s", "examples/pd_session*")
+        selected = tuple(
+            line
+            for line in git_lines(*args)
+            if line.split("\t", 1)[1] in frozen_paths
+        )
+        assert {line.split("\t", 1)[1] for line in selected} == frozen_paths
+        return selected
+
+    monkeypatch.setattr(builder, "_git_lines", original_artifact_lines)
     assert builder.build_freeze() == committed
     assert builder.render_markdown(committed) == markdown
