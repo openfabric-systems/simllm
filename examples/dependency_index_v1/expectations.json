@@ -1,0 +1,189 @@
+{
+  "schema": "simllm-dependency-index-expectations-v1",
+  "task": "CORE-52",
+  "as_of_commit": "67cb2dbdfc393400f1c760a0d24534ad3c494094",
+  "allowed_package_change": "simllm/traffic/execution_goal.py",
+  "before_verifier_sha256": "88aecaddaf4aad9b732fc763675db226d04b9fd60586591993eeac113ee2100d",
+  "granite_helper_sha256": "56d96ba0f1979ddf5160b93c19c4e93b57406c6ebf76d61e4a5661f9b317410b",
+  "depths": [
+    1,
+    2,
+    4,
+    8
+  ],
+  "widths": [
+    2,
+    4,
+    8
+  ],
+  "ring_payload_bytes": 64,
+  "compute_service_ps": 1000,
+  "graph_cases": [
+    {
+      "id": "d1-w2",
+      "depth": 1,
+      "width": 2
+    },
+    {
+      "id": "d1-w4",
+      "depth": 1,
+      "width": 4
+    },
+    {
+      "id": "d1-w8",
+      "depth": 1,
+      "width": 8
+    },
+    {
+      "id": "d2-w2",
+      "depth": 2,
+      "width": 2
+    },
+    {
+      "id": "d2-w4",
+      "depth": 2,
+      "width": 4
+    },
+    {
+      "id": "d2-w8",
+      "depth": 2,
+      "width": 8
+    },
+    {
+      "id": "d4-w2",
+      "depth": 4,
+      "width": 2
+    },
+    {
+      "id": "d4-w4",
+      "depth": 4,
+      "width": 4
+    },
+    {
+      "id": "d4-w8",
+      "depth": 4,
+      "width": 8
+    },
+    {
+      "id": "d8-w2",
+      "depth": 8,
+      "width": 2
+    },
+    {
+      "id": "d8-w4",
+      "depth": 8,
+      "width": 4
+    },
+    {
+      "id": "d8-w8",
+      "depth": 8,
+      "width": 8
+    }
+  ],
+  "valid_key_controls": [
+    "same-endpoints-distinct-origin",
+    "same-endpoints-distinct-rank"
+  ],
+  "projection_corruptions": [
+    "predecessor",
+    "target",
+    "scope",
+    "origin",
+    "participant-rank",
+    "invalid-type",
+    "delete",
+    "duplicate",
+    "reverse",
+    "boundary-as-serialized",
+    "serialized-also-boundary",
+    "canonical-text",
+    "boundary-index-before-invalid-type",
+    "edge-count-before-canonical-text"
+  ],
+  "sink_cases": [
+    {
+      "id": "prompt-8-requests-1",
+      "prompt_tokens": 8,
+      "requests": 1
+    },
+    {
+      "id": "prompt-8-requests-4",
+      "prompt_tokens": 8,
+      "requests": 4
+    },
+    {
+      "id": "prompt-16-requests-1",
+      "prompt_tokens": 16,
+      "requests": 1
+    },
+    {
+      "id": "prompt-16-requests-4",
+      "prompt_tokens": 16,
+      "requests": 4
+    }
+  ],
+  "known_services_ps": {
+    "8": {
+      "prefill": 95424000,
+      "decode": 77952000
+    },
+    "16": {
+      "prefill": 114936000,
+      "decode": 77976000
+    }
+  },
+  "resident_per_rank_bytes": 320864256,
+  "memory_bandwidth_bytes_per_second": 8000000000000,
+  "resident_surrogate_floor_ps": 40108032,
+  "sink_collections": [
+    "outcomes",
+    "locality_outcomes",
+    "collective_timing_outcomes",
+    "collective_floor_timing_outcomes",
+    "dependency_cross_check_reports",
+    "collective_registration_outcomes",
+    "packet_breakdowns",
+    "bottleneck_reports",
+    "session_evidence",
+    "peer_evidence"
+  ],
+  "limits": {
+    "process_timeout_seconds": 900,
+    "rss_cap_kib": 8388608,
+    "rss_sample_seconds": 0.25
+  },
+  "behavioral_families": {
+    "lookup-conversion-reduction": [
+      "d1-w2",
+      "d1-w4",
+      "d1-w8",
+      "d2-w2",
+      "d2-w4",
+      "d2-w8",
+      "d4-w2",
+      "d4-w4",
+      "d4-w8",
+      "d8-w2",
+      "d8-w4",
+      "d8-w8"
+    ]
+  },
+  "exact_oracle_count": 24,
+  "corruption_controls": [
+    "source-receipt",
+    "profile-count",
+    "positive-projection",
+    "sink-result",
+    "disk-only-bytes"
+  ],
+  "required_stages": [
+    "protocol",
+    "before-capture",
+    "before-admission",
+    "after-capture",
+    "after-admission",
+    "paired-relations",
+    "corruption-controls",
+    "final-receipts"
+  ]
+}
