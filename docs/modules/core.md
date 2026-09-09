@@ -1560,7 +1560,12 @@ capture exists.
   native processes, twelve behavioral relation instances in three families,
   independent decode schedule oracles and fatal ownership/failure controls.
   The pending capability and serving-loop integration have component evidence;
-  the native acceptance harness and campaign remain required. Scope is modeled
+  the native acceptance harness and campaign remain required. The separate
+  [complete exchange deadline qualification](../../examples/shared_kv_handoff_v1/DEADLINE_RESULTS.md)
+  admits all sixteen replies from eight local echo children and preserves the
+  original lifetime bound, partial failure receipts and first cleanup error.
+  It is component evidence, with no native serving or packet-to-token claim.
+  Scope is modeled
   cache bytes on the ideal packetized endpoint profile, with no physical Clos
   or tensor-buffer-retention claim. Depends on CORE-68's complete qualification;
   other shared resources and native buffer retention remain CORE-70.
