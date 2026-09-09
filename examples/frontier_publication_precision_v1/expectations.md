@@ -105,7 +105,9 @@ precision never resolves the ambiguity. With nonzero delta, sufficiently
 small intervals select only the corresponding side. These shapes must hold
 without changing either point's throughput or the accepted band.
 
-Freeze exact lower/at/upper breakpoint answers, both endpoint ownerships,
+The JSON freeze names 15 supplemental exact-oracle inputs and expected
+selection sequences. Their complete identity set is a fatal guard. Freeze
+exact lower/at/upper breakpoint answers, both endpoint ownerships,
 rightmost infeasibility, duplicate-coordinate tie direction, dominated and
 unsorted inputs, and two selections outside the band whose numerical hull
 crosses the band. The latter must FAIL, not INDETERMINATE. A singleton interval
@@ -139,7 +141,8 @@ and verify the expectation commit, clean implementation commit, all protected
 historical bytes and source stability over execution. Retain raw outputs
 under a fresh external root. No overwritten artifacts or hidden retries.
 
-Keep 40 prospective behavioral instances, exact lookup regression oracles,
+Keep 40 prospective behavioral instances, 15 boundary exact oracles, ten
+historical exact lookup regression oracles,
 historical conditional agreement disclosures, fatal guards and software tests
 in separate evidence classes. A fatal violation makes the study VOID with a
 null behavioral score. Any behavioral or exact-oracle miss prevents DEPLOY-13

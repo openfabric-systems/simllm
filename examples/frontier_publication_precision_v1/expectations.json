@@ -1,6 +1,7 @@
 {
   "acceptance": {
     "behavioral_instances": 40,
+    "boundary_exact_oracles": 15,
     "closes_only": [
       "DEPLOY-13"
     ],
@@ -8,6 +9,7 @@
     "historical_agreement_is_not_study_score": true,
     "historical_exact_oracles": 10,
     "historical_rescoring": false,
+    "oracle_identity_completeness_is_fatal": true,
     "remains_open": [
       "DEPLOY-26"
     ],
@@ -18,6 +20,361 @@
     "27/20"
   ],
   "authored_against": "67d8c020ef40195668d90801c880c615fa58c9bd",
+  "boundary_oracles": [
+    {
+      "expected_choice_sequence": [
+        "a"
+      ],
+      "expected_verdict": "PASS",
+      "id": "below-breakpoint",
+      "lower": "199/100",
+      "lower_closed": true,
+      "points": [
+        [
+          "a",
+          "2",
+          "100"
+        ],
+        [
+          "b",
+          "3",
+          "40"
+        ]
+      ],
+      "reference_y": "100",
+      "upper": "199/100",
+      "upper_closed": true
+    },
+    {
+      "expected_choice_sequence": [
+        "a"
+      ],
+      "expected_verdict": "PASS",
+      "id": "at-breakpoint",
+      "lower": "2",
+      "lower_closed": true,
+      "points": [
+        [
+          "a",
+          "2",
+          "100"
+        ],
+        [
+          "b",
+          "3",
+          "40"
+        ]
+      ],
+      "reference_y": "100",
+      "upper": "2",
+      "upper_closed": true
+    },
+    {
+      "expected_choice_sequence": [
+        "b"
+      ],
+      "expected_verdict": "FAIL",
+      "id": "above-breakpoint",
+      "lower": "201/100",
+      "lower_closed": true,
+      "points": [
+        [
+          "a",
+          "2",
+          "100"
+        ],
+        [
+          "b",
+          "3",
+          "40"
+        ]
+      ],
+      "reference_y": "100",
+      "upper": "201/100",
+      "upper_closed": true
+    },
+    {
+      "expected_choice_sequence": [
+        "b"
+      ],
+      "expected_verdict": "FAIL",
+      "id": "at-last-point",
+      "lower": "3",
+      "lower_closed": true,
+      "points": [
+        [
+          "a",
+          "2",
+          "100"
+        ],
+        [
+          "b",
+          "3",
+          "40"
+        ]
+      ],
+      "reference_y": "100",
+      "upper": "3",
+      "upper_closed": true
+    },
+    {
+      "expected_choice_sequence": [
+        null
+      ],
+      "expected_verdict": "FAIL",
+      "id": "above-last-point",
+      "lower": "301/100",
+      "lower_closed": true,
+      "points": [
+        [
+          "a",
+          "2",
+          "100"
+        ],
+        [
+          "b",
+          "3",
+          "40"
+        ]
+      ],
+      "reference_y": "100",
+      "upper": "301/100",
+      "upper_closed": true
+    },
+    {
+      "expected_choice_sequence": [
+        "a",
+        "b"
+      ],
+      "expected_verdict": "INDETERMINATE",
+      "id": "included-lower-singleton",
+      "lower": "2",
+      "lower_closed": true,
+      "points": [
+        [
+          "a",
+          "2",
+          "100"
+        ],
+        [
+          "b",
+          "3",
+          "40"
+        ]
+      ],
+      "reference_y": "100",
+      "upper": "5/2",
+      "upper_closed": true
+    },
+    {
+      "expected_choice_sequence": [
+        "b"
+      ],
+      "expected_verdict": "FAIL",
+      "id": "excluded-lower-singleton",
+      "lower": "2",
+      "lower_closed": false,
+      "points": [
+        [
+          "a",
+          "2",
+          "100"
+        ],
+        [
+          "b",
+          "3",
+          "40"
+        ]
+      ],
+      "reference_y": "100",
+      "upper": "5/2",
+      "upper_closed": true
+    },
+    {
+      "expected_choice_sequence": [
+        "a"
+      ],
+      "expected_verdict": "PASS",
+      "id": "included-upper-breakpoint",
+      "lower": "3/2",
+      "lower_closed": true,
+      "points": [
+        [
+          "a",
+          "2",
+          "100"
+        ],
+        [
+          "b",
+          "3",
+          "40"
+        ]
+      ],
+      "reference_y": "100",
+      "upper": "2",
+      "upper_closed": true
+    },
+    {
+      "expected_choice_sequence": [
+        "a"
+      ],
+      "expected_verdict": "PASS",
+      "id": "excluded-upper-breakpoint",
+      "lower": "3/2",
+      "lower_closed": true,
+      "points": [
+        [
+          "a",
+          "2",
+          "100"
+        ],
+        [
+          "b",
+          "3",
+          "40"
+        ]
+      ],
+      "reference_y": "100",
+      "upper": "2",
+      "upper_closed": false
+    },
+    {
+      "expected_choice_sequence": [
+        "b"
+      ],
+      "expected_verdict": "FAIL",
+      "id": "two-open-endpoints",
+      "lower": "2",
+      "lower_closed": false,
+      "points": [
+        [
+          "a",
+          "2",
+          "100"
+        ],
+        [
+          "b",
+          "3",
+          "40"
+        ]
+      ],
+      "reference_y": "100",
+      "upper": "3",
+      "upper_closed": false
+    },
+    {
+      "expected_choice_sequence": [
+        "b",
+        null
+      ],
+      "expected_verdict": "INDETERMINATE",
+      "id": "rightmost-infeasible-segment",
+      "lower": "3",
+      "lower_closed": true,
+      "points": [
+        [
+          "b",
+          "3",
+          "100"
+        ]
+      ],
+      "reference_y": "100",
+      "upper": "7/2",
+      "upper_closed": true
+    },
+    {
+      "expected_choice_sequence": [
+        null
+      ],
+      "expected_verdict": "FAIL",
+      "id": "empty-frontier",
+      "lower": "1",
+      "lower_closed": true,
+      "points": [],
+      "reference_y": "100",
+      "upper": "2",
+      "upper_closed": true
+    },
+    {
+      "expected_choice_sequence": [
+        "z"
+      ],
+      "expected_verdict": "PASS",
+      "id": "coordinate-tie-max-identity",
+      "lower": "2",
+      "lower_closed": true,
+      "points": [
+        [
+          "a",
+          "2",
+          "100"
+        ],
+        [
+          "z",
+          "2",
+          "100"
+        ]
+      ],
+      "reference_y": "100",
+      "upper": "2",
+      "upper_closed": true
+    },
+    {
+      "expected_choice_sequence": [
+        "a",
+        "b"
+      ],
+      "expected_verdict": "INDETERMINATE",
+      "id": "dominated-unsorted",
+      "lower": "3/2",
+      "lower_closed": true,
+      "points": [
+        [
+          "b",
+          "3",
+          "40"
+        ],
+        [
+          "c",
+          "1",
+          "20"
+        ],
+        [
+          "a",
+          "2",
+          "100"
+        ]
+      ],
+      "reference_y": "100",
+      "upper": "5/2",
+      "upper_closed": true
+    },
+    {
+      "expected_choice_sequence": [
+        "a",
+        "b"
+      ],
+      "expected_verdict": "FAIL",
+      "id": "disconnected-quotient-hull",
+      "lower": "3/2",
+      "lower_closed": true,
+      "points": [
+        [
+          "a",
+          "2",
+          "200"
+        ],
+        [
+          "b",
+          "3",
+          "40"
+        ]
+      ],
+      "reference_y": "100",
+      "upper": "5/2",
+      "upper_closed": true
+    }
+  ],
   "date": "2026-09-09",
   "fresh_processes": 2,
   "historical": {
