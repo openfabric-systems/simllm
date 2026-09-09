@@ -873,7 +873,8 @@ class OwnedBinaryProcess:
             return self._call(read_all)
         except subprocess.TimeoutExpired as error:
             with self._lock:
-                error.output = bytes(data)
+                if error.output is None:
+                    error.output = bytes(data)
             raise
 
     def finish(self) -> int:

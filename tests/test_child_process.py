@@ -504,6 +504,21 @@ def test_owned_stream_context_preserves_the_original_body_exception(monkeypatch)
     _wait_until_not_live(process.pid)
 
 
+def test_read_retry_cannot_overwrite_the_original_timeout_bytes():
+    process = OwnedBinaryProcess.__new__(OwnedBinaryProcess)
+    process._lock = threading.RLock()
+    original = subprocess.TimeoutExpired(("retained-read",), 1, output=b"first partial bytes")
+
+    def repeated_failure(function):
+        raise original
+
+    process._call = repeated_failure
+    for _ in range(2):
+        with pytest.raises(subprocess.TimeoutExpired) as error:
+            process.read_exact(4)
+        assert error.value is original and original.output == b"first partial bytes"
+
+
 @pytest.mark.skipif(os.name != "nt", reason="Windows Job Object control")
 def test_binary_stream_keeps_windows_job_open_until_finish():
     code = "import os; os.write(1, os.read(0, 1)); assert os.read(0, 1) == b''"
