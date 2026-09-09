@@ -265,6 +265,7 @@ def render_serial_execution_graph_goal(
             graph_edges,
         )
         if isinstance(work, ComputeWork):
+            work.require_executable()
             if work.nominal_duration_ps is None:
                 raise ValueError(
                     f"compute operation {operation.operation_id!r} has no nominal duration"

@@ -590,3 +590,6 @@ examples/local_peer_packet_runtime_v1/*.py text eol=lf
 examples/local_peer_packet_runtime_v1/*.json text eol=lf
 simllm/core/packet_port.py text eol=lf
 simllm/backends/rnic/include/simllm/ports/*.h text eol=lf
+examples/kimi_k3_structure_v1/* text eol=lf
+tests/fixtures/kimi_k3_config.json text eol=lf
+tests/test_kimi_k3*.py text eol=lf

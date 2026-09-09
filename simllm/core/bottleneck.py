@@ -365,6 +365,9 @@ def classify_runtime(graph, report, selected_paths, gpu, *, kernel_cells=None):
         work = operations[record.operation_id].work
         kernel = None
         if isinstance(work, ComputeWork):
+            work.require_executable()
+            if work.scope != "kernel-region":
+                raise ValueError("synthetic operator work has no physical bottleneck classification")
             kernel = KernelEvidence.from_kernel(KernelSpec(work.kernel, work.flops, work.hbm_bytes, work.config), gpu)
             kernel = join_kernel_cell(kernel, kernel_cells)
         owner = ("kernel" if isinstance(work, ComputeWork) else "kv" if isinstance(work, KvCacheWork)

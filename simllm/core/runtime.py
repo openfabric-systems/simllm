@@ -1208,6 +1208,7 @@ class CoarseDeviceRuntime:
         kv_pools: Iterable[KvPoolSpec] | None = None,
         precision: PrecisionConfig | None = None,
         receiver_ingress: bool = False,
+        serial_compute: bool = False,
     ) -> None:
         from simllm.compute import KernelLaunch, SmSchedulerModel
 
@@ -1221,6 +1222,9 @@ class CoarseDeviceRuntime:
         if receiver_ingress and authority_mode is not RnicAuthorityMode.BYPASS:
             raise ValueError("receiver_ingress requires the coarse bypass authority")
         self.receiver_ingress = receiver_ingress
+        if type(serial_compute) is not bool:
+            raise TypeError("serial_compute must be a bool")
+        self.serial_compute = serial_compute
         #: explicit run-wide fidelity surface, or None when none was supplied
         self.precision = precision
         #: the one seam this runtime selects; an explicit disagreement is
@@ -1538,6 +1542,7 @@ class CoarseDeviceRuntime:
             work = operation.work
             self.profile.node_gpu(operation.rank)
             if isinstance(work, ComputeWork):
+                work.require_executable()
                 if operation.rank in self.kernel_services:
                     self._kernel_launch(operation)
                 elif work.nominal_duration_ps is None:
@@ -1813,6 +1818,8 @@ class CoarseDeviceRuntime:
         state: _RuntimeState,
     ) -> tuple[str, ...]:
         assert isinstance(selected.work, ComputeWork)
+        if self.serial_compute:
+            return (selected.operation_id,)
         rank = selected.rank
         selected_eligible = ready_data[selected.operation_id][0][rank]
         start = max(selected_eligible, state.gpu_available.get(rank, 0))
