@@ -6,6 +6,19 @@ the flow-level work the GOAL emitter renders.
 
 ## Interface
 
+`SharedKvHandoffRuntime` owns one framed native flow session for cache shards
+from independent producer engines. Engine identities bind to the standard
+deployment manifests' distinct global GPU and NIC endpoints. Submission
+registers all shards at a strictly future eligibility without advancing the
+public clock. Shared destination ports contend in the same packetized ideal
+endpoint runtime; complete native arrivals produce request-level all-shard
+joins. The explicit synchronous handoff policies retain their existing
+interface and records. The
+[shared-handoff qualification](../../examples/shared_kv_handoff_v1/RESULTS.md)
+closes CORE-71 with native packet-to-token timing, complete compatibility and
+fatal ownership/failure controls. TRAF-64 owns physical target-topology
+qualification; CORE-70 owns native producer-buffer retention.
+
 `HtsimStepSinkConfig.peer_packet` binds the checked locality segments to the
 fabric manifest's declared GPU attachments. The local phase executes through
 one retained packet calendar, with source feed, directed links, switch ports,

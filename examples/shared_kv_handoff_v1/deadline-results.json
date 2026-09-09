@@ -1,0 +1,669 @@
+{
+  "admitted_native_configurations": 8,
+  "behavioral_instances": 0,
+  "behavioral_score": null,
+  "captured_native_configurations": 8,
+  "cells": [
+    {
+      "exchange_enabled": false,
+      "exchange_seconds": 1,
+      "exit_code": 0,
+      "failure": null,
+      "host_seconds": 3.049620673060417,
+      "id": "exchange-1-idle-3-legacy",
+      "idle_seconds": 3,
+      "lifetime_seconds": 30,
+      "pid": 24107,
+      "ready": "52",
+      "reaped": true,
+      "rounds": [
+        {
+          "host_seconds": 0.00042809732258319855,
+          "lifetime_unchanged": true,
+          "response_hex": "00ff8077697265",
+          "same_live_child": true
+        },
+        {
+          "host_seconds": 0.0005499524995684624,
+          "lifetime_unchanged": true,
+          "response_hex": "00ff8077697265",
+          "same_live_child": true
+        }
+      ]
+    },
+    {
+      "exchange_enabled": true,
+      "exchange_seconds": 1,
+      "exit_code": 0,
+      "failure": null,
+      "host_seconds": 3.0487603805959225,
+      "id": "exchange-1-idle-3-enabled",
+      "idle_seconds": 3,
+      "lifetime_seconds": 30,
+      "pid": 24179,
+      "ready": "52",
+      "reaped": true,
+      "rounds": [
+        {
+          "host_seconds": 0.000475454144179821,
+          "lifetime_unchanged": true,
+          "response_hex": "00ff8077697265",
+          "same_live_child": true
+        },
+        {
+          "host_seconds": 0.0005416730418801308,
+          "lifetime_unchanged": true,
+          "response_hex": "00ff8077697265",
+          "same_live_child": true
+        }
+      ]
+    },
+    {
+      "exchange_enabled": false,
+      "exchange_seconds": 1,
+      "exit_code": 0,
+      "failure": null,
+      "host_seconds": 6.058677675202489,
+      "id": "exchange-1-idle-6-legacy",
+      "idle_seconds": 6,
+      "lifetime_seconds": 30,
+      "pid": 24188,
+      "ready": "52",
+      "reaped": true,
+      "rounds": [
+        {
+          "host_seconds": 0.0004067476838827133,
+          "lifetime_unchanged": true,
+          "response_hex": "00ff8077697265",
+          "same_live_child": true
+        },
+        {
+          "host_seconds": 0.0004881434142589569,
+          "lifetime_unchanged": true,
+          "response_hex": "00ff8077697265",
+          "same_live_child": true
+        }
+      ]
+    },
+    {
+      "exchange_enabled": true,
+      "exchange_seconds": 1,
+      "exit_code": 0,
+      "failure": null,
+      "host_seconds": 6.053279796615243,
+      "id": "exchange-1-idle-6-enabled",
+      "idle_seconds": 6,
+      "lifetime_seconds": 30,
+      "pid": 24197,
+      "ready": "52",
+      "reaped": true,
+      "rounds": [
+        {
+          "host_seconds": 0.0003388598561286926,
+          "lifetime_unchanged": true,
+          "response_hex": "00ff8077697265",
+          "same_live_child": true
+        },
+        {
+          "host_seconds": 0.000507524237036705,
+          "lifetime_unchanged": true,
+          "response_hex": "00ff8077697265",
+          "same_live_child": true
+        }
+      ]
+    },
+    {
+      "exchange_enabled": false,
+      "exchange_seconds": 2,
+      "exit_code": 0,
+      "failure": null,
+      "host_seconds": 3.044594742357731,
+      "id": "exchange-2-idle-3-legacy",
+      "idle_seconds": 3,
+      "lifetime_seconds": 30,
+      "pid": 24231,
+      "ready": "52",
+      "reaped": true,
+      "rounds": [
+        {
+          "host_seconds": 0.00028655026108026505,
+          "lifetime_unchanged": true,
+          "response_hex": "00ff8077697265",
+          "same_live_child": true
+        },
+        {
+          "host_seconds": 0.0005415631458163261,
+          "lifetime_unchanged": true,
+          "response_hex": "00ff8077697265",
+          "same_live_child": true
+        }
+      ]
+    },
+    {
+      "exchange_enabled": true,
+      "exchange_seconds": 2,
+      "exit_code": 0,
+      "failure": null,
+      "host_seconds": 3.0509176310151815,
+      "id": "exchange-2-idle-3-enabled",
+      "idle_seconds": 3,
+      "lifetime_seconds": 30,
+      "pid": 24241,
+      "ready": "52",
+      "reaped": true,
+      "rounds": [
+        {
+          "host_seconds": 0.0004522465169429779,
+          "lifetime_unchanged": true,
+          "response_hex": "00ff8077697265",
+          "same_live_child": true
+        },
+        {
+          "host_seconds": 0.0005637118592858315,
+          "lifetime_unchanged": true,
+          "response_hex": "00ff8077697265",
+          "same_live_child": true
+        }
+      ]
+    },
+    {
+      "exchange_enabled": false,
+      "exchange_seconds": 2,
+      "exit_code": 0,
+      "failure": null,
+      "host_seconds": 6.056272231973708,
+      "id": "exchange-2-idle-6-legacy",
+      "idle_seconds": 6,
+      "lifetime_seconds": 30,
+      "pid": 24274,
+      "ready": "52",
+      "reaped": true,
+      "rounds": [
+        {
+          "host_seconds": 0.00040217675268650055,
+          "lifetime_unchanged": true,
+          "response_hex": "00ff8077697265",
+          "same_live_child": true
+        },
+        {
+          "host_seconds": 0.000536823645234108,
+          "lifetime_unchanged": true,
+          "response_hex": "00ff8077697265",
+          "same_live_child": true
+        }
+      ]
+    },
+    {
+      "exchange_enabled": true,
+      "exchange_seconds": 2,
+      "exit_code": 0,
+      "failure": null,
+      "host_seconds": 6.056030299514532,
+      "id": "exchange-2-idle-6-enabled",
+      "idle_seconds": 6,
+      "lifetime_seconds": 30,
+      "pid": 24332,
+      "ready": "52",
+      "reaped": true,
+      "rounds": [
+        {
+          "host_seconds": 0.0004554241895675659,
+          "lifetime_unchanged": true,
+          "response_hex": "00ff8077697265",
+          "same_live_child": true
+        },
+        {
+          "host_seconds": 0.0005379831418395042,
+          "lifetime_unchanged": true,
+          "response_hex": "00ff8077697265",
+          "same_live_child": true
+        }
+      ]
+    }
+  ],
+  "completed_component_grid_pairs": 4,
+  "component_only": true,
+  "findings": [],
+  "first_receipts": {
+    "exchange-1-idle-3-enabled": {
+      "markers/exchange-1-idle-3-enabled-24179.json": {
+        "bytes": 236,
+        "sha256": "dd049b17f7dc5ebf55e0e848d7d0e46bf2f985387c26eaad434c1936d166833b"
+      },
+      "partial.json": {
+        "bytes": 393,
+        "sha256": "0f091fa46edba77265479df21995c24fe99ae411986dabb0cb21f79781ab1fd1"
+      },
+      "response-0.bin": {
+        "bytes": 7,
+        "sha256": "e8cfda66c459ad313d85ec0e8b316a79354040a7e619c79c93a56966846f5c2b"
+      },
+      "response-1.bin": {
+        "bytes": 7,
+        "sha256": "e8cfda66c459ad313d85ec0e8b316a79354040a7e619c79c93a56966846f5c2b"
+      },
+      "result.json": {
+        "bytes": 438,
+        "sha256": "8ece659a0340cf4fce27b3466dde6b1b0372238c1722cc5a122047211a00aaf1"
+      },
+      "stderr.bin": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "exchange-1-idle-3-legacy": {
+      "markers/exchange-1-idle-3-legacy-24107.json": {
+        "bytes": 235,
+        "sha256": "33a549e31daaaba5135279843366cd857acb15920449dacb428dc229de80e443"
+      },
+      "partial.json": {
+        "bytes": 396,
+        "sha256": "3924e0683caea1e1ad8a613f4a2420899741c271c3921efcd85e8f71af49911f"
+      },
+      "response-0.bin": {
+        "bytes": 7,
+        "sha256": "e8cfda66c459ad313d85ec0e8b316a79354040a7e619c79c93a56966846f5c2b"
+      },
+      "response-1.bin": {
+        "bytes": 7,
+        "sha256": "e8cfda66c459ad313d85ec0e8b316a79354040a7e619c79c93a56966846f5c2b"
+      },
+      "result.json": {
+        "bytes": 440,
+        "sha256": "31347a0594838c7f970efbb6ca04cb433908eebed38bd48bc0f1d70fb22af24e"
+      },
+      "stderr.bin": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "exchange-1-idle-6-enabled": {
+      "markers/exchange-1-idle-6-enabled-24197.json": {
+        "bytes": 236,
+        "sha256": "7bef7aa479fd5d2079908eb4b37a207388c77b238d420350e74f63fba8e32d20"
+      },
+      "partial.json": {
+        "bytes": 393,
+        "sha256": "5f5f23f475849963ac4eebd614045218642308643173fd626aa6635dd2ee036b"
+      },
+      "response-0.bin": {
+        "bytes": 7,
+        "sha256": "e8cfda66c459ad313d85ec0e8b316a79354040a7e619c79c93a56966846f5c2b"
+      },
+      "response-1.bin": {
+        "bytes": 7,
+        "sha256": "e8cfda66c459ad313d85ec0e8b316a79354040a7e619c79c93a56966846f5c2b"
+      },
+      "result.json": {
+        "bytes": 437,
+        "sha256": "7ecbf778a6a0a5ff86d04b4706e4086decb36c5815af93691dd9559a1e7e896f"
+      },
+      "stderr.bin": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "exchange-1-idle-6-legacy": {
+      "markers/exchange-1-idle-6-legacy-24188.json": {
+        "bytes": 235,
+        "sha256": "f12db24d521f35a1297f5b098857a76632df8c6cba49e206928f8c36cf67f5c8"
+      },
+      "partial.json": {
+        "bytes": 395,
+        "sha256": "834fd2aee43efb6a18ce07cd6ab1bc640e2bfa62d360df56863beea8fa1a8bab"
+      },
+      "response-0.bin": {
+        "bytes": 7,
+        "sha256": "e8cfda66c459ad313d85ec0e8b316a79354040a7e619c79c93a56966846f5c2b"
+      },
+      "response-1.bin": {
+        "bytes": 7,
+        "sha256": "e8cfda66c459ad313d85ec0e8b316a79354040a7e619c79c93a56966846f5c2b"
+      },
+      "result.json": {
+        "bytes": 439,
+        "sha256": "023fc6d0e71efbb7e1ae9d6592575e67e97d35755bb88f0356bf11f7ae214510"
+      },
+      "stderr.bin": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "exchange-2-idle-3-enabled": {
+      "markers/exchange-2-idle-3-enabled-24241.json": {
+        "bytes": 236,
+        "sha256": "d0d3ab4b747a13da3f0b176eaf60dc2ec93f10f9e888e448d399471681df057d"
+      },
+      "partial.json": {
+        "bytes": 394,
+        "sha256": "363f6bb431c9385dd1cd7d11d781519abf5cafd646888612e6d6130673c20544"
+      },
+      "response-0.bin": {
+        "bytes": 7,
+        "sha256": "e8cfda66c459ad313d85ec0e8b316a79354040a7e619c79c93a56966846f5c2b"
+      },
+      "response-1.bin": {
+        "bytes": 7,
+        "sha256": "e8cfda66c459ad313d85ec0e8b316a79354040a7e619c79c93a56966846f5c2b"
+      },
+      "result.json": {
+        "bytes": 439,
+        "sha256": "faa2a9cf1bef5ba9df9900fc301c8a225ac71b8b99c5f03556c737e12ec75319"
+      },
+      "stderr.bin": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "exchange-2-idle-3-legacy": {
+      "markers/exchange-2-idle-3-legacy-24231.json": {
+        "bytes": 235,
+        "sha256": "6c29713881380a12cad9b0c43a4a0ae3d31ea69bc985f73d24c54c69d8589fde"
+      },
+      "partial.json": {
+        "bytes": 396,
+        "sha256": "74018fac080c8321432990ac95d53357a49b77f282db675c3b2928c16681eea7"
+      },
+      "response-0.bin": {
+        "bytes": 7,
+        "sha256": "e8cfda66c459ad313d85ec0e8b316a79354040a7e619c79c93a56966846f5c2b"
+      },
+      "response-1.bin": {
+        "bytes": 7,
+        "sha256": "e8cfda66c459ad313d85ec0e8b316a79354040a7e619c79c93a56966846f5c2b"
+      },
+      "result.json": {
+        "bytes": 440,
+        "sha256": "4cf9e6254b3228b3d568b808a5aaa30742648da3462cf5cbc5445b71c823c840"
+      },
+      "stderr.bin": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "exchange-2-idle-6-enabled": {
+      "markers/exchange-2-idle-6-enabled-24332.json": {
+        "bytes": 236,
+        "sha256": "230491cc5653c512f6bbeaec961d443c0a2678b2f71bee49c7f090943c04902f"
+      },
+      "partial.json": {
+        "bytes": 394,
+        "sha256": "2d5e8cf5ed426cc01b1e7e21f8c008ee592f312c746592a0080aeee3b1f297d3"
+      },
+      "response-0.bin": {
+        "bytes": 7,
+        "sha256": "e8cfda66c459ad313d85ec0e8b316a79354040a7e619c79c93a56966846f5c2b"
+      },
+      "response-1.bin": {
+        "bytes": 7,
+        "sha256": "e8cfda66c459ad313d85ec0e8b316a79354040a7e619c79c93a56966846f5c2b"
+      },
+      "result.json": {
+        "bytes": 438,
+        "sha256": "623526b3fee076a39d8b534a492b75c787ac08756ec3b22a72919de14ebbd281"
+      },
+      "stderr.bin": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "exchange-2-idle-6-legacy": {
+      "markers/exchange-2-idle-6-legacy-24274.json": {
+        "bytes": 235,
+        "sha256": "ea5ab845da5a7ccc8265da6b40048bb31f669cc41bb4d6bb447c99e27d2c1099"
+      },
+      "partial.json": {
+        "bytes": 395,
+        "sha256": "b5f9abece9f2c4610bbea2443f3f6899c346e478321c1f5c3f891536eeb8b0d5"
+      },
+      "response-0.bin": {
+        "bytes": 7,
+        "sha256": "e8cfda66c459ad313d85ec0e8b316a79354040a7e619c79c93a56966846f5c2b"
+      },
+      "response-1.bin": {
+        "bytes": 7,
+        "sha256": "e8cfda66c459ad313d85ec0e8b316a79354040a7e619c79c93a56966846f5c2b"
+      },
+      "result.json": {
+        "bytes": 439,
+        "sha256": "35db2613da9aade7457d7e01203ed8bbfe3dafb11480a1ddbea63a0ddd34a755"
+      },
+      "stderr.bin": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  },
+  "identity": {
+    "freeze_commit": "0e0e71aa586b2ccd2d786534d6b686d888e300b0",
+    "freeze_sha256": "029600e183f40ebc41ff904b12d5ab6dbc04e1fffc913ee55181105f931a858c",
+    "interpreter_sha256": "cdba30be4a3749f41f282c02123214088e7e823efd0d30ef2da6a15d91fb1f75",
+    "package_sha256": {
+      "simllm/__init__.py": "c9ad08b7a95f2f664aa880a11a9574cd7d89a771459363ed8d2ab493a7b8754c",
+      "simllm/_local_config.py": "2c8933e2eedd66f7ddc2a2634c91d4afefed8c7b982f1c637a3511d3f3813154",
+      "simllm/_native.py": "9ed6de3188f7b7c3b3b3a4123e1a4008ecb25263b274f5ff4dd68ad4fe01e048",
+      "simllm/adapters/__init__.py": "caf7a47c6d990eda06897b0d491bead37b9b9b2c5020403078f40885b433cd9e",
+      "simllm/adapters/sglang/__init__.py": "08903d928f8214c143b45131472fa6075606e8f66c267948562891e2b80b9e0d",
+      "simllm/adapters/sglang/_version.py": "9dbafbff32b2c6f1c3bd5936cbf534ebb67c4c3bcad89f6d4cc9021024f1ebe2",
+      "simllm/adapters/sglang/client.py": "3f1e4032bd8fc41a70ec2b6fbc32d23cef361afad013c5b879a396bdf7d7998a",
+      "simllm/adapters/sglang/communicator.py": "d69cb834c609607323e8b86610b0daef99e6cfc13fe791063309688aebbae3d8",
+      "simllm/adapters/sglang/extraction.py": "8c271067891d9ee76bd5578841dac0fc4cdab60874438f767c474deaffe1d193",
+      "simllm/adapters/sglang/host.py": "a88558278204331de6f1932fc07f6a10de6280ddd159f3986a725d062a18a02c",
+      "simllm/adapters/sglang/oracle.py": "0fdc8f8328b427feabed3bef8d0dbef14f9a5d2543b36c1e741359776585c23c",
+      "simllm/adapters/sglang/pd_session.py": "69f85bcaf252ca0be4ce1df1584ecea57ecbd7a5810036ee99522aa58e8dd16e",
+      "simllm/adapters/sglang/plugin.py": "2fc481cec318a2f304e8edbe04e9cec0c89fcfe80d62e5b4d321dbaca9897ffd",
+      "simllm/adapters/sglang/pump.py": "265e1436b2deeba8f858173cd014454b4b46c5fa21445e073d4555595198e94b",
+      "simllm/adapters/sglang/replay.py": "f7a345f56299a678c22a73496ce439677729b4c1028699483b4afa95ba7775b4",
+      "simllm/adapters/sglang/worker.py": "5107e1636b42e0719a744c82f895636d44272ea7e77ac8d03ec8f23bae9876c0",
+      "simllm/adapters/vllm/__init__.py": "1e2da0145b8842c31ce9875831b910cab268d7a9d59d00b1531eacddc6b417e0",
+      "simllm/adapters/vllm/_version.py": "e273feca3f69f34421086b234fa483b9a74f95f2c9c2b5f6f7fb9ca8cd1c9ce1",
+      "simllm/adapters/vllm/capture.py": "92ac867d6cd5e39e29a9215728fedde91b037e880d513831c154887102ce1ccc",
+      "simllm/adapters/vllm/collective_capture.py": "a92e9a628b29cf287506988424c6547ce092d00427f1dcb65f9036d512debc68",
+      "simllm/adapters/vllm/communicator.py": "ee977b0f7ad2ff147f3a4f45f2d1bfaa1dfb62c03714ed551e2b614dea864673",
+      "simllm/adapters/vllm/executor.py": "d7863cf6c6ba6ced0d3b5c61bb09d0c6f4698dad7e6e3259c0de186f126007af",
+      "simllm/adapters/vllm/extraction.py": "c818f08ea7a8af8cde30093b418c55eca4ea5ae4038d1f176598b1ea8ca6d645",
+      "simllm/adapters/vllm/independent.py": "0d78c97f2cf92a8f596f7cf0732db8bb24efd0c4b2f6ac68a220f88a7675713e",
+      "simllm/adapters/vllm/kv_bridge.py": "86b9731c9d6171d4097d9055c570dab14ce616ab3db7acdfb5b16b1ecf392b4f",
+      "simllm/adapters/vllm/oracle.py": "d4fbbcfdae005ddc03ed5014ab08fc4f5d1700b2bee16c5d33cf70fdd0927f77",
+      "simllm/adapters/vllm/pd_connector.py": "d2d5ca76b019a61023961e7ca26fc61ee750562f0a261fd76c6dfd3e6989c6de",
+      "simllm/adapters/vllm/pd_session.py": "735c79a9d90e01ef393d60d476c4773feaa8744c3b9f55217b4de8e56a280a46",
+      "simllm/adapters/vllm/replay.py": "3ee970e855358c5409eb92ce2b6d411201bbb17a4bec6f1bc1c63d6a4122b5f2",
+      "simllm/adapters/vllm/schedule.py": "ed62a1ae58ffe50d9d5c5b4b406776cb471867a0327adf048154e898cd83116d",
+      "simllm/adapters/vllm/worker.py": "7e189a8f2b90f0ce28bd3510287e9bcd8b27b3c4a5896012d886719754e35ce8",
+      "simllm/adapters/vllm/worker_ext.py": "9228568b5b6d45bd7686501e08069768791daba056d2820e8f57ce03d9c6e503",
+      "simllm/backends/__init__.py": "94b1736713eaa70f38dc9dc8d1413e6b8c4dbb4f96324060cbdc220d07794fa1",
+      "simllm/backends/_child_exec.py": "106966e1501dd13a406bb79433cb8808e6b4d583ed96423a0258108c5a494674",
+      "simllm/backends/_child_process.py": "7a9f4ec06b1b63e9ca17422baf2327aeadd63f1daa677abae5d239917febc006",
+      "simllm/backends/composed_rnic.py": "0d6f5557cd70858a4f16472c88b54362ad5e0687d628c2146356561ec2246d2a",
+      "simllm/backends/dependency_cross_check.py": "9fb7c4cd77d670640096b8c62db47696a58c4d6b55c580141813ac0646d15dc3",
+      "simllm/backends/device_step_sink.py": "391e3227ac9d81d1a1e0ea3ba9ace2ad8a9e5f9513b448e2ac2ede7eaa4ecfc8",
+      "simllm/backends/fabric_profile.py": "33ad6adc81580ecac5922ed81263471ddaa519a75a1ed30e3ced87d7feb68bbb",
+      "simllm/backends/fct.py": "98d37fe3b2543f99ab2369993b5768908c0d0cf881cd0bdec00307d193f33e2e",
+      "simllm/backends/flow_session.py": "9c5a51642f153bbb3792bd63e447a4ce3c55ed7f563f789bd3e5e4d6c21812db",
+      "simllm/backends/goal_session.py": "6f7f304501941f6cedb95d2c6bb849f444741f043619a4156461a48db7ba4082",
+      "simllm/backends/htsim.py": "5d4f88c962256f5cc5821f2a8b6946848c34668ae3cfdc2ff645834333ce989a",
+      "simllm/backends/htsim_dcqcn.py": "1c901137c22b9ce7caa167aa54b0e505387fb9835560b9ea198675eab3ce69fa",
+      "simllm/backends/htsim_nvlink.py": "6b8248c7bf2395ef3f9763144aab2b512339f7ab690253c983b33cc997de6ec2",
+      "simllm/backends/htsim_rnic.py": "ff4ed6567194201b118afd73ce22e141d4bea366c89c549667d998ef22b0c9b7",
+      "simllm/backends/kimi_k3_lowerer.py": "4f4818275e6c2107fd4e06809b4354668fb473533e0d1177145faa6635e6ecf6",
+      "simllm/backends/loggopsim.py": "5f28c74d9cb2f7f6dc71322029f24c774281e783807805370cbcac6416f4baeb",
+      "simllm/backends/loggopsim_step_sink.py": "601fb697b9eea5b0cf4794502cad6fbe71f8505a41f143ba08430e8cecd6017d",
+      "simllm/backends/nic_profile.py": "eadd35cdbba36cfcd00ccfaa28d312e285b4047adbe4b76f7aa9ed49b12e7309",
+      "simllm/backends/nvlink_runtime.py": "aa8560c53a18444c39356c53e13c389fef30227c3e4f696abd979548f460865b",
+      "simllm/backends/packet_breakdown.py": "f5af0288efeb87392952af44d00a52db5065d7be84ad5374e05296b5cf1fd8fd",
+      "simllm/backends/peer_step.py": "dcd5f205a3404874d68217d35d2c5758219d7ac69db7f44e17dd203edff6acab",
+      "simllm/backends/rail_topology.py": "127862e84b7d03be852efa618185fe66d36ea8dcfe27f56a89f26eeaef8c2f18",
+      "simllm/backends/rnic/CMakeLists.txt": "534cb13c5897108937c09c5e529e83f3041d65313d6f4864ba77d5f02e5de8b1",
+      "simllm/backends/rnic/README.md": "884540406f8a0217d8d2ae112a61b419bf69a41f77744a026598eddc46bd1ced",
+      "simllm/backends/rnic/__init__.py": "f753cbe615822be53c472e50dfa1e8c1b79fce4a495aec199a0658ddd584fe75",
+      "simllm/backends/rnic/include/simllm/ports/packet_port.h": "d99dec9ef12e294b5d1222d16c2526495f2b14adef083e65f3fd8365ac042e5d",
+      "simllm/backends/rnic/include/simllm/rnic/gpu_device.h": "1e6ad9ec72115b05efd04ed1358748df16febf7b44032a7ed1d922b8adf7a781",
+      "simllm/backends/rnic/include/simllm/rnic/host_memory.h": "895f1b1a0f5d6f05ff15e428ed48f63a5e5c5f2c7ba72f331aaa75cae782566c",
+      "simllm/backends/rnic/include/simllm/rnic/network_port.h": "6940b8ce019959ac05ce086941febbb3bbfd9940a969a5b2bb821368313a6a82",
+      "simllm/backends/rnic/include/simllm/rnic/pcie_fabric.h": "99e8df26165bf13278d1ecd5f529537871d660fc815992d9bd6906eeb8183a38",
+      "simllm/backends/rnic/include/simllm/rnic/rnic_anomaly_table.h": "c360a740a2e4cef625b010985269f50cd5bd7c63424ded361233f071af03994d",
+      "simllm/backends/rnic/include/simllm/rnic/rnic_cc.h": "5ef76cfd7b3181cddd8e8777ff7b024a930c286c0e0144bd1405d327569ea487",
+      "simllm/backends/rnic/include/simllm/rnic/rnic_cmodel_c.h": "44c599137f2ae7ee604cdbd671300cde897b058d15013dfe1c7be4a847f902d9",
+      "simllm/backends/rnic/include/simllm/rnic/rnic_device.h": "2d91c482f78dd7a4d31a929598fc4df8b14478360d350e61b36ddc772da7a12d",
+      "simllm/backends/rnic/include/simllm/rnic/rnic_hw_profile.h": "dc7ae55f9d9fce2e296a5f99f4e19dca66f8cfb7ae4b5716750a533f42c538f5",
+      "simllm/backends/rnic/include/simllm/rnic/rnic_nic_counters.h": "4d1aacb2fd53af526586a73b323fe15ee953113c493072b4dcbe997acc3d7e48",
+      "simllm/backends/rnic/include/simllm/rnic/rnic_rx_pipeline.h": "6afa685b75abf99b6ccbe091d05acea34306ca1c8c468a01c38785193067dc75",
+      "simllm/backends/rnic/include/simllm/rnic/rnic_tx_pipeline.h": "8f6b33f496f19be78ef4cbfd26c7b7d7b953b04b4ee60cb22d3b90fdb7fd6cba",
+      "simllm/backends/rnic/include/simllm/rnic/session_record.h": "fda26b195fd5098956237dc643851574c35ba4af241bc6fe7e0572fd72799af8",
+      "simllm/backends/rnic/include/simllm/rnic/submission.h": "62b953b7d5d7934d0c0245ec8c1a0ff0448bb496214bad915269e51e1f83dccd",
+      "simllm/backends/rnic/include/simllm/rnic/work_queue.h": "43936c693342278c6eb0fa638c503a79f21f04fc566741b6d49880625f9519c5",
+      "simllm/backends/rnic/src/gpu_device.cpp": "ffc7a61bfc360e67d1c66ecc027b1a6ca02d63190d22ef1426b2af2d26f737dc",
+      "simllm/backends/rnic/src/host_memory.cpp": "c0d417647a2367501812cc55f152acbc4fae4f5f4bd0ae4538c76fb51f7e3754",
+      "simllm/backends/rnic/src/pcie_fabric.cpp": "b36eec5a919b43082d6ad142f2182936f4dbb300e56ba7a312e2f7316a75c024",
+      "simllm/backends/rnic/src/rnic_anomaly_table.cpp": "5b575acc2aa3d522bfffc7b79665871fc06f7b35d5473465bf07c563e3632f2d",
+      "simllm/backends/rnic/src/rnic_cc.cpp": "a22b88da7a1a8c0ce3f86f62253167297e18f9f11055f49164d66417ee166a63",
+      "simllm/backends/rnic/src/rnic_cmodel_c.cpp": "46a5f4711490e7fbfa6d462e378b8da4dcaa34bfc66c79a4c25b55fcd867d057",
+      "simllm/backends/rnic/src/rnic_device.cpp": "46dd9596705f7bb457130babc9957d40fd05c73bb830274a5f72e075dfbba764",
+      "simllm/backends/rnic/src/rnic_hw_profile.cpp": "bcf4516f6ab81250b34eb9d7613ca1f9dffbd3c6e2aaac629fec39935a8a5a84",
+      "simllm/backends/rnic/src/rnic_rx_pipeline.cpp": "8a9136a5db57fe89eb4b23c57a647de534aed8f60916e1c47b8e2938b157f642",
+      "simllm/backends/rnic/src/rnic_tx_pipeline.cpp": "54ec98c95a011a8570147bb80b2ecd99454f65f1014aeeb95616e36d7572bc11",
+      "simllm/backends/rnic/src/session_record.cpp": "e84f1f6196a6d1d5d890b3a17cdb22e8ac1d1cee4921b195bd7b5c01cf669733",
+      "simllm/backends/rnic/src/submission.cpp": "b320b4b46cd5a4cc0b6a87e3e6340d385758c8aaec5fae4b3a203ce9d31d465f",
+      "simllm/backends/rnic/src/work_queue.cpp": "d7805abe26154211786fd16abfb92c10d73a367afc79e9db2ed05e67092cdcf8",
+      "simllm/backends/rnic/tests/fake_network.h": "1fffe5c2fa10ae501e618119c93a76f6a78c29fdb14743a73e51d1a564958634",
+      "simllm/backends/rnic/tests/gpu_device_test.cpp": "ac57c89d6b67d069412ea9b420499d1e40af9e8cbc7139cf81a2adcf7776b799",
+      "simllm/backends/rnic/tests/host_memory_test.cpp": "f99b77122af8d60f18a5b5a5251042e0f9593932d5d4652ea55cbe44a42857b3",
+      "simllm/backends/rnic/tests/pcie_fabric_test.cpp": "7cdfbb84900afbb49205326e6d3043f3080086dc2834f543b0a4062ef49f4ce7",
+      "simllm/backends/rnic/tests/rnic_cc_test.cpp": "590e2986783d08e3178eb03840cec33537ae95161325425ae356dacd536a80fe",
+      "simllm/backends/rnic/tests/rnic_cmodel_test.cpp": "158ab32f398c7f0052988ffbd88ed59e9d6a4f0b160c984adbcbebf22ba54893",
+      "simllm/backends/rnic/tests/rnic_device_test.cpp": "aee22e4b0cf4b54219fbd3876296fe2c1a118456ff3233dd9f88698d9ca9ba29",
+      "simllm/backends/rnic/tests/session_record_test.cpp": "3e98390aa54ef613794803e2f9c4d1654ea484b2df9471091b31f087e569de9a",
+      "simllm/backends/rnic/tests/submission_test.cpp": "18ce8aa36c77fd4248d80586bdf3cf3d84da9fcc2d4bccbe37cea3031041c9db",
+      "simllm/backends/rnic/tests/work_queue_test.cpp": "cc1a7b4cd926724101fbde0863c3fe4d9df7df1e17a0df149100655297068da8",
+      "simllm/backends/rnic/tools/cmodel_probe.cpp": "0e7606722d677c161e630b893d46bb52f7ae59c16a99c1983bc8107987234efb",
+      "simllm/backends/rnic/tools/pcie_probe.cpp": "76c2900999978ef9d749f6787b36a7e1f24dd5a977214f5b22f01dcbc2cee43b",
+      "simllm/backends/rnic/tools/wq_probe.cpp": "1c7c7bad7077a7193b10d40d56c5d282e69ac8979f94af48eb9d36ee3b8fe2e5",
+      "simllm/backends/rnic_records.py": "5e4824f6e92b0b9c806452c813351f3419078933a213299e325206a04e547220",
+      "simllm/backends/session_projection.py": "8beb6a7d363b37f791b7ba077f719da90704eaaa014c4a38eef751b89f389e33",
+      "simllm/backends/step_attribution.py": "bc7365fced4ced86544f13a7ebdda07223f85fe13f1cf88d33e44628392088be",
+      "simllm/backends/step_lowerer.py": "bd1530fb5faffefc4c4113b528557b80c39f07f21de4925a57807c84da4aac57",
+      "simllm/backends/step_sink.py": "ffdf912d46dc0477d6e16b8b6f73a1ac3832c3c70779f0d5a32d155c3eecfcac",
+      "simllm/calibration/__init__.py": "fce1ca1702f94be5b8978c07c45f96d590b0fdf13e7fc3a3386b9e80ece47b08",
+      "simllm/calibration/__main__.py": "7a2949bb660cfed2bc4cb178102db5fb7af75540f354cdd078b454d988eb4455",
+      "simllm/calibration/batch_service_surface.py": "e249bf9357f789bac1af3994420818b815cc193e0369c28e238c31abe6fc45f1",
+      "simllm/calibration/bindings.py": "02f0266abbde3b453726fe7e3a7d289f20683cbee0423a53aee1927605ce6ca4",
+      "simllm/calibration/canonical.py": "0da0cce54c75933db26be63ffcbc0b588cb06911041156d05304dd1138dd2b59",
+      "simllm/calibration/cli.py": "2680c37c38415b161466ba0a89cf85c4e6a995998fe5063620e766aeeadaf8f2",
+      "simllm/calibration/deepseek_deployment.py": "8f7d0efb63c6e170ae962706cb215e32dc8da4cebe78f5fb70698263e03c0cf8",
+      "simllm/calibration/doctor.py": "425b11ba4973ee7e76ed2ada2c63e051fa328b8c05472050b752c2f0b814482a",
+      "simllm/calibration/external_composition.py": "4ba2fdb7e205cfcb8359fee07b7b892eb9d90cff581cce0cb4c89026e3ae42fd",
+      "simllm/calibration/external_db.py": "6fe939977f1dbee0ef38b150fd27ee02f1605864f3c0b84ad9563eb974eb7e92",
+      "simllm/calibration/external_family_mapping.json": "63a65ff85d1e45835d550bac31127a17f38a0c3b3a7d46733048067db63dc248",
+      "simllm/calibration/external_nccl.py": "a221da6d5952d412122cbebf172cb72fec7b694007ede8818828407f0ea9c312",
+      "simllm/calibration/external_pass.py": "0f1d48ef52d91f3d0eb0e337ed50d6e7369b75486490e2c218ebb3fc501aa94f",
+      "simllm/calibration/extraction.py": "358147304786f53a2f31a30522cf1f0a566d0deaf31d5d39a24fce55ce88b233",
+      "simllm/calibration/graph_identity.py": "0615bfce3b8e5fde7983b23026783d9d12c850c6e744600cf4058dddf86dc864",
+      "simllm/calibration/identity.py": "969288243d3a19978316fbad55f572eaf82eae456f8609a9d0e3359478874d18",
+      "simllm/calibration/kernel_cycle_lut.py": "b1bff09c2125306d50e24599b5b34b730cde39abddbdb0860d6a796245ccca43",
+      "simllm/calibration/kimi_k3.py": "1ce2533c5d5be14a091033487e7e2435de9727aa0554bf5256983c4b571e2cb1",
+      "simllm/calibration/local_shard.py": "db4169c686e7853de99208b5a22dd234acb39cdbf105aade142268b59ca7419e",
+      "simllm/calibration/manifests.py": "028454e12e1c5e6367f3d6e8e4fc1ed575f736d6bec5ff4c1f3d1b65577ced10",
+      "simllm/calibration/model_inventory.py": "f527c25f54de698d2ae9259af4968874e204bc6ed0cd9ad771baebff32894e3a",
+      "simllm/calibration/protocols.py": "f92b295f5162e27f6205a82b22c80b118823043d9e64cea831caa1c5c71cecd1",
+      "simllm/calibration/record_types.py": "6c48e37bd79d2172cbec25d8d4efd13839a7ce8a779a0a266798291037306b9a",
+      "simllm/calibration/registry.py": "321fb6ecf86934dcc6c204df5ca9092ca0a271da3369249c3598e849fe4ad0d8",
+      "simllm/calibration/splits.py": "580d116551ece9b4777faa92ad9c7f6eb20a6388ea30e8ef2c5ecd4285c30c66",
+      "simllm/calibration/store.py": "0373666891c6eb8d30ffa4f627139e495a429edad37fc0b7ac5e41e6dbd83613",
+      "simllm/calibration/validation.py": "7fee3d7ddb299e0f7ee1ff09f3791e0b65b6ba718b2fa50e5a115351e16d59af",
+      "simllm/compute/__init__.py": "25fbcec9149578e78ae3a9cdcd4e78f6d889e3508d8430cda2cb2e07e0e8268e",
+      "simllm/compute/calibration.py": "67d8fdfd64abacb9b03f6a2e7e3df45efe7f247fd293810bdeee30abbfa466de",
+      "simllm/compute/device_model.py": "af263f60f6030f38fc5a25b82c77a16114c2090a1fe17bacba38204e3ff11a60",
+      "simllm/compute/device_model_io.py": "4ea6781c808e56093c11fd3e275584827ff1b07c283b2c7b4f433d673c06807a",
+      "simllm/compute/gpu_device.py": "785b35f23b4c0b0a6939077842e2d2150d4c5ee26692801b61ffd3ed38ec8ab6",
+      "simllm/compute/gpu_model.py": "8c81fc049abf0d671a05a5973fc59e017fb59965f775c2bc6935c06e4287062a",
+      "simllm/compute/gpu_model_io.py": "0d6f00a766240cab4944e87c1f636e297349f2fa21ed1b4eea796b7f69cb4a8b",
+      "simllm/compute/gpu_packet_port.py": "5952af5c604e7d85a8dd9dcd21f26c4fe6df88a14c0dd6c3459ae080f5c02db9",
+      "simllm/compute/host.py": "017d879046b5b0d852427fb13c5201bfee2812b231f507c4452b0b23757a4c7f",
+      "simllm/compute/kimi_k3.py": "d101cdc08c6f4c11c1b805a18c399ac81c2ff8aaa99d75b8f83ba98fe58fc0f5",
+      "simllm/compute/nccl.py": "6cfeccb1fdd10ec3211d1e1f3fcaba305eb9e3c482181dc62e64974f3d95689a",
+      "simllm/compute/nccl_stack.py": "9f7de4a28899df68703149b3e526c84e0e019b8b0eb7cf45d52ff3b45238ec68",
+      "simllm/compute/provider.py": "37d4cbf8f0139686788cbef6745b48ac2e4a6a628123023358e6a45c77d46d3f",
+      "simllm/compute/rnic.py": "107c7cad4e024b05346e4bb5c54a53f33754aedf73ddeb77a0702572663a8c48",
+      "simllm/compute/transformer.py": "9bf8f98e3a34e5c60ecaa287c5f08daf60d8a4da951abeb57a7037faee389091",
+      "simllm/core/__init__.py": "2a5ac2ef512243277e8b95aa4b317348ea889a7a88053619aad83d8bcb38c293",
+      "simllm/core/_wire.py": "5584cedc4fb93fab1f89c6d4a3e5f6bda88f0f9c05c8fa893816911c68629ef7",
+      "simllm/core/authority.py": "8a5b7e920be7561c31e26815e165aa14cd8f99b4ebb2c390f62b031d94430175",
+      "simllm/core/bookkeeping.py": "faef24367ebdf9725331f66f6e9398d848add7dccbe70ea8527c681dc21b990e",
+      "simllm/core/bookkeeping_io.py": "dc4a58425eb01b7ccc151906ade0e02c306d7e3fcb8cbe734a7dd664c7c5a7a5",
+      "simllm/core/bottleneck.py": "bfcb28bba17d1cfbf39df51add21c99247a15bd2f6fa1d4b6478f72e1a9973bf",
+      "simllm/core/clock.py": "5693cc845e4c3c7371b43abef6b10d66bf1af96f13a5401c48a64175fdc44516",
+      "simllm/core/completion.py": "644beb71891accea1a35a453b9ecb82b7c879b45ad5a79f2a18bf01978244c40",
+      "simllm/core/engine_steps.py": "423e11537616f1c22fcb72f0e2bc5132ba23f2ee4f05feea846a1f1e46e246ff",
+      "simllm/core/execution.py": "bd2e45081bc1f5b2c21fd4019414579c128650c89c2d5f4c7a195a788f11d362",
+      "simllm/core/execution_io.py": "cc249b79cbd4164ebb36a5618f6c8893584bbf3b1453b6be9a1dda59b69f4326",
+      "simllm/core/kv.py": "e4c9e3830cf3cacb287c0fa8b06e92b3217a594d0be5ab9c89a9c594d2149fe5",
+      "simllm/core/packet_port.py": "0750722615dcf3c0e36f2f5fefc17ed432b26a0d6aa79ad50c47c7a22f2cec35",
+      "simllm/core/pd_session.py": "dcaf8550b1dfa1f6425245c3b4b3d9c186a6de142f1037609e141537ad078cc2",
+      "simllm/core/precision.py": "580a6b4dd2c929bd4096e2575a6c1cff9e1d35dbbeb6fe20a7c29b2003315b90",
+      "simllm/core/request_lifetime.py": "17c174233d653ca21a29ff555011fa4f4e4484c45398b85cdc13c6b9ff4f6c6a",
+      "simllm/core/runtime.py": "fb4b8765ccc62420b78b81801b21bcf1d0526eab0c9b33bd13a2e1886511be64",
+      "simllm/core/step.py": "163359c65bfd0a6809f0a1efcc131ca16f0c0d85a1c390efed36a31a79f9cbc7",
+      "simllm/core/step_io.py": "3aaaa471b4b40498d1e2f321ed1d7b1bfeea68618c7fb0277b7f8f5aa1b139ca",
+      "simllm/core/value_snapshot.py": "158c027bfdb94a00e53b677da1842b4b2c8b010950b9b30f993c6e3011890768",
+      "simllm/deploy/__init__.py": "5065d52ee9a856eda88e0b093e4c1a714975a02a9b4831e955d11efb10731f85",
+      "simllm/deploy/candidate.py": "4c53c737aa16572a924ee1016f5b19edd254c1a6d738a422472ad3ebc7d806ab",
+      "simllm/deploy/estimator.py": "e0cc9540b72090d490b3babcd71dbd4c5f946e16407aa1e52c233a93ac3678b2",
+      "simllm/deploy/external_measured.py": "d76ab736b7bb4c5d20efb90fb03a1da116ba7c371bbf6ace6b79ccba9bd8ee47",
+      "simllm/deploy/frontier.py": "31e827288d8adcd4a48978b2f8d1295824e8497bc560c2e0a6a50680b853ef5e",
+      "simllm/deploy/frontier_publication.py": "114cac0d217ff504ff8a7f2802f76769e70b22d266dec21a9f52493cf6b54f7c",
+      "simllm/deploy/ladder.py": "621c5a42a63d33ad8316145d54090616ba1df26df5a5628db2ddc4d6cdfa188b",
+      "simllm/deploy/loop.py": "7aad3859b124ded7068af13228d0d69e432240fbed471ba95cefcd481fc6e924",
+      "simllm/goal/__init__.py": "6d8ff7c598bd29ac675cd96f132477d656daeb8b51a1ace581539a12f9c1cd56",
+      "simllm/goal/emitter.py": "5bd3a73b061c7229325d524d7aa4c9a4203fdeaf3ba616d6c80f7bbde359e9dd",
+      "simllm/goal/txt2bin.py": "fa769d73fae922da0968d5d8a9e8c072308f5553beaff1dc2a53dbce7d6080b0",
+      "simllm/placement/__init__.py": "fd39ea359c66925729533a85400636ba7378e80a3185cc1a59dba47f4dd76053",
+      "simllm/placement/declared.py": "7478a294396057509fccc25248b6f357ef7b750b2accef9e91c4d3eb2d3c32f7",
+      "simllm/placement/disaggregated.py": "50f53e69a4c7b6201c01eb6228ddeddf2054cfa256a3d12841ca417f56ab71a3",
+      "simllm/placement/manifest.py": "f82f05b7277501bdc2c6993e2638a16f9a5631a08c7a13f5f24a34ecad8936c2",
+      "simllm/placement/mapper.py": "b1a5d2d62d2fe0924ec0971ca23218581d387db0e38ee8333ed426814f195716",
+      "simllm/placement/peer_topology.py": "8259321fc7102434b73af7f7d9d33f6184a0c000e175c54df7de667a06092fb3",
+      "simllm/placement/rail.py": "b86a72bddee1ea22017f638ee2a4826343736dee12cbff4fb9dc9111590034c8",
+      "simllm/placement/sglang_disaggregated.py": "f20fa2e151c6de39d3a58c0a4cf8a50fc252388fabfa98cd4e5350feba91bc82",
+      "simllm/preplay/__init__.py": "34b98da75668ae641e9afe11ab80043c544793bc2903b7125c676dd9203f551d",
+      "simllm/preplay/arena.py": "4f983233c9ed4eae47391241d57b33f5c3c4c1acaf7eff8c26ea777409090e8c",
+      "simllm/preplay/framework_join.py": "92e20b842b97cd7b39a3a9fe7b4b11ed896d042cc2ba4b9bf9436fc5b21f23b2",
+      "simllm/preplay/framework_runner.py": "dda360c624591bbd378ce446b6be4b559133b1d51759edbec21aaf9c903bf69c",
+      "simllm/preplay/framework_schema.py": "50fe365c637c38402da82de000d47540b3d1aa7589622cd4b87fd11a58c9b4c5",
+      "simllm/preplay/framework_trace.py": "c6a8c964228f61accc31cfa102a8c29f6a3fce0502804af39c6ef45ebee7e729",
+      "simllm/preplay/join.py": "d844bfbd36b4aa516336507e3902075af682766fb9669979067dc7f53176d900",
+      "simllm/preplay/routing.py": "849b21b27e985f139fcf230392b62e6c2a65e1d550bd6bf543ffacf4ddb78c9a",
+      "simllm/preplay/runner.py": "893d04c6d5114bbcb147fd6090178b38cc8b75d3bb5d1bba9c1ecd78d71a2462",
+      "simllm/preplay/schema.py": "c5c72415721505c6f7fcdab744f3fca0eb2afd7f373d2ce5c723daffef00fe5c",
+      "simllm/preplay/trace.py": "baf7ca581a84ae564932cebff02b675dd1c692145624657b3f175895e0a7cc77",
+      "simllm/preplay/validation.py": "324027b59a72a0fcd907dd7c3beaa580ef9aa2163f481b7abe786540ba89aa0c",
+      "simllm/traffic/__init__.py": "90db0c4614d094ae94e59ec57ae6ad38672a326b5b82cf9f3864c1bb41a05782",
+      "simllm/traffic/collective_floor.py": "565dfd806b2da41264cfd2c2307365b0a94386c71f6324357174a76d59219226",
+      "simllm/traffic/collective_latency.py": "dd51b636ded65f70f51c92f952b6b550edfe8783069ca3c9a9af67c55be9af6f",
+      "simllm/traffic/collective_plan.py": "181bd4422a5eb580f5b066b77f9ce1ce0fa7934a4660bac5ca974e658328393b",
+      "simllm/traffic/collective_registration.py": "50a0e82fc8426d82b44687142db71fba24408b8bd5d466ff6839e333a6d10e22",
+      "simllm/traffic/execution_goal.py": "d66e03f59a51a34556a35c1ab35e292936378d1c1e19ea0fa7639e20dee87548",
+      "simllm/traffic/kv_handoff.py": "27e6e4671c51fccb4c48af86f60797964f733e6c20c04d3f3e5315303ef3b94b",
+      "simllm/traffic/locality.py": "879c803fe1b664267429778acfb47144f53c7736ab55fc9c4354e592f4c6ec38",
+      "simllm/traffic/patterns.py": "85740c1256d7e4ae4c66d062c49a719c2f7209a543953b33c1a160095ab217da",
+      "simllm/traffic/pipeline.py": "57655dc20a2f75e0d6f3482cb085d83460446be89886a0932e13da2247df69f6",
+      "simllm/traffic/request_fidelity.py": "8343c37b5292a3d78fb760c973dd444656e019baf1386429c00abf63fd96725c",
+      "simllm/traffic/routed_conservation.py": "99a03abce27a7a98345ef03a7057bba3c29d0bb6cf4dbcb07dc48bd168fbbb55",
+      "simllm/traffic/routed_moe.py": "d90307243193ad908bbe00b4d4365245793b5e7dc0abcae8724b19dc3e7622ca",
+      "simllm/traffic/shared_kv_handoff.py": "027245fb82a8bebc80620a2acf892818befc88e6c2c2ee3097408863ced7e3e3",
+      "simllm/traffic/step_comm.py": "680779b03b1e6d0f1ba3842a3cd4e3ec38f2c5096c32d0bb3da6c77d1d809c1c",
+      "simllm/workload/__init__.py": "bd42723eeff940e30b59ffd42ae502ad18b40a842095cb199a4a4e337d195d56",
+      "simllm/workload/admission.py": "ce4188ea245e69eea097b3a1fef9c7fcc68b61a35b1a8d5c7f4711380a1a89a2",
+      "simllm/workload/arrivals.py": "1260aadba8e182bba081cc8a36aa7143f8076ce33f36d94c1a70daec8a81bc17",
+      "simllm/workload/lengths.py": "529941b488f8df8084a62dad740f5c8db16eac4f836b21f914bbe01b3213e25a",
+      "simllm/workload/serving.py": "b1d9b717c9a3459217be4b9a76c9d81227343b5617079b2b3ef563289be4e269"
+    },
+    "runner_sha256": "24b327a7a7a088afef41baae2a853d9437ad43cc383acdcf855df46bed29ae86",
+    "source_commit": "ec976fe51f18dcefc8ce1a6bc28283e2cb4670c3"
+  },
+  "raw_bytes": 8662,
+  "raw_file_count": 48,
+  "raw_summary_sha256": "789b27abf7e60635c2763607b5c078f888b1876de558e66ba5a400b805e5d880",
+  "required_component_grid_pairs": 4,
+  "schema": "simllm-shared-handoff-deadline-results-v1",
+  "verdict": "PASS"
+}

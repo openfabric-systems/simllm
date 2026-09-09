@@ -1,0 +1,31 @@
+{
+  "schema": "simllm-shared-handoff-service-vector-expectations-v1",
+  "task": "CORE-71",
+  "as_of_commit": "3678fcf816a5f46e5fc6e8bdea0fadfd28583d07",
+  "interpretation": "Use frozen native reference service_steps by request_index, role and engine_id, adding admission to each endpoint; never assign another engine's waiting interval to service.",
+  "shared_path": "Retain the original contiguous service and all-shard decode-release checks.",
+  "native_processes": 18,
+  "native_requests": 40,
+  "exact_oracle_vectors": 20,
+  "behavioral_instances": 12,
+  "behavioral_families": 3,
+  "preservation_sha256": {
+    "examples/independent_engine_completion_v1/reference.py": "201651f69eeda2c0f56a1bad2f1c6b8927e626a4c6a64bd1317b813496ac3f75",
+    "examples/shared_kv_handoff_v1/VOID_RESULTS.md": "e0161ded96e829bfdf136e324abe1e9ba818efc9630b69566513fd6e63f24a7c",
+    "examples/shared_kv_handoff_v1/void-frozen-v1.json": "d6cb2f287131c4f2524d9c23a4858be5dbc33b069c30fc867ac877d1e685c32d"
+  },
+  "software_controls": {
+    "timing": ["serialized", "independent"],
+    "handoff_ps": [0, 23],
+    "decode_service_ps": [7, 11],
+    "admission_ps": [0, 101],
+    "prefill_service_ps": 13,
+    "prefill_engines": 2,
+    "decode_engines": 2,
+    "requests": 2,
+    "decode_tokens": 4,
+    "fatal_mutations": ["missing", "duplicate", "wrong-engine", "early-start", "changed-finish", "wait-as-service"],
+    "evidence_class": "post-specified reader regressions; unscored prospective controls for fresh execution"
+  },
+  "prior_run": "Immutable VOID; no re-admission or rescore is permitted."
+}

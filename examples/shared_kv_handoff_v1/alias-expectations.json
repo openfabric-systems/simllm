@@ -1,0 +1,48 @@
+{
+  "allowed_control": "coherent bijective renaming of fresh process-local aliases preserves the complete comparison",
+  "as_of_commit": "1741465a6dcb51150219216772cec66d1337e97d",
+  "binding": [
+    "engine_id",
+    "public_request_id",
+    "role",
+    "opaque_native_request_id"
+  ],
+  "fatal_controls": [
+    "alias-collision",
+    "foreign-alias",
+    "wrong-engine-binding",
+    "missing-record-member",
+    "unrecognized-alias-location",
+    "partial-renaming"
+  ],
+  "native_source_sha256": {
+    "vllm/v1/engine/input_processor.py": "5de9296e6f4c00473a92df8df6e4e7e5f83fa37852c7540c4447c59a8b813111"
+  },
+  "no_native_serving_run_before_amendment": true,
+  "original_freeze": "2ad72f72d947e636ea384bfa40f365da27e1ec5a",
+  "projected_step_fields": [
+    "scheduled[].request_id",
+    "finished_request_ids[]",
+    "preempted_request_ids[]"
+  ],
+  "request_comparison_root_exclusions": [
+    "prefill_internal_request_id",
+    "decode_internal_request_id"
+  ],
+  "schema": "simllm-shared-handoff-native-alias-expectations-v1",
+  "task": "CORE-71",
+  "unchanged_comparison_fields": [
+    "step_index",
+    "virtual_time_ps",
+    "num_sampled",
+    "token_counts",
+    "context_lengths",
+    "StepResult",
+    "all_sink_publications",
+    "all_engine_events",
+    "all_engine_visits",
+    "clock_advances",
+    "public_batches",
+    "selected_profiles"
+  ]
+}

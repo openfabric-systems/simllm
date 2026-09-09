@@ -57,12 +57,23 @@ own modules.
   carries one stable request identity across pool-local scheduler identities,
   and it reports TTFT from session admission through the first decode token
   and TPOT only from decode-pool cadence.
-- `KvHandoffEvent` is the sole handoff timing authority. Its declared-constant
+- `KvHandoffEvent` projects the selected synchronous handoff authority. Its declared-constant
   arm derives bytes from model KV geometry and prompt context, advances the
   shared clock once, and publishes a loss-checked read-only record. Its packet
   policy charges PCIe submission, renders the same bytes through GOAL and the
   packet backend, and completes at the last required arrival. TRAF-62 and
   TRAF-64 retain the PLACE-5-dependent target-topology qualification.
+
+- `PendingKvHandoffPolicy` registers future-dated cache shards with one native
+  network owner. `PendingKvHandoff` carries accepted identities and bytes;
+  `KvHandoffJoin` publishes their all-shard maximum only at the exact public
+  completion time. The join gates decode step release and its existing
+  completion/result metric chain. Native lifecycle rows remain complete flow
+  observations; the join does not invent a resource-release timestamp or sum
+  parallel shard durations into request wall time. The
+  [shared packet qualification](../../examples/shared_kv_handoff_v1/RESULTS.md)
+  closes CORE-71 with forty native requests, exact downstream decode schedules
+  and complete declared off/constant source-pair compatibility.
 
 - `simllm.core.engine_steps.EngineStepRuntime` owns independent whole-engine
   service on one `VirtualClock`. A receipt binds its engine, input record,
@@ -1509,7 +1520,7 @@ capture exists.
 
 - CORE-70 (Completeness; P2; L): extend independent native engine completion
   beyond its isolated synchronous single-sequence envelope. Compose shared
-  fabric or peer-packet service, collective registration and the request-metric
+  collective fabric or peer-packet service, collective registration and the request-metric
   sink reducer. Add explicitly admitted paced/replay, multi-sequence and native
   version/request extensions with their existing framework owners (including
   VLLM-8 and VLLM-10). CORE-68 admits in-process vLLM 0.27.1 with declared local
@@ -1520,7 +1531,9 @@ capture exists.
   attribution; never preprice shared contention as an isolated constant.
   Freeze overlapping-engine load and message-size sweeps with exact byte,
   request and completion conservation and a live TTFT/TPOT effect. Depends on
-  CORE-68 and each enabled resource's owning runtime.
+  CORE-68 and each enabled resource's owning runtime. CORE-71 qualifies shared
+  modeled cache-transfer timing; native producer-buffer retention during that transfer
+  remains here and must not be inferred from the tensor-free connector.
 
 - CORE-69 (Completeness; P2; L): support cancellation, reset and recovery
   while an independent native engine step is pending. CORE-68's initial

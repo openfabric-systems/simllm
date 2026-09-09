@@ -167,12 +167,21 @@ Disaggregated session driver (`simllm/adapters/vllm/pd_session.py`):
   the accepted request-result wire schema.
 - Independent mode uses in-process vLLM 0.27.1, synchronous scheduling,
   `max_num_seqs=1`, virtual time, isolated local collective service and the
-  declared handoff policy. An optional `completion_observer` receives read-only
+  declared or shared packet handoff policy. An optional `completion_observer` receives read-only
   request/cache state and emitted frontend outputs at the submission and
   retirement boundaries. Pending input, provider, configuration, prepared
   price or publication changes poison the session. Pending cancellation and
-  reset are rejected before mutation (CORE-69); shared-resource and broader
-  native-mode composition are explicit rejected paths owned by CORE-70.
+  reset are rejected before mutation (CORE-69); additional shared-resource and
+  broader native-mode composition remain explicit rejected paths under CORE-70.
+- A `SharedKvHandoffRuntime` selected as `handoff_policy` binds each actual
+  engine to its deployment endpoints and retains one native packet child
+  across request batches. Independent engine retirement submits future-dated
+  shards; their exact all-shard join releases the decode scheduler. Native
+  packet completions retire at their public time before new work is admitted.
+  The [forty-request qualification](../../examples/shared_kv_handoff_v1/RESULTS.md)
+  closes CORE-71 for the ideal endpoint profile and preserves complete
+  serialized/independent declared off/constant results. Tensor ownership,
+  physical topology and broader composition retain their owning tasks.
 - Each engine's scheduler remains its only batching authority. The delivered
   concurrent path admits several stable session requests, releases each decode
   consumer from its own completed producer handoff and records the pool-local

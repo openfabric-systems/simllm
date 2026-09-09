@@ -1,0 +1,419 @@
+{
+  "as_of_commit": "72a395677ec56e9814a85518473940f2f95313c3",
+  "authority": {
+    "legacy": "simllm-declared-kv-handoff-v1",
+    "native_sessions_per_compatibility_process": 0,
+    "native_sessions_per_shared_process": 1,
+    "shared": "simllm-shared-packet-kv-handoff-v1",
+    "shared_pricing_arm": "shared-packet"
+  },
+  "backend": {
+    "binary_sha256": "16a111a2a7e5ab573189739ba701bc8c10ec4ad4f8d0ef5b142c496964a5663c",
+    "data_header_bytes": 64,
+    "effective_hardware_sha256": "252f6a502fe8f0ced3b8848a924a03f27a53acaa9123eea4b692ef7e71c668ae",
+    "max_events_per_call": 1000000,
+    "max_wire_packet_bytes": 4160,
+    "pcie_submission_ps": 20000000,
+    "policy_context_token": 9001,
+    "profile": "rnic-nn",
+    "propagation_ps": 2000000,
+    "seed": 1,
+    "simulation_budget_ps": 10000000000,
+    "source_commit": "6efec16c54595e8905d37eb45ed9fc9fd7650be2",
+    "wall_timeout_s": 60
+  },
+  "behavioral_families": {
+    "rate": 4,
+    "sharing": 4,
+    "size": 4
+  },
+  "behavioral_instance_total": 12,
+  "component_controls": [
+    "visibility-before-exact-after",
+    "separate-shard-completions",
+    "same-time-distinct-native-callbacks",
+    "engine-arrival-packet-tie",
+    "prior-injection-eligibility-tie",
+    "zero-submission-delay",
+    "duplicate-request",
+    "foreign-request",
+    "endpoint-bijection-and-mutation",
+    "shard-byte-change",
+    "wrong-owner-and-forged-receipt",
+    "missing-and-duplicate-sequences",
+    "foreign-completion",
+    "partial-join",
+    "early-late-reused-publication",
+    "policy-replacement",
+    "partial-injection-failure",
+    "pending-close",
+    "cleanup-preserves-first-exception",
+    "same-owner-across-batches"
+  ],
+  "exact_oracle_vectors": {
+    "persistent_batch_schedules": 4,
+    "primary_request_schedules": 8,
+    "source_pair_compatibility": 4,
+    "unshared_packet_cells": 4
+  },
+  "geometry": {
+    "element_bytes": 2,
+    "head_size": 64,
+    "num_kv_heads": 8,
+    "num_layers": 24,
+    "tensor_parallel_size": 8
+  },
+  "input_dependencies_sha256": {
+    "examples/independent_engine_completion_v1/expectations.json": "2eb623a6a29a1498149e0a28eb6b2ba9af600a1f7f484cf3c7f0425ce5491803"
+  },
+  "known_services_ps": {
+    "16": {
+      "decode": [
+        77976000,
+        77976000,
+        77976000,
+        77976000
+      ],
+      "prefill": 114936000
+    },
+    "8": {
+      "decode": [
+        77952000,
+        77952000,
+        77952000,
+        77952000
+      ],
+      "prefill": 95424000
+    }
+  },
+  "limits": {
+    "max_current_rss_bytes": 17179869184,
+    "rss_poll_seconds": 0.25,
+    "wall_seconds_per_process": 1800
+  },
+  "native_environment": {
+    "async_scheduling": false,
+    "checkpoint": "ibm-granite/granite-3.0-1b-a400m-instruct",
+    "checkpoint_revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
+    "collective_arm": "lower",
+    "collective_envelope": "intra-node-fixed-cost-v1",
+    "data_parallel_size": 1,
+    "dtype": "bfloat16",
+    "engine_local_backend_runs": 0,
+    "gpu": "b100",
+    "gpu_context_initialized": false,
+    "host_model": "ideal",
+    "max_model_len": 64,
+    "max_num_seqs": 1,
+    "model_config_sha256": "ca4bb3a5c1bdef988ab413e0d731640446da65316e4ed16de3666cd96ecc3a0b",
+    "num_gpu_blocks_override": 64,
+    "pipeline_parallel_size": 1,
+    "provider": "RooflineProvider(efficiency=0.7)",
+    "scheduling_policy": "fcfs",
+    "tensor_parallel_size": 8,
+    "token_id": 512,
+    "vllm_version": "0.27.1",
+    "worker_mode": "simulated-only"
+  },
+  "native_process_count": 18,
+  "native_processes": [
+    {
+      "admission_times_ps": [
+        0
+      ],
+      "decode_engines": 1,
+      "decode_output_tokens": 4,
+      "id": "shared-p2-d1-t8-r200",
+      "kind": "shared",
+      "link_rate_bps": 200000000000,
+      "prefill_engines": 2,
+      "prompt_tokens": 8,
+      "requests_per_batch": 2
+    },
+    {
+      "admission_times_ps": [
+        0
+      ],
+      "decode_engines": 1,
+      "decode_output_tokens": 4,
+      "id": "shared-p2-d1-t8-r400",
+      "kind": "shared",
+      "link_rate_bps": 400000000000,
+      "prefill_engines": 2,
+      "prompt_tokens": 8,
+      "requests_per_batch": 2
+    },
+    {
+      "admission_times_ps": [
+        0
+      ],
+      "decode_engines": 1,
+      "decode_output_tokens": 4,
+      "id": "shared-p2-d1-t16-r200",
+      "kind": "shared",
+      "link_rate_bps": 200000000000,
+      "prefill_engines": 2,
+      "prompt_tokens": 16,
+      "requests_per_batch": 2
+    },
+    {
+      "admission_times_ps": [
+        0
+      ],
+      "decode_engines": 1,
+      "decode_output_tokens": 4,
+      "id": "shared-p2-d1-t16-r400",
+      "kind": "shared",
+      "link_rate_bps": 400000000000,
+      "prefill_engines": 2,
+      "prompt_tokens": 16,
+      "requests_per_batch": 2
+    },
+    {
+      "admission_times_ps": [
+        0
+      ],
+      "decode_engines": 2,
+      "decode_output_tokens": 4,
+      "id": "shared-p2-d2-t8-r200",
+      "kind": "shared",
+      "link_rate_bps": 200000000000,
+      "prefill_engines": 2,
+      "prompt_tokens": 8,
+      "requests_per_batch": 2
+    },
+    {
+      "admission_times_ps": [
+        0
+      ],
+      "decode_engines": 2,
+      "decode_output_tokens": 4,
+      "id": "shared-p2-d2-t8-r400",
+      "kind": "shared",
+      "link_rate_bps": 400000000000,
+      "prefill_engines": 2,
+      "prompt_tokens": 8,
+      "requests_per_batch": 2
+    },
+    {
+      "admission_times_ps": [
+        0
+      ],
+      "decode_engines": 2,
+      "decode_output_tokens": 4,
+      "id": "shared-p2-d2-t16-r200",
+      "kind": "shared",
+      "link_rate_bps": 200000000000,
+      "prefill_engines": 2,
+      "prompt_tokens": 16,
+      "requests_per_batch": 2
+    },
+    {
+      "admission_times_ps": [
+        0
+      ],
+      "decode_engines": 2,
+      "decode_output_tokens": 4,
+      "id": "shared-p2-d2-t16-r400",
+      "kind": "shared",
+      "link_rate_bps": 400000000000,
+      "prefill_engines": 2,
+      "prompt_tokens": 16,
+      "requests_per_batch": 2
+    },
+    {
+      "admission_times_ps": [
+        0,
+        1664000000
+      ],
+      "decode_engines": 1,
+      "decode_output_tokens": 4,
+      "id": "persistent-p2-d1-t8-r200",
+      "kind": "persistent",
+      "link_rate_bps": 200000000000,
+      "prefill_engines": 2,
+      "prompt_tokens": 8,
+      "requests_per_batch": 2
+    },
+    {
+      "admission_times_ps": [
+        0,
+        1664000000
+      ],
+      "decode_engines": 1,
+      "decode_output_tokens": 4,
+      "id": "persistent-p2-d1-t8-r400",
+      "kind": "persistent",
+      "link_rate_bps": 400000000000,
+      "prefill_engines": 2,
+      "prompt_tokens": 8,
+      "requests_per_batch": 2
+    },
+    {
+      "admission_times_ps": [
+        0
+      ],
+      "decode_engines": 2,
+      "decode_output_tokens": 4,
+      "engine_timing": "serialized",
+      "handoff_arm": "off",
+      "handoff_ps": 0,
+      "id": "before-serialized-off",
+      "kind": "compatibility",
+      "prefill_engines": 2,
+      "prompt_tokens": 8,
+      "requests_per_batch": 2,
+      "source": "before"
+    },
+    {
+      "admission_times_ps": [
+        0
+      ],
+      "decode_engines": 2,
+      "decode_output_tokens": 4,
+      "engine_timing": "serialized",
+      "handoff_arm": "constant",
+      "handoff_ps": 100000000,
+      "id": "before-serialized-constant",
+      "kind": "compatibility",
+      "prefill_engines": 2,
+      "prompt_tokens": 8,
+      "requests_per_batch": 2,
+      "source": "before"
+    },
+    {
+      "admission_times_ps": [
+        0
+      ],
+      "decode_engines": 2,
+      "decode_output_tokens": 4,
+      "engine_timing": "independent",
+      "handoff_arm": "off",
+      "handoff_ps": 0,
+      "id": "before-independent-off",
+      "kind": "compatibility",
+      "prefill_engines": 2,
+      "prompt_tokens": 8,
+      "requests_per_batch": 2,
+      "source": "before"
+    },
+    {
+      "admission_times_ps": [
+        0
+      ],
+      "decode_engines": 2,
+      "decode_output_tokens": 4,
+      "engine_timing": "independent",
+      "handoff_arm": "constant",
+      "handoff_ps": 100000000,
+      "id": "before-independent-constant",
+      "kind": "compatibility",
+      "prefill_engines": 2,
+      "prompt_tokens": 8,
+      "requests_per_batch": 2,
+      "source": "before"
+    },
+    {
+      "admission_times_ps": [
+        0
+      ],
+      "decode_engines": 2,
+      "decode_output_tokens": 4,
+      "engine_timing": "serialized",
+      "handoff_arm": "off",
+      "handoff_ps": 0,
+      "id": "after-serialized-off",
+      "kind": "compatibility",
+      "prefill_engines": 2,
+      "prompt_tokens": 8,
+      "requests_per_batch": 2,
+      "source": "after"
+    },
+    {
+      "admission_times_ps": [
+        0
+      ],
+      "decode_engines": 2,
+      "decode_output_tokens": 4,
+      "engine_timing": "serialized",
+      "handoff_arm": "constant",
+      "handoff_ps": 100000000,
+      "id": "after-serialized-constant",
+      "kind": "compatibility",
+      "prefill_engines": 2,
+      "prompt_tokens": 8,
+      "requests_per_batch": 2,
+      "source": "after"
+    },
+    {
+      "admission_times_ps": [
+        0
+      ],
+      "decode_engines": 2,
+      "decode_output_tokens": 4,
+      "engine_timing": "independent",
+      "handoff_arm": "off",
+      "handoff_ps": 0,
+      "id": "after-independent-off",
+      "kind": "compatibility",
+      "prefill_engines": 2,
+      "prompt_tokens": 8,
+      "requests_per_batch": 2,
+      "source": "after"
+    },
+    {
+      "admission_times_ps": [
+        0
+      ],
+      "decode_engines": 2,
+      "decode_output_tokens": 4,
+      "engine_timing": "independent",
+      "handoff_arm": "constant",
+      "handoff_ps": 100000000,
+      "id": "after-independent-constant",
+      "kind": "compatibility",
+      "prefill_engines": 2,
+      "prompt_tokens": 8,
+      "requests_per_batch": 2,
+      "source": "after"
+    }
+  ],
+  "native_request_count": 40,
+  "native_source_sha256": {
+    "vllm/config/kv_transfer.py": "64bde41204a5eea02cf2bb886e3479de90d5aab238e0d8a50de488d27edae4be",
+    "vllm/config/scheduler.py": "3cf5d41a5d662ab0eada6f3128e2538abc0a250d6aef82acab7df7dd84e498bc",
+    "vllm/config/vllm.py": "66e82e95c5cdbb88715e25feb65f4cc2be83cd67bff5b5f703d52dea43a0815e",
+    "vllm/distributed/kv_transfer/kv_connector/v1/base.py": "ec3e461a802fdbc0d324d8cb200a161042da0614cfc0cb342accdd9d58dca31d",
+    "vllm/entrypoints/llm.py": "3bb98c9bff8d018902f4352bb5f81f1b4d13276ba1c3f18a9ec11d9a5aa5a57a",
+    "vllm/outputs.py": "44e2ea5d8a34403a99a867b42806e8102b3d9e7b1a0f735af26e6650cc482342",
+    "vllm/v1/core/block_pool.py": "51cad2fd425128a0ff433ca4685acfc022e40659153ea5d7180fc586e1eebb6c",
+    "vllm/v1/core/kv_cache_coordinator.py": "cf1a92db18d079403d8d4c8c9e5b0b615d2a116e3e8ffb5ffb39352a01c04b29",
+    "vllm/v1/core/kv_cache_manager.py": "70f7f608c0963af155540630a5633483e5c19c0c0280dfd621760d5db2a419a6",
+    "vllm/v1/core/kv_cache_utils.py": "0ab5385925f660395612e3f69030cad3b18c2e0bd6fb61d3ff43072a6cefb74f",
+    "vllm/v1/core/sched/request_queue.py": "4b8d938e5fb8152fe61030b8aa991f983fcac9a405c37ed8908045e05e82ae5e",
+    "vllm/v1/core/sched/scheduler.py": "c67bda2886b52865ddafabaae7d797c359e930752f374421a33e537d94a5f45a",
+    "vllm/v1/core/single_type_kv_cache_manager.py": "8c9030040cbc3b7176e228e10ff6491c3cf6c3e95bdfb573532fcf75f5385ebd",
+    "vllm/v1/engine/core.py": "6fdd067f54e5d42c57ff413e292685f5bdf6f343498d85c9262567f1eb746916",
+    "vllm/v1/engine/core_client.py": "7f5e1ac1a999faf36eab7d0c184bea7c93ae5e92234c39a148a809fd6e89840c",
+    "vllm/v1/engine/detokenizer.py": "213d71cf6eefcea061b28b656cf8a08af60c9f3513403e724b16876995f3de93",
+    "vllm/v1/engine/llm_engine.py": "46caab7b8a09d74321ef7a64683e8019b2187810725c80a15298cf9f51f1df03",
+    "vllm/v1/engine/output_processor.py": "7cd99f14e0c0dc5f8cd69100d12489abfddee21d5fb3d6594a713beeefe3cdb0",
+    "vllm/v1/request.py": "6085b0668f41d56cd81ef483c06456f4ebe88bc1d46c8131d7134182d7893012"
+  },
+  "prerequisite": "CORE-68",
+  "primary_structural_inventory": {
+    "cells": 8,
+    "data_packets": 2304,
+    "flows": 128,
+    "lifecycle_events": 512,
+    "requests": 16,
+    "wire_bytes": 9584640
+  },
+  "schema": "simllm-shared-kv-handoff-expectations-v1",
+  "task": "CORE-71",
+  "verdict_policy": {
+    "behavioral_score_after_fatal": null,
+    "failed_attempts": "retain first receipts and do not rescore",
+    "fatal": "VOID"
+  }
+}

@@ -161,6 +161,7 @@ from simllm.traffic.routed_moe import (
     validate_expert_placement_snapshot,
     validate_routed_moe_supply,
 )
+from simllm.traffic.shared_kv_handoff import SharedKvHandoffRuntime
 from simllm.traffic.step_comm import (
     EXPERT_PARALLEL_TP_ALLREDUCE_SITES,
     MOE_A2A_PHASES,
@@ -289,6 +290,7 @@ __all__ = [
     "RoutedMoeSupply",
     "RoutedPhaseTable",
     "RoutedTokenOwnership",
+    "SharedKvHandoffRuntime",
     "StepLocalityPlan",
     "TpAllReduce",
     "arm_ratio_envelope",
