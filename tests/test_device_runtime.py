@@ -374,6 +374,22 @@ def test_co_runnable_kernels_are_one_concurrent_compute_service_dispatch():
     assert scheduler.calls == [("a", "b")]
 
 
+def test_logical_operator_cannot_enter_mapped_concurrent_service():
+    scheduler = SmSchedulerModel(_architecture())
+    graph = ExecutionGraph("unbound-concurrent", 0, 0, (
+        ExecutionOperation("a", 0, "stream-a", ComputeWork(
+            "unbound", flops=None, hbm_bytes=None, nominal_duration_ps=1,
+            scope="logical-operator")),
+    ))
+    runtime = CoarseDeviceRuntime(kernel_services={0: scheduler},
+                                  kernel_launches={"a": _launch("a")})
+    events = []
+    with pytest.raises(ValueError, match="logical-operator"):
+        runtime.execute(graph, on_event=events.append)
+    assert events == []
+    assert runtime.last_report is None
+
+
 def _control_graph(execution_id: str, active_gpus: int, mode=ControlMode.SYNCHRONOUS):
     operations = []
     for rank in range(active_gpus):

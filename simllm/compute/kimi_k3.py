@@ -55,7 +55,9 @@ class KdaSpec:
         if self.full_rank_output_gate is not True or self.gate_lower_bound != "-5":
             raise ValueError("K3 requires the full output gate and bounded per-key forget gate")
         if (self.recurrent_dtype, self.convolution_state_dtype) != ("float32", "bfloat16"):
-            raise ValueError("this structural envelope declares FP32 recurrence and BF16 convolution state")
+            raise ValueError(
+                "this structural envelope declares FP32 recurrence and BF16 convolution state"
+            )
 
     @property
     def projection_width(self) -> int:
@@ -82,7 +84,14 @@ class MlaSpec:
     cache_dtype: str
 
     def __post_init__(self) -> None:
-        for name in ("heads", "query_rank", "kv_rank", "score_nope_dim", "score_extra_dim", "value_dim"):
+        for name in (
+            "heads",
+            "query_rank",
+            "kv_rank",
+            "score_nope_dim",
+            "score_extra_dim",
+            "value_dim",
+        ):
             _positive(f"MLA.{name}", getattr(self, name))
         if self.skip_rotary is not True or self.output_gate is not True:
             raise ValueError("K3 MLA requires NoPE and the full output gate")
@@ -124,13 +133,27 @@ class LatentMoeSpec:
     situ_linear_beta: str
 
     def __post_init__(self) -> None:
-        for name in ("experts", "selected_experts", "latent_width", "intermediate_size", "shared_experts", "expert_groups", "topk_groups"):
+        for name in (
+            "experts",
+            "selected_experts",
+            "latent_width",
+            "intermediate_size",
+            "shared_experts",
+            "expert_groups",
+            "topk_groups",
+        ):
             _positive(f"MoE.{name}", getattr(self, name))
         if self.selected_experts > self.experts:
             raise ValueError("selected experts exceed the resident expert population")
         if self.normalize_latent_output is not True or self.renormalize is not True:
-            raise ValueError("K3 requires latent-output normalization and normalized routing weights")
-        if (self.router_activation, self.topk_method, self.routed_scale) != ("sigmoid", "noaux_tc", "1"):
+            raise ValueError(
+                "K3 requires latent-output normalization and normalized routing weights"
+            )
+        if (self.router_activation, self.topk_method, self.routed_scale) != (
+            "sigmoid",
+            "noaux_tc",
+            "1",
+        ):
             raise ValueError("unsupported K3 routing operator")
         if (self.expert_groups, self.topk_groups) != (1, 1):
             raise ValueError("this K3 envelope has one expert-selection group")
@@ -176,9 +199,13 @@ class LogicalWeightShape:
         return prod(self.dimensions)
 
     def to_obj(self) -> dict[str, Any]:
-        return {"name": self.name, "dimensions": list(self.dimensions),
-                "layer": self.layer, "parameters": self.parameters,
-                "scope": "logical-weight-shape"}
+        return {
+            "name": self.name,
+            "dimensions": list(self.dimensions),
+            "layer": self.layer,
+            "parameters": self.parameters,
+            "scope": "logical-weight-shape",
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -199,7 +226,13 @@ class KimiK3Spec:
     checkpoint_quantization: str
 
     def __post_init__(self) -> None:
-        for name in ("hidden_size", "vocab_size", "dense_intermediate_size", "residual_block_size", "max_context"):
+        for name in (
+            "hidden_size",
+            "vocab_size",
+            "dense_intermediate_size",
+            "residual_block_size",
+            "max_context",
+        ):
             _positive(f"K3.{name}", getattr(self, name))
         _positive("K3.dense_prefix_layers", self.dense_prefix_layers)
         if not isinstance(self.layer_types, tuple) or not self.layer_types:
@@ -212,7 +245,9 @@ class KimiK3Spec:
             if not isinstance(value, kind):
                 raise TypeError(f"K3 geometry requires typed {kind.__name__}")
         if self.activation_dtype != "bfloat16" or self.tied_embeddings is not False:
-            raise ValueError("this K3 text envelope requires BF16 activations and untied embeddings")
+            raise ValueError(
+                "this K3 text envelope requires BF16 activations and untied embeddings"
+            )
         if self.rms_norm_epsilon != "1/100000":
             raise ValueError("K3 model RMS normalization epsilon must be 1e-5")
         if self.checkpoint_quantization != MXFP4_GROUP32:
@@ -225,15 +260,26 @@ class KimiK3Spec:
     @property
     def layers(self) -> tuple[KimiK3LayerSpec, ...]:
         width = self.residual_block_size
-        return tuple(KimiK3LayerSpec(i, attention,
-                                    "dense" if i < self.dense_prefix_layers else "latent-moe",
-                                    (i + width - 1) // width, i % width == 0)
-                     for i, attention in enumerate(self.layer_types))
+        return tuple(
+            KimiK3LayerSpec(
+                i,
+                attention,
+                "dense" if i < self.dense_prefix_layers else "latent-moe",
+                (i + width - 1) // width,
+                i % width == 0,
+            )
+            for i, attention in enumerate(self.layer_types)
+        )
 
     def to_obj(self) -> dict[str, Any]:
         value = _scalars(self)
-        value.update(schema=KIMI_K3_GEOMETRY_SCHEMA, layer_types=list(self.layer_types),
-                     kda=self.kda.to_obj(), mla=self.mla.to_obj(), moe=self.moe.to_obj())
+        value.update(
+            schema=KIMI_K3_GEOMETRY_SCHEMA,
+            layer_types=list(self.layer_types),
+            kda=self.kda.to_obj(),
+            mla=self.mla.to_obj(),
+            moe=self.moe.to_obj(),
+        )
         return value
 
     @classmethod
@@ -243,24 +289,39 @@ class KimiK3Spec:
             raise ValueError("unknown K3 geometry schema")
         if not isinstance(obj["layer_types"], list):
             raise TypeError("serialized layer types must be an array")
-        obj.update(layer_types=tuple(obj["layer_types"]), kda=KdaSpec.from_obj(obj["kda"]),
-                   mla=MlaSpec.from_obj(obj["mla"]), moe=LatentMoeSpec.from_obj(obj["moe"]))
+        obj.update(
+            layer_types=tuple(obj["layer_types"]),
+            kda=KdaSpec.from_obj(obj["kda"]),
+            mla=MlaSpec.from_obj(obj["mla"]),
+            moe=LatentMoeSpec.from_obj(obj["moe"]),
+        )
         return cls(**obj)
 
-    def retained_state(self, *, sequences: int, cached_tokens: int, current_tokens: int) -> dict[str, int]:
+    def retained_state(
+        self, *, sequences: int, cached_tokens: int, current_tokens: int
+    ) -> dict[str, int]:
         """Return declared capacity; token counts are totals across all sequences.
 
         This does not price cache accesses or describe physical allocation.
         """
-        for name, value in (("sequences", sequences), ("cached_tokens", cached_tokens), ("current_tokens", current_tokens)):
+        for name, value in (
+            ("sequences", sequences),
+            ("cached_tokens", cached_tokens),
+            ("current_tokens", current_tokens),
+        ):
             _nonnegative(name, value)
         linear = self.layer_types.count("kda")
         full = self.layer_types.count("mla")
         kda = self.kda
         bank = (self.num_layers + self.residual_block_size - 1) // self.residual_block_size
         return {
-            "kda_recurrent_bytes": sequences * linear * kda.heads * kda.head_dim ** 2 * 4,
-            "kda_convolution_history_bytes": sequences * linear * 3 * kda.projection_width * (kda.convolution_width - 1) * 2,
+            "kda_recurrent_bytes": sequences * linear * kda.heads * kda.head_dim**2 * 4,
+            "kda_convolution_history_bytes": sequences
+            * linear
+            * 3
+            * kda.projection_width
+            * (kda.convolution_width - 1)
+            * 2,
             "mla_cached_history_bytes": cached_tokens * full * self.mla.compressed_width * 2,
             "mla_new_token_state_bytes": current_tokens * full * self.mla.compressed_width * 2,
             "residual_snapshot_capacity_bytes": current_tokens * bank * self.hidden_size * 2,
@@ -278,7 +339,14 @@ class KimiK3Spec:
         add("embedding", (self.vocab_size, h))
         for layer in self.layers:
             i = layer.index
-            for name in ("input_norm", "post_attention_norm", "attention_residual_norm", "mlp_residual_norm", "attention_residual_query", "mlp_residual_query"):
+            for name in (
+                "input_norm",
+                "post_attention_norm",
+                "attention_residual_norm",
+                "mlp_residual_norm",
+                "attention_residual_query",
+                "mlp_residual_query",
+            ):
                 add(name, (h,), i)
             if layer.attention == "kda":
                 for name in ("q", "k", "v", "output_gate"):
@@ -294,10 +362,14 @@ class KimiK3Spec:
                 add("kda.output_norm", (a.head_dim,), i)
             else:
                 for name, shape in (
-                    ("q_a", (h, m.query_rank)), ("q_b", (m.query_rank, m.heads * m.expanded_score_dim)),
-                    ("kv_a", (h, m.compressed_width)), ("kv_b", (m.kv_rank, m.heads * (m.score_nope_dim + m.value_dim))),
-                    ("output_gate", (h, m.heads * m.value_dim)), ("output", (m.heads * m.value_dim, h)),
-                    ("q_norm", (m.query_rank,)), ("kv_norm", (m.kv_rank,)),
+                    ("q_a", (h, m.query_rank)),
+                    ("q_b", (m.query_rank, m.heads * m.expanded_score_dim)),
+                    ("kv_a", (h, m.compressed_width)),
+                    ("kv_b", (m.kv_rank, m.heads * (m.score_nope_dim + m.value_dim))),
+                    ("output_gate", (h, m.heads * m.value_dim)),
+                    ("output", (m.heads * m.value_dim, h)),
+                    ("q_norm", (m.query_rank,)),
+                    ("kv_norm", (m.kv_rank,)),
                 ):
                     add(f"mla.{name}", shape, i)
             if layer.feed_forward == "dense":
@@ -307,9 +379,13 @@ class KimiK3Spec:
             else:
                 e, width = moe.latent_width, moe.intermediate_size
                 for name, shape in (
-                    ("router", (h, moe.experts)), ("router_correction", (moe.experts,)),
-                    ("latent_down", (h, e)), ("latent_up", (e, h)), ("latent_norm", (e,)),
-                    ("expert_gate", (moe.experts, e, width)), ("expert_up", (moe.experts, e, width)),
+                    ("router", (h, moe.experts)),
+                    ("router_correction", (moe.experts,)),
+                    ("latent_down", (h, e)),
+                    ("latent_up", (e, h)),
+                    ("latent_norm", (e,)),
+                    ("expert_gate", (moe.experts, e, width)),
+                    ("expert_up", (moe.experts, e, width)),
                     ("expert_down", (moe.experts, width, e)),
                     ("shared_gate", (h, width * moe.shared_experts)),
                     ("shared_up", (h, width * moe.shared_experts)),

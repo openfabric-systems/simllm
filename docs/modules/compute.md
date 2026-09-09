@@ -1406,6 +1406,47 @@ calendar. Packet mode selects this authority exclusively. Scalar and packet
 port service cannot both advance the same transfer. Host-port emission stays
 with COMP-40, and measured per-port profile ceilings stay with COMP-41.
 
+## Kimi K3 logical text structure
+
+**Kimi K3 has one typed, original-layer execution graph.** `KimiK3Spec`
+represents its 69 Kimi Delta Attention layers, 24 multi-head latent attention
+layers, dense first feed-forward layer, 92 latent expert layers and residual
+snapshot bank. Its tagged geometry enters the existing checkpoint identity;
+there is no uniform `ModelDims` projection. Both pinned framework configuration
+seams normalize the same exact checkpoint independently.
+
+`KimiK3Lowerer` implements `ExecutionLowerer`. Cold prefill expands new keys
+and values; one-token decode absorbs the attention projections into the latent
+space. Every routed and full-width shared expert branch has an explicit join.
+Prefill cache writes remain a separate completion frontier, while decode waits
+for the current token's cache visibility. The vLLM output normalization uses
+sampled rows; SGLang normalizes all newly computed rows at its native caller.
+The inventory is a read-only family projection of that same graph, with
+content-addressed instance and template joins.
+
+Logical weight shapes, checkpoint packing and retained state capacity are
+separate quantities. Packed expert values carry one scale byte per 32 values.
+Retained Kimi Delta Attention state uses four bytes per recurrent element and
+two bytes per convolution-history element. The native SGLang dtype helper
+resolves environment overrides, and incompatible effective state formats reject.
+These capacities do not price memory traffic or identify physical launches.
+
+Every logical region carries `ComputeWork.scope="logical-operator"` and an
+unbound memory demand. Unknown arithmetic remains null. Runtime execution,
+GOAL emission and physical bottleneck classification reject that scope even
+when someone supplies a duration. `bind_synthetic_kimi_k3_graph` creates a
+separate identity with explicit uniform service and zero memory arbitration.
+The diagnostic selects `CoarseDeviceRuntime(serial_compute=True)` and reaches
+ordinary completion events, `StepResult`, time to first token and time per
+output token. These diagnostic times are synthetic operator service.
+
+The [authored suite](../../offline/calibration/suites/kimi-k3-text-v1-frameworks-2026-09-09/suite.json)
+fixes text-only cold prefill and one-token decode at one rank. Vision,
+projection of images, multiple-token prediction, prefix prefill, mixed phases,
+padding and distributed rank projection require their own declared envelopes
+and reject at this boundary. COMP-54 owns structural qualification; COMP-59
+owns physical coverage and CORE-54 owns deployment curves.
+
 ## Status
 
 The module exposes one vendor-neutral offline calibration contract from real
@@ -1446,8 +1487,8 @@ fields remain absent by design. No tracked second Qwen3-32B-FP8 extraction run
 exists, so the column makes no repeat-run claim.
 The latest Qwen3-32B-FP8 column binds exact revision
 `aa55da1ecc13d006e8b8e4f54579b1ea8c3db2df`, covers all 15 declared cases and
-emits exactly 257 logical visits per case. COMP-54 stays open for the Kimi K3
-structure half.
+emits exactly 257 logical visits per case. COMP-54 stays open for independent
+qualification of the complete Kimi K3 logical structure.
 
 The kernel-time determinism contract above is stated publicly and enforced. The
 pre-registered
@@ -1878,8 +1919,9 @@ packed values and their scale bytes separately. A 512-value envelope has a
 272-byte payload floor, so its 320-byte synthetic container passes admission;
 one byte below the floor rejects. All five independent byte oracles have zero
 residual across 15 admission cases. Existing BF16 and FP8 identities preserve
-their canonical bytes, and generic compute rejects the packed format until
-COMP-54 supplies its complete structure. These are metadata constraints, not
+their canonical bytes. Generic uniform-attention compute rejects the packed
+K3 format; its heterogeneous logical graph carries explicitly unbound service
+and memory demands under COMP-54. These are metadata constraints, not
 verified weight contents, memory-traffic measurements or physical kernel timing.
 
 ## Open tasks
@@ -2802,8 +2844,16 @@ semantic comparison remains DEPLOY-12's scope.
   coverage denominators it publishes. The Granite, Qwen3.8-27B and
   comparison-specific Qwen3-32B-FP8 slices are published for both framework
   rows with exact checkpoint identities and freeze-first shape grids. Complete
-  the Kimi K3 structure half beside the COMP-59 physical envelope; until then
-  this task stays open.
+  the Kimi K3 structural qualification beside the COMP-59 physical envelope.
+  The typed full-depth graph, native configuration projections and strict
+  unknown-demand boundary are supplied by `kimi_k3_structure_v1`. Its original
+  frozen slow-shared oracle omits one final addition in each of 92 expert
+  layers, so the study is void and its behavioral score is null. Keep that
+  refutation and its raw evidence. A corrected check is post-specified and does
+  not turn the original run into a closure. Finish an independently reviewed
+  qualification envelope and publish accepted content-addressed inventories
+  before closing this task. Physical launch counts, kernel timing and
+  distributed projections remain COMP-59, COMP-64 and CORE-54 work.
 - COMP-59 (Completeness; P1; L): fill coverage columns for models whose
   weights exceed the reachable fleet, with the Kimi K3 class (2.8T-parameter
   MXFP4 MoE against 1.6 TB of total A100 HBM and about 1.15 TB of GH200
