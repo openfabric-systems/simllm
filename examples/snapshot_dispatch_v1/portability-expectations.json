@@ -1,0 +1,13 @@
+{
+  "schema": "simllm-runtime-identity-portability-expectations-v1",
+  "as_of_commit": "7df28a332582bc9f962ade89ecae4984a770e67c",
+  "chronology": "post-specified to Windows CI failure, frozen before correction and fixture runs",
+  "library_kinds": ["file-backed", "built-in"],
+  "backing_contents": ["first runtime bytes", "second runtime bytes"],
+  "file_backed_identity_exact": true,
+  "built_in_requires_loaded_runtime_image": true,
+  "fatal_controls": ["missing-file", "unknown-module", "unknown-origin", "missing-handle", "invalid-handle", "lookup-failure", "truncated-path"],
+  "model_behavior_changed": false,
+  "behavioral_instance_count": 0,
+  "behavioral_score": null
+}
