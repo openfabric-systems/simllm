@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable, Sequence
+from copy import deepcopy
 from dataclasses import dataclass, field
 from fractions import Fraction
 from pathlib import Path
@@ -50,6 +51,11 @@ PD_KV_PARAMS_SCHEMA = "simllm-pd-kv-params-v1"
 PS_PER_SECOND = 1_000_000_000_000
 DEPLOYMENT_CURVE_SCHEMA = "simllm-deployment-curve-v1"
 DEPLOYMENT_CURVE_POINT_SCHEMA = "simllm-deployment-curve-point-v1"
+PD_REQUEST_COMPARISON_SCHEMA = "simllm-vllm-pd-request-comparison-v1"
+PD_REQUEST_OPAQUE_ROOT_FIELDS = (
+    "prefill_internal_request_id",
+    "decode_internal_request_id",
+)
 
 
 def _positive_int(name: str, value: object) -> int:
@@ -201,6 +207,23 @@ class VllmPdRequestResult:
         if self.compute_pricing is not None:
             value["compute_pricing"] = dict(self.compute_pricing)
         return value
+
+    def to_comparison_json(self) -> dict[str, object]:
+        """Preserve the complete result except two opaque native request IDs."""
+
+        value = self.to_json()
+        for name in PD_REQUEST_OPAQUE_ROOT_FIELDS:
+            identifier = value.get(name)
+            if not isinstance(identifier, str) or not identifier.strip():
+                raise ValueError(f"comparison requires a nonblank {name}")
+        request = deepcopy(value)
+        for name in PD_REQUEST_OPAQUE_ROOT_FIELDS:
+            del request[name]
+        return {
+            "schema": PD_REQUEST_COMPARISON_SCHEMA,
+            "excluded_root_fields": list(PD_REQUEST_OPAQUE_ROOT_FIELDS),
+            "request": request,
+        }
 
 
 @dataclass(frozen=True)

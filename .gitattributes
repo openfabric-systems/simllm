@@ -590,3 +590,4 @@ examples/local_peer_packet_runtime_v1/*.py text eol=lf
 examples/local_peer_packet_runtime_v1/*.json text eol=lf
 simllm/core/packet_port.py text eol=lf
 simllm/backends/rnic/include/simllm/ports/*.h text eol=lf
+examples/pd_session_identity_v1/* text eol=lf
