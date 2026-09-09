@@ -246,3 +246,31 @@ retain large deployment and public frontier qualification. Physical GPU service,
 shared packet-fabric contention and mid-flight cancellation remain outside this
 acceptance. This study establishes resource independence and causal visibility,
 not calibrated GPU throughput.
+
+## Source-representation amendment
+
+This amendment follows the first retained VOID and is a post-specified
+regression contract. It precedes the checker repair and a fresh campaign;
+it does not establish public pre-registration for the corrected assertion.
+The original behavioral protocol remains frozen at
+`73270f6699440aa4a17ec7b2af5155698ab643b2`. No service, arrival, width, handoff,
+physical bound, process limit or required evidence domain changes.
+
+The source B100 `GpuSpec` in `simllm/compute/transformer.py` represents memory
+bandwidth as floating-point `8.0e12` bytes per second. The physical bound in
+JSON is integer `8000000000000`. Join these explicitly by comparing the
+captured profile value with the floating-point representation of that exact
+integer bound. Keep the physical arithmetic integer and keep generic JSON
+equality strict. The full source-derived GPU record still requires its native
+field representations; an integer substitution in that record is invalid.
+
+Exercise the actual selected GPU, roofline provider, ideal host and collective
+envelope through the unchanged JSON writer and reader, then the actual engine
+selection checks. This is a post-specified configuration regression, not
+re-admission of a retained native run. Reject changed bandwidth, fractional
+deviations, booleans, strings, nonfinite values and a coerced integer profile.
+No opaque identity normalization can change the selected configuration.
+
+Retain the first VOID, its initial raw receipts and null score unchanged.
+A fresh source-bound campaign must complete the entire original finite domain
+before any native concurrency claim closes.
