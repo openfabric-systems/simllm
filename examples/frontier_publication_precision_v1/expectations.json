@@ -1,0 +1,313 @@
+{
+  "acceptance": {
+    "behavioral_instances": 40,
+    "closes_only": [
+      "DEPLOY-13"
+    ],
+    "fatal_failure": "VOID",
+    "historical_agreement_is_not_study_score": true,
+    "historical_exact_oracles": 10,
+    "historical_rescoring": false,
+    "remains_open": [
+      "DEPLOY-26"
+    ],
+    "void_behavioral_score": null
+  },
+  "agreement_band": [
+    "3/4",
+    "27/20"
+  ],
+  "authored_against": "67d8c020ef40195668d90801c880c615fa58c9bd",
+  "date": "2026-09-09",
+  "fresh_processes": 2,
+  "historical": {
+    "closed_endpoints": true,
+    "decimal_places": 3,
+    "external_csv": "examples/frontier_comparison_v1/external/disagg_pareto.csv",
+    "guard": "4*u*(p+q)",
+    "historical_profile_verified": false,
+    "maximum_p": "1023",
+    "minimum_p": "1",
+    "point_record": "examples/matched_seam_frontier_v1/record.json",
+    "profile": "conditional-binary64-nearest-v1",
+    "rows": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "unit_roundoff": "1/9007199254740992"
+  },
+  "historical_oracles_are_known": true,
+  "preservation": [
+    {
+      "path": "examples/external_db_parity_v1/RESULTS.md",
+      "sha256": "845e97b8a8284126584d2c48ebb1a9a82c05898e13d7a65876bd2feca559a6ad"
+    },
+    {
+      "path": "examples/external_db_parity_v1/expectations.md",
+      "sha256": "efecb44a4cc51a0c4f9c4dec74fe6aeedc1151d7ddfede560bc145b8554b4253"
+    },
+    {
+      "path": "examples/external_db_parity_v1/freeze_addendum.md",
+      "sha256": "cfd2b2444c4c9d286ddc5a3e2ca4ed546b08f55b407591ca6257170d378038b8"
+    },
+    {
+      "path": "examples/external_db_parity_v1/query_points.json",
+      "sha256": "b255a8db42ed7426a0815927c2a53c23396603e44df213212a601422e05fa8ab"
+    },
+    {
+      "path": "examples/external_db_parity_v1/query_points_supplement.json",
+      "sha256": "d63af42245bbb27a421e8eaddc7f9ca12d3fa48d90e1d26bd023bedf54ebde17"
+    },
+    {
+      "path": "examples/external_db_parity_v1/record.json",
+      "sha256": "38d616b3245a8a42bd06ee9f79d3397d16476cd4acd46dfecd7bd503a55a0e96"
+    },
+    {
+      "path": "examples/external_db_parity_v1/results.csv",
+      "sha256": "273ad38c8ce309fdc6612c1d620f33b35be85beefb7c754c4585845621dd5687"
+    },
+    {
+      "path": "examples/external_db_parity_v1/run_study.py",
+      "sha256": "3d9ed89294ff91d19bd518298f3b29834d57c882bd47e5fe4bf5e1b2f3df10f4"
+    },
+    {
+      "path": "examples/frontier_comparison_v1/external/agg_pareto.csv",
+      "sha256": "89b062634eacb75acacf7a6935e00d42992d112359a302eb8a998992f52ab1f3"
+    },
+    {
+      "path": "examples/frontier_comparison_v1/external/disagg_best_topn.csv",
+      "sha256": "809aebbf58dd68136d8a035d895371d75c8783b11d7a6da3494d8c100eb62cf7"
+    },
+    {
+      "path": "examples/frontier_comparison_v1/external/disagg_pareto.csv",
+      "sha256": "8b437860a9ad00bafefa53f956b1f9b958e5709f7fb721c76b3fe3f2820688b4"
+    },
+    {
+      "path": "examples/frontier_comparison_v1/external/provenance.txt",
+      "sha256": "005c916c368fb3ed94ee5da8fdc815773f4f74bc5709bdb33a1c1073e1f1425d"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/AGG_RESULTS.md",
+      "sha256": "a5ba42d434a9ec9d596b430dbf267d3611cd22b19af727a828882517fd156c57"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/DEPLOY12_RESULTS.md",
+      "sha256": "d3f7d001899ff48ec408367c8dc4e43c1533206e8cf6935a39dd7a01f902f4d5"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/RESULTS.md",
+      "sha256": "fa1170277fa8f3b9f1a14df353add3dbd4e8e490aeb4847748dd2120d4434e62"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/agg_record.json",
+      "sha256": "799e491cc474ac08e87767187d035e9205c348dbdc9c97e61e947e34163c752f"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/agg_results.csv",
+      "sha256": "44ac173646082aff8bf8e453b27edc9479850a444b33f5eeef696d085a6b1b98"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/deploy12_record.json",
+      "sha256": "c2b4fa9b8e8c2401d01a36731e9e1989ef27918b5bb170813b436c0e61ab630f"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/deploy12_results.csv",
+      "sha256": "4057d5f321ae60bd7e34bd8b3e9ca663694f189788632c34806b4bfe1b7bc4a8"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/expectations.md",
+      "sha256": "fc5af307fee560fc7050011543e18e1cf77030d0aa6a13e6c5a014cb159a5726"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/expectations_agg.md",
+      "sha256": "19f04e97d9f3df0c30d6bc5546e390d14b044be22884309c7f15e17b61da81ff"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/expectations_deploy12.md",
+      "sha256": "ed784f7514fe766c509b02ed591391370129b84c63cc51552e278f5fcee44812"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/expectations_v2.md",
+      "sha256": "fe403500575d674a25c8b7c6c59eb41aec65fce6cc29024609fa995b29585f35"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/external_adjustments.json",
+      "sha256": "c6778a81cdc6078ce74f06733e4bce9d99a92b4ab3eccba4a83d14e7d063a09e"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/external_adjustments_agg.json",
+      "sha256": "99106ef0d421c045f0cd6afc7d9cd8aef600bb771e167b8ef9c68dd123332020"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/figure_addendum.md",
+      "sha256": "cc4dcb8c82bbcd5e542457b56d91ddf172af2cbe05e6bac5c865535dcc307762"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/figures/matched-seam-frontier-aggregate-publication.pdf",
+      "sha256": "83dc1445826914df60e430bb67dfe8b756552dfcd8a6318c5c433ec3b3d32ff0"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/figures/matched-seam-frontier-aggregate-publication.png",
+      "sha256": "92e8e76c96ddc3d9ed2ae42e035c6ee9e1f134b8bcb6793fc93ae851ef7f5252"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/figures/matched-seam-frontier-aggregate.pdf",
+      "sha256": "89a52a3bd0282923332568bc2cfee8c54bb1c9f36b7e6194639a01df99e78b86"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/figures/matched-seam-frontier-aggregate.png",
+      "sha256": "932177b1d9320f1f7b23834e6c44b8ddcbbb86e04a46f8294b22c6778d817fd9"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/figures/matched-seam-frontier-publication.pdf",
+      "sha256": "511a0fb869d3397a87664d28c6b0c1d5adc17738dd84543973f66c7fcfd764cb"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/figures/matched-seam-frontier-publication.png",
+      "sha256": "d79b5099cbbfeed9e4272a64d7007512ed1889a08fc3438c9f2eef41a28986d1"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/figures/matched-seam-frontier.pdf",
+      "sha256": "4ecc3bf2822f916bfd53107b55d1344406efea01fd0b1ad7a417019391712dbb"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/figures/matched-seam-frontier.png",
+      "sha256": "852378a01d3c9e0aeab74423259afe86b456dca0b193e27c23e48256322069c4"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/plot_agg.py",
+      "sha256": "4679ceb5a77bc7e39897f79d007b665bbeba8e8fc22a501c058eb2048de43afe"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/plot_publication.py",
+      "sha256": "a98514cb985a9980a679357285a11dbe52418e774a55d69a6c9f30ba9ddda53d"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/plot_study.py",
+      "sha256": "d4fe430f1fede23bcbcbb21834d98a51d3563c4b4e4c21dc887c7b8c837a7e4f"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/record.json",
+      "sha256": "bddd7cb040a3c0f0ec8afd7ea836d873fa22cad2131f98ff36e38da5441b2d50"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/results.csv",
+      "sha256": "4113ab2413084b7da957de60002abc4a4f8530bbb89837a5a5f73b9852f4448d"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/run_agg_arm.py",
+      "sha256": "c2452537d978e7aaa4e0c2824e649e403c25b28d4becf273409a89d88a23d1cc"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/run_deploy12_arm.py",
+      "sha256": "683bd65e48539bfaf657b3b1f1aaa0dbcae809bbc39de815be50544fcba03a41"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/run_study.py",
+      "sha256": "242b5f1ae46ac18ac2cb474ad6fa24acc4dba21c4b8ff1d6683137163fec3182"
+    },
+    {
+      "path": "examples/matched_seam_frontier_v1/study_config.json",
+      "sha256": "64c8e16de53e194e98f5ca7c9b27d533d4c7f7ca32311841a62e3c6cece21f17"
+    },
+    {
+      "path": "offline/calibration/external-databases/85e72f990f00ea457de522d0b773e678f5e067740689912df5646f6296273284/LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "offline/calibration/external-databases/85e72f990f00ea457de522d0b773e678f5e067740689912df5646f6296273284/MODIFIED",
+      "sha256": "bfe7e227252dc60f86bd78f9427ac9930fd2f25255308b05f1c8de695e826446"
+    },
+    {
+      "path": "offline/calibration/external-databases/85e72f990f00ea457de522d0b773e678f5e067740689912df5646f6296273284/THIRD_PARTY_NOTICE",
+      "sha256": "8883f78c9d753e647963f468145231e9c14e42e8642fda36b0b5c9b6f89e9c57"
+    },
+    {
+      "path": "offline/calibration/external-databases/85e72f990f00ea457de522d0b773e678f5e067740689912df5646f6296273284/family-mapping.json",
+      "sha256": "63a65ff85d1e45835d550bac31127a17f38a0c3b3a7d46733048067db63dc248"
+    },
+    {
+      "path": "offline/calibration/external-databases/85e72f990f00ea457de522d0b773e678f5e067740689912df5646f6296273284/manifest.json",
+      "sha256": "6be827d3dca584dce57594a2dc190b441e3de8ca932242fa71cfe56b59a89344"
+    },
+    {
+      "path": "offline/calibration/external-databases/85e72f990f00ea457de522d0b773e678f5e067740689912df5646f6296273284/model-config.json",
+      "sha256": "28f872ba386022a4417e2d21f11fd14f2a75ab213c8ab364e4d0704473997523"
+    },
+    {
+      "path": "offline/calibration/external-databases/85e72f990f00ea457de522d0b773e678f5e067740689912df5646f6296273284/rows-0f606718c5e413e898d9ad33a3d7e803e532d5d5bd8a1c29929e7f8b2458e8ef.jsonl.xz",
+      "sha256": "0f606718c5e413e898d9ad33a3d7e803e532d5d5bd8a1c29929e7f8b2458e8ef"
+    },
+    {
+      "path": "offline/calibration/external-databases/85e72f990f00ea457de522d0b773e678f5e067740689912df5646f6296273284/source-files.sha256",
+      "sha256": "85e72f990f00ea457de522d0b773e678f5e067740689912df5646f6296273284"
+    },
+    {
+      "path": "offline/calibration/external-databases/85e72f990f00ea457de522d0b773e678f5e067740689912df5646f6296273284/system.json",
+      "sha256": "1ee7f75a56b0d078d360c159e5fe4b3ec052f456f32d8123dab0a19256012921"
+    },
+    {
+      "path": "offline/calibration/external-databases/e432db694195110aa39c1e1eccf1accda012e69ef68e95210d049809bb93f015/LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "offline/calibration/external-databases/e432db694195110aa39c1e1eccf1accda012e69ef68e95210d049809bb93f015/MODIFIED",
+      "sha256": "e568185a088b9981d5794724d3dbb75a31eca26832720c3a6aaca65a68785bf8"
+    },
+    {
+      "path": "offline/calibration/external-databases/e432db694195110aa39c1e1eccf1accda012e69ef68e95210d049809bb93f015/THIRD_PARTY_NOTICE",
+      "sha256": "9c853b7cb95c027f3344bf95c2ec8de34f6614a86a06744df6bc43e88df13899"
+    },
+    {
+      "path": "offline/calibration/external-databases/e432db694195110aa39c1e1eccf1accda012e69ef68e95210d049809bb93f015/manifest.json",
+      "sha256": "11803f9c53b6e0cfe4556197a301cf547344c5e2bebd4a811fa44e4b9cb6badf"
+    },
+    {
+      "path": "offline/calibration/external-databases/e432db694195110aa39c1e1eccf1accda012e69ef68e95210d049809bb93f015/rows-12ed4c1dc12b3d9f0f04ffecf025d0dea5599946fa36944bcb60117035d70efb.jsonl.xz",
+      "sha256": "12ed4c1dc12b3d9f0f04ffecf025d0dea5599946fa36944bcb60117035d70efb"
+    },
+    {
+      "path": "offline/calibration/external-databases/e432db694195110aa39c1e1eccf1accda012e69ef68e95210d049809bb93f015/source-files.sha256",
+      "sha256": "e432db694195110aa39c1e1eccf1accda012e69ef68e95210d049809bb93f015"
+    }
+  ],
+  "schema": "simllm-frontier-publication-precision-expectations-v1",
+  "source_hashes": {
+    "inference_session.py": "7c95060d8363080b4139b821c0902a432d60cd16861c08498696e5a28c8ab159",
+    "inference_summary.py": "61d37ce627d7230446060a7b6e97da87fecd5afc1f64f3279e1471b38ee7c11c",
+    "picking.py": "068dfe08a3ce95db43027391d0e86d75cde2975b1e6af2ed811d418f0f5ee35c"
+  },
+  "synthetic_grid": {
+    "alternate_x_delta": 1,
+    "alternate_y": 40,
+    "cell_count": 40,
+    "centers": [
+      10,
+      100
+    ],
+    "decimal_places": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "offsets": [
+      "-0.00075",
+      "-0.00025",
+      "0",
+      "0.00025",
+      "0.00075"
+    ],
+    "primary_y": 100,
+    "reference_y": 100
+  },
+  "task": "DEPLOY-13"
+}

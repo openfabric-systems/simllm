@@ -233,8 +233,26 @@ protected disaggregated result.
   168.130792, excludes that point, selects row 10 and reports 0.607495 against
   the frozen 0.75 floor. Freeze the representation and lookup rule before the
   successor run, retain the current refutation unchanged, and require every
-  matched configuration to remain selected throughout its declared rounding
-  interval without weakening any quotient band.
+  declared interval to return every exact threshold selection and any
+  infeasible range, without weakening the quotient band. The former demand
+  that a matched configuration stay selected throughout its rounding interval
+  is withdrawn before the successor freeze: thresholds above that point
+  exclude it by definition. PASS requires every possible quotient to pass;
+  mixed outcomes are INDETERMINATE. DEPLOY-26 owns exact source recovery and
+  unresolved historical agreement.
+- DEPLOY-26 (Precision; P1; M): resolve exact archived frontier agreement
+  after publication uncertainty is represented explicitly. The active
+  surrogate is a three-decimal throughput coordinate whose archive does not
+  retain its exact pre-round value or complete numeric-export environment.
+  A conditional enclosure can disclose possible selections but cannot prove
+  unconditional agreement. Obtain independently source-carried exact
+  coordinates with their environment and row/configuration joins, or prove
+  the archive's export profile and sufficient bounds. A fresh source replay
+  is separately identified evidence, never a recovered historical value.
+  Freeze the comparison before acquisition, keep [0.75, 1.35] unchanged and
+  require every claimed agreement row to resolve its complete selection set.
+  Any remaining failure or indeterminacy stays explicit; retain F-2-09 and
+  every historical artifact unchanged.
 - DEPLOY-19 (Precision; P1; M): emit prefix-request finished identities in the
   same decision step as the pinned scheduler. The corrected record withdraws
   the former block-lifecycle attribution: every cache-enabled F7 row passes on
