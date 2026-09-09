@@ -134,3 +134,10 @@ Success closes COMP-54's structural qualification. Physical capture remains
 COMP-59, physical compute binding remains COMP-64, and distributed projection
 remains CORE-54. This protocol cannot qualify GPU timing, native stream
 scheduling or a K3 deployment frontier.
+
+The finite successor stage list and each stage's check-name expansion are
+frozen in JSON. Use only its framework, source, module, case, layer and grid
+domains. Every stage finishes exactly once. Its evidence names have the form
+`successor:STAGE:CHECK`; only `completion-oracle` is an exact-oracle row, and
+all other successor rows are fatal guards. Missing, duplicated, extra or
+mistyped names reject independently of the recorded verdict or row totals.
