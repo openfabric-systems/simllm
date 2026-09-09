@@ -1398,6 +1398,12 @@ capture exists.
   byte-identical. CORE-52 proves host retention and routing only; CORE-51 and
   CORE-54 retain this independent-engine timing requirement. No GPU measurement
   is required to establish the resource independence and causality rules.
+  The first [native campaign](../../examples/independent_engine_completion_v1/RESULTS.md)
+  is VOID at a checker representation mismatch: the declared bandwidth is
+  captured as a float but compared against an integer physical bound. Its first
+  process completes 24 requests, but no process is admitted and the independent
+  arms never start. Preserve that evidence and freeze the corrected source
+  representation before a fresh campaign; no concurrency claim closes here.
 
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
   queue-visit contract above before residual-driven calibration. Define one
