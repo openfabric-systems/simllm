@@ -117,7 +117,10 @@ remain offline; none runs once per serving step.
 - `ExternalQwen32BPassModel`: the audited TensorRT-LLM Python context and
   generation composition over that database. It preserves effective-token
   accounting, generation stride and repeat rules, and the H200 analytical
-  embedding and elementwise memory terms.
+  embedding and elementwise memory terms. An optional immutable
+  `ExternalServingComposition` owns its declared operation and phase factors,
+  verifies the imported source closure and rejects conflicting parameters.
+  Record-derived service keys carry that identity through estimator stamps.
 - `CalibrationCompiler`: the deterministic offline compiler from validated
   evidence and an immutable split to a compact device model. It applies
   source precedence, fits only the training partition, scores validation and
@@ -1910,8 +1913,16 @@ range for each. The source audit also corrects the prose-level phase
 transposition: the pinned installation assigns 0.9 to prefill rate matching and
 0.92 to decode. **Every external adjustment carried by the composition is
 declared, source-attributed and joined to the imported operation slice through
-a content-addressed composition surface.** COMP-88 owns promotion from the
-study-local declaration to that installed surface.
+a content-addressed composition surface.** The
+[composition study](../../examples/external_composition_v1/RESULTS.md)
+closes COMP-88: two fresh evaluations are byte-identical, all 13 historical
+services match bit for bit and all 112 behavioral instances pass. Public pass
+calls apply the record's phase factor and reject conflicting values. The
+first attempt remains void because it missed that public-entry admission
+guard; its raw evidence is retained and the corrected successor uses the same
+freeze. Record absence preserves legacy arithmetic, keys and source strings.
+The result establishes source identity and composition behavior, not new GPU
+calibration or frontier agreement.
 
 The [packed metadata admission study](../../examples/packed_weight_identity_v1/RESULTS.md)
 closes COMP-91. The explicitly declared group-32 MXFP4 format accounts for
@@ -1941,17 +1952,6 @@ semantic comparison remains DEPLOY-12's scope.
 
 ### Precision
 
-- COMP-88 (Precision; P1; M): move the external serving-composition constants
-  into a content-addressed artifact joined to the imported operation slice.
-  The matched-seam study declares the 1.1 prefill correction, 1.08 decode
-  correction, 1.8 TTFT autoscale, 0.9 prefill and 0.92 decode rate-degradation
-  factors, 0.8 memory-bandwidth derating, 3 microsecond memory-operation
-  constant and 1.1 context-attention extra-latency correction. Promote that
-  source-attributed study table into an immutable composition record with its
-  own digest, then require it to reproduce all 13 Family S hexadecimal
-  services, all 10 Family R quotients, every remove-one sensitivity row and the
-  full Family D decomposition exactly. Omitting the record must preserve the
-  current explicit configuration path and every accepted artifact byte.
 - COMP-89 (Precision; P1; L): replace the MiniMax external dispatch
   extrapolation above eight ranks with independently measured H200 NCCL
   all-gather and reduce-scatter evidence at the message sizes and widths the
