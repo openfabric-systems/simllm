@@ -1398,22 +1398,21 @@ capture exists.
   byte-identical. CORE-52 proves host retention and routing only; CORE-51 and
   CORE-54 retain this independent-engine timing requirement. No GPU measurement
   is required to establish the resource independence and causality rules.
-  The first [native campaign](../../examples/independent_engine_completion_v1/RESULTS.md)
-  is VOID at a checker representation mismatch: the declared bandwidth is
-  captured as a float but compared against an integer physical bound. Its first
-  process completes 24 requests, but no process is admitted and the independent
-  arms never start. A post-specified representation repair admits all three
-  serialized processes in the fresh campaign, totaling 58 requests, but that
-  run is also VOID: its first independent process reaches the 1,800-second host
-  limit with eight full request-result rows and a partial third cell. Retain
-  both attempts unchanged. The source-paired
+  The three retained [native campaigns](../../examples/independent_engine_completion_v1/RESULTS.md)
+  are VOID. The first stops at an integer/float checker mismatch after its first
+  serialized process. A representation repair admits all three serialized
+  processes in the next attempt, but its first independent process reaches the
+  1,800-second host limit with eight complete request rows. The source-paired
   [publication reader study](../../examples/publication_snapshot_v1/RESULTS.md)
-  qualifies removal of repeated snapshot encoding: the largest input visits
-  1,523 values instead of 7,030, all six model jobs preserve byte-identical
-  source-paired records, and the complete corruption controls retain their
-  rejection behavior. The existing native timing sweep and process limits
-  remain the acceptance bar for a fresh campaign. No native concurrency claim
-  closes here.
+  then qualifies removal of repeated encoding: its largest input visits 1,523
+  values instead of 7,030, with all six model jobs byte-identical and complete
+  rejection controls preserved. The latest native campaign still reaches the
+  same host limit, retaining 18 complete independent request rows from five
+  cells before its sixth cell finishes. Its failed process has matching first
+  and final raw receipts; no independent process is admitted. Retain all three
+  attempts unchanged. Further host-work investigation and a complete fresh
+  native campaign remain required; the timing sweep and limits are unchanged.
+  No native concurrency claim closes here.
 
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
   queue-visit contract above before residual-driven calibration. Define one
