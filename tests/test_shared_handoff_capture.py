@@ -174,19 +174,19 @@ def test_native_step_streams_reject_changed_or_missing_original_records(tmp_path
     for engine in ("first", "second"):
         path = tmp_path / "engine-work" / engine / "step-records.jsonl"
         path.parent.mkdir(parents=True)
-        path.write_text(json.dumps(record) + "\n" if engine == "first" else "", encoding="ascii")
+        path.write_bytes((json.dumps(record) + "\n").encode("ascii") if engine == "first" else b"")
         paths.append(path)
     run_study.admit_step_streams(tmp_path, data, "valid", Evidence([]))
     if kind == "truncated":
         paths[0].write_bytes(b"")
     elif kind == "changed":
-        paths[0].write_text(json.dumps(step_record_to_json(StepRecord(1, 2))) + "\n", encoding="ascii")
+        paths[0].write_bytes((json.dumps(step_record_to_json(StepRecord(1, 2))) + "\n").encode("ascii"))
     elif kind == "missing":
         paths[1].unlink()
     elif kind == "extra":
         (tmp_path / "step-records.jsonl").write_bytes(b"")
     else:
-        paths[0].write_text(json.dumps(record, separators=(",", ":")) + "\n", encoding="ascii")
+        paths[0].write_bytes((json.dumps(record, separators=(",", ":")) + "\n").encode("ascii"))
     with pytest.raises(GuardFailure):
         run_study.admit_step_streams(tmp_path, data, "corrupt", Evidence([]))
 
