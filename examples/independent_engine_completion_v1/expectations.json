@@ -1,0 +1,1099 @@
+{
+  "as_of_commit": "c0f529c87c4f573cc580d53f223abe09b815a5aa",
+  "authority": {
+    "disabled": "simllm-serialized-engine-service-v1",
+    "enabled": "simllm-independent-engine-completion-v1",
+    "input_publication": "StepRecord at dispatch; StepResult and native output only at sole completion.",
+    "native_boundary": "Pinned EngineCore instance step_fn bridge; unchanged InprocClient.get_output and LLMEngine.step.",
+    "ordering": "At each time complete all due receipts in insertion order, then admit requests and handoffs, then submit ready free engines in prefill/decode ordinal order; settle zero drains before advancing time.",
+    "projections": "QueueVisit and CompletionEvent are read-only projections; no secondary timing ledger.",
+    "resource_identity": "Engine-qualified, with stable engine_id and step_index join.",
+    "resource_kind": "gpu-work-queue",
+    "sink_publication": "Private deterministic prepared price; consume and publish once only at due event.",
+    "time_owner": "One session VirtualClock"
+  },
+  "baseline_control": {
+    "accepted_cells": [
+      {
+        "decode_first_token_service_ps": 77952000,
+        "handoff_ps": 100000000,
+        "kv_bytes": 393216,
+        "prefill_service_ps": 95424000,
+        "prompt_tokens": 8,
+        "tpot_ps": 77952000,
+        "ttft_ps": 273376000
+      },
+      {
+        "decode_first_token_service_ps": 77952000,
+        "handoff_ps": 200000000,
+        "kv_bytes": 393216,
+        "prefill_service_ps": 95424000,
+        "prompt_tokens": 8,
+        "tpot_ps": 77952000,
+        "ttft_ps": 373376000
+      },
+      {
+        "decode_first_token_service_ps": 77976000,
+        "handoff_ps": 100000000,
+        "kv_bytes": 786432,
+        "prefill_service_ps": 114936000,
+        "prompt_tokens": 16,
+        "tpot_ps": 77976000,
+        "ttft_ps": 292912000
+      },
+      {
+        "decode_first_token_service_ps": 77976000,
+        "handoff_ps": 200000000,
+        "kv_bytes": 786432,
+        "prefill_service_ps": 114936000,
+        "prompt_tokens": 16,
+        "tpot_ps": 77976000,
+        "ttft_ps": 392912000
+      }
+    ],
+    "comparison_schema": "simllm-vllm-pd-request-comparison-v1",
+    "comparisons": [
+      {
+        "cell": "prompt-8-handoff-100000000",
+        "comparison_sha256": "9ca1add59fb8f41d8afd40923cdeb16d94a35bb540f99228aa1a244644cc6ce3",
+        "projected_bytes_equal": true,
+        "raw_difference_paths": [
+          [
+            "decode_internal_request_id"
+          ],
+          [
+            "prefill_internal_request_id"
+          ]
+        ]
+      },
+      {
+        "cell": "prompt-8-handoff-200000000",
+        "comparison_sha256": "e653b93e25f83a3ef2b561afeab9d3073d1202a4c2a1ad436d678c82dde3d3a0",
+        "projected_bytes_equal": true,
+        "raw_difference_paths": [
+          [
+            "decode_internal_request_id"
+          ],
+          [
+            "prefill_internal_request_id"
+          ]
+        ]
+      },
+      {
+        "cell": "prompt-16-handoff-100000000",
+        "comparison_sha256": "fb7f30d87e90253d532909caf50482d27624b3ebe42cdb18c1c94483294a957c",
+        "projected_bytes_equal": true,
+        "raw_difference_paths": [
+          [
+            "decode_internal_request_id"
+          ],
+          [
+            "prefill_internal_request_id"
+          ]
+        ]
+      },
+      {
+        "cell": "prompt-16-handoff-200000000",
+        "comparison_sha256": "542e7085975048c96fe8232e6d0af69573e249b721dc123370c220c67200aed3",
+        "projected_bytes_equal": true,
+        "raw_difference_paths": [
+          [
+            "decode_internal_request_id"
+          ],
+          [
+            "prefill_internal_request_id"
+          ]
+        ]
+      }
+    ],
+    "excluded_root_fields": [
+      "prefill_internal_request_id",
+      "decode_internal_request_id"
+    ],
+    "position": "Before all serial and burst cells, using their original four labels and order.",
+    "scale": "serialized-p1-d1"
+  },
+  "behavioral_families": {
+    "component-independence": {
+      "instances": [
+        "n2-s1000",
+        "n2-s3000",
+        "n4-s1000",
+        "n4-s3000"
+      ],
+      "relation": "Independent equal work completes at S, serial equal work at N*S; compare actual sole-authority completion times."
+    },
+    "component-unequal-order": {
+      "instances": [
+        "long10000-short1000",
+        "long10000-short2000",
+        "long20000-short1000",
+        "long20000-short2000"
+      ],
+      "relation": "Later short completion equals 1000+short_service, strictly before long_service; long completion stays at its own due time."
+    },
+    "native-arrival": {
+      "instances": [
+        "arrival-47712000",
+        "arrival-190848000"
+      ],
+      "relation": "Second request absolute decode token times equal second width-one burst request; TTFT falls by own arrival offset. Native prefill starts max(arrival,Cp). One joint instance."
+    },
+    "native-handoff": {
+      "instances": [
+        "p1-prompt8",
+        "p1-prompt16",
+        "p2-prompt8",
+        "p2-prompt16",
+        "p4-prompt8",
+        "p4-prompt16"
+      ],
+      "relation": "Adding 100000000ps handoff shifts every independent request TTFT, every token completion and cell makespan by exactly 100000000ps. Fixed TPOT is an unscored guard."
+    },
+    "native-mixed-order": {
+      "instances": [
+        "later-short-prompt"
+      ],
+      "relation": "In independent width two, later short prompt completes at 96424000ps before long prompt114936000ps, and short first decode token274376000ps before long292912000ps. Serialized comparator has the opposite request order. One joint instance."
+    },
+    "native-width": {
+      "instances": [
+        "p1-to-p2-prompt8-handoff100000000",
+        "p1-to-p2-prompt8-handoff200000000",
+        "p1-to-p2-prompt16-handoff100000000",
+        "p1-to-p2-prompt16-handoff200000000",
+        "p2-to-p4-prompt8-handoff100000000",
+        "p2-to-p4-prompt8-handoff200000000",
+        "p2-to-p4-prompt16-handoff100000000",
+        "p2-to-p4-prompt16-handoff200000000"
+      ],
+      "relation": "At fixed four requests, last completion falls by (16/a-16/b)*Cd, and completed throughput equals 4e12/makespan requests/s. Both checks form one joint instance."
+    }
+  },
+  "behavioral_instance_total": 25,
+  "bounds": {
+    "cache_bytes_per_prompt_token": 49152,
+    "declared_ceiling_link_bps": 10000000000,
+    "declared_ceiling_propagation_ps": 50000000,
+    "link_floor_bps": 400000000000,
+    "memory_bytes_per_second": 8000000000000,
+    "native_makespan_ceiling": "Last relative arrival + unique engine step service sum + all handoff durations.",
+    "native_makespan_floor": "Maximum of every request causal chain and every engine service sum.",
+    "resident_floor_scope": "Conditional all-resident-expert streaming surrogate, not routed-token hardware floor; COMP-7.",
+    "resident_per_rank_weight_bytes": 320864256,
+    "resident_streaming_floor_ps": 40108032
+  },
+  "chronology": {
+    "known_native_receipt_sha256": "cfc900c0a7b1f7a04c6958d597a1f4c203eb751298595e2e8d872e3984f98333",
+    "known_regression_prices": "Individual intervals read from retained CORE-58 before freeze; not GPU measurements.",
+    "new_behavior": "Final expectations-only commit precedes implementation and this campaign.",
+    "original_target_scale_run": "Remains VOID; no rescoring or timeout changes."
+  },
+  "component_cases": [
+    {
+      "id": "equal-n2-s1000-independent",
+      "kind": "equal-work",
+      "resource_mode": "independent",
+      "service_ps": 1000,
+      "work_items": 2
+    },
+    {
+      "id": "equal-n2-s1000-serial",
+      "kind": "equal-work",
+      "resource_mode": "serial",
+      "service_ps": 1000,
+      "work_items": 2
+    },
+    {
+      "id": "equal-n2-s3000-independent",
+      "kind": "equal-work",
+      "resource_mode": "independent",
+      "service_ps": 3000,
+      "work_items": 2
+    },
+    {
+      "id": "equal-n2-s3000-serial",
+      "kind": "equal-work",
+      "resource_mode": "serial",
+      "service_ps": 3000,
+      "work_items": 2
+    },
+    {
+      "id": "equal-n4-s1000-independent",
+      "kind": "equal-work",
+      "resource_mode": "independent",
+      "service_ps": 1000,
+      "work_items": 4
+    },
+    {
+      "id": "equal-n4-s1000-serial",
+      "kind": "equal-work",
+      "resource_mode": "serial",
+      "service_ps": 1000,
+      "work_items": 4
+    },
+    {
+      "id": "equal-n4-s3000-independent",
+      "kind": "equal-work",
+      "resource_mode": "independent",
+      "service_ps": 3000,
+      "work_items": 4
+    },
+    {
+      "id": "equal-n4-s3000-serial",
+      "kind": "equal-work",
+      "resource_mode": "serial",
+      "service_ps": 3000,
+      "work_items": 4
+    },
+    {
+      "id": "unequal-long10000-short1000",
+      "kind": "unequal-arrival",
+      "long_service_ps": 10000,
+      "short_arrival_ps": 1000,
+      "short_service_ps": 1000
+    },
+    {
+      "id": "unequal-long10000-short2000",
+      "kind": "unequal-arrival",
+      "long_service_ps": 10000,
+      "short_arrival_ps": 1000,
+      "short_service_ps": 2000
+    },
+    {
+      "id": "unequal-long20000-short1000",
+      "kind": "unequal-arrival",
+      "long_service_ps": 20000,
+      "short_arrival_ps": 1000,
+      "short_service_ps": 1000
+    },
+    {
+      "id": "unequal-long20000-short2000",
+      "kind": "unequal-arrival",
+      "long_service_ps": 20000,
+      "short_arrival_ps": 1000,
+      "short_service_ps": 2000
+    },
+    {
+      "completion_order": [
+        "a",
+        "b",
+        "c"
+      ],
+      "id": "tied-completion-and-arrival",
+      "jobs": [
+        {
+          "arrival_ps": 0,
+          "engine": "a",
+          "id": "a",
+          "service_ps": 4000
+        },
+        {
+          "arrival_ps": 1000,
+          "engine": "b",
+          "id": "b",
+          "service_ps": 3000
+        },
+        {
+          "arrival_ps": 4000,
+          "engine": "a",
+          "id": "c",
+          "service_ps": 1000
+        }
+      ],
+      "kind": "tie"
+    },
+    {
+      "at_ps": 3000,
+      "finished_request_ids": [
+        "finished-native-request"
+      ],
+      "id": "finished-only-drain",
+      "kind": "drain",
+      "service_ps": 0
+    }
+  ],
+  "exact_oracles": {
+    "component_drain_cases": 1,
+    "component_tie_cases": 1,
+    "historical_complete_comparisons": 4,
+    "native_full_timelines": 30,
+    "note": "Oracle, guard, configuration and behavioral populations remain distinct."
+  },
+  "fatal_guard_families": [
+    "strict-schema-types-and-finite-domains",
+    "exact-component-and-native-case-sets",
+    "complete-distinct-protocol-stages",
+    "family-instance-exact-domain",
+    "source-and-config-origin-before-after",
+    "retained-raw-byte-receipts-before-after",
+    "actual-session-engine-worker-clock-identities",
+    "single-pending-slot-per-engine",
+    "input-receipt-event-result-native-output-bijection",
+    "native-membership-token-phase-and-finished-contract",
+    "no-native-output-or-handoff-before-due",
+    "no-early-completion-driven-cache-release",
+    "native-schedule-reservation-is-allowed",
+    "exact-queue-visit-and-event-projection",
+    "no-overlap-on-same-engine-resource",
+    "no-clock-rewind-or-unexplained-idle",
+    "deterministic-completion-before-arrival-ties",
+    "immutable-input-price-owner-and-configuration",
+    "poisoned-session-does-not-retry",
+    "unsupported-opt-in-admission-rejects-before-schedule",
+    "mid-flight-abort-reset-reject-before-mutation",
+    "zero-drain-has-finished-or-preempted-cause",
+    "no-phantom-work-or-zero-time-spin",
+    "serialized-exact-off-controls",
+    "unique-step-work-and-request-slice-joins",
+    "per-request-critical-path-conservation",
+    "separate-work-sum-wall-idle-and-makespan",
+    "fixed-native-service-and-forced-zero-identities",
+    "no-gpu-context-weights-or-backend-runs",
+    "host-timeout-and-rss-envelope",
+    "declared-physical-and-causal-bounds",
+    "all-semantic-corruptions-rejected"
+  ],
+  "historical_files_sha256": {
+    "examples/disaggregated_target_topology_v1/RESULTS.md": "d7f975a41e28b04fe5cb5c777361aa6e47613ac8939bbfad7c75d7e1d7cfdc0f",
+    "examples/disaggregated_target_topology_v1/expectations.json": "b1d0f73b1042e007725a359f524cbf93e68a3f1395bba54777837ebd07a2d0f0",
+    "examples/disaggregated_target_topology_v1/expectations.md": "c01b1b7f13d4b16404ee0230ad014327a254f3f22ea3e8cc794dedd787517400",
+    "examples/disaggregated_target_topology_v1/results.json": "45aa34874370c353d8c5a15a6b09939321cc1f4fafaed66d89529e8da37a7715",
+    "examples/disaggregated_target_topology_v1/run_study.py": "fbba036bd4aa35a82acd7317f148da0a50effbd58efc3b86c8fc5366b8afba70",
+    "examples/pd_session_identity_v1/RESULTS.md": "b8a8cc007d97fc4ccdc82c43de9110a4e07f0128d4bcb518b872ca9714af98d2",
+    "examples/pd_session_identity_v1/expectations.json": "b484cbed05db8c6e1a8157dc0633156d837bfe125f25e26947de0bfd831e7a65",
+    "examples/pd_session_identity_v1/expectations.md": "6e689b4f39181b9fb62c9ac830206a6503d8016c1945da30bb00ce44006b4f03",
+    "examples/pd_session_identity_v1/results.json": "fe4e8e3525747a6ad497f7e8494e13d07971cb0ad8bcd95c1759bec0583bb46f",
+    "examples/pd_session_identity_v1/run_study.py": "4441a73f4c172225271ef8e64bb2e30447d60ad2a4d049361aae7234132ba126",
+    "examples/pd_session_v1/RESULTS.md": "fea7a659879c0c1bf9a2a7a2751edb7ec84286a9e790f7a193ac8b2933f96276",
+    "examples/pd_session_v1/expectations.json": "064d48044820b673ff99c0fb2ea6d185e8caca1633314a3146fcc3cfb3ff0aba",
+    "examples/pd_session_v1/expectations.md": "12aa356846d9a0f316d47e48024db498dd71bd034c9ef1c589e96f55614bac82",
+    "examples/pd_session_v1/results.json": "9660a5bcd47706fe857694d68340aab9fdab2d7096632624e6f310118d4a435e",
+    "examples/pd_session_v1/run_study.py": "56d96ba0f1979ddf5160b93c19c4e93b57406c6ebf76d61e4a5661f9b317410b"
+  },
+  "known_services_ps": {
+    "16": {
+      "decode": [
+        77976000,
+        77976000,
+        77976000,
+        77976000
+      ],
+      "prefill": 114936000
+    },
+    "8": {
+      "decode": [
+        77952000,
+        77952000,
+        77952000,
+        77952000
+      ],
+      "prefill": 95424000
+    }
+  },
+  "limits": {
+    "native_output_root_must_be_fresh": true,
+    "native_rss_cap_kib": 16777216,
+    "native_rss_sample_seconds": 0.25,
+    "native_timeout_seconds": 1800
+  },
+  "native_cell_total_including_baseline": 34,
+  "native_environment": {
+    "async_scheduling": false,
+    "backend_runs": 0,
+    "checkpoint": "ibm-granite/granite-3.0-1b-a400m-instruct",
+    "checkpoint_revision": "ffec3c35bdfd97a06f0b4cd5fcc92cd9b1584445",
+    "collective_arm": "lower",
+    "collective_envelope": "intra-node-fixed-cost-v1",
+    "data_parallel_size": 1,
+    "dtype": "bfloat16",
+    "gpu": "b100",
+    "gpu_context_initialized": false,
+    "handoff_authority": "simllm-declared-kv-handoff-v1",
+    "host_model": "ideal",
+    "max_model_len": 64,
+    "max_num_seqs": 1,
+    "model_config_sha256": "ca4bb3a5c1bdef988ab413e0d731640446da65316e4ed16de3666cd96ecc3a0b",
+    "num_gpu_blocks_override": 64,
+    "pipeline_parallel_size": 1,
+    "provider": "RooflineProvider(efficiency=0.7)",
+    "tensor_parallel_size": 8,
+    "token_id": 512,
+    "vllm_version": "0.27.1",
+    "worker_mode": "simulated-only"
+  },
+  "native_processes": [
+    {
+      "baseline_controls_first": true,
+      "cells": [
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 100000000,
+          "id": "burst-prompt8-handoff100000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            8,
+            8,
+            8,
+            8
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 200000000,
+          "id": "burst-prompt8-handoff200000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            8,
+            8,
+            8,
+            8
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 100000000,
+          "id": "burst-prompt16-handoff100000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            16,
+            16,
+            16,
+            16
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 200000000,
+          "id": "burst-prompt16-handoff200000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            16,
+            16,
+            16,
+            16
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            47712000
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 100000000,
+          "id": "arrival-47712000",
+          "kind": "later-arrival",
+          "prompt_tokens": [
+            8,
+            8
+          ],
+          "requests": 2
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            190848000
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 100000000,
+          "id": "arrival-190848000",
+          "kind": "later-arrival",
+          "prompt_tokens": [
+            8,
+            8
+          ],
+          "requests": 2
+        }
+      ],
+      "decode_engines": 1,
+      "id": "serialized-p1-d1",
+      "mode": "serialized",
+      "prefill_engines": 1
+    },
+    {
+      "baseline_controls_first": false,
+      "cells": [
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 100000000,
+          "id": "burst-prompt8-handoff100000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            8,
+            8,
+            8,
+            8
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 200000000,
+          "id": "burst-prompt8-handoff200000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            8,
+            8,
+            8,
+            8
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 100000000,
+          "id": "burst-prompt16-handoff100000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            16,
+            16,
+            16,
+            16
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 200000000,
+          "id": "burst-prompt16-handoff200000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            16,
+            16,
+            16,
+            16
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            1000000
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 100000000,
+          "id": "later-short-prompt",
+          "kind": "mixed-prompt",
+          "prompt_tokens": [
+            16,
+            8
+          ],
+          "requests": 2
+        }
+      ],
+      "decode_engines": 2,
+      "id": "serialized-p2-d2",
+      "mode": "serialized",
+      "prefill_engines": 2
+    },
+    {
+      "baseline_controls_first": false,
+      "cells": [
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 100000000,
+          "id": "burst-prompt8-handoff100000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            8,
+            8,
+            8,
+            8
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 200000000,
+          "id": "burst-prompt8-handoff200000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            8,
+            8,
+            8,
+            8
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 100000000,
+          "id": "burst-prompt16-handoff100000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            16,
+            16,
+            16,
+            16
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 200000000,
+          "id": "burst-prompt16-handoff200000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            16,
+            16,
+            16,
+            16
+          ],
+          "requests": 4
+        }
+      ],
+      "decode_engines": 4,
+      "id": "serialized-p4-d4",
+      "mode": "serialized",
+      "prefill_engines": 4
+    },
+    {
+      "baseline_controls_first": false,
+      "cells": [
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 100000000,
+          "id": "burst-prompt8-handoff100000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            8,
+            8,
+            8,
+            8
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 200000000,
+          "id": "burst-prompt8-handoff200000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            8,
+            8,
+            8,
+            8
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 100000000,
+          "id": "burst-prompt16-handoff100000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            16,
+            16,
+            16,
+            16
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 200000000,
+          "id": "burst-prompt16-handoff200000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            16,
+            16,
+            16,
+            16
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            47712000
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 100000000,
+          "id": "arrival-47712000",
+          "kind": "later-arrival",
+          "prompt_tokens": [
+            8,
+            8
+          ],
+          "requests": 2
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            190848000
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 100000000,
+          "id": "arrival-190848000",
+          "kind": "later-arrival",
+          "prompt_tokens": [
+            8,
+            8
+          ],
+          "requests": 2
+        }
+      ],
+      "decode_engines": 1,
+      "id": "independent-p1-d1",
+      "mode": "independent",
+      "prefill_engines": 1
+    },
+    {
+      "baseline_controls_first": false,
+      "cells": [
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 100000000,
+          "id": "burst-prompt8-handoff100000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            8,
+            8,
+            8,
+            8
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 200000000,
+          "id": "burst-prompt8-handoff200000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            8,
+            8,
+            8,
+            8
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 100000000,
+          "id": "burst-prompt16-handoff100000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            16,
+            16,
+            16,
+            16
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 200000000,
+          "id": "burst-prompt16-handoff200000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            16,
+            16,
+            16,
+            16
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            1000000
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 100000000,
+          "id": "later-short-prompt",
+          "kind": "mixed-prompt",
+          "prompt_tokens": [
+            16,
+            8
+          ],
+          "requests": 2
+        }
+      ],
+      "decode_engines": 2,
+      "id": "independent-p2-d2",
+      "mode": "independent",
+      "prefill_engines": 2
+    },
+    {
+      "baseline_controls_first": false,
+      "cells": [
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 100000000,
+          "id": "burst-prompt8-handoff100000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            8,
+            8,
+            8,
+            8
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 200000000,
+          "id": "burst-prompt8-handoff200000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            8,
+            8,
+            8,
+            8
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 100000000,
+          "id": "burst-prompt16-handoff100000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            16,
+            16,
+            16,
+            16
+          ],
+          "requests": 4
+        },
+        {
+          "arrival_offsets_ps": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "decode_output_tokens": 4,
+          "handoff_ps": 200000000,
+          "id": "burst-prompt16-handoff200000000",
+          "kind": "burst",
+          "prompt_tokens": [
+            16,
+            16,
+            16,
+            16
+          ],
+          "requests": 4
+        }
+      ],
+      "decode_engines": 4,
+      "id": "independent-p4-d4",
+      "mode": "independent",
+      "prefill_engines": 4
+    }
+  ],
+  "native_request_total": 112,
+  "native_source_sha256": {
+    "vllm/config/kv_transfer.py": "64bde41204a5eea02cf2bb886e3479de90d5aab238e0d8a50de488d27edae4be",
+    "vllm/config/vllm.py": "66e82e95c5cdbb88715e25feb65f4cc2be83cd67bff5b5f703d52dea43a0815e",
+    "vllm/distributed/kv_transfer/kv_connector/v1/base.py": "ec3e461a802fdbc0d324d8cb200a161042da0614cfc0cb342accdd9d58dca31d",
+    "vllm/entrypoints/llm.py": "3bb98c9bff8d018902f4352bb5f81f1b4d13276ba1c3f18a9ec11d9a5aa5a57a",
+    "vllm/outputs.py": "44e2ea5d8a34403a99a867b42806e8102b3d9e7b1a0f735af26e6650cc482342",
+    "vllm/v1/core/sched/scheduler.py": "c67bda2886b52865ddafabaae7d797c359e930752f374421a33e537d94a5f45a",
+    "vllm/v1/engine/core.py": "6fdd067f54e5d42c57ff413e292685f5bdf6f343498d85c9262567f1eb746916",
+    "vllm/v1/engine/core_client.py": "7f5e1ac1a999faf36eab7d0c184bea7c93ae5e92234c39a148a809fd6e89840c",
+    "vllm/v1/engine/llm_engine.py": "46caab7b8a09d74321ef7a64683e8019b2187810725c80a15298cf9f51f1df03"
+  },
+  "preimplementation_source_sha256": {
+    "simllm/adapters/vllm/executor.py": "7c572e9d0140c0185a9d5535a3e97a1b014a3aa10613cddb1c059347259e4332",
+    "simllm/adapters/vllm/pd_connector.py": "d2d5ca76b019a61023961e7ca26fc61ee750562f0a261fd76c6dfd3e6989c6de",
+    "simllm/adapters/vllm/pd_session.py": "60777c67a8c1f76fe73af4aacc98df074a0358dcecf46083f6606f0e4e1d28d4",
+    "simllm/backends/step_sink.py": "3cdb1084b40800be654959a60cd6107106f0ffb55334842691cae22adc9623c3",
+    "simllm/core/clock.py": "5693cc845e4c3c7371b43abef6b10d66bf1af96f13a5401c48a64175fdc44516",
+    "simllm/core/completion.py": "644beb71891accea1a35a453b9ecb82b7c879b45ad5a79f2a18bf01978244c40",
+    "simllm/core/execution.py": "bd2e45081bc1f5b2c21fd4019414579c128650c89c2d5f4c7a195a788f11d362",
+    "simllm/core/runtime.py": "fb4b8765ccc62420b78b81801b21bcf1d0526eab0c9b33bd13a2e1886511be64",
+    "simllm/core/step.py": "163359c65bfd0a6809f0a1efcc131ca16f0c0d85a1c390efed36a31a79f9cbc7"
+  },
+  "remaining_owners": {
+    "COMP-7": "Routed expert demand.",
+    "CORE-51": "Whole disaggregated deployment.",
+    "CORE-52": "Actual target host retention and routing.",
+    "CORE-54": "Public large-model frontier.",
+    "VLLM-10": "Pipeline-parallel execution.",
+    "VLLM-8": "Structured output and speculative native work."
+  },
+  "required_stages": [
+    "protocol",
+    "component-cases",
+    "historical-baselines",
+    "serialized-p1-d1:capture",
+    "serialized-p1-d1:admission",
+    "serialized-p2-d2:capture",
+    "serialized-p2-d2:admission",
+    "serialized-p4-d4:capture",
+    "serialized-p4-d4:admission",
+    "independent-p1-d1:capture",
+    "independent-p1-d1:admission",
+    "independent-p2-d2:capture",
+    "independent-p2-d2:admission",
+    "independent-p4-d4:capture",
+    "independent-p4-d4:admission",
+    "native-relations",
+    "semantic-corruptions",
+    "final-identities"
+  ],
+  "schema": "simllm-independent-engine-completion-expectations-v1",
+  "semantic_mutations": [
+    "early-native-token",
+    "early-producer-handoff",
+    "duplicate-step-retirement",
+    "foreign-engine-receipt",
+    "missing-completion-event",
+    "changed-input-after-submit",
+    "changed-selected-configuration",
+    "two-authorities-one-step",
+    "unexplained-wall-idle",
+    "wrong-baseline-comparison",
+    "wrong-native-source-receipt",
+    "disk-only-raw-receipt-change"
+  ],
+  "task": "CORE-68",
+  "verdict_policy": {
+    "fatal_failure": "VOID with null behavioral_score, exact stopping point and retained traceback; never fractional guard scoring.",
+    "incomplete": "VOID with no promotion from partial native cells.",
+    "pass": "Every required stage, fatal guard, exact oracle and declared behavioral relation satisfied."
+  }
+}
