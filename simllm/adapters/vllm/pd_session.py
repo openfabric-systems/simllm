@@ -527,11 +527,17 @@ class VllmDisaggregatedSession:
         if self._shared_handoff is None:
             self.shutdown()
             return
-        self._shared_handoff.abort()
+        failures = []
+        try:
+            self._shared_handoff.abort()
+        except BaseException as error:  # noqa: BLE001, preserve the original failure.
+            failures.append(str(error))
         try:
             self.shutdown()
-        except Exception as error:  # noqa: BLE001, retain cleanup failure without replacing the original.
-            self._shared_cleanup_error = str(error)
+        except BaseException as error:  # noqa: BLE001, retain cleanup failure without replacing the original.
+            failures.append(str(error))
+        if failures:
+            self._shared_cleanup_error = "; ".join(failures)
 
     @property
     def timing_authority(self) -> str:
@@ -1026,7 +1032,10 @@ class VllmDisaggregatedSession:
         except Exception as error:
             runtime.invalidate(str(error))
             if self._shared_handoff is not None:
-                self._shared_handoff.abort()
+                try:
+                    self._shared_handoff.abort()
+                except BaseException as cleanup_error:  # noqa: BLE001, retain the driver failure.
+                    self._shared_cleanup_error = str(cleanup_error)
             raise
 
     def run_requests(
@@ -1238,10 +1247,12 @@ class VllmDisaggregatedSession:
         if self.engine_runtime is not None:
             return self.run_requests((VllmPdRequest(request_id, prompt, decode_output_tokens, admitted),),
                                      handoff_policy=handoff_policy).requests[0]
-        self.clock.advance_to(admitted)
         policy = self.config.handoff_policy if handoff_policy is None else handoff_policy
+        if isinstance(policy, PendingKvHandoffPolicy):
+            raise TypeError("shared handoff requires its original independent session policy owner")
         if not isinstance(policy, KvHandoffPolicy):
             raise TypeError("handoff_policy must implement KvHandoffPolicy")
+        self.clock.advance_to(admitted)
         self._request_ids.add(request_id)
 
         prefill = self.prefill_engines[self._next_prefill]
@@ -1368,11 +1379,19 @@ class VllmDisaggregatedSession:
                 if self.engine_runtime.next_completion_ps is not None:
                     raise RuntimeError("cannot close a shared session with pending engine work")
                 self._shared_handoff.close()
-                self.engine_runtime.close()
             except Exception as error:  # noqa: BLE001, a failed owner still must reap its child.
                 failures.append(str(error))
                 self.engine_runtime.invalidate(str(error))
-                self._shared_handoff.abort()
+            try:
+                self.engine_runtime.close()
+            except Exception as error:  # noqa: BLE001, release an empty poisoned clock owner independently.
+                failures.append(str(error))
+                self.engine_runtime.invalidate(str(error))
+            if failures:
+                try:
+                    self._shared_handoff.abort()
+                except Exception as error:  # noqa: BLE001, finish the remaining terminal cleanup.
+                    failures.append(str(error))
             for bridge in self._completion_bridges.values():
                 try:
                     bridge.close()

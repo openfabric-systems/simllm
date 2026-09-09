@@ -92,6 +92,7 @@ class SharedKvHandoffRuntime:
         self._validated = False
         self._closed = False
         self._poisoned = False
+        self._abort_error: str | None = None
         self._receipts: dict[str, PendingKvHandoff] = {}
         self._receipt_values: dict[str, tuple] = {}
         self._pending: dict[str, PendingKvHandoff] = {}
@@ -107,10 +108,20 @@ class SharedKvHandoffRuntime:
     def _guard(self) -> None:
         if self._closed or self._poisoned:
             raise RuntimeError("shared handoff owner is closed or poisoned")
-        for request, receipt in self._receipts.items():
-            receipt.__post_init__()
-            if astuple(receipt) != self._receipt_values[request]:
-                raise RuntimeError("accepted handoff receipt was changed")
+        try:
+            for request, receipt in self._receipts.items():
+                receipt.__post_init__()
+                if astuple(receipt) != self._receipt_values[request]:
+                    raise RuntimeError("accepted handoff receipt was changed")
+        except BaseException:
+            self._abort_after_failure()
+            raise
+
+    def _abort_after_failure(self) -> None:
+        try:
+            self.abort()
+        except BaseException as error:  # noqa: BLE001, preserve the original failure.
+            self._abort_error = str(error)
 
     def validate_engines(self, prefill_ids: Sequence[str], decode_ids: Sequence[str], width: int) -> None:
         self._guard()
@@ -141,7 +152,7 @@ class SharedKvHandoffRuntime:
         try:
             self._session.open()
         except BaseException:
-            self.abort()
+            self._abort_after_failure()
             raise
 
     def _bound(self) -> None:
@@ -159,7 +170,7 @@ class SharedKvHandoffRuntime:
                     or any(self._pending.get(value.request_id) is not value for value in values)):
                 raise RuntimeError("pending handoff inventory is missing, foreign, forged or already published")
         except BaseException:
-            self.abort()
+            self._abort_after_failure()
             raise
 
     def submit(self, *, request_id: str, source_engine_id: str, destination_engine_id: str,
@@ -201,7 +212,7 @@ class SharedKvHandoffRuntime:
             self._pending[request_id] = receipt
             return receipt
         except BaseException:
-            self.abort()
+            self._abort_after_failure()
             raise
 
     def _progress(self, through_ps: int | None) -> int | None:
@@ -240,14 +251,14 @@ class SharedKvHandoffRuntime:
         try:
             return self._progress(through_ps)
         except BaseException:
-            self.abort()
+            self._abort_after_failure()
             raise
 
     def complete_due(self, pending: Sequence[PendingKvHandoff]) -> tuple[KvHandoffJoin, ...]:
         self._check_pending(pending)
         now = self._clock.now_ps
         if any(join.completed_at_ps < now for join in self._staged.values()):
-            self.abort()
+            self._abort_after_failure()
             raise RuntimeError("handoff join publication missed its exact completion")
         # Lookahead may have found a future join; it remains private until C.
         if any(join.completed_at_ps > now for join in self._staged.values()):
@@ -269,7 +280,7 @@ class SharedKvHandoffRuntime:
                 self._published.append(join)
             return ready
         except BaseException:
-            self.abort()
+            self._abort_after_failure()
             raise
 
     @property
