@@ -31,6 +31,24 @@ arithmetic, state capacity, exact rational token times, negative execution
 boundaries and installed source identity. Those are post-specified regression
 checks, not a new claim of pre-registration or task closure.
 
+The formal run completes all 24 structural cells, four native inventory
+extractions and eight synthetic request cells containing 24 steps. Its only
+fatal findings are the shared-join error in both phases of both frameworks.
+The retained-evidence audit at `0e41c8e4957795b8de926e34c1f82bea6d9bfc8a`
+passes without findings. It joins every lifecycle event, exact input record,
+inventory and request boundary, and verifies 11 pinned native source files
+and 40 critical import origins. That later pass leaves the original run void.
+
+The [compact publication](results.json) separates the original 157 exact
+oracle rows, 64 retained relation instances across four families, and 292
+unscored structural guards. These counts are never added into a score. The
+original summary has SHA-256
+`11a59db533fbaab49498b091cf29e49846e17e872b6990515f2fe8386d26fcd0`.
+
+The final software regression passes 5,466 tests with 31 skips. Ruff, module
+format and task-registry checks pass. These software gates are separate from
+the study's evidence classes and do not change its void verdict.
+
 ## Why the frozen oracle is wrong
 
 The shared branch has two parallel input projections, then its activation
@@ -99,6 +117,11 @@ the prompt from one to four tokens multiplies the first-token time by four
 and preserves the one-token decode service. These numbers are synthetic
 request-path checks and must not be interpreted as GPU throughput.
 
+All eight observed cells satisfy those exact synthetic relations in both
+frameworks. For the one-token, 1,000-picosecond cell, prefill followed by two
+decode steps completes at 9,780,000 picoseconds. The additive sum of queue
+waits is a separate work quantity; it is not a wall-latency decomposition.
+
 Raw native repetitions, complete event streams, request records, graph
 identities, compatibility records and audit findings are retained outside Git.
 The compact publication records their content hashes and verdicts.
@@ -109,6 +132,8 @@ COMP-54 supplies a complete logical K3 text representation and retains its
 structural qualification gap after this refutation. The candidate inventory
 does not enter the accepted coverage registry. Existing accepted Granite,
 Qwen3.8, DeepSeek-V3 and Qwen3-32B columns remain the compatibility controls.
+All eight fresh native compatibility records reproduce their accepted
+content identities, and all 19 pinned legacy artifacts remain byte-identical.
 
 COMP-59 and COMP-64 still own physical capture and service coverage. CORE-54
 still owns realistic deployment curves. This study supplies no multi-GPU
