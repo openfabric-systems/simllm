@@ -39,7 +39,10 @@ from simllm.core import (
     DisaggregatedRequestTimeline,
     KvHandoffEvent,
     KvHandoffGeometry,
+    KvHandoffJoin,
     KvHandoffPolicy,
+    PendingKvHandoff,
+    PendingKvHandoffPolicy,
     ServingPoolRole,
     StepRecord,
     VirtualClock,
@@ -96,7 +99,7 @@ class VllmPdSessionConfig:
     workdir: Path
     dims: ModelDims
     handoff_geometry: KvHandoffGeometry
-    handoff_policy: KvHandoffPolicy
+    handoff_policy: KvHandoffPolicy | PendingKvHandoffPolicy
     model_revision: str | None = None
     prefill_engines: int = 1
     decode_engines: int = 1
@@ -123,8 +126,11 @@ class VllmPdSessionConfig:
             raise TypeError("dims must be ModelDims")
         if not isinstance(self.handoff_geometry, KvHandoffGeometry):
             raise TypeError("handoff_geometry must be KvHandoffGeometry")
-        if not isinstance(self.handoff_policy, KvHandoffPolicy):
-            raise TypeError("handoff_policy must implement KvHandoffPolicy")
+        shared = isinstance(self.handoff_policy, PendingKvHandoffPolicy)
+        if not isinstance(self.handoff_policy, KvHandoffPolicy) and not shared:
+            raise TypeError("handoff_policy must implement a synchronous or pending handoff capability")
+        if shared and isinstance(self.handoff_policy, KvHandoffPolicy):
+            raise ValueError("handoff policy cannot enable both timing authorities")
         for name in (
             "prefill_engines",
             "decode_engines",
@@ -149,9 +155,17 @@ class VllmPdSessionConfig:
         if self.engine_timing not in ("serialized", "independent"):
             raise ValueError("engine_timing must be serialized or independent")
         if (self.engine_timing == "independent"
-                and (self.max_num_seqs != 1 or type(self.handoff_policy) is not DeclaredKvHandoffPolicy)):
+                and (self.max_num_seqs != 1 or (type(self.handoff_policy) is not DeclaredKvHandoffPolicy and not shared))):
             raise NotImplementedError(
                 "independent sessions require one sequence per engine and declared handoff (CORE-70)"
+            )
+        if shared:
+            if self.engine_timing != "independent":
+                raise NotImplementedError("shared packet handoff requires independent engine timing (CORE-71)")
+            self.handoff_policy.validate_engines(
+                tuple(f"simllm-prefill-{index}" for index in range(self.prefill_engines)),
+                tuple(f"simllm-decode-{index}" for index in range(self.decode_engines)),
+                self.tensor_parallel_size,
             )
 
     def provider_for_role(self, role: ServingPoolRole) -> ComputeProvider:
@@ -449,7 +463,8 @@ class _ConcurrentRequestState:
     decode_record_stop: int | None = None
     prefill_eligible_at_ps: int | None = None
     prefill_completed_at_ps: int | None = None
-    handoff: KvHandoffEvent | None = None
+    handoff: KvHandoffEvent | KvHandoffJoin | None = None
+    pending_handoff: PendingKvHandoff | None = None
     bootstrap_token_id: int | None = None
     kv_transfer_params: dict[str, Any] | None = None
     decode_token_ids: tuple[int, ...] = ()
@@ -478,7 +493,8 @@ class VllmDisaggregatedSession:
         self.construction_observer = construction_observer
         self.prefill_engines: list[VllmPoolEngine] = []
         self.decode_engines: list[VllmPoolEngine] = []
-        self.handoffs: list[KvHandoffEvent] = []
+        self.handoffs: list[KvHandoffEvent | KvHandoffJoin] = []
+        self._shared_handoff = config.handoff_policy if isinstance(config.handoff_policy, PendingKvHandoffPolicy) else None
         self._request_ids: set[str] = set()
         self._next_prefill = 0
         self._next_decode = 0
@@ -498,9 +514,24 @@ class VllmDisaggregatedSession:
                 for engine in (*self.prefill_engines, *self.decode_engines):
                     self._completion_bridges[engine.engine_id] = NativeEngineCompletion(
                         engine, self.engine_runtime, observer=completion_observer)
+                if self._shared_handoff is not None:
+                    self._shared_handoff.bind(self.clock, {
+                        engine.engine_id: tuple(rank.local_rank for rank in engine.placement.ranks)
+                        for engine in (*self.prefill_engines, *self.decode_engines)
+                    })
             except BaseException:
-                self.shutdown()
+                self._shutdown_after_failure()
                 raise
+
+    def _shutdown_after_failure(self) -> None:
+        if self._shared_handoff is None:
+            self.shutdown()
+            return
+        self._shared_handoff.abort()
+        try:
+            self.shutdown()
+        except Exception as error:  # noqa: BLE001, retain cleanup failure without replacing the original.
+            self._shared_cleanup_error = str(error)
 
     @property
     def timing_authority(self) -> str:
@@ -528,7 +559,7 @@ class VllmDisaggregatedSession:
                     if self.construction_observer is not None:
                         self.construction_observer(engine)
         except BaseException:
-            self.shutdown()
+            self._shutdown_after_failure()
             raise
         finally:
             reset_configuration()
@@ -802,14 +833,20 @@ class VllmDisaggregatedSession:
             state.prefill_internal_id,
         )
         state.bootstrap_token_id = tokens[0]
-        state.handoff = policy.schedule(
-            submitted_at_ps=self.clock.now_ps,
-            request_id=request.request_id,
-            kv_bytes=self.config.handoff_geometry.bytes_for_prompt(
-                len(request.prompt_token_ids)
-            ),
-        )
         state.kv_transfer_params = dict(kv_params)
+        handoff_inputs = {"submitted_at_ps": self.clock.now_ps, "request_id": request.request_id,
+                          "kv_bytes": self.config.handoff_geometry.bytes_for_prompt(len(request.prompt_token_ids))}
+        if self._shared_handoff is not None:
+            state.pending_handoff = self._shared_handoff.submit(
+                **handoff_inputs, source_engine_id=state.prefill.engine_id,
+                destination_engine_id=state.decode.engine_id)
+            return
+        self._publish_handoff(state, policy.schedule(**handoff_inputs))
+
+    def _publish_handoff(self, state: _ConcurrentRequestState, handoff: KvHandoffEvent | KvHandoffJoin) -> None:
+        if state.handoff is not None or handoff.request_id != state.request.request_id:
+            raise RuntimeError("request handoff publication is foreign or duplicated")
+        state.handoff = handoff
         if state.handoff.authority != KV_HANDOFF_AUTHORITY:
             state.kv_transfer_params.update(
                 {
@@ -820,9 +857,29 @@ class VllmDisaggregatedSession:
             )
         self.handoffs.append(state.handoff)
         if sum(
-            event.request_id == request.request_id for event in self.handoffs
+            event.request_id == state.request.request_id for event in self.handoffs
         ) != 1:
             raise RuntimeError("request emitted other than one KV handoff")
+
+    @staticmethod
+    def _pending_handoffs(states: Sequence[_ConcurrentRequestState]) -> tuple[PendingKvHandoff, ...]:
+        return tuple(state.pending_handoff for state in states if state.pending_handoff is not None)
+
+    def _complete_handoffs(self, states: Sequence[_ConcurrentRequestState]) -> None:
+        if self._shared_handoff is None:
+            return
+        by_id = {state.request.request_id: state for state in states}
+        joins = self._shared_handoff.complete_due(self._pending_handoffs(states))
+        for join in joins:
+            state = by_id.get(join.request_id)
+            if state is None or state.pending_handoff is not join.submission:
+                raise RuntimeError("shared handoff join changed its private request binding")
+            if (join.completed_at_ps != self.clock.now_ps
+                    or join.submission.source_engine_id != state.prefill.engine_id
+                    or join.submission.destination_engine_id != state.decode.engine_id):
+                raise RuntimeError("shared handoff join changed engine binding or completion visibility")
+            state.pending_handoff = None
+            self._publish_handoff(state, join)
 
     def _admit_decode(self, state: _ConcurrentRequestState) -> None:
         request = state.request
@@ -917,6 +974,7 @@ class VllmDisaggregatedSession:
         try:
             while True:
                 runtime.complete_due()
+                self._complete_handoffs(states)
                 if all(state.decode_record_stop is not None for state in states):
                     if runtime.next_completion_ps is not None:
                         raise RuntimeError("completed requests leave unexplained pending engine service")
@@ -952,18 +1010,30 @@ class VllmDisaggregatedSession:
                 candidates = list(self._ready_time_candidates(states, self.clock.now_ps))
                 if due is not None:
                     candidates.append(due)
+                local = min(candidates) if candidates else None
+                if self._shared_handoff is not None:
+                    pending = self._pending_handoffs(states)
+                    if pending:
+                        completion = self._shared_handoff.progress(
+                            pending, through_ps=None if local is None else local - 1)
+                        if completion is not None:
+                            if completion <= self.clock.now_ps:
+                                raise RuntimeError("shared packet progress did not advance its causal frontier")
+                            candidates.append(completion)
                 if not candidates:
                     raise RuntimeError("independent native session made no progress")
                 runtime.advance_to(min(candidates))
         except Exception as error:
             runtime.invalidate(str(error))
+            if self._shared_handoff is not None:
+                self._shared_handoff.abort()
             raise
 
     def run_requests(
         self,
         requests: Sequence[VllmPdRequest],
         *,
-        handoff_policy: KvHandoffPolicy | None = None,
+        handoff_policy: KvHandoffPolicy | PendingKvHandoffPolicy | None = None,
     ) -> VllmPdConcurrentResult:
         """Drive several requests while the two stock schedulers own batching."""
 
@@ -983,9 +1053,14 @@ class VllmDisaggregatedSession:
         if min(request.admitted_at_ps for request in rows) < self.clock.now_ps:
             raise ValueError("request admission cannot precede the session clock")
         policy = self.config.handoff_policy if handoff_policy is None else handoff_policy
-        if not isinstance(policy, KvHandoffPolicy):
+        if self._shared_handoff is not None:
+            if policy is not self._shared_handoff or self.config.handoff_policy is not self._shared_handoff:
+                raise ValueError("shared handoff policy replacement is not supported")
+        elif isinstance(policy, PendingKvHandoffPolicy):
+            raise ValueError("shared handoff requires its original session policy owner")
+        elif not isinstance(policy, KvHandoffPolicy):
             raise TypeError("handoff_policy must implement KvHandoffPolicy")
-        if self.engine_runtime is not None and type(policy) is not DeclaredKvHandoffPolicy:
+        if self.engine_runtime is not None and self._shared_handoff is None and type(policy) is not DeclaredKvHandoffPolicy:
             raise NotImplementedError("independent packet handoff composition remains CORE-70")
 
         states = tuple(
@@ -1132,7 +1207,7 @@ class VllmDisaggregatedSession:
         *,
         decode_output_tokens: int,
         admitted_at_ps: int | None = None,
-        handoff_policy: KvHandoffPolicy | None = None,
+        handoff_policy: KvHandoffPolicy | PendingKvHandoffPolicy | None = None,
     ) -> VllmPdRequestResult:
         """Run one request through prefill, handoff, and decode in order."""
 
@@ -1287,6 +1362,32 @@ class VllmDisaggregatedSession:
     def shutdown(self) -> None:
         if self._closed:
             return
+        if self._shared_handoff is not None:
+            failures = []
+            try:
+                if self.engine_runtime.next_completion_ps is not None:
+                    raise RuntimeError("cannot close a shared session with pending engine work")
+                self._shared_handoff.close()
+                self.engine_runtime.close()
+            except Exception as error:  # noqa: BLE001, a failed owner still must reap its child.
+                failures.append(str(error))
+                self.engine_runtime.invalidate(str(error))
+                self._shared_handoff.abort()
+            for bridge in self._completion_bridges.values():
+                try:
+                    bridge.close()
+                except Exception as error:  # noqa: BLE001, finish all terminal cleanup.
+                    failures.append(str(error))
+            self._closed = True
+            for engine in (*self.prefill_engines, *self.decode_engines):
+                try:
+                    engine.llm.llm_engine.engine_core.shutdown()
+                except Exception as error:  # noqa: BLE001, finish all terminal cleanup.
+                    failures.append(engine.engine_id + ": " + str(error))
+            reset_configuration()
+            if failures:
+                raise RuntimeError("shared session cleanup failed: " + "; ".join(failures))
+            return
         if self.engine_runtime is not None:
             # Pending work rejects before any native teardown mutates state.
             self.engine_runtime.close()
@@ -1315,6 +1416,9 @@ class VllmDisaggregatedSession:
         return self
 
     def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
+        if exc is not None and self._shared_handoff is not None:
+            self._shutdown_after_failure()
+            return
         self.shutdown()
 
 
