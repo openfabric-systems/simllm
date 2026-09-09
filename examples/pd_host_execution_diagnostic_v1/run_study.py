@@ -360,7 +360,7 @@ def execute(args):
         subprocess.run(["git", "merge-base", "--is-ancestor", FREEZE_COMMIT, "HEAD"], cwd=ROOT, check=True)
         subprocess.run(["git", "diff", "--quiet", "HEAD", "--"], cwd=ROOT, check=True)
         for name in ("expectations.md", "expectations.json"):
-            original = subprocess.check_output(["git", "show", f"{FREEZE_COMMIT}:{HERE.relative_to(ROOT) / name}"], cwd=ROOT)
+            original = subprocess.check_output(["git", "show", f"{FREEZE_COMMIT}:{(HERE.relative_to(ROOT) / name).as_posix()}"], cwd=ROOT)
             evidence.equal("freeze:" + name, sha((HERE / name).read_bytes()), sha(original))
         harness = {path.name: sha(path.read_bytes()) for path in HERE.iterdir()
                    if path.suffix == ".py" or path.name in ("expectations.md", "expectations.json")}
