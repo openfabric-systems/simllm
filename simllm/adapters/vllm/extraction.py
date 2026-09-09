@@ -15,13 +15,17 @@ from simllm.calibration.extraction import (
     FrameworkTextStack,
     extract_model_inventory,
 )
+from simllm.calibration.kimi_k3 import exact_config_ratio, validate_kimi_k3_native_contract
 from simllm.calibration.model_inventory import (
     FrameworkIdentity,
     ModelGeometry,
     ModelKernelInventory,
 )
 from simllm.compute import ModelDims
+from simllm.compute.kimi_k3 import KdaSpec, KimiK3Spec, LatentMoeSpec, MlaSpec
 
+VLLM_KIMI_K3_BINDING = "vllm.models.kimi_k3:KimiK3ForConditionalGeneration"
+VLLM_KIMI_K3_IMPLEMENTATION = "KimiK3DeltaAttention and MultiHeadLatentAttention"
 VLLM_SOURCE_COMMIT = "6e448d0ea9bf3d88d898b65449ca6dc2aec170ac"
 VLLM_EXTRACTION_SEAM = "flagged-skeleton-step-record-v1"
 VLLM_CONFIGURATION_SEAM = "ModelConfig-with-skip-tokenizer-init"
@@ -267,6 +271,72 @@ def _deepseek_v3_dims(stack: FrameworkDeepseekStack) -> ModelDims:
     )
 
 
+def _kimi_k3_projection(
+    model_config: Any,
+    framework: FrameworkIdentity,
+) -> FrameworkConfigurationProjection | None:
+    hf = model_config.hf_config
+    if tuple(hf.architectures or ()) != ("KimiK3ForConditionalGeneration",):
+        return None
+    from vllm.model_executor.models.registry import ModelRegistry
+
+    registered = ModelRegistry.models.get("KimiK3ForConditionalGeneration")
+    if (registered is None or getattr(registered, "module_name", None) != "vllm.models.kimi_k3"
+            or getattr(registered, "class_name", None) != "KimiK3ForConditionalGeneration"):
+        raise RuntimeError("vLLM K3 architecture binding does not match the pin")
+    text = model_config.hf_text_config
+    layer_types = tuple("kda" if text.is_kda_layer(i) else "mla"
+                        for i in range(text.num_hidden_layers))
+    quantization = validate_kimi_k3_native_contract(text, layer_types, quant_method="mxfp4")
+    if str(model_config.dtype) not in {"bfloat16", "torch.bfloat16"}:
+        raise ValueError("native K3 extraction requires BF16 activation configuration")
+    linear = text.linear_attn_config
+    spec = KimiK3Spec(
+        hidden_size=text.hidden_size,
+        vocab_size=text.vocab_size,
+        dense_intermediate_size=text.intermediate_size,
+        dense_prefix_layers=text.first_k_dense_replace,
+        layer_types=layer_types,
+        residual_block_size=text.attn_res_block_size,
+        kda=KdaSpec(
+            heads=linear["num_heads"], head_dim=linear["head_dim"],
+            convolution_width=linear["short_conv_kernel_size"],
+            full_rank_output_gate=linear["use_full_rank_gate"],
+            gate_lower_bound=exact_config_ratio(linear["gate_lower_bound"]),
+            recurrent_dtype="float32", convolution_state_dtype="bfloat16",
+        ),
+        mla=MlaSpec(
+            heads=text.num_attention_heads, query_rank=text.q_lora_rank,
+            kv_rank=text.kv_lora_rank, score_nope_dim=text.qk_nope_head_dim,
+            score_extra_dim=text.qk_rope_head_dim, value_dim=text.v_head_dim,
+            skip_rotary=text.mla_use_nope, output_gate=text.mla_use_output_gate,
+            cache_dtype="bfloat16",
+        ),
+        moe=LatentMoeSpec(
+            experts=text.num_experts, selected_experts=text.num_experts_per_token,
+            latent_width=text.routed_expert_hidden_size,
+            intermediate_size=text.moe_intermediate_size,
+            shared_experts=text.num_shared_experts,
+            normalize_latent_output=text.latent_moe_use_norm,
+            router_activation=text.moe_router_activation_func,
+            topk_method=text.topk_method, renormalize=text.moe_renormalize,
+            expert_groups=text.num_expert_group, topk_groups=text.topk_group,
+            routed_scale=exact_config_ratio(text.routed_scaling_factor),
+            activation=text.hidden_act, situ_beta=exact_config_ratio(text.activation_situ_beta),
+            situ_linear_beta=exact_config_ratio(text.activation_situ_linear_beta),
+        ),
+        rms_norm_epsilon=exact_config_ratio(text.rms_norm_eps),
+        activation_dtype="bfloat16", tied_embeddings=text.tie_word_embeddings,
+        max_context=text.max_position_embeddings,
+        checkpoint_quantization=quantization,
+    )
+    return FrameworkConfigurationProjection(
+        framework=framework, configuration_seam=VLLM_CONFIGURATION_SEAM,
+        architecture_binding=VLLM_KIMI_K3_BINDING,
+        text_implementation=VLLM_KIMI_K3_IMPLEMENTATION, kimi_k3_stack=spec,
+    )
+
+
 def _configuration(
     checkpoint_root: Path,
 ) -> tuple[Any, Any, FrameworkConfigurationProjection | None]:
@@ -292,6 +362,9 @@ def _configuration(
         enforce_eager=True,
     )
     framework = _framework_identity(version)
+    kimi_projection = _kimi_k3_projection(model_config, framework)
+    if kimi_projection is not None:
+        return None, framework, kimi_projection
     qwen3_projection = _qwen3_projection(model_config, framework)
     if qwen3_projection is not None:
         assert qwen3_projection.dense_stack is not None

@@ -140,7 +140,10 @@ def _work_template(
     path: str,
 ) -> dict[str, Any]:
     if isinstance(work, ComputeWork):
-        return {"kind": "compute", "kernel": work.kernel}
+        value = {"kind": "compute", "kernel": work.kernel}
+        if work.scope != "kernel-region":
+            value["scope"] = work.scope
+        return value
     if isinstance(work, KvCacheWork):
         return {"kind": "kv-cache", "action": work.action.value}
     if isinstance(work, DmaWork):

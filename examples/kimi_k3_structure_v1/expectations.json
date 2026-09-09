@@ -1,0 +1,239 @@
+{
+  "schema": "simllm-kimi-k3-structure-expectations-v1",
+  "owning_task": "COMP-54",
+  "evidence_class": "native-configuration-and-declared-logical-operators",
+  "model": {
+    "name": "moonshotai/Kimi-K3",
+    "revision": "f831ab66814297da540d832a5235f8e904f29d06",
+    "config_sha256": "9710e121a58d03ac92c8d6da287a19541994319afbbe6d6202af001ffd379213",
+    "text_layers": 93,
+    "kda_layers": 69,
+    "mla_layers": 24,
+    "dense_layers": 1,
+    "routed_layers": 92,
+    "hidden_size": 7168,
+    "latent_hidden_size": 3584,
+    "routed_intermediate_size": 3072,
+    "dense_intermediate_size": 33792,
+    "routed_experts": 896,
+    "selected_experts": 16,
+    "shared_experts": 2,
+    "vocab_size": 163840,
+    "parameter_count_full_checkpoint": 2779931837184
+  },
+  "frameworks": [
+    {
+      "id": "vllm",
+      "version": "0.27.1",
+      "source_commit": "6e448d0ea9bf3d88d898b65449ca6dc2aec170ac",
+      "source_tree": null,
+      "native_configuration": "ModelConfig-with-skip-tokenizer-init",
+      "final_norm_token_axis": "sampled_tokens"
+    },
+    {
+      "id": "sglang",
+      "version": "0.5.19.dev345+gbfeae4e79",
+      "source_commit": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
+      "source_tree": "9ffe149f40e1cd5bff7dadc6806ad1927d312e69",
+      "native_configuration": "DeviceConfig-cpu-plus-ModelConfig-with-multimodal-disabled",
+      "final_norm_token_axis": "new_tokens"
+    }
+  ],
+  "source_files": {
+    "config.json": "9710e121a58d03ac92c8d6da287a19541994319afbbe6d6202af001ffd379213",
+    "vllm-nvidia-model.py": "f620ecf1a542db1f4e684a6956143afb45d72fa1ff12bc6d3cc44f9957b1a3d4",
+    "vllm-nvidia-kda.py": "3663c3b273abf41e9727e2b1724e87628b64b6a9dc048a2c48d002b1f9085420",
+    "vllm-nvidia-mla.py": "034c634f93abc3d640e214b2971106489bf608289013c69f94c479f3792e2a93",
+    "vllm-linear-config.py": "896feb1fe65e391215ee60a49d945fb725f38a86a9abb28ffe77415b5bc7ed29",
+    "sglang-kimi-k3.py": "58c0c747b81ae4aa2cb1954ea6778d74b6556af4d7f3ed8d84a13a803c5e1f80",
+    "sglang-mamba-config.py": "820627a476130e36e8c9aeec2f1ded01d0c068369149e014cc0ef074f1e90808",
+    "sglang-residual.py": "a0586497dec4db2b7fd9e073ed0ad98ec2f9b1535a53e3b5e43f12c075662f11",
+    "vllm-kda-fused_recurrent.py": "bffe3fc24af947695fd278e62298eec7e00d89db1bbcc405bcb1768f4bc9af54",
+    "vllm-ops-attn_res.py": "40cc7242f49d532569c7f63bef1634be4bff5194e4f1777917bef5adfc414fe6",
+    "vllm-runner-latent_moe_runner.py": "37b732d691178db35deaf341585cfc6bce90d87a0a9389fc69ca690f39519808",
+    "vllm-gpu-model-runner.py": "993f2c926012241bcb8cc7f568c8e82968e4d81ca125641c831ecf501aac02ac"
+  },
+  "shape_matrix": {
+    "batch": [
+      1,
+      3
+    ],
+    "cold_prefill_new_tokens_per_sequence": [
+      1,
+      4,
+      16
+    ],
+    "decode_context_including_current_token": [
+      1,
+      17,
+      257
+    ],
+    "decode_new_tokens_per_sequence": 1,
+    "sampled_tokens_per_sequence": 1,
+    "repetitions_per_framework": 2,
+    "tensor_parallel": 1,
+    "expert_parallel": 1,
+    "pipeline_parallel": 1
+  },
+  "supported_mla_variants": {
+    "cold_prefill": "expanded-new-token",
+    "decode": "absorbed-latent"
+  },
+  "rejected_modes": [
+    "prefix-prefill",
+    "mixed-phase-batch",
+    "speculation",
+    "vision",
+    "projector",
+    "multi-token-prediction",
+    "undeclared-mla-dispatch",
+    "distributed-rank-projection"
+  ],
+  "operator_partition": {
+    "kda": [
+      "q_projection",
+      "k_projection",
+      "v_projection",
+      "q_convolution_silu",
+      "k_convolution_silu",
+      "v_convolution_silu",
+      "q_l2_norm",
+      "k_l2_norm",
+      "forget_a_projection",
+      "forget_b_projection",
+      "forget_gate",
+      "beta_projection",
+      "beta_sigmoid",
+      "output_gate_projection",
+      "state_update_and_query",
+      "gated_rms_norm",
+      "output_projection"
+    ],
+    "mla_common": [
+      "q_a_projection",
+      "q_norm",
+      "q_b_projection",
+      "kv_a_projection",
+      "kv_norm",
+      "compressed_cache_commit",
+      "query_key_product",
+      "softmax",
+      "probability_value_product",
+      "output_gate_projection",
+      "sigmoid_multiply",
+      "output_projection"
+    ],
+    "mla_expanded_extra": [
+      "kv_b_projection"
+    ],
+    "mla_absorbed_extra": [
+      "query_absorption",
+      "value_reexpansion"
+    ],
+    "dense_ffn": [
+      "gate_projection",
+      "up_projection",
+      "situ",
+      "down_projection"
+    ],
+    "latent_moe": [
+      "router_projection",
+      "expert_selection",
+      "latent_down_projection",
+      "dispatch",
+      "expert_gate_projection",
+      "expert_up_projection",
+      "expert_situ",
+      "expert_down_projection",
+      "weighted_combine",
+      "latent_rms_norm",
+      "latent_up_projection",
+      "shared_gate_projection",
+      "shared_up_projection",
+      "shared_situ",
+      "shared_down_projection",
+      "shared_routed_add"
+    ],
+    "per_layer_common": [
+      "attention_residual_input_norm_snapshot",
+      "mlp_residual_post_attention_norm",
+      "ffn_delta_prefix_add"
+    ],
+    "outer": [
+      "embedding",
+      "final_residual_mixture",
+      "final_norm",
+      "lm_head"
+    ]
+  },
+  "exact_oracles": {
+    "prefill_logical_visits": 3244,
+    "decode_logical_visits": 3268,
+    "prefill_dependency_depth": 1812,
+    "decode_dependency_depth": 1860,
+    "routed_values_per_expert": 33030144,
+    "routed_encoded_bytes_per_expert": 17547264,
+    "routed_values_all_layers": 2722740830208,
+    "routed_encoded_bytes_all_layers": 1446456066048,
+    "shared_bf16_bytes_all_layers": 24310185984,
+    "latent_projection_values_per_layer": 51380224,
+    "router_values_per_layer": 6422528,
+    "dense_values_first_layer": 726663168,
+    "kda_recurrent_bytes_per_sequence": 434110464,
+    "kda_convolution_history_bytes_per_sequence": 15261696,
+    "kda_total_persistent_bytes_per_sequence": 449372160,
+    "mla_history_bytes_per_cached_token": 27648,
+    "residual_snapshot_bytes_per_current_token": 114688,
+    "residual_source_evaluations_per_current_token": 1002
+  },
+  "diagnostic": {
+    "service_ps_per_new_token": [
+      1000,
+      2000
+    ],
+    "prompt_tokens": [
+      1,
+      4
+    ],
+    "decode_steps": 2,
+    "requests": 1,
+    "compute_slots": 1,
+    "memory_arbitration": "explicit-synthetic-zero",
+    "separate_graph_identity": true,
+    "exact_serial_completion": "logical_visits * total_new_tokens * service_ps_per_new_token",
+    "shared_branch_control": {
+      "ordinary_region_ps": 1000,
+      "shared_region_ps": 10000,
+      "prefill_completion_ps": 3652000,
+      "decode_completion_ps": 3700000,
+      "evidence_class": "logical-graph-longest-path-only",
+      "resource_model": "independently-granted-regions"
+    },
+    "runtime_selection": "CoarseDeviceRuntime-explicit-serial-compute"
+  },
+  "behavioral_families": [
+    "batch-linear-work-and-capacity",
+    "cold-prefill-inclusive-pairs",
+    "decode-history-growth",
+    "synthetic-request-service-scaling"
+  ],
+  "fatal_policy": "any-violation-voids-entire-run-with-null-score",
+  "hardware_measurements": 0,
+  "compatibility": {
+    "tracked_inventory_glob": "offline/calibration/model-inventories/*.json",
+    "tracked_suite_glob": "offline/calibration/suites/*/suite.json",
+    "baseline_commit": "7bb8c3b65d724a2905b7ba86d5b270e33831f56c",
+    "native_controls": [
+      "transformer-dag-v1-frameworks-2026-08-24",
+      "qwen3.8-27b-text-v1-frameworks-2026-08-25",
+      "deepseek-v3-text-v1-frameworks-2026-08-25",
+      "qwen3-32b-fp8-text-v1-frameworks-2026-08-28"
+    ]
+  },
+  "fatal_graph_controls": [
+    "shared-branch-completion-join",
+    "cache-commit-frontier",
+    "original-layer-indices",
+    "complete-family-visit-inventory"
+  ]
+}
