@@ -6,6 +6,32 @@ finishing its first scale. The original target run remains VOID, with its
 1,200-second timeout and partial evidence unchanged. No production behavior
 or model-service value changes in this diagnostic.
 
+## Source-writer encoding amendment
+
+The finite protocol below was frozen before its implementation at
+`8f06648d26bbfb2bfff4751d29a2e2bf232b440d`. This encoding amendment is a
+post-specified regression contract after the first diagnostic's retained VOID.
+It precedes the parser repair and fresh execution; it does not establish public
+pre-registration for the corrected checker. The old run stays unrescored.
+
+The unchanged `StepRecordStream.append` in `simllm/core/step.py` emits
+`json.dumps(step_record_to_json(record))` followed by exactly one LF. Its ASCII
+bytes retain schema insertion order and standard spaces. Bind admission to the
+writer's source hash and reconstruct those exact bytes, including whole-file
+framing. Positive fixtures use the actual writer. Reject CRLF, missing final
+LF, additional blank lines and alternate member order.
+
+Parse every native line with duplicate-member and finite-value checks,
+including nested duplicates and exponent overflow. Rehydration through the
+step schema cannot replace the original parsed object: compare that original
+object to `native.json` using the existing type-aware equality. Unknown fields
+and missing fields cannot disappear through rehydration. Diagnostic JSON keeps
+its exact compact sorted encoding; progress JSONL adds exactly one LF per
+compact row. Raw bytes and their first receipts remain untouched.
+
+No native writer, service value, finite case, timing limit, identity rule or
+profiling boundary changes with this amendment.
+
 ## Question and physical boundary
 
 The host constructs a model graph, validates and projects its dependencies,

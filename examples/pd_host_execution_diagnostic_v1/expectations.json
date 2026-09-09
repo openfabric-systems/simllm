@@ -1,4 +1,14 @@
 {
+  "admission_encodings": {
+    "classification": "Post-specified source-writer regression checks after the retained first diagnostic VOID; no public pre-registration claim for the corrected checker.",
+    "diagnostic_json": "Exact compact sorted ASCII JSON with finite values.",
+    "framing": "Whole-file bytes remain untouched. Reject CRLF, missing final LF, extra blank lines and alternate member order.",
+    "native_step_records": "Exact ASCII bytes of json.dumps(step_record_to_json(record)) + LF per record, as emitted by StepRecordStream.append; preserve insertion order and standard spaces.",
+    "original_freeze_commit": "8f06648d26bbfb2bfff4751d29a2e2bf232b440d",
+    "progress_jsonl": "Exact compact sorted ASCII JSON plus one LF per row.",
+    "scope": "Native writer and all model service, grid, limits, identity, normalization and profile requirements remain unchanged.",
+    "strict_parsing": "Reject nested duplicate members and every nonfinite value, including exponent overflow. Compare original parsed objects with native.json through type-aware equality; rerendering never replaces the original objects."
+  },
   "arms": [
     "uninstrumented",
     "instrumented"
@@ -446,6 +456,7 @@
     "simllm/core/clock.py": "5693cc845e4c3c7371b43abef6b10d66bf1af96f13a5401c48a64175fdc44516",
     "simllm/core/execution_io.py": "cc249b79cbd4164ebb36a5618f6c8893584bbf3b1453b6be9a1dda59b69f4326",
     "simllm/core/pd_session.py": "7970d5573d683f94b96e8075a32a564646ccde34fea64e594aa7a26010592052",
+    "simllm/core/step.py": "163359c65bfd0a6809f0a1efcc131ca16f0c0d85a1c390efed36a31a79f9cbc7",
     "simllm/placement/disaggregated.py": "50f53e69a4c7b6201c01eb6228ddeddf2054cfa256a3d12841ca417f56ab71a3",
     "simllm/placement/manifest.py": "f82f05b7277501bdc2c6993e2638a16f9a5631a08c7a13f5f24a34ecad8936c2",
     "simllm/traffic/execution_goal.py": "88aecaddaf4aad9b732fc763675db226d04b9fd60586591993eeac113ee2100d",
