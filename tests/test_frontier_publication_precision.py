@@ -339,3 +339,10 @@ def test_study_retained_identity_replacement_voids_even_with_correct_count(key):
     result = evaluation.finish()
     assert f"complete:{key}" in result["fatal_findings"]
     assert result["behavioral_score"] is None
+
+
+def test_publication_extension_preserves_the_frozen_exact_frontier_source():
+    from examples.decode_hbm_crossover_v1.run_study import frozen_findings
+
+    frozen = json.loads((ROOT / "examples/decode_hbm_crossover_v1/expectations.json").read_bytes())
+    assert frozen_findings(frozen) == []
