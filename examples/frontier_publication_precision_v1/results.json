@@ -1,0 +1,2033 @@
+{
+  "behavioral_classes": {
+    "families": 1,
+    "instances": 40,
+    "passed": 40
+  },
+  "exact_oracle_classes": {
+    "boundary": 15,
+    "historical_exact_threshold": 10
+  },
+  "fatal_guard_count": 468,
+  "fatal_guards_scored": false,
+  "historical_agreement": [
+    {
+      "comparison": {
+        "agreement_verdict": "PASS",
+        "axis": "x_tokens_per_second_per_request",
+        "possibly_infeasible": false,
+        "quotient_band": [
+          {
+            "denominator": 4,
+            "numerator": 3
+          },
+          {
+            "denominator": 20,
+            "numerator": 27
+          }
+        ],
+        "quotient_bounds": [
+          {
+            "denominator": 1791343141505977066857693184,
+            "numerator": 1770213720719360076904296875
+          },
+          {
+            "denominator": 92772535493691585140912816128,
+            "numerator": 92771293593600002288818359375
+          }
+        ],
+        "quotients": [
+          {
+            "denominator": 1791343141505977066857693184,
+            "numerator": 1770213720719360076904296875
+          },
+          {
+            "denominator": 92772535493691585140912816128,
+            "numerator": 92771293593600002288818359375
+          }
+        ],
+        "reference_y": {
+          "denominator": 250,
+          "numerator": 193303
+        },
+        "segments": [
+          {
+            "interval": {
+              "lower": {
+                "denominator": 2251799813685248000,
+                "numerator": 126171721260504917279
+              },
+              "lower_closed": true,
+              "upper": {
+                "denominator": 17847022159,
+                "numerator": 1000000000000
+              },
+              "upper_closed": true
+            },
+            "selection": {
+              "point_id": "21c113c4d019f266777005804f4080c9577d0b5341ff827a0d98a9bfff03d1c4",
+              "x": {
+                "denominator": 17847022159,
+                "numerator": 1000000000000
+              },
+              "y": {
+                "denominator": 959866484158979272343552,
+                "numerator": 742170348748800018310546875
+              }
+            }
+          },
+          {
+            "interval": {
+              "lower": {
+                "denominator": 17847022159,
+                "numerator": 1000000000000
+              },
+              "lower_closed": false,
+              "upper": {
+                "denominator": 2251799813685248000,
+                "numerator": 126173973060318714593
+              },
+              "upper_closed": true
+            },
+            "selection": {
+              "point_id": "5a3ff9bf0402ad203630d3e030955620326831cbab50072b362f244d7e7cf311",
+              "x": {
+                "denominator": 8428307353,
+                "numerator": 500000000000
+              },
+              "y": {
+                "denominator": 18534043874186919673856,
+                "numerator": 14161709765754880615234375
+              }
+            }
+          }
+        ],
+        "threshold": {
+          "assumptions": "conditional binary64 enclosure, historical profile unverified",
+          "basis": "CONDITIONAL",
+          "interval": {
+            "lower": {
+              "denominator": 2251799813685248000,
+              "numerator": 126171721260504917279
+            },
+            "lower_closed": true,
+            "upper": {
+              "denominator": 2251799813685248000,
+              "numerator": 126173973060318714593
+            },
+            "upper_closed": true
+          },
+          "published_text": "56.032",
+          "row_id": "historical-row-01",
+          "source_sha256": "8b437860a9ad00bafefa53f956b1f9b958e5709f7fb721c76b3fe3f2820688b4"
+        },
+        "units": "tokens/s/request"
+      },
+      "exact_threshold_choice": "external-disagg-row-02",
+      "exact_threshold_quotient": {
+        "denominator": 1791343141505977066857693184,
+        "numerator": 1770213720719360076904296875
+      },
+      "external_row": 1,
+      "guard": {
+        "denominator": 2251799813685248000,
+        "numerator": 56033
+      },
+      "historical_profile_verified": false,
+      "id": "historical-row-01",
+      "interpretation": "choices over a conditional enclosure, not the exact exporter preimage",
+      "matched_candidate_is_possible_selection": true,
+      "matched_candidate_key": "21c113c4d019f266777005804f4080c9577d0b5341ff827a0d98a9bfff03d1c4",
+      "matched_coordinate_in_enclosure": true,
+      "source_row": {
+        "(d)backend": "trtllm",
+        "(d)bs": "128",
+        "(d)comm": "half",
+        "(d)dp": "1",
+        "(d)fmha": "fp8",
+        "(d)gemm": "fp8_block",
+        "(d)global_bs": "128",
+        "(d)kvcache": "fp8",
+        "(d)memory": "55.039",
+        "(d)moe": "fp8_block",
+        "(d)moe_ep": "1",
+        "(d)moe_tp": "1",
+        "(d)parallel": "tp2pp1dp1etp1ep1",
+        "(d)pp": "1",
+        "(d)seq/s/worker": "14.373",
+        "(d)system": "h200_sxm",
+        "(d)tp": "2",
+        "(d)version": "1.3.0rc10",
+        "(d)workers": "2",
+        "(e)memory": "0.0",
+        "(e)parallel": "",
+        "(e)pp": "0",
+        "(e)tp": "0",
+        "(e)workers": "0",
+        "(p)backend": "trtllm",
+        "(p)bs": "1",
+        "(p)comm": "half",
+        "(p)cp": "1",
+        "(p)dp": "1",
+        "(p)fmha": "fp8",
+        "(p)gemm": "fp8_block",
+        "(p)global_bs": "1",
+        "(p)kvcache": "fp8",
+        "(p)memory": "12.262",
+        "(p)moe": "fp8_block",
+        "(p)moe_ep": "1",
+        "(p)moe_tp": "1",
+        "(p)parallel": "tp4pp1dp1etp1ep1",
+        "(p)pp": "1",
+        "(p)seq/s/worker": "9.164",
+        "(p)system": "h200_sxm",
+        "(p)tp": "4",
+        "(p)version": "1.3.0rc10",
+        "(p)workers": "3",
+        "concurrency": "256",
+        "encoder_latency": "0.0",
+        "isl": "4000",
+        "model": "Qwen/Qwen3-32B-FP8",
+        "num_total_gpus": "16",
+        "osl": "500",
+        "power_w": "0.0",
+        "prefix": "500",
+        "request_latency": "9102.076",
+        "request_rate": "24.743",
+        "seq/s": "24.743",
+        "seq/s/gpu": "1.546",
+        "tokens/s": "12371.4",
+        "tokens/s/gpu": "773.212",
+        "tokens/s/gpu_cluster": "773.212",
+        "tokens/s/user": "56.032",
+        "tpot": "17.847",
+        "ttft": "196.423"
+      }
+    },
+    {
+      "comparison": {
+        "agreement_verdict": "PASS",
+        "axis": "x_tokens_per_second_per_request",
+        "possibly_infeasible": false,
+        "quotient_band": [
+          {
+            "denominator": 4,
+            "numerator": 3
+          },
+          {
+            "denominator": 20,
+            "numerator": 27
+          }
+        ],
+        "quotient_bounds": [
+          {
+            "denominator": 183721564634102149409190969344,
+            "numerator": 154618822656000003814697265625
+          },
+          {
+            "denominator": 1773738116580983766532489216,
+            "numerator": 1770213720719360076904296875
+          }
+        ],
+        "quotients": [
+          {
+            "denominator": 183721564634102149409190969344,
+            "numerator": 154618822656000003814697265625
+          },
+          {
+            "denominator": 1773738116580983766532489216,
+            "numerator": 1770213720719360076904296875
+          }
+        ],
+        "reference_y": {
+          "denominator": 1000,
+          "numerator": 765613
+        },
+        "segments": [
+          {
+            "interval": {
+              "lower": {
+                "denominator": 2251799813685248000,
+                "numerator": 133584646247156750403
+              },
+              "lower_closed": true,
+              "upper": {
+                "denominator": 8428307353,
+                "numerator": 500000000000
+              },
+              "upper_closed": true
+            },
+            "selection": {
+              "point_id": "5a3ff9bf0402ad203630d3e030955620326831cbab50072b362f244d7e7cf311",
+              "x": {
+                "denominator": 8428307353,
+                "numerator": 500000000000
+              },
+              "y": {
+                "denominator": 18534043874186919673856,
+                "numerator": 14161709765754880615234375
+              }
+            }
+          },
+          {
+            "interval": {
+              "lower": {
+                "denominator": 8428307353,
+                "numerator": 500000000000
+              },
+              "lower_closed": false,
+              "upper": {
+                "denominator": 2251799813685248000,
+                "numerator": 133586898046970554301
+              },
+              "upper_closed": true
+            },
+            "selection": {
+              "point_id": "c4b1ea197da8ce2ee439406b872d1f88291956d2e67b94c020a33b6b7385b419",
+              "x": {
+                "denominator": 5951952861,
+                "numerator": 500000000000
+              },
+              "y": {
+                "denominator": 1919732968317958544687104,
+                "numerator": 1236950581248000030517578125
+              }
+            }
+          }
+        ],
+        "threshold": {
+          "assumptions": "conditional binary64 enclosure, historical profile unverified",
+          "basis": "CONDITIONAL",
+          "interval": {
+            "lower": {
+              "denominator": 2251799813685248000,
+              "numerator": 133584646247156750403
+            },
+            "lower_closed": true,
+            "upper": {
+              "denominator": 2251799813685248000,
+              "numerator": 133586898046970554301
+            },
+            "upper_closed": true
+          },
+          "published_text": "59.324",
+          "row_id": "historical-row-02",
+          "source_sha256": "8b437860a9ad00bafefa53f956b1f9b958e5709f7fb721c76b3fe3f2820688b4"
+        },
+        "units": "tokens/s/request"
+      },
+      "exact_threshold_choice": "external-disagg-row-03",
+      "exact_threshold_quotient": {
+        "denominator": 183721564634102149409190969344,
+        "numerator": 154618822656000003814697265625
+      },
+      "external_row": 2,
+      "guard": {
+        "denominator": 90071992547409920,
+        "numerator": 2373
+      },
+      "historical_profile_verified": false,
+      "id": "historical-row-02",
+      "interpretation": "choices over a conditional enclosure, not the exact exporter preimage",
+      "matched_candidate_is_possible_selection": true,
+      "matched_candidate_key": "5a3ff9bf0402ad203630d3e030955620326831cbab50072b362f244d7e7cf311",
+      "matched_coordinate_in_enclosure": true,
+      "source_row": {
+        "(d)backend": "trtllm",
+        "(d)bs": "112",
+        "(d)comm": "half",
+        "(d)dp": "1",
+        "(d)fmha": "fp8",
+        "(d)gemm": "fp8_block",
+        "(d)global_bs": "112",
+        "(d)kvcache": "fp8",
+        "(d)memory": "50.644",
+        "(d)moe": "fp8_block",
+        "(d)moe_ep": "1",
+        "(d)moe_tp": "1",
+        "(d)parallel": "tp2pp1dp1etp1ep1",
+        "(d)pp": "1",
+        "(d)seq/s/worker": "13.315",
+        "(d)system": "h200_sxm",
+        "(d)tp": "2",
+        "(d)version": "1.3.0rc10",
+        "(d)workers": "2",
+        "(e)memory": "0.0",
+        "(e)parallel": "",
+        "(e)pp": "0",
+        "(e)tp": "0",
+        "(e)workers": "0",
+        "(p)backend": "trtllm",
+        "(p)bs": "1",
+        "(p)comm": "half",
+        "(p)cp": "1",
+        "(p)dp": "1",
+        "(p)fmha": "fp8",
+        "(p)gemm": "fp8_block",
+        "(p)global_bs": "1",
+        "(p)kvcache": "fp8",
+        "(p)memory": "12.262",
+        "(p)moe": "fp8_block",
+        "(p)moe_ep": "1",
+        "(p)moe_tp": "1",
+        "(p)parallel": "tp4pp1dp1etp1ep1",
+        "(p)pp": "1",
+        "(p)seq/s/worker": "9.164",
+        "(p)system": "h200_sxm",
+        "(p)tp": "4",
+        "(p)version": "1.3.0rc10",
+        "(p)workers": "3",
+        "concurrency": "224",
+        "encoder_latency": "0.0",
+        "isl": "4000",
+        "model": "Qwen/Qwen3-32B-FP8",
+        "num_total_gpus": "16",
+        "osl": "500",
+        "power_w": "0.0",
+        "prefix": "500",
+        "request_latency": "8608.066",
+        "request_rate": "24.5",
+        "seq/s": "24.5",
+        "seq/s/gpu": "1.531",
+        "tokens/s": "12249.8",
+        "tokens/s/gpu": "765.613",
+        "tokens/s/gpu_cluster": "765.613",
+        "tokens/s/user": "59.324",
+        "tpot": "16.857",
+        "ttft": "196.423"
+      }
+    },
+    {
+      "comparison": {
+        "agreement_verdict": "PASS",
+        "axis": "x_tokens_per_second_per_request",
+        "possibly_infeasible": false,
+        "quotient_band": [
+          {
+            "denominator": 4,
+            "numerator": 3
+          },
+          {
+            "denominator": 20,
+            "numerator": 27
+          }
+        ],
+        "quotient_bounds": [
+          {
+            "denominator": 270957484342613348636950528,
+            "numerator": 252887674388480010986328125
+          },
+          {
+            "denominator": 154621052467233335064733417472,
+            "numerator": 154618822656000003814697265625
+          }
+        ],
+        "quotients": [
+          {
+            "denominator": 270957484342613348636950528,
+            "numerator": 252887674388480010986328125
+          },
+          {
+            "denominator": 154621052467233335064733417472,
+            "numerator": 154618822656000003814697265625
+          }
+        ],
+        "reference_y": {
+          "denominator": 125,
+          "numerator": 80543
+        },
+        "segments": [
+          {
+            "interval": {
+              "lower": {
+                "denominator": 2251799813685248000,
+                "numerator": 189163569248536016857
+              },
+              "lower_closed": true,
+              "upper": {
+                "denominator": 5951952861,
+                "numerator": 500000000000
+              },
+              "upper_closed": true
+            },
+            "selection": {
+              "point_id": "c4b1ea197da8ce2ee439406b872d1f88291956d2e67b94c020a33b6b7385b419",
+              "x": {
+                "denominator": 5951952861,
+                "numerator": 500000000000
+              },
+              "y": {
+                "denominator": 1919732968317958544687104,
+                "numerator": 1236950581248000030517578125
+              }
+            }
+          },
+          {
+            "interval": {
+              "lower": {
+                "denominator": 5951952861,
+                "numerator": 500000000000
+              },
+              "lower_closed": false,
+              "upper": {
+                "denominator": 2251799813685248000,
+                "numerator": 189165821048349870119
+              },
+              "upper_closed": true
+            },
+            "selection": {
+              "point_id": "83bd4fa09c633566f6dbf124a279f4395496e5b1e57b1fa79e8424acce3b4cc5",
+              "x": {
+                "denominator": 286843359,
+                "numerator": 31250000000
+              },
+              "y": {
+                "denominator": 3364134491422139088896,
+                "numerator": 2023101395107840087890625
+              }
+            }
+          }
+        ],
+        "threshold": {
+          "assumptions": "conditional binary64 enclosure, historical profile unverified",
+          "basis": "CONDITIONAL",
+          "interval": {
+            "lower": {
+              "denominator": 2251799813685248000,
+              "numerator": 189163569248536016857
+            },
+            "lower_closed": true,
+            "upper": {
+              "denominator": 2251799813685248000,
+              "numerator": 189165821048349870119
+            },
+            "upper_closed": true
+          },
+          "published_text": "84.006",
+          "row_id": "historical-row-03",
+          "source_sha256": "8b437860a9ad00bafefa53f956b1f9b958e5709f7fb721c76b3fe3f2820688b4"
+        },
+        "units": "tokens/s/request"
+      },
+      "exact_threshold_choice": "external-disagg-row-03",
+      "exact_threshold_quotient": {
+        "denominator": 154621052467233335064733417472,
+        "numerator": 154618822656000003814697265625
+      },
+      "external_row": 3,
+      "guard": {
+        "denominator": 2251799813685248000,
+        "numerator": 84007
+      },
+      "historical_profile_verified": false,
+      "id": "historical-row-03",
+      "interpretation": "choices over a conditional enclosure, not the exact exporter preimage",
+      "matched_candidate_is_possible_selection": true,
+      "matched_candidate_key": "c4b1ea197da8ce2ee439406b872d1f88291956d2e67b94c020a33b6b7385b419",
+      "matched_coordinate_in_enclosure": true,
+      "source_row": {
+        "(d)backend": "trtllm",
+        "(d)bs": "48",
+        "(d)comm": "half",
+        "(d)dp": "1",
+        "(d)fmha": "fp8",
+        "(d)gemm": "fp8_block",
+        "(d)global_bs": "48",
+        "(d)kvcache": "fp8",
+        "(d)memory": "33.066",
+        "(d)moe": "fp8_block",
+        "(d)moe_ep": "1",
+        "(d)moe_tp": "1",
+        "(d)parallel": "tp2pp1dp1etp1ep1",
+        "(d)pp": "1",
+        "(d)seq/s/worker": "8.081",
+        "(d)system": "h200_sxm",
+        "(d)tp": "2",
+        "(d)version": "1.3.0rc10",
+        "(d)workers": "6",
+        "(e)memory": "0.0",
+        "(e)parallel": "",
+        "(e)pp": "0",
+        "(e)tp": "0",
+        "(e)workers": "0",
+        "(p)backend": "trtllm",
+        "(p)bs": "1",
+        "(p)comm": "half",
+        "(p)cp": "1",
+        "(p)dp": "1",
+        "(p)fmha": "fp8",
+        "(p)gemm": "fp8_block",
+        "(p)global_bs": "1",
+        "(p)kvcache": "fp8",
+        "(p)memory": "12.262",
+        "(p)moe": "fp8_block",
+        "(p)moe_ep": "1",
+        "(p)moe_tp": "1",
+        "(p)parallel": "tp4pp1dp1etp1ep1",
+        "(p)pp": "1",
+        "(p)seq/s/worker": "9.164",
+        "(p)system": "h200_sxm",
+        "(p)tp": "4",
+        "(p)version": "1.3.0rc10",
+        "(p)workers": "5",
+        "concurrency": "288",
+        "encoder_latency": "0.0",
+        "isl": "4000",
+        "model": "Qwen/Qwen3-32B-FP8",
+        "num_total_gpus": "32",
+        "osl": "500",
+        "power_w": "0.0",
+        "prefix": "500",
+        "request_latency": "6136.519",
+        "request_rate": "41.238",
+        "seq/s": "41.238",
+        "seq/s/gpu": "1.289",
+        "tokens/s": "20619.0",
+        "tokens/s/gpu": "644.344",
+        "tokens/s/gpu_cluster": "644.344",
+        "tokens/s/user": "84.006",
+        "tpot": "11.904",
+        "ttft": "196.423"
+      }
+    },
+    {
+      "comparison": {
+        "agreement_verdict": "PASS",
+        "axis": "x_tokens_per_second_per_request",
+        "possibly_infeasible": false,
+        "quotient_band": [
+          {
+            "denominator": 4,
+            "numerator": 3
+          },
+          {
+            "denominator": 20,
+            "numerator": 27
+          }
+        ],
+        "quotient_bounds": [
+          {
+            "denominator": 1973526878910120606635655168,
+            "numerator": 1770213720719360076904296875
+          },
+          {
+            "denominator": 253397543331012638127685632,
+            "numerator": 252887674388480010986328125
+          }
+        ],
+        "quotients": [
+          {
+            "denominator": 1973526878910120606635655168,
+            "numerator": 1770213720719360076904296875
+          },
+          {
+            "denominator": 253397543331012638127685632,
+            "numerator": 252887674388480010986328125
+          }
+        ],
+        "reference_y": {
+          "denominator": 500,
+          "numerator": 301293
+        },
+        "segments": [
+          {
+            "interval": {
+              "lower": {
+                "denominator": 2251799813685248000,
+                "numerator": 245318953002218706543
+              },
+              "lower_closed": true,
+              "upper": {
+                "denominator": 286843359,
+                "numerator": 31250000000
+              },
+              "upper_closed": true
+            },
+            "selection": {
+              "point_id": "83bd4fa09c633566f6dbf124a279f4395496e5b1e57b1fa79e8424acce3b4cc5",
+              "x": {
+                "denominator": 286843359,
+                "numerator": 31250000000
+              },
+              "y": {
+                "denominator": 3364134491422139088896,
+                "numerator": 2023101395107840087890625
+              }
+            }
+          },
+          {
+            "interval": {
+              "lower": {
+                "denominator": 286843359,
+                "numerator": 31250000000
+              },
+              "lower_closed": false,
+              "upper": {
+                "denominator": 2251799813685248000,
+                "numerator": 245321204802032609681
+              },
+              "upper_closed": true
+            },
+            "selection": {
+              "point_id": "0bbe58076951e993f7e2c739fc6868a26f17abd2d414a844da5f9eddf2cb18b6",
+              "x": {
+                "denominator": 8936046839,
+                "numerator": 1000000000000
+              },
+              "y": {
+                "denominator": 78602299246651755200512,
+                "numerator": 42485129297264641845703125
+              }
+            }
+          }
+        ],
+        "threshold": {
+          "assumptions": "conditional binary64 enclosure, historical profile unverified",
+          "basis": "CONDITIONAL",
+          "interval": {
+            "lower": {
+              "denominator": 2251799813685248000,
+              "numerator": 245318953002218706543
+            },
+            "lower_closed": true,
+            "upper": {
+              "denominator": 2251799813685248000,
+              "numerator": 245321204802032609681
+            },
+            "upper_closed": true
+          },
+          "published_text": "108.944",
+          "row_id": "historical-row-04",
+          "source_sha256": "8b437860a9ad00bafefa53f956b1f9b958e5709f7fb721c76b3fe3f2820688b4"
+        },
+        "units": "tokens/s/request"
+      },
+      "exact_threshold_choice": "external-disagg-row-04",
+      "exact_threshold_quotient": {
+        "denominator": 253397543331012638127685632,
+        "numerator": 252887674388480010986328125
+      },
+      "external_row": 4,
+      "guard": {
+        "denominator": 450359962737049600,
+        "numerator": 21789
+      },
+      "historical_profile_verified": false,
+      "id": "historical-row-04",
+      "interpretation": "choices over a conditional enclosure, not the exact exporter preimage",
+      "matched_candidate_is_possible_selection": true,
+      "matched_candidate_key": "83bd4fa09c633566f6dbf124a279f4395496e5b1e57b1fa79e8424acce3b4cc5",
+      "matched_coordinate_in_enclosure": true,
+      "source_row": {
+        "(d)backend": "trtllm",
+        "(d)bs": "64",
+        "(d)comm": "half",
+        "(d)dp": "1",
+        "(d)fmha": "fp8",
+        "(d)gemm": "fp8_block",
+        "(d)global_bs": "64",
+        "(d)kvcache": "fp8",
+        "(d)memory": "20.73",
+        "(d)moe": "fp8_block",
+        "(d)moe_ep": "1",
+        "(d)moe_tp": "1",
+        "(d)parallel": "tp4pp1dp1etp1ep1",
+        "(d)pp": "1",
+        "(d)seq/s/worker": "13.973",
+        "(d)system": "h200_sxm",
+        "(d)tp": "4",
+        "(d)version": "1.3.0rc10",
+        "(d)workers": "3",
+        "(e)memory": "0.0",
+        "(e)parallel": "",
+        "(e)pp": "0",
+        "(e)tp": "0",
+        "(e)workers": "0",
+        "(p)backend": "trtllm",
+        "(p)bs": "1",
+        "(p)comm": "half",
+        "(p)cp": "1",
+        "(p)dp": "1",
+        "(p)fmha": "fp8",
+        "(p)gemm": "fp8_block",
+        "(p)global_bs": "1",
+        "(p)kvcache": "fp8",
+        "(p)memory": "12.262",
+        "(p)moe": "fp8_block",
+        "(p)moe_ep": "1",
+        "(p)moe_tp": "1",
+        "(p)parallel": "tp4pp1dp1etp1ep1",
+        "(p)pp": "1",
+        "(p)seq/s/worker": "9.164",
+        "(p)system": "h200_sxm",
+        "(p)tp": "4",
+        "(p)version": "1.3.0rc10",
+        "(p)workers": "5",
+        "concurrency": "192",
+        "encoder_latency": "0.0",
+        "isl": "4000",
+        "model": "Qwen/Qwen3-32B-FP8",
+        "num_total_gpus": "32",
+        "osl": "500",
+        "power_w": "0.0",
+        "prefix": "500",
+        "request_latency": "4776.744",
+        "request_rate": "38.565",
+        "seq/s": "38.565",
+        "seq/s/gpu": "1.205",
+        "tokens/s": "19282.74",
+        "tokens/s/gpu": "602.586",
+        "tokens/s/gpu_cluster": "602.586",
+        "tokens/s/user": "108.944",
+        "tpot": "9.179",
+        "ttft": "196.423"
+      }
+    },
+    {
+      "comparison": {
+        "agreement_verdict": "PASS",
+        "axis": "x_tokens_per_second_per_request",
+        "possibly_infeasible": false,
+        "quotient_band": [
+          {
+            "denominator": 4,
+            "numerator": 3
+          },
+          {
+            "denominator": 20,
+            "numerator": 27
+          }
+        ],
+        "quotient_bounds": [
+          {
+            "denominator": 311096589231957327218737152,
+            "numerator": 252887674388480010986328125
+          },
+          {
+            "denominator": 5321444436010164647360462848,
+            "numerator": 5310641162158080230712890625
+          }
+        ],
+        "quotients": [
+          {
+            "denominator": 311096589231957327218737152,
+            "numerator": 252887674388480010986328125
+          },
+          {
+            "denominator": 5321444436010164647360462848,
+            "numerator": 5310641162158080230712890625
+          }
+        ],
+        "reference_y": {
+          "denominator": 1000,
+          "numerator": 541607
+        },
+        "segments": [
+          {
+            "interval": {
+              "lower": {
+                "denominator": 2251799813685248000,
+                "numerator": 251988784050354408157
+              },
+              "lower_closed": true,
+              "upper": {
+                "denominator": 8936046839,
+                "numerator": 1000000000000
+              },
+              "upper_closed": true
+            },
+            "selection": {
+              "point_id": "0bbe58076951e993f7e2c739fc6868a26f17abd2d414a844da5f9eddf2cb18b6",
+              "x": {
+                "denominator": 8936046839,
+                "numerator": 1000000000000
+              },
+              "y": {
+                "denominator": 78602299246651755200512,
+                "numerator": 42485129297264641845703125
+              }
+            }
+          },
+          {
+            "interval": {
+              "lower": {
+                "denominator": 8936046839,
+                "numerator": 1000000000000
+              },
+              "lower_closed": false,
+              "upper": {
+                "denominator": 2251799813685248000,
+                "numerator": 251991035850168317219
+              },
+              "upper_closed": true
+            },
+            "selection": {
+              "point_id": "341ec9ff7282a71a18d8aa4e5664adae02592099e91a69f68900102ce6c9f21e",
+              "x": {
+                "denominator": 8358553701,
+                "numerator": 1000000000000
+              },
+              "y": {
+                "denominator": 4595163492819809599488,
+                "numerator": 2023101395107840087890625
+              }
+            }
+          }
+        ],
+        "threshold": {
+          "assumptions": "conditional binary64 enclosure, historical profile unverified",
+          "basis": "CONDITIONAL",
+          "interval": {
+            "lower": {
+              "denominator": 2251799813685248000,
+              "numerator": 251988784050354408157
+            },
+            "lower_closed": true,
+            "upper": {
+              "denominator": 2251799813685248000,
+              "numerator": 251991035850168317219
+            },
+            "upper_closed": true
+          },
+          "published_text": "111.906",
+          "row_id": "historical-row-05",
+          "source_sha256": "8b437860a9ad00bafefa53f956b1f9b958e5709f7fb721c76b3fe3f2820688b4"
+        },
+        "units": "tokens/s/request"
+      },
+      "exact_threshold_choice": "external-disagg-row-05",
+      "exact_threshold_quotient": {
+        "denominator": 5321444436010164647360462848,
+        "numerator": 5310641162158080230712890625
+      },
+      "external_row": 5,
+      "guard": {
+        "denominator": 2251799813685248000,
+        "numerator": 111907
+      },
+      "historical_profile_verified": false,
+      "id": "historical-row-05",
+      "interpretation": "choices over a conditional enclosure, not the exact exporter preimage",
+      "matched_candidate_is_possible_selection": true,
+      "matched_candidate_key": "0bbe58076951e993f7e2c739fc6868a26f17abd2d414a844da5f9eddf2cb18b6",
+      "matched_coordinate_in_enclosure": true,
+      "source_row": {
+        "(d)backend": "trtllm",
+        "(d)bs": "56",
+        "(d)comm": "half",
+        "(d)dp": "1",
+        "(d)fmha": "fp8",
+        "(d)gemm": "fp8_block",
+        "(d)global_bs": "56",
+        "(d)kvcache": "fp8",
+        "(d)memory": "19.632",
+        "(d)moe": "fp8_block",
+        "(d)moe_ep": "1",
+        "(d)moe_tp": "1",
+        "(d)parallel": "tp4pp1dp1etp1ep1",
+        "(d)pp": "1",
+        "(d)seq/s/worker": "12.559",
+        "(d)system": "h200_sxm",
+        "(d)tp": "4",
+        "(d)version": "1.3.0rc10",
+        "(d)workers": "3",
+        "(e)memory": "0.0",
+        "(e)parallel": "",
+        "(e)pp": "0",
+        "(e)tp": "0",
+        "(e)workers": "0",
+        "(p)backend": "trtllm",
+        "(p)bs": "1",
+        "(p)comm": "half",
+        "(p)cp": "1",
+        "(p)dp": "1",
+        "(p)fmha": "fp8",
+        "(p)gemm": "fp8_block",
+        "(p)global_bs": "1",
+        "(p)kvcache": "fp8",
+        "(p)memory": "12.262",
+        "(p)moe": "fp8_block",
+        "(p)moe_ep": "1",
+        "(p)moe_tp": "1",
+        "(p)parallel": "tp4pp1dp1etp1ep1",
+        "(p)pp": "1",
+        "(p)seq/s/worker": "9.164",
+        "(p)system": "h200_sxm",
+        "(p)tp": "4",
+        "(p)version": "1.3.0rc10",
+        "(p)workers": "5",
+        "concurrency": "168",
+        "encoder_latency": "0.0",
+        "isl": "4000",
+        "model": "Qwen/Qwen3-32B-FP8",
+        "num_total_gpus": "32",
+        "osl": "500",
+        "power_w": "0.0",
+        "prefix": "500",
+        "request_latency": "4655.487",
+        "request_rate": "34.663",
+        "seq/s": "34.663",
+        "seq/s/gpu": "1.083",
+        "tokens/s": "17331.42",
+        "tokens/s/gpu": "541.607",
+        "tokens/s/gpu_cluster": "541.607",
+        "tokens/s/user": "111.906",
+        "tpot": "8.936",
+        "ttft": "196.423"
+      }
+    },
+    {
+      "comparison": {
+        "agreement_verdict": "PASS",
+        "axis": "x_tokens_per_second_per_request",
+        "possibly_infeasible": false,
+        "quotient_band": [
+          {
+            "denominator": 4,
+            "numerator": 3
+          },
+          {
+            "denominator": 20,
+            "numerator": 27
+          }
+        ],
+        "quotient_bounds": [
+          {
+            "denominator": 21171775041094605810081726464,
+            "numerator": 18554258718720000457763671875
+          },
+          {
+            "denominator": 50677760580563270167953408,
+            "numerator": 50577534877696002197265625
+          }
+        ],
+        "quotients": [
+          {
+            "denominator": 21171775041094605810081726464,
+            "numerator": 18554258718720000457763671875
+          },
+          {
+            "denominator": 50677760580563270167953408,
+            "numerator": 50577534877696002197265625
+          }
+        ],
+        "reference_y": {
+          "denominator": 50,
+          "numerator": 22057
+        },
+        "segments": [
+          {
+            "interval": {
+              "lower": {
+                "denominator": 2251799813685248000,
+                "numerator": 269399700209768737961
+              },
+              "lower_closed": true,
+              "upper": {
+                "denominator": 8358553701,
+                "numerator": 1000000000000
+              },
+              "upper_closed": true
+            },
+            "selection": {
+              "point_id": "341ec9ff7282a71a18d8aa4e5664adae02592099e91a69f68900102ce6c9f21e",
+              "x": {
+                "denominator": 8358553701,
+                "numerator": 1000000000000
+              },
+              "y": {
+                "denominator": 4595163492819809599488,
+                "numerator": 2023101395107840087890625
+              }
+            }
+          },
+          {
+            "interval": {
+              "lower": {
+                "denominator": 8358553701,
+                "numerator": 1000000000000
+              },
+              "lower_closed": false,
+              "upper": {
+                "denominator": 2251799813685248000,
+                "numerator": 269401952009582662487
+              },
+              "upper_closed": true
+            },
+            "selection": {
+              "point_id": "61e0b86fbb521ea8993b6fa7b0b30ec6dbd562ddf95c86358d64e1ab6f4330d5",
+              "x": {
+                "denominator": 1967517477,
+                "numerator": 250000000000
+              },
+              "y": {
+                "denominator": 1919732968317958544687104,
+                "numerator": 742170348748800018310546875
+              }
+            }
+          }
+        ],
+        "threshold": {
+          "assumptions": "conditional binary64 enclosure, historical profile unverified",
+          "basis": "CONDITIONAL",
+          "interval": {
+            "lower": {
+              "denominator": 2251799813685248000,
+              "numerator": 269399700209768737961
+            },
+            "lower_closed": true,
+            "upper": {
+              "denominator": 2251799813685248000,
+              "numerator": 269401952009582662487
+            },
+            "upper_closed": true
+          },
+          "published_text": "119.638",
+          "row_id": "historical-row-06",
+          "source_sha256": "8b437860a9ad00bafefa53f956b1f9b958e5709f7fb721c76b3fe3f2820688b4"
+        },
+        "units": "tokens/s/request"
+      },
+      "exact_threshold_choice": "external-disagg-row-07",
+      "exact_threshold_quotient": {
+        "denominator": 21171775041094605810081726464,
+        "numerator": 18554258718720000457763671875
+      },
+      "external_row": 6,
+      "guard": {
+        "denominator": 2251799813685248000,
+        "numerator": 119639
+      },
+      "historical_profile_verified": false,
+      "id": "historical-row-06",
+      "interpretation": "choices over a conditional enclosure, not the exact exporter preimage",
+      "matched_candidate_is_possible_selection": true,
+      "matched_candidate_key": "341ec9ff7282a71a18d8aa4e5664adae02592099e91a69f68900102ce6c9f21e",
+      "matched_coordinate_in_enclosure": true,
+      "source_row": {
+        "(d)backend": "trtllm",
+        "(d)bs": "64",
+        "(d)comm": "half",
+        "(d)dp": "1",
+        "(d)fmha": "fp8",
+        "(d)gemm": "fp8_block",
+        "(d)global_bs": "64",
+        "(d)kvcache": "fp8",
+        "(d)memory": "12.341",
+        "(d)moe": "fp8_block",
+        "(d)moe_ep": "1",
+        "(d)moe_tp": "1",
+        "(d)parallel": "tp8pp1dp1etp1ep1",
+        "(d)pp": "1",
+        "(d)seq/s/worker": "15.344",
+        "(d)system": "h200_sxm",
+        "(d)tp": "8",
+        "(d)version": "1.3.0rc10",
+        "(d)workers": "1",
+        "(e)memory": "0.0",
+        "(e)parallel": "",
+        "(e)pp": "0",
+        "(e)tp": "0",
+        "(e)workers": "0",
+        "(p)backend": "trtllm",
+        "(p)bs": "1",
+        "(p)comm": "half",
+        "(p)cp": "1",
+        "(p)dp": "1",
+        "(p)fmha": "fp8",
+        "(p)gemm": "fp8_block",
+        "(p)global_bs": "1",
+        "(p)kvcache": "fp8",
+        "(p)memory": "12.262",
+        "(p)moe": "fp8_block",
+        "(p)moe_ep": "1",
+        "(p)moe_tp": "1",
+        "(p)parallel": "tp4pp1dp1etp1ep1",
+        "(p)pp": "1",
+        "(p)seq/s/worker": "9.164",
+        "(p)system": "h200_sxm",
+        "(p)tp": "4",
+        "(p)version": "1.3.0rc10",
+        "(p)workers": "2",
+        "concurrency": "64",
+        "encoder_latency": "0.0",
+        "isl": "4000",
+        "model": "Qwen/Qwen3-32B-FP8",
+        "num_total_gpus": "16",
+        "osl": "500",
+        "power_w": "0.0",
+        "prefix": "500",
+        "request_latency": "4367.564",
+        "request_rate": "14.116",
+        "seq/s": "14.116",
+        "seq/s/gpu": "0.882",
+        "tokens/s": "7058.24",
+        "tokens/s/gpu": "441.14",
+        "tokens/s/gpu_cluster": "441.14",
+        "tokens/s/user": "119.638",
+        "tpot": "8.359",
+        "ttft": "196.423"
+      }
+    },
+    {
+      "comparison": {
+        "agreement_verdict": "PASS",
+        "axis": "x_tokens_per_second_per_request",
+        "possibly_infeasible": false,
+        "quotient_band": [
+          {
+            "denominator": 4,
+            "numerator": 3
+          },
+          {
+            "denominator": 20,
+            "numerator": 27
+          }
+        ],
+        "quotient_bounds": [
+          {
+            "denominator": 34789700810134344427842306048,
+            "numerator": 30923764531200000762939453125
+          },
+          {
+            "denominator": 92772535493691585140912816128,
+            "numerator": 92771293593600002288818359375
+          }
+        ],
+        "quotients": [
+          {
+            "denominator": 34789700810134344427842306048,
+            "numerator": 30923764531200000762939453125
+          },
+          {
+            "denominator": 92772535493691585140912816128,
+            "numerator": 92771293593600002288818359375
+          }
+        ],
+        "reference_y": {
+          "denominator": 500,
+          "numerator": 193303
+        },
+        "segments": [
+          {
+            "interval": {
+              "lower": {
+                "denominator": 2251799813685248000,
+                "numerator": 286121565626195382183
+              },
+              "lower_closed": true,
+              "upper": {
+                "denominator": 1967517477,
+                "numerator": 250000000000
+              },
+              "upper_closed": true
+            },
+            "selection": {
+              "point_id": "61e0b86fbb521ea8993b6fa7b0b30ec6dbd562ddf95c86358d64e1ab6f4330d5",
+              "x": {
+                "denominator": 1967517477,
+                "numerator": 250000000000
+              },
+              "y": {
+                "denominator": 1919732968317958544687104,
+                "numerator": 742170348748800018310546875
+              }
+            }
+          },
+          {
+            "interval": {
+              "lower": {
+                "denominator": 1967517477,
+                "numerator": 250000000000
+              },
+              "lower_closed": false,
+              "upper": {
+                "denominator": 2251799813685248000,
+                "numerator": 286123817426009321561
+              },
+              "upper_closed": true
+            },
+            "selection": {
+              "point_id": "061dffd33f99548b27a9e6fc7f39f27c02583051b1b5f8bc1ee928c018656335",
+              "x": {
+                "denominator": 6849218381,
+                "numerator": 1000000000000
+              },
+              "y": {
+                "denominator": 719899863119234454257664,
+                "numerator": 247390116249600006103515625
+              }
+            }
+          }
+        ],
+        "threshold": {
+          "assumptions": "conditional binary64 enclosure, historical profile unverified",
+          "basis": "CONDITIONAL",
+          "interval": {
+            "lower": {
+              "denominator": 2251799813685248000,
+              "numerator": 286121565626195382183
+            },
+            "lower_closed": true,
+            "upper": {
+              "denominator": 2251799813685248000,
+              "numerator": 286123817426009321561
+            },
+            "upper_closed": true
+          },
+          "published_text": "127.064",
+          "row_id": "historical-row-07",
+          "source_sha256": "8b437860a9ad00bafefa53f956b1f9b958e5709f7fb721c76b3fe3f2820688b4"
+        },
+        "units": "tokens/s/request"
+      },
+      "exact_threshold_choice": "external-disagg-row-08",
+      "exact_threshold_quotient": {
+        "denominator": 34789700810134344427842306048,
+        "numerator": 30923764531200000762939453125
+      },
+      "external_row": 7,
+      "guard": {
+        "denominator": 450359962737049600,
+        "numerator": 25413
+      },
+      "historical_profile_verified": false,
+      "id": "historical-row-07",
+      "interpretation": "choices over a conditional enclosure, not the exact exporter preimage",
+      "matched_candidate_is_possible_selection": true,
+      "matched_candidate_key": "61e0b86fbb521ea8993b6fa7b0b30ec6dbd562ddf95c86358d64e1ab6f4330d5",
+      "matched_coordinate_in_enclosure": true,
+      "source_row": {
+        "(d)backend": "trtllm",
+        "(d)bs": "26",
+        "(d)comm": "half",
+        "(d)dp": "1",
+        "(d)fmha": "fp8",
+        "(d)gemm": "fp8_block",
+        "(d)global_bs": "26",
+        "(d)kvcache": "fp8",
+        "(d)memory": "15.512",
+        "(d)moe": "fp8_block",
+        "(d)moe_ep": "1",
+        "(d)moe_tp": "1",
+        "(d)parallel": "tp4pp1dp1etp1ep1",
+        "(d)pp": "1",
+        "(d)seq/s/worker": "6.621",
+        "(d)system": "h200_sxm",
+        "(d)tp": "4",
+        "(d)version": "1.3.0rc10",
+        "(d)workers": "5",
+        "(e)memory": "0.0",
+        "(e)parallel": "",
+        "(e)pp": "0",
+        "(e)tp": "0",
+        "(e)workers": "0",
+        "(p)backend": "trtllm",
+        "(p)bs": "1",
+        "(p)comm": "half",
+        "(p)cp": "1",
+        "(p)dp": "1",
+        "(p)fmha": "fp8",
+        "(p)gemm": "fp8_block",
+        "(p)global_bs": "1",
+        "(p)kvcache": "fp8",
+        "(p)memory": "12.262",
+        "(p)moe": "fp8_block",
+        "(p)moe_ep": "1",
+        "(p)moe_tp": "1",
+        "(p)parallel": "tp4pp1dp1etp1ep1",
+        "(p)pp": "1",
+        "(p)seq/s/worker": "9.164",
+        "(p)system": "h200_sxm",
+        "(p)tp": "4",
+        "(p)version": "1.3.0rc10",
+        "(p)workers": "3",
+        "concurrency": "130",
+        "encoder_latency": "0.0",
+        "isl": "4000",
+        "model": "Qwen/Qwen3-32B-FP8",
+        "num_total_gpus": "32",
+        "osl": "500",
+        "power_w": "0.0",
+        "prefix": "500",
+        "request_latency": "4123.553",
+        "request_rate": "24.743",
+        "seq/s": "24.743",
+        "seq/s/gpu": "0.773",
+        "tokens/s": "12371.4",
+        "tokens/s/gpu": "386.606",
+        "tokens/s/gpu_cluster": "386.606",
+        "tokens/s/user": "127.064",
+        "tpot": "7.87",
+        "ttft": "196.423"
+      }
+    },
+    {
+      "comparison": {
+        "agreement_verdict": "PASS",
+        "axis": "x_tokens_per_second_per_request",
+        "possibly_infeasible": false,
+        "quotient_band": [
+          {
+            "denominator": 4,
+            "numerator": 3
+          },
+          {
+            "denominator": 20,
+            "numerator": 27
+          }
+        ],
+        "quotient_bounds": [
+          {
+            "denominator": 67420220657957970496192512,
+            "numerator": 50577534877696002197265625
+          },
+          {
+            "denominator": 1236967939804624601028231168,
+            "numerator": 1236950581248000030517578125
+          }
+        ],
+        "quotients": [
+          {
+            "denominator": 67420220657957970496192512,
+            "numerator": 50577534877696002197265625
+          },
+          {
+            "denominator": 1236967939804624601028231168,
+            "numerator": 1236950581248000030517578125
+          }
+        ],
+        "reference_y": {
+          "denominator": 20,
+          "numerator": 6873
+        },
+        "segments": [
+          {
+            "interval": {
+              "lower": {
+                "denominator": 2251799813685248000,
+                "numerator": 328766150497766589869
+              },
+              "lower_closed": true,
+              "upper": {
+                "denominator": 6849218381,
+                "numerator": 1000000000000
+              },
+              "upper_closed": true
+            },
+            "selection": {
+              "point_id": "061dffd33f99548b27a9e6fc7f39f27c02583051b1b5f8bc1ee928c018656335",
+              "x": {
+                "denominator": 6849218381,
+                "numerator": 1000000000000
+              },
+              "y": {
+                "denominator": 719899863119234454257664,
+                "numerator": 247390116249600006103515625
+              }
+            }
+          },
+          {
+            "interval": {
+              "lower": {
+                "denominator": 6849218381,
+                "numerator": 1000000000000
+              },
+              "lower_closed": false,
+              "upper": {
+                "denominator": 2251799813685248000,
+                "numerator": 328768402297580567123
+              },
+              "upper_closed": true
+            },
+            "selection": {
+              "point_id": "ba5bd2e89edcba63a951d36065bd99464de057194d97ec05b681b0226f873fe4",
+              "x": {
+                "denominator": 5947750471,
+                "numerator": 1000000000000
+              },
+              "y": {
+                "denominator": 39237724811848084094976,
+                "numerator": 10115506975539200439453125
+              }
+            }
+          }
+        ],
+        "threshold": {
+          "assumptions": "conditional binary64 enclosure, historical profile unverified",
+          "basis": "CONDITIONAL",
+          "interval": {
+            "lower": {
+              "denominator": 2251799813685248000,
+              "numerator": 328766150497766589869
+            },
+            "lower_closed": true,
+            "upper": {
+              "denominator": 2251799813685248000,
+              "numerator": 328768402297580567123
+            },
+            "upper_closed": true
+          },
+          "published_text": "146.002",
+          "row_id": "historical-row-08",
+          "source_sha256": "8b437860a9ad00bafefa53f956b1f9b958e5709f7fb721c76b3fe3f2820688b4"
+        },
+        "units": "tokens/s/request"
+      },
+      "exact_threshold_choice": "external-disagg-row-08",
+      "exact_threshold_quotient": {
+        "denominator": 1236967939804624601028231168,
+        "numerator": 1236950581248000030517578125
+      },
+      "external_row": 8,
+      "guard": {
+        "denominator": 2251799813685248000,
+        "numerator": 146003
+      },
+      "historical_profile_verified": false,
+      "id": "historical-row-08",
+      "interpretation": "choices over a conditional enclosure, not the exact exporter preimage",
+      "matched_candidate_is_possible_selection": true,
+      "matched_candidate_key": "061dffd33f99548b27a9e6fc7f39f27c02583051b1b5f8bc1ee928c018656335",
+      "matched_coordinate_in_enclosure": true,
+      "source_row": {
+        "(d)backend": "trtllm",
+        "(d)bs": "16",
+        "(d)comm": "half",
+        "(d)dp": "1",
+        "(d)fmha": "fp8",
+        "(d)gemm": "fp8_block",
+        "(d)global_bs": "16",
+        "(d)kvcache": "fp8",
+        "(d)memory": "14.139",
+        "(d)moe": "fp8_block",
+        "(d)moe_ep": "1",
+        "(d)moe_tp": "1",
+        "(d)parallel": "tp4pp1dp1etp1ep1",
+        "(d)pp": "1",
+        "(d)seq/s/worker": "4.681",
+        "(d)system": "h200_sxm",
+        "(d)tp": "4",
+        "(d)version": "1.3.0rc10",
+        "(d)workers": "4",
+        "(e)memory": "0.0",
+        "(e)parallel": "",
+        "(e)pp": "0",
+        "(e)tp": "0",
+        "(e)workers": "0",
+        "(p)backend": "trtllm",
+        "(p)bs": "1",
+        "(p)comm": "half",
+        "(p)cp": "1",
+        "(p)dp": "1",
+        "(p)fmha": "fp8",
+        "(p)gemm": "fp8_block",
+        "(p)global_bs": "1",
+        "(p)kvcache": "fp8",
+        "(p)memory": "12.262",
+        "(p)moe": "fp8_block",
+        "(p)moe_ep": "1",
+        "(p)moe_tp": "1",
+        "(p)parallel": "tp4pp1dp1etp1ep1",
+        "(p)pp": "1",
+        "(p)seq/s/worker": "9.164",
+        "(p)system": "h200_sxm",
+        "(p)tp": "4",
+        "(p)version": "1.3.0rc10",
+        "(p)workers": "2",
+        "concurrency": "64",
+        "encoder_latency": "0.0",
+        "isl": "4000",
+        "model": "Qwen/Qwen3-32B-FP8",
+        "num_total_gpus": "24",
+        "osl": "500",
+        "power_w": "0.0",
+        "prefix": "500",
+        "request_latency": "3614.074",
+        "request_rate": "16.495",
+        "seq/s": "16.495",
+        "seq/s/gpu": "0.687",
+        "tokens/s": "8247.6",
+        "tokens/s/gpu": "343.65",
+        "tokens/s/gpu_cluster": "257.73749999999995",
+        "tokens/s/user": "146.002",
+        "tpot": "6.849",
+        "ttft": "196.423"
+      }
+    },
+    {
+      "comparison": {
+        "agreement_verdict": "INDETERMINATE",
+        "axis": "x_tokens_per_second_per_request",
+        "possibly_infeasible": false,
+        "quotient_band": [
+          {
+            "denominator": 4,
+            "numerator": 3
+          },
+          {
+            "denominator": 20,
+            "numerator": 27
+          }
+        ],
+        "quotient_bounds": [
+          {
+            "denominator": 3746513547734710644811759616,
+            "numerator": 2275989069496320098876953125
+          },
+          {
+            "denominator": 1267025371899386483510870016,
+            "numerator": 1264438371942400054931640625
+          }
+        ],
+        "quotients": [
+          {
+            "denominator": 3746513547734710644811759616,
+            "numerator": 2275989069496320098876953125
+          },
+          {
+            "denominator": 1267025371899386483510870016,
+            "numerator": 1264438371942400054931640625
+          }
+        ],
+        "reference_y": {
+          "denominator": 125,
+          "numerator": 32291
+        },
+        "segments": [
+          {
+            "interval": {
+              "lower": {
+                "denominator": 562949953421312000,
+                "numerator": 94649057143701855183
+              },
+              "lower_closed": true,
+              "upper": {
+                "denominator": 5947750471,
+                "numerator": 1000000000000
+              },
+              "upper_closed": true
+            },
+            "selection": {
+              "point_id": "ba5bd2e89edcba63a951d36065bd99464de057194d97ec05b681b0226f873fe4",
+              "x": {
+                "denominator": 5947750471,
+                "numerator": 1000000000000
+              },
+              "y": {
+                "denominator": 39237724811848084094976,
+                "numerator": 10115506975539200439453125
+              }
+            }
+          },
+          {
+            "interval": {
+              "lower": {
+                "denominator": 5947750471,
+                "numerator": 1000000000000
+              },
+              "lower_closed": false,
+              "upper": {
+                "denominator": 562949953421312000,
+                "numerator": 94649620093655360561
+              },
+              "upper_closed": true
+            },
+            "selection": {
+              "point_id": "2253b95a1bca25f5a96e45b62e5f139c5666fcb12c50daa796b7d040d183caf7",
+              "x": {
+                "denominator": 2473188801,
+                "numerator": 500000000000
+              },
+              "y": {
+                "denominator": 116023460027088372760576,
+                "numerator": 18207912555970560791015625
+              }
+            }
+          }
+        ],
+        "threshold": {
+          "assumptions": "conditional binary64 enclosure, historical profile unverified",
+          "basis": "CONDITIONAL",
+          "interval": {
+            "lower": {
+              "denominator": 562949953421312000,
+              "numerator": 94649057143701855183
+            },
+            "lower_closed": true,
+            "upper": {
+              "denominator": 562949953421312000,
+              "numerator": 94649620093655360561
+            },
+            "upper_closed": true
+          },
+          "published_text": "168.131",
+          "row_id": "historical-row-09",
+          "source_sha256": "8b437860a9ad00bafefa53f956b1f9b958e5709f7fb721c76b3fe3f2820688b4"
+        },
+        "units": "tokens/s/request"
+      },
+      "exact_threshold_choice": "external-disagg-row-10",
+      "exact_threshold_quotient": {
+        "denominator": 3746513547734710644811759616,
+        "numerator": 2275989069496320098876953125
+      },
+      "external_row": 9,
+      "guard": {
+        "denominator": 562949953421312000,
+        "numerator": 42033
+      },
+      "historical_profile_verified": false,
+      "id": "historical-row-09",
+      "interpretation": "choices over a conditional enclosure, not the exact exporter preimage",
+      "matched_candidate_is_possible_selection": true,
+      "matched_candidate_key": "ba5bd2e89edcba63a951d36065bd99464de057194d97ec05b681b0226f873fe4",
+      "matched_coordinate_in_enclosure": true,
+      "source_row": {
+        "(d)backend": "trtllm",
+        "(d)bs": "20",
+        "(d)comm": "half",
+        "(d)dp": "1",
+        "(d)fmha": "fp8",
+        "(d)gemm": "fp8_block",
+        "(d)global_bs": "20",
+        "(d)kvcache": "fp8",
+        "(d)memory": "9.32",
+        "(d)moe": "fp8_block",
+        "(d)moe_ep": "1",
+        "(d)moe_tp": "1",
+        "(d)parallel": "tp8pp1dp1etp1ep1",
+        "(d)pp": "1",
+        "(d)seq/s/worker": "6.739",
+        "(d)system": "h200_sxm",
+        "(d)tp": "8",
+        "(d)version": "1.3.0rc10",
+        "(d)workers": "2",
+        "(e)memory": "0.0",
+        "(e)parallel": "",
+        "(e)pp": "0",
+        "(e)tp": "0",
+        "(e)workers": "0",
+        "(p)backend": "trtllm",
+        "(p)bs": "1",
+        "(p)comm": "half",
+        "(p)cp": "1",
+        "(p)dp": "1",
+        "(p)fmha": "fp8",
+        "(p)gemm": "fp8_block",
+        "(p)global_bs": "1",
+        "(p)kvcache": "fp8",
+        "(p)memory": "12.262",
+        "(p)moe": "fp8_block",
+        "(p)moe_ep": "1",
+        "(p)moe_tp": "1",
+        "(p)parallel": "tp4pp1dp1etp1ep1",
+        "(p)pp": "1",
+        "(p)seq/s/worker": "9.164",
+        "(p)system": "h200_sxm",
+        "(p)tp": "4",
+        "(p)version": "1.3.0rc10",
+        "(p)workers": "2",
+        "concurrency": "40",
+        "encoder_latency": "0.0",
+        "isl": "4000",
+        "model": "Qwen/Qwen3-32B-FP8",
+        "num_total_gpus": "24",
+        "osl": "500",
+        "power_w": "0.0",
+        "prefix": "500",
+        "request_latency": "3164.475",
+        "request_rate": "12.4",
+        "seq/s": "12.4",
+        "seq/s/gpu": "0.517",
+        "tokens/s": "6199.88",
+        "tokens/s/gpu": "258.328",
+        "tokens/s/gpu_cluster": "193.74599999999998",
+        "tokens/s/user": "168.131",
+        "tpot": "5.948",
+        "ttft": "196.423"
+      }
+    },
+    {
+      "comparison": {
+        "agreement_verdict": "INDETERMINATE",
+        "axis": "x_tokens_per_second_per_request",
+        "possibly_infeasible": true,
+        "quotient_band": [
+          {
+            "denominator": 4,
+            "numerator": 3
+          },
+          {
+            "denominator": 20,
+            "numerator": 27
+          }
+        ],
+        "quotient_bounds": [
+          {
+            "denominator": 1,
+            "numerator": 0
+          },
+          {
+            "denominator": 2280354089237401650329550848,
+            "numerator": 2275989069496320098876953125
+          }
+        ],
+        "quotients": [
+          {
+            "denominator": 1,
+            "numerator": 0
+          },
+          {
+            "denominator": 2280354089237401650329550848,
+            "numerator": 2275989069496320098876953125
+          }
+        ],
+        "reference_y": {
+          "denominator": 500,
+          "numerator": 78617
+        },
+        "segments": [
+          {
+            "interval": {
+              "lower": {
+                "denominator": 2251799813685248000,
+                "numerator": 455240738833212172871
+              },
+              "lower_closed": true,
+              "upper": {
+                "denominator": 2473188801,
+                "numerator": 500000000000
+              },
+              "upper_closed": true
+            },
+            "selection": {
+              "point_id": "2253b95a1bca25f5a96e45b62e5f139c5666fcb12c50daa796b7d040d183caf7",
+              "x": {
+                "denominator": 2473188801,
+                "numerator": 500000000000
+              },
+              "y": {
+                "denominator": 116023460027088372760576,
+                "numerator": 18207912555970560791015625
+              }
+            }
+          },
+          {
+            "interval": {
+              "lower": {
+                "denominator": 2473188801,
+                "numerator": 500000000000
+              },
+              "lower_closed": false,
+              "upper": {
+                "denominator": 2251799813685248000,
+                "numerator": 455242990633026262457
+              },
+              "upper_closed": true
+            },
+            "selection": null
+          }
+        ],
+        "threshold": {
+          "assumptions": "conditional binary64 enclosure, historical profile unverified",
+          "basis": "CONDITIONAL",
+          "interval": {
+            "lower": {
+              "denominator": 2251799813685248000,
+              "numerator": 455240738833212172871
+            },
+            "lower_closed": true,
+            "upper": {
+              "denominator": 2251799813685248000,
+              "numerator": 455242990633026262457
+            },
+            "upper_closed": true
+          },
+          "published_text": "202.168",
+          "row_id": "historical-row-10",
+          "source_sha256": "8b437860a9ad00bafefa53f956b1f9b958e5709f7fb721c76b3fe3f2820688b4"
+        },
+        "units": "tokens/s/request"
+      },
+      "exact_threshold_choice": "external-disagg-row-10",
+      "exact_threshold_quotient": {
+        "denominator": 2280354089237401650329550848,
+        "numerator": 2275989069496320098876953125
+      },
+      "external_row": 10,
+      "guard": {
+        "denominator": 2251799813685248000,
+        "numerator": 202169
+      },
+      "historical_profile_verified": false,
+      "id": "historical-row-10",
+      "interpretation": "choices over a conditional enclosure, not the exact exporter preimage",
+      "matched_candidate_is_possible_selection": true,
+      "matched_candidate_key": "2253b95a1bca25f5a96e45b62e5f139c5666fcb12c50daa796b7d040d183caf7",
+      "matched_coordinate_in_enclosure": true,
+      "source_row": {
+        "(d)backend": "trtllm",
+        "(d)bs": "9",
+        "(d)comm": "half",
+        "(d)dp": "1",
+        "(d)fmha": "fp8",
+        "(d)gemm": "fp8_block",
+        "(d)global_bs": "9",
+        "(d)kvcache": "fp8",
+        "(d)memory": "8.564",
+        "(d)moe": "fp8_block",
+        "(d)moe_ep": "1",
+        "(d)moe_tp": "1",
+        "(d)parallel": "tp8pp1dp1etp1ep1",
+        "(d)pp": "1",
+        "(d)seq/s/worker": "3.646",
+        "(d)system": "h200_sxm",
+        "(d)tp": "8",
+        "(d)version": "1.3.0rc10",
+        "(d)workers": "3",
+        "(e)memory": "0.0",
+        "(e)parallel": "",
+        "(e)pp": "0",
+        "(e)tp": "0",
+        "(e)workers": "0",
+        "(p)backend": "trtllm",
+        "(p)bs": "1",
+        "(p)comm": "half",
+        "(p)cp": "1",
+        "(p)dp": "1",
+        "(p)fmha": "fp8",
+        "(p)gemm": "fp8_block",
+        "(p)global_bs": "1",
+        "(p)kvcache": "fp8",
+        "(p)memory": "12.262",
+        "(p)moe": "fp8_block",
+        "(p)moe_ep": "1",
+        "(p)moe_tp": "1",
+        "(p)parallel": "tp4pp1dp1etp1ep1",
+        "(p)pp": "1",
+        "(p)seq/s/worker": "9.164",
+        "(p)system": "h200_sxm",
+        "(p)tp": "4",
+        "(p)version": "1.3.0rc10",
+        "(p)workers": "2",
+        "concurrency": "27",
+        "encoder_latency": "0.0",
+        "isl": "4000",
+        "model": "Qwen/Qwen3-32B-FP8",
+        "num_total_gpus": "32",
+        "osl": "500",
+        "power_w": "0.0",
+        "prefix": "500",
+        "request_latency": "2664.477",
+        "request_rate": "10.063",
+        "seq/s": "10.063",
+        "seq/s/gpu": "0.314",
+        "tokens/s": "5031.48",
+        "tokens/s/gpu": "157.234",
+        "tokens/s/gpu_cluster": "157.234",
+        "tokens/s/user": "202.168",
+        "tpot": "4.946",
+        "ttft": "196.423"
+      }
+    }
+  ],
+  "historical_agreement_is_study_score": false,
+  "historical_profile_verified": false,
+  "point_identity_map": {
+    "061dffd33f99548b27a9e6fc7f39f27c02583051b1b5f8bc1ee928c018656335": {
+      "candidate_id": "external-disagg-row-08",
+      "row": 8
+    },
+    "0bbe58076951e993f7e2c739fc6868a26f17abd2d414a844da5f9eddf2cb18b6": {
+      "candidate_id": "external-disagg-row-05",
+      "row": 5
+    },
+    "21c113c4d019f266777005804f4080c9577d0b5341ff827a0d98a9bfff03d1c4": {
+      "candidate_id": "external-disagg-row-01",
+      "row": 1
+    },
+    "2253b95a1bca25f5a96e45b62e5f139c5666fcb12c50daa796b7d040d183caf7": {
+      "candidate_id": "external-disagg-row-10",
+      "row": 10
+    },
+    "341ec9ff7282a71a18d8aa4e5664adae02592099e91a69f68900102ce6c9f21e": {
+      "candidate_id": "external-disagg-row-06",
+      "row": 6
+    },
+    "5a3ff9bf0402ad203630d3e030955620326831cbab50072b362f244d7e7cf311": {
+      "candidate_id": "external-disagg-row-02",
+      "row": 2
+    },
+    "61e0b86fbb521ea8993b6fa7b0b30ec6dbd562ddf95c86358d64e1ab6f4330d5": {
+      "candidate_id": "external-disagg-row-07",
+      "row": 7
+    },
+    "83bd4fa09c633566f6dbf124a279f4395496e5b1e57b1fa79e8424acce3b4cc5": {
+      "candidate_id": "external-disagg-row-04",
+      "row": 4
+    },
+    "ba5bd2e89edcba63a951d36065bd99464de057194d97ec05b681b0226f873fe4": {
+      "candidate_id": "external-disagg-row-09",
+      "row": 9
+    },
+    "c4b1ea197da8ce2ee439406b872d1f88291956d2e67b94c020a33b6b7385b419": {
+      "candidate_id": "external-disagg-row-03",
+      "row": 3
+    }
+  },
+  "qualification": "PASS",
+  "raw_artifacts": {
+    "configuration.json": "057a730acea5d5743655d15f71989416b8315a8c1fcdf78768d533914a8d7989",
+    "evaluation-0.json": "4dcd753ef3dae9cf7a147e681fc4796f6d5b1956a3becbbbb08d4b691ff3953a",
+    "evaluation-0.process.json": "4a9ab2f10ffdc96d79403e92381ff0bf868f4f20f96a52f0216e1a849f94f6ee",
+    "evaluation-1.json": "4dcd753ef3dae9cf7a147e681fc4796f6d5b1956a3becbbbb08d4b691ff3953a",
+    "evaluation-1.process.json": "d4a2cf95816a64676744e89929cbef1466171d8af9262befee9e3fb0a8c6e3f8",
+    "summary.json": "307d9c35332378c726f81e6fc669a4e4d991d37ed3ae09b563343c9e4b3bd38b",
+    "worker-0.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "worker-0.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "worker-1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "worker-1.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "schema": "simllm-frontier-publication-precision-publication-v1",
+  "scope": {
+    "GPU_calibration_changed": false,
+    "closes": [
+      "DEPLOY-13"
+    ],
+    "historical_runs_rescored": false,
+    "large_model_validity_changed": false,
+    "remains_open": [
+      "DEPLOY-26"
+    ]
+  },
+  "study": "frontier_publication_precision_v1",
+  "summary": {
+    "behavioral_score": {
+      "instances": 40,
+      "passed": 40
+    },
+    "deterministic_bytes_equal": true,
+    "evaluation_sha256": [
+      "4dcd753ef3dae9cf7a147e681fc4796f6d5b1956a3becbbbb08d4b691ff3953a",
+      "4dcd753ef3dae9cf7a147e681fc4796f6d5b1956a3becbbbb08d4b691ff3953a"
+    ],
+    "expectations_commit": "d88c52005be7e0b9a9a0ae2142f099ee640d5f04",
+    "fatal_findings": [],
+    "historical_agreement_is_study_score": false,
+    "historical_profile_verified": false,
+    "historical_runs_rescored": false,
+    "schema": "simllm-frontier-publication-precision-summary-v1",
+    "source_commit": "5bf34397a81572d82807d129ebb554f3a33ed423",
+    "state": "PASS",
+    "worker_exit_codes": [
+      0,
+      0
+    ]
+  },
+  "synthetic_agreement_verdict_counts": {
+    "FAIL": 6,
+    "INDETERMINATE": 28,
+    "PASS": 6
+  }
+}

@@ -79,6 +79,13 @@ backend, allocating a GPU or importing a serving framework.
   coordinate ties, and returns a canonical order independent of input order.
   `weak_dominance_pareto` applies the same coordinate-deduplicated rule to
   pool-composed throughput curves whose y axis is not `batch * decode_speed`.
+  `frontier_at_threshold` preserves exact feasibility and the greatest
+  throughput/identity tie rule on that generic coordinate surface.
+  `compare_published_frontier` consumes a source-carrying `PublishedThreshold`
+  and returns every maximal constant-selection segment over its exact
+  interval, including infeasibility. Source qualification remains separate
+  from whole-choice agreement. The issued immutable result retains ID and
+  coordinate snapshots; the reader retains the original points and stamps.
 - `prepare_plot_v3` emits
   `simllm-deployment-frontier-plot-contract-v3` data. It preserves the version
   2 analytical lines, simulated dots, measured white diamonds and dashed
@@ -210,9 +217,14 @@ price 2.295752 to 2.295758 ms of the network leg. At TP2 the packet leg is
 frontier-visible penalty of 1.021231 on rows 1 through 3. The TP2 receiver
 floor is 4.587520 ms, while TP4 and TP8 leave only 0.035927 to 0.036014 ms
 network residuals; receiver-side shared-ingress serialization is therefore
-identified only for this TP4-to-TP2 schedule shape. DEPLOY-13 retains the
-rounded-axis residual. DEPLOY-9 through DEPLOY-11 retain their breadth and
-silicon-precision scopes.
+identified only for this TP4-to-TP2 schedule shape. The
+[publication precision study](../../examples/frontier_publication_precision_v1/RESULTS.md)
+closes DEPLOY-13 with complete exact interval selection: all 40 parameter
+checks, 15 boundary oracles and ten historical exact answers pass. Historical
+rows one through eight are conditionally within the unchanged band; rows nine
+and ten are indeterminate, with row ten retaining an infeasible segment.
+DEPLOY-26 owns the exact source and historical-agreement evidence. DEPLOY-9
+through DEPLOY-11 retain their breadth and silicon-precision scopes.
 
 The additive
 [aggregate arm](../../examples/matched_seam_frontier_v1/AGG_RESULTS.md) is
@@ -234,20 +246,6 @@ protected disaggregated result.
 
 ### Precision
 
-- DEPLOY-13 (Precision; P1; M): replace the rounded external x coordinate as
-  an exact step-frontier threshold with source-carried unrounded coordinates
-  or explicit publication intervals. The matched-seam study's F-2-09 surrogate
-  compares external 168.131 tokens/s/user with the exact matching point at
-  168.130792, excludes that point, selects row 10 and reports 0.607495 against
-  the frozen 0.75 floor. Freeze the representation and lookup rule before the
-  successor run, retain the current refutation unchanged, and require every
-  declared interval to return every exact threshold selection and any
-  infeasible range, without weakening the quotient band. The former demand
-  that a matched configuration stay selected throughout its rounding interval
-  is withdrawn before the successor freeze: thresholds above that point
-  exclude it by definition. PASS requires every possible quotient to pass;
-  mixed outcomes are INDETERMINATE. DEPLOY-26 owns exact source recovery and
-  unresolved historical agreement.
 - DEPLOY-26 (Precision; P1; M): resolve exact archived frontier agreement
   after publication uncertainty is represented explicitly. The active
   surrogate is a three-decimal throughput coordinate whose archive does not
