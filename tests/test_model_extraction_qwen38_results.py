@@ -28,4 +28,5 @@ def test_qwen38_historical_rejection_is_superseded_only_in_coverage() -> None:
     assert len(rows) == 1
     assert "model_extraction_qwen38_v1" not in rows[0]
     assert "model_extraction_qwen38_v2" in rows[0]
-    assert "COMP-54 stays open for the Kimi K3 structure half" in rows[0]
+    assert "kimi_k3_qualification_v1" in rows[0]
+    assert "completes COMP-54" in rows[0]
