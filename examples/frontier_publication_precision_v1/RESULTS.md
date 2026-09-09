@@ -26,7 +26,16 @@ comparisons and all raw artifact hashes. The expectations-only commits are
 `88e9496dfd1092b60f58ba12ef0094752bdec049` and the final completeness amendment
 `d88c52005be7e0b9a9a0ae2142f099ee640d5f04`. Both precede implementation and the
 first study run. The accepted implementation source, including the qualified
-serving composition, is `5bf34397a81572d82807d129ebb554f3a33ed423`.
+serving composition, is `1cd4b501c60dfe354e4b28852017340ac54ed7ad`.
+
+The first component study also passed at
+`5bf34397a81572d82807d129ebb554f3a33ed423`, but its full software gate rejected
+an edited source file pinned by the older decode memory study. The new
+publication comparison now lives in `simllm/deploy/frontier_publication.py`;
+`simllm/deploy/frontier.py` is restored byte for byte. The unchanged-freeze
+successor returns the same complete evaluation digest. Both runs and the
+failed software gate remain in the evidence record. No older hash or result
+was relaxed to admit the extension.
 
 Before those freezes, the former acceptance premise was withdrawn explicitly:
 a configuration cannot remain selected throughout an interval that extends
@@ -123,4 +132,4 @@ void evidence. Process identity and elapsed wall time remain outside the
 compared object. The evaluation digest is
 `4dcd753ef3dae9cf7a147e681fc4796f6d5b1956a3becbbbb08d4b691ff3953a`;
 the summary digest is
-`307d9c35332378c726f81e6fc669a4e4d991d37ed3ae09b563343c9e4b3bd38b`.
+`d04eafc20e14007837fbd860aa439d7bf2864094e017c1fa81d48fbfac4d2f9f`.

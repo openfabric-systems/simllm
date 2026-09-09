@@ -1976,14 +1976,54 @@
       "row": 3
     }
   },
+  "previous_runs": [
+    {
+      "qualification": "Component PASS; complete software gate rejected the changed pinned frontier.py source. No historical freeze changed.",
+      "raw_artifacts": {
+        "configuration.json": "057a730acea5d5743655d15f71989416b8315a8c1fcdf78768d533914a8d7989",
+        "evaluation-0.json": "4dcd753ef3dae9cf7a147e681fc4796f6d5b1956a3becbbbb08d4b691ff3953a",
+        "evaluation-0.process.json": "4a9ab2f10ffdc96d79403e92381ff0bf868f4f20f96a52f0216e1a849f94f6ee",
+        "evaluation-1.json": "4dcd753ef3dae9cf7a147e681fc4796f6d5b1956a3becbbbb08d4b691ff3953a",
+        "evaluation-1.process.json": "d4a2cf95816a64676744e89929cbef1466171d8af9262befee9e3fb0a8c6e3f8",
+        "summary.json": "307d9c35332378c726f81e6fc669a4e4d991d37ed3ae09b563343c9e4b3bd38b",
+        "worker-0.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "worker-0.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "worker-1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "worker-1.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "summary": {
+        "behavioral_score": {
+          "instances": 40,
+          "passed": 40
+        },
+        "deterministic_bytes_equal": true,
+        "evaluation_sha256": [
+          "4dcd753ef3dae9cf7a147e681fc4796f6d5b1956a3becbbbb08d4b691ff3953a",
+          "4dcd753ef3dae9cf7a147e681fc4796f6d5b1956a3becbbbb08d4b691ff3953a"
+        ],
+        "expectations_commit": "d88c52005be7e0b9a9a0ae2142f099ee640d5f04",
+        "fatal_findings": [],
+        "historical_agreement_is_study_score": false,
+        "historical_profile_verified": false,
+        "historical_runs_rescored": false,
+        "schema": "simllm-frontier-publication-precision-summary-v1",
+        "source_commit": "5bf34397a81572d82807d129ebb554f3a33ed423",
+        "state": "PASS",
+        "worker_exit_codes": [
+          0,
+          0
+        ]
+      }
+    }
+  ],
   "qualification": "PASS",
   "raw_artifacts": {
-    "configuration.json": "057a730acea5d5743655d15f71989416b8315a8c1fcdf78768d533914a8d7989",
+    "configuration.json": "571676e617205baf8847217f201f0030add1fb7850e22a86b38306fdaf8cf185",
     "evaluation-0.json": "4dcd753ef3dae9cf7a147e681fc4796f6d5b1956a3becbbbb08d4b691ff3953a",
-    "evaluation-0.process.json": "4a9ab2f10ffdc96d79403e92381ff0bf868f4f20f96a52f0216e1a849f94f6ee",
+    "evaluation-0.process.json": "00defd3739aacebb447088411825a58c41ff76e21a50ce55c220d5de7ddbf3e3",
     "evaluation-1.json": "4dcd753ef3dae9cf7a147e681fc4796f6d5b1956a3becbbbb08d4b691ff3953a",
-    "evaluation-1.process.json": "d4a2cf95816a64676744e89929cbef1466171d8af9262befee9e3fb0a8c6e3f8",
-    "summary.json": "307d9c35332378c726f81e6fc669a4e4d991d37ed3ae09b563343c9e4b3bd38b",
+    "evaluation-1.process.json": "17edc0f6e73e9975875df56ad60984cd36c04bcd0db7f2295945fc8a1e7eae15",
+    "summary.json": "d04eafc20e14007837fbd860aa439d7bf2864094e017c1fa81d48fbfac4d2f9f",
     "worker-0.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "worker-0.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "worker-1.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -2018,7 +2058,7 @@
     "historical_profile_verified": false,
     "historical_runs_rescored": false,
     "schema": "simllm-frontier-publication-precision-summary-v1",
-    "source_commit": "5bf34397a81572d82807d129ebb554f3a33ed423",
+    "source_commit": "1cd4b501c60dfe354e4b28852017340ac54ed7ad",
     "state": "PASS",
     "worker_exit_codes": [
       0,
