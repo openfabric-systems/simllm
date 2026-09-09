@@ -25,9 +25,9 @@ A cell is one `(target, framework, model)` triple. It is filled by this
 chain, each link owned by a registered task:
 
 1. **Extraction** ([COMP-54 qualification](../../examples/kimi_k3_qualification_v1/RESULTS.md)): the
-   model's kernel inventory is extracted from the framework offline,
-   producing the content-addressed execution-graph template, kernel
-   families, typed invocation shapes and per-phase launch counts that
+   model's logical operator inventory is extracted from the framework offline,
+   producing the content-addressed execution-graph template, logical operator
+   families, typed invocation shapes and per-phase visit counts that
    define the cell's denominators. No GPU is required for this link.
 2. **Capture** ([VLLM-12](../modules/adapters-vllm.md#open-tasks) or
    [SGL-10](../modules/adapters-sglang.md#open-tasks), joined by

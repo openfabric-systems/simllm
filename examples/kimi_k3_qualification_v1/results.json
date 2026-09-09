@@ -1060,6 +1060,17 @@
   ],
   "software_validation": {
     "combined_source_commit": "4475eec5ab5ed0dbb8c61984bc5f32c6f1c68b74",
+    "retained_attempts": [
+      {
+        "failed": 2,
+        "finding": "Two forward coverage assertions still required COMP-54 to remain open; historical reports and native evidence are unchanged.",
+        "log_sha256": "c99647fca89f77448cda66725006825f9ab92530e26552a160776fcd6880aace",
+        "passed": 5705,
+        "skipped": 31,
+        "source_commit": "e4060abd9db6c30eefce188493fbea8b6a28a334",
+        "status": "FAIL"
+      }
+    ],
     "status": "PENDING"
   },
   "storage_and_state_oracles": {
