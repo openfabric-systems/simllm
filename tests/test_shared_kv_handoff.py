@@ -159,7 +159,7 @@ def test_repeated_batches_preserve_native_owner_history_and_prior_evidence(share
     assert [row["verb"] for row in shared.peer.requests][-3:] == ["await_completion", "drain", "close"]
 
 
-@pytest.mark.parametrize("kind", ["missing", "duplicate", "forged", "bytes", "sequence"])
+@pytest.mark.parametrize("kind", ["missing", "duplicate", "forged", "bytes", "sequence", "foreign-request"])
 def test_bad_private_receipt_inventory_poison_and_reap(shared, kind):
     receipt = submit(shared)
     pending = (receipt,)
@@ -169,6 +169,8 @@ def test_bad_private_receipt_inventory_poison_and_reap(shared, kind):
         pending = (receipt, receipt)
     elif kind == "forged":
         pending = (replace(receipt),)
+    elif kind == "foreign-request":
+        pending = (replace(receipt, request_id="foreign"),)
     else:
         object.__setattr__(receipt, "kv_bytes" if kind == "bytes" else "sequences",
                            8193 if kind == "bytes" else (3, 4))
@@ -505,3 +507,46 @@ def test_native_foreign_row_is_rejected_by_complete_framed_admission(shared):
     with pytest.raises(FlowSessionError, match="changed destination"):
         shared.runtime.progress((receipt,), through_ps=None)
     assert shared.runtime.poisoned and shared.stream.aborted and not shared.runtime.joins
+
+
+def test_zero_submission_delay_rejects_before_starting_another_child(shared):
+    with pytest.raises(ValueError, match="positive submission"):
+        SharedKvHandoffRuntime(shared.config, ("scripted-native",), session_id="invalid",
+            deployment=shared.deployment, engine_nodes=shared.bindings, pcie_submission_ps=0)
+    assert len(shared.calls) == 1 and shared.clock.now_ps == 0
+
+
+def test_duplicate_request_rejects_before_more_shards_are_injected(shared):
+    receipt = submit(shared)
+    before = list(shared.peer.requests)
+    with pytest.raises(ValueError, match="duplicate"):
+        submit(shared)
+    assert shared.peer.requests == before and shared.runtime.accepted_shards
+    assert shared.runtime._pending == {receipt.request_id: receipt}
+
+
+@pytest.mark.parametrize("kind", ["missing-node", "duplicate-node", "endpoint-count"])
+def test_invalid_endpoint_bijection_rejects_before_native_launch(shared, kind):
+    config, bindings = shared.config, dict(shared.bindings)
+    if kind == "missing-node":
+        bindings.pop(PREFILL[0])
+    elif kind == "duplicate-node":
+        bindings[PREFILL[1]] = bindings[PREFILL[0]]
+    else:
+        config = replace(config, node_count=5)
+    with pytest.raises(ValueError, match="endpoint|exactly once"):
+        SharedKvHandoffRuntime(config, ("scripted-native",), session_id="invalid",
+            deployment=shared.deployment, engine_nodes=bindings, pcie_submission_ps=10)
+    assert len(shared.calls) == 1
+
+
+def test_shared_policy_replacement_rejects_before_admission_and_clock_change(shared):
+    from simllm.adapters.vllm.pd_session import VllmPdRequest
+
+    session = bare_serving_session(shared)
+    before = list(shared.peer.requests)
+    request = VllmPdRequest("new", (1,), 4, 100)
+    with pytest.raises(ValueError, match="policy replacement"):
+        session.run_requests((request,), handoff_policy=DeclaredKvHandoffPolicy.off())
+    assert session._request_ids == set() and shared.peer.requests == before and shared.clock.now_ps == 0
+    session.__exit__(None, None, None)
