@@ -11,6 +11,17 @@ from simllm.preplay.arena import RoutingArena
 from simllm.preplay.routing import RoutedExperts, validate_routed_experts
 
 
+@dataclass(frozen=True)
+class RoutedExpertAssignment:
+    """One selected expert row before destination-message deduplication."""
+
+    request_id: str
+    token_index: int
+    top_k_index: int
+    expert_id: int
+    owner_rank: int
+
+
 def _integer(value: object, path: str, *, nonnegative: bool = False) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise TypeError(f"{path}: expected an integer")

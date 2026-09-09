@@ -166,6 +166,7 @@ from simllm.compute.rnic import (
     RnicSubmissionScheduleEntry,
     rnic_submission_producer_task,
 )
+from simllm.compute.routed import RoutedComputeConfig, grouped_expert_kernels
 from simllm.compute.transformer import (
     GPU_ENVELOPES,
     ModelDims,
@@ -265,6 +266,7 @@ __all__ = [
     "RnicProducerTaskLink",
     "RnicSubmissionScheduleEntry",
     "RooflineProvider",
+    "RoutedComputeConfig",
     "SassInstruction",
     "SassWarpTrace",
     "SmSchedulerModel",
@@ -279,6 +281,7 @@ __all__ = [
     "gpu_model_artifact_from_json",
     "gpu_model_artifact_to_json",
     "gpu_model_artifact_to_profile_table",
+    "grouped_expert_kernels",
     "h100_sxm_80gb_seed_profile",
     "held_out_errors",
     "load_gpu_model_artifact",
