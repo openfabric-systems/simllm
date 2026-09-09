@@ -1,0 +1,40 @@
+{
+  "schema": "simllm-routed-compute-expectations-v1",
+  "source_base": "1839a3ad743507a69895feffc7a3a15d877aded2",
+  "tasks": ["COMP-7", "COMP-43"],
+  "request_counts": [8, 16],
+  "routing": ["balanced", "hot"],
+  "gemm_minimum_ps": [0, 5000000, 20000000],
+  "steps_per_configuration": 3,
+  "model": {
+    "num_layers": 2,
+    "hidden_size": 16,
+    "moe_intermediate_size": 32,
+    "num_experts": 4,
+    "top_k": 1,
+    "num_heads": 1,
+    "num_kv_heads": 1,
+    "head_size": 16,
+    "vocab_size": 64,
+    "dtype_bytes": 2
+  },
+  "engine_rank": 0,
+  "expert_ranks": [0, 3],
+  "expert_owners_per_layer": [[0, 0], [1, 0], [2, 3], [3, 3]],
+  "gpu": {
+    "name": "declared-routed-compute-study",
+    "peak_flops": 1000000000,
+    "mem_bandwidth": 1000000000000000
+  },
+  "efficiency": 1,
+  "rnic_rate_bps": 8000000000000,
+  "nvlink_rate_bps": 8000000000000,
+  "evidence": {
+    "configurations": 12,
+    "model_step_calls": 36,
+    "exact_expert_service_vectors": 36,
+    "behavioral_families": {"load_imbalance": 5, "minimum_service": 5, "request_count": 6},
+    "fatal_guards_scored": false,
+    "hardware_measurement": false
+  }
+}
