@@ -598,3 +598,4 @@ examples/external_composition_v1/* text eol=lf
 offline/calibration/external-compositions/*.json text eol=lf
 
 examples/pd_session_target_scale_v1/** text eol=lf
+examples/pd_host_execution_diagnostic_v1/** text eol=lf
