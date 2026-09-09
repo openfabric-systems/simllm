@@ -201,7 +201,7 @@ def prepare_cell(cell, root, references, locks, txt2bin):
     for name, field in (("step.goal", "goal_text_sha256"), ("step.bin", "goal_sha256"),
                         ("clos.topo", "topology_sha256")):
         require_digest(retained / name, lock[field])
-    expected_json = {"placement.json": asdict(placement), "fabric.json": asdict(fabric),
+    expected_json = {"placement.json": asdict(placement), "fabric.json": fabric.to_dict(),
                      "endpoint_by_rank.json": projection.endpoint_by_rank,
                      "semantic_graph.json": execution_graph_to_json(baseline_graph)}
     for name, value in expected_json.items():

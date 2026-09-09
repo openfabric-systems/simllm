@@ -1,0 +1,160 @@
+{
+  "schema": "simllm-local-peer-packet-expectations-v1",
+  "owning_tasks": [
+    "BACK-48",
+    "COMP-40",
+    "TRAF-45"
+  ],
+  "evidence_class": "declared-model",
+  "donors": [
+    1,
+    3
+  ],
+  "rx_bytes_per_second": [
+    12500000000,
+    25000000000
+  ],
+  "routes": [
+    "direct",
+    "switched"
+  ],
+  "phase_order": [
+    "dispatch",
+    "combine"
+  ],
+  "extent_payload_bytes": 1024,
+  "packet_payload_bytes": 256,
+  "packet_wire_bytes": 272,
+  "link_bytes_per_second": 25000000000,
+  "source_feed_bytes_per_second": 25000000000,
+  "switch_port_bytes_per_second": 25000000000,
+  "propagation_ps_per_hop": 1000,
+  "finite_buffer_bytes": 65536,
+  "credits_per_pool": 256,
+  "additional_acknowledgement_ps": 0,
+  "arbitration": "identity",
+  "analytic_bytes_per_second": 450000000000,
+  "request": {
+    "request_id": "peer-star",
+    "arrived_at_ps": 0,
+    "home_rank": 0,
+    "prompt_tokens": 1,
+    "outputs": 3,
+    "steps": [
+      {
+        "phase": "prefill",
+        "num_tokens": 1,
+        "context_length": 1
+      },
+      {
+        "phase": "decode",
+        "num_tokens": 1,
+        "context_length": 2
+      },
+      {
+        "phase": "decode",
+        "num_tokens": 1,
+        "context_length": 3
+      }
+    ]
+  },
+  "model": {
+    "num_layers": 1,
+    "hidden_size": 512,
+    "intermediate_size": 512,
+    "num_heads": 8,
+    "num_kv_heads": 4,
+    "head_size": 64,
+    "vocab_size": 49152,
+    "dtype_bytes": 2,
+    "moe_intermediate_size": 512,
+    "compute_estimate_ps": 37000
+  },
+  "oracle": {
+    "packets_per_extent": 4,
+    "link_service_ps": 10880,
+    "receiver_service_ps": {
+      "12500000000": 21760,
+      "25000000000": 10880
+    },
+    "direct_communication_ps": {
+      "1,25000000000": 110800,
+      "1,12500000000": 197840,
+      "3,25000000000": 284880,
+      "3,12500000000": 458960
+    },
+    "switched_communication_ps": {
+      "1,25000000000": 134560,
+      "1,12500000000": 221600,
+      "3,25000000000": 308640,
+      "3,12500000000": 482720
+    },
+    "analytic_communication_ps": {
+      "1": 6000,
+      "3": 14000
+    }
+  },
+  "behavioral_relations": [
+    "receiver-serialization",
+    "donor-width",
+    "hop-transport",
+    "packet-versus-analytic-token-latency"
+  ],
+  "retained_credit_control": {
+    "payload_bytes": 256,
+    "packets": 1,
+    "credits_per_pool": 1,
+    "receiver_buffer_bytes": 272,
+    "link_bytes_per_second": 25000000000,
+    "rx_bytes_per_second": 25000000000,
+    "propagation_ps": 1000,
+    "return_processing_ps": [
+      0,
+      100000
+    ],
+    "acknowledgement_processing_ps": 200000,
+    "exact_oracles_ps": {
+      "first_visibility": 22760,
+      "second_start_before_D": 23760,
+      "second_visibility_before_D": 46520,
+      "final_drain_before_D": 236640
+    }
+  },
+  "attachment_control": {
+    "destinations": [
+      1,
+      2
+    ],
+    "payload_bytes": 1024,
+    "link_bytes_per_second": [
+      12500000000,
+      25000000000
+    ],
+    "source_feed_bytes_per_second": 100000000000,
+    "switch_input_buffer_bytes": [
+      272,
+      544
+    ],
+    "receiver_buffer_bytes": 65536,
+    "rx_bytes_per_second": 25000000000,
+    "switch_port_bytes_per_second": 25000000000,
+    "propagation_ps_per_hop": 1000,
+    "credits_per_pool": 256,
+    "credit_return_processing_ps": 0,
+    "acknowledgement_processing_ps": 0,
+    "arbitration": "identity"
+  },
+  "compatibility_baseline_commit": "4b7042681a8b5d942fc21f96dd9786f887203a46",
+  "compatibility_families": [
+    "nvlink_locality_v1",
+    "mixed_attribution_v1",
+    "rnic_live_v1",
+    "rnic_packet_v2"
+  ],
+  "unsupported_capabilities": [
+    "ecn_marking",
+    "priority_flow_control",
+    "congestion_notification"
+  ],
+  "credit_return_processing_ps": 0
+}

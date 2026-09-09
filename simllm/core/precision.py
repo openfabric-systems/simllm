@@ -79,6 +79,7 @@ class LocalityLevel(str, enum.Enum):
 
     ALL_REMOTE = "all-remote"
     ANALYTIC_NVLINK = "analytic-nvlink"
+    PACKET_NVLINK = "packet-nvlink"
 
 
 class NetworkLevel(str, enum.Enum):

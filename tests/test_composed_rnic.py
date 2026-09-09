@@ -127,11 +127,13 @@ def _native_packet_cell(
     cell = _packet_cell(payload_bytes, rate_gbps, doorbell_ps, wqe_count)
     packet_events = []
     wqes = []
+    admissions = []
+    terminals = []
     for wqe in cell.wqes:
         for packet_index, started_at_ps in enumerate(wqe.packet_tx_started_at_ps):
             packet_events.append(
                 {
-                    "attempt_token": 1000 + packet_index,
+                    "attempt_token": 1000 + wqe.ordinal * (payload_bytes // 4096) + packet_index,
                     "extent_token": wqe.native_wqe_id,
                     "wqe_id": wqe.native_wqe_id,
                     "event_kind": "packet_tx_started",
@@ -145,6 +147,15 @@ def _native_packet_cell(
                     "packet_kind": "data",
                 }
             )
+        admissions.append({
+            "token": wqe.native_wqe_id, "wqe_id": wqe.native_wqe_id,
+            "accepted_at_ps": wqe.network_accepted_at_ps,
+            "port_tx_at_ps": wqe.first_packet_at_ps, "payload_bytes": payload_bytes,
+        })
+        terminals.append({
+            "token": wqe.native_wqe_id, "wqe_id": wqe.native_wqe_id,
+            "kind": "delivered", "at_ps": wqe.network_finished_at_ps,
+        })
         wqes.append(
             {
                 "ordinal": wqe.ordinal,
@@ -159,9 +170,17 @@ def _native_packet_cell(
                 "polled_at_ps": wqe.completed_at_ps,
                 "first_packet_at_ps": wqe.first_packet_at_ps,
                 "last_packet_at_ps": wqe.last_packet_at_ps,
-                "first_rx_at_ps": wqe.network_finished_at_ps,
+                "first_rx_at_ps": wqe.first_packet_at_ps + 4096 * 8 * 1000 // rate_gbps,
                 "last_rx_at_ps": wqe.network_finished_at_ps,
             }
+        )
+    complete_events = []
+    for row in packet_events:
+        complete_events.append(row)
+        finish = row["event_time_ps"] + 4096 * 8 * 1000 // rate_gbps
+        complete_events.extend(
+            {**row, "event_kind": kind, "event_time_ps": finish}
+            for kind in ("packet_tx_finished", "packet_rx_arrived", "delivered")
         )
     return {
         "payload_bytes": payload_bytes,
@@ -189,10 +208,10 @@ def _native_packet_cell(
             "fatal": False,
         },
         "port": {
-            "issued": [{} for _ in range(wqe_count)],
-            "terminals": [{} for _ in range(wqe_count)],
+            "issued": admissions,
+            "terminals": terminals,
             "live_tokens": [],
-            "packet_events": packet_events,
+            "packet_events": complete_events,
         },
         "wqes": wqes,
         "cqe_order": list(range(1, wqe_count + 1)),
@@ -347,8 +366,40 @@ def test_composed_abi_v2_parser_rejects_missing_packet_tx_start():
 
     with pytest.raises(
         ComposedRnicObservationError,
-        match="no explicit data TX-start event",
+        match="lacks complete successful payload coverage",
     ):
+        ComposedRnicObservations.from_json(raw)
+
+
+@pytest.mark.parametrize(
+    "location,field,value,reason",
+    (
+        ("terminal", "at_ps", 163841, "completion disagrees"),
+        ("terminal", "kind", "dropped", "completion disagrees"),
+        ("wqe", "first_rx_at_ps", "invalid", "must be an integer"),
+        ("wqe", "last_rx_at_ps", 163841, "receiver boundaries disagree"),
+        ("admission", "port_tx_at_ps", 1, "issued port TX disagrees"),
+    ),
+)
+def test_native_summary_cannot_disagree_with_validated_port(location, field, value, reason):
+    raw = _native_packet_observations()
+    cell = raw["single_wqe"][0]
+    row = {
+        "terminal": cell["port"]["terminals"][0],
+        "admission": cell["port"]["issued"][0],
+        "wqe": cell["wqes"][0],
+    }[location]
+    row[field] = value
+    with pytest.raises(ComposedRnicObservationError, match=reason):
+        ComposedRnicObservations.from_json(raw)
+
+
+def test_native_packet_array_order_cannot_be_repaired_by_grouping_wqes():
+    raw = _native_packet_observations()
+    cell = raw["fifo"][0]
+    first, second = cell["port"]["packet_events"][:4], cell["port"]["packet_events"][4:]
+    cell["port"]["packet_events"] = second + first
+    with pytest.raises(ComposedRnicObservationError, match="array time moved backwards"):
         ComposedRnicObservations.from_json(raw)
 
 

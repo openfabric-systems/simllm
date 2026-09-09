@@ -53,6 +53,7 @@ include = ["simllm*"]
     "CMakeLists.txt",
     "README.md",
     "include/simllm/rnic/*.h",
+    "include/simllm/ports/*.h",
     "src/*.cpp",
     "tests/*.h",
     "tests/*.cpp",

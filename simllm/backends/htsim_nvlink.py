@@ -29,6 +29,7 @@ from typing import Generic, TypeVar
 NVLINK_CANDIDATE_PROFILE_SCHEMA = "simllm-htsim-nvlink-candidate-profile-v1"
 NVLINK_CANDIDATE_PROFILE_IMPLEMENTATION = "simllm-htsim-nvlink-domain-v1"
 NVLINK_ALIGNED_PROFILE_IMPLEMENTATION = "simllm-htsim-nvlink-domain-v3"
+NVLINK_PHYSICAL_PROFILE_IMPLEMENTATION = "simllm-nvlink-physical-retained-v1"
 NVLINK_CANDIDATE_EVIDENCE_CLASS = "declared_candidate_not_hardware_measurement"
 NVLINK_PUBLIC_MECHANISM_EVIDENCE_CLASS = "public_document_generation_scoped_mechanism"
 NVLINK_SCORED_PROFILE_STATUS = "scored_mixed_parameter_evidence"
@@ -61,6 +62,7 @@ class NvlinkMechanismAuthority(str, Enum):
 
     COMPATIBILITY = "compatibility_v1"
     ALIGNED = "aligned_v3"
+    PHYSICAL = "physical_retained_v1"
 
 
 class NvlinkTrafficClass(str, Enum):
@@ -1378,6 +1380,26 @@ class NvlinkTx:
 class _NvlinkVoqHead:
     original_index: int
     packet: NvlinkFlitPacket
+    shared_capacity_id: str | None = None
+
+
+def _select_nvlink_heads(candidates, shared_capacities):
+    """Plan a legal crossbar match and shared byte reservations without mutation."""
+    remaining = dict(shared_capacities or {})
+    used_inputs, used_outputs, selected = set(), set(), []
+    for candidate in candidates:
+        packet = candidate.packet
+        if packet.source in used_inputs or packet.destination in used_outputs:
+            continue
+        pool = candidate.shared_capacity_id
+        if pool is not None:
+            if remaining.get(pool, 0) < packet.wire_bytes:
+                continue
+            remaining[pool] -= packet.wire_bytes
+        used_inputs.add(packet.source)
+        used_outputs.add(packet.destination)
+        selected.append(candidate)
+    return tuple(selected)
 
 
 class NvlinkSwitchPolicy:
@@ -1388,18 +1410,9 @@ class NvlinkSwitchPolicy:
     def select(
         self,
         candidates: Sequence[_NvlinkVoqHead],
+        *, shared_capacities: Mapping[str, int] | None = None,
     ) -> tuple[_NvlinkVoqHead, ...]:
-        used_inputs: set[int] = set()
-        used_outputs: set[int] = set()
-        selected = []
-        for candidate in sorted(candidates, key=lambda item: item.original_index):
-            packet = candidate.packet
-            if packet.source in used_inputs or packet.destination in used_outputs:
-                continue
-            used_inputs.add(packet.source)
-            used_outputs.add(packet.destination)
-            selected.append(candidate)
-        return tuple(selected)
+        return _select_nvlink_heads(sorted(candidates, key=lambda item: item.original_index), shared_capacities)
 
 
 class NvlinkIdentitySwitchPolicy(NvlinkSwitchPolicy):
@@ -1419,22 +1432,14 @@ class NvlinkRoundRobinSwitchPolicy(NvlinkSwitchPolicy):
     def select(
         self,
         candidates: Sequence[_NvlinkVoqHead],
+        *, shared_capacities: Mapping[str, int] | None = None,
     ) -> tuple[_NvlinkVoqHead, ...]:
         ordered = sorted(candidates, key=lambda item: item.original_index)
         if not ordered:
             return ()
         offset = self._cursor % len(ordered)
         rotated = ordered[offset:] + ordered[:offset]
-        used_inputs: set[int] = set()
-        used_outputs: set[int] = set()
-        selected = []
-        for candidate in rotated:
-            packet = candidate.packet
-            if packet.source in used_inputs or packet.destination in used_outputs:
-                continue
-            used_inputs.add(packet.source)
-            used_outputs.add(packet.destination)
-            selected.append(candidate)
+        selected = _select_nvlink_heads(rotated, shared_capacities)
         self._cursor = (offset + max(1, len(selected))) % len(ordered)
         return tuple(selected)
 
@@ -2148,6 +2153,8 @@ class NvlinkDomainService(Generic[_AnalyticResult]):
             raise TypeError("include_switch must be a boolean")
         _require_enum("flow_policy", flow_policy, NvlinkFlowPolicy)
         _require_enum("authority", authority, NvlinkMechanismAuthority)
+        if authority is NvlinkMechanismAuthority.PHYSICAL:
+            raise ValueError("physical authority requires a retained session with explicit attachments")
         if authority is NvlinkMechanismAuthority.ALIGNED:
             if flow_policy is not LEGACY_NVLINK_FLOW_POLICY:
                 raise ValueError(

@@ -14,6 +14,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from simllm.core.packet_port import (
+    PacketPortContext,
+    PacketPortError,
+    PacketPortLedger,
+    validate_packet_observation,
+)
 from simllm.core.runtime import (
     SemanticWqeSubmission,
     WqeLifecycleProjection,
@@ -23,20 +29,6 @@ NATIVE_AUTHORITY = "SimllmNativeRnicSession"
 TIER_A_EXPECTATION_SCHEMA = "simllm-rnic-tier-a-expectations-v1"
 TIER_A_OBSERVATION_SCHEMA = "simllm-rnic-tier-a-observations-v1"
 TIER_A_OBSERVATION_SCHEMA_V2 = "simllm-rnic-tier-a-observations-v2"
-PACKET_EVENT_KEYS = {
-    "attempt_token",
-    "extent_token",
-    "wqe_id",
-    "event_kind",
-    "event_time_ps",
-    "extent_index",
-    "packet_index",
-    "transmission_attempt",
-    "payload_offset_bytes",
-    "payload_bytes",
-    "wire_bytes",
-    "packet_kind",
-}
 
 
 class ComposedRnicObservationError(ValueError):
@@ -200,19 +192,12 @@ class ComposedRnicCell:
         return len(self.wqes)
 
 
-def _packet_tx_starts(port: dict[str, Any], wqe_id: int, name: str) -> tuple[int, ...]:
-    rows = _array(port.get("packet_events"), f"{name}.packet_events")
-    starts: list[int] = []
-    for index, value in enumerate(rows):
-        row_name = f"{name}.packet_events[{index}]"
-        row = _object(value, row_name)
-        _exact_keys(row, PACKET_EVENT_KEYS, row_name)
-        if (
-            _integer(row["wqe_id"], f"{row_name}.wqe_id") == wqe_id
-            and row["event_kind"] == "packet_tx_started"
-            and row["packet_kind"] in {"data", "retransmission"}
-        ):
-            starts.append(_integer(row["event_time_ps"], f"{row_name}.event_time_ps"))
+def _packet_tx_starts(ledger: PacketPortLedger, wqe_id: int, name: str) -> tuple[int, ...]:
+    starts = tuple(
+        row.event_time_ps for row in ledger.events
+        if row.wqe_id == wqe_id and row.event_kind == "packet_tx_started"
+        and row.packet_kind in {"data", "retransmission"}
+    )
     _require(bool(starts), f"{name} has no explicit data TX-start event")
     return tuple(starts)
 
@@ -222,7 +207,7 @@ def _parse_wqe(
     name: str,
     *,
     network_abi_version: int,
-    port: dict[str, Any],
+    port_ledger: PacketPortLedger | None,
 ) -> ComposedWqeObservation:
     row = _object(value, name)
     packet_keys = (
@@ -286,7 +271,29 @@ def _parse_wqe(
         last_packet = _integer(
             row["last_packet_at_ps"], f"{name}.last_packet_at_ps"
         )
-        packet_tx_starts = _packet_tx_starts(port, native_wqe_id, name)
+        assert port_ledger is not None
+        packet_tx_starts = _packet_tx_starts(port_ledger, native_wqe_id, name)
+        admissions = tuple(x for x in port_ledger.admissions if x.producer_id == native_wqe_id)
+        terminals = tuple(x for x in port_ledger.terminals if x.producer_id == native_wqe_id)
+        _require(len(admissions) == len(terminals) == 1,
+                 f"{name} has no unique admitted and retired port extent")
+        admission, port_terminal = admissions[0], terminals[0]
+        _require(admission.eligible_at_ps == accepted,
+                 f"{name} network acceptance disagrees with port admission")
+        _require(port_terminal.extent_token == admission.extent_token
+                 and port_terminal.kind == row["terminal_kind"]
+                 and port_terminal.at_ps == terminal,
+                 f"{name} completion disagrees with port terminal")
+        rx_arrivals = tuple(
+            x.event_time_ps for x in port_ledger.events
+            if x.wqe_id == native_wqe_id and x.event_kind == "packet_rx_arrived"
+        )
+        first_rx = _integer(row["first_rx_at_ps"], f"{name}.first_rx_at_ps")
+        last_rx = _integer(row["last_rx_at_ps"], f"{name}.last_rx_at_ps")
+        _require(bool(rx_arrivals) and first_rx == min(rx_arrivals)
+                 and last_rx == max(rx_arrivals),
+                 f"{name} receiver boundaries disagree with packet arrivals")
+        _require(port_tx == first_packet, f"{name} port TX disagrees with first packet issue")
         started = first_packet
     else:
         _require(
@@ -386,6 +393,16 @@ def _parse_cell(
         and not live_tokens,
         f"{name} port token ledger is not quiescent",
     )
+    port_ledger = None
+    if network_abi_version == 2:
+        try:
+            port_ledger = validate_packet_observation(
+                port, PacketPortContext(session_id=name, port_id="native-wire-port"),
+            )
+        except (PacketPortError, KeyError, TypeError) as exc:
+            raise ComposedRnicObservationError(f"{name} invalid packet lifecycle: {exc}") from exc
+        _require(all(row["payload_bytes"] == payload for row in issued),
+                 f"{name} admitted extent bytes disagree with the cell payload")
 
     raw_wqes = _array(cell["wqes"], f"{name}.wqes")
     _require(len(raw_wqes) == expected_wqes, f"{name} has the wrong WQE count")
@@ -394,7 +411,7 @@ def _parse_cell(
             row,
             f"{name}.wqes[{index}]",
             network_abi_version=network_abi_version,
-            port=port,
+            port_ledger=port_ledger,
         )
         for index, row in enumerate(raw_wqes)
     )
@@ -404,6 +421,11 @@ def _parse_cell(
     )
     native_ids = tuple(wqe.native_wqe_id for wqe in wqes)
     _require(len(set(native_ids)) == len(native_ids), f"{name} repeats a WQE ID")
+    if network_abi_version == 2:
+        for raw_wqe, wqe in zip(raw_wqes, wqes):
+            admissions = [row for row in issued if row["wqe_id"] == wqe.native_wqe_id]
+            _require(len(admissions) == 1 and admissions[0]["port_tx_at_ps"] == raw_wqe["port_tx_at_ps"],
+                     f"{name} issued port TX disagrees with WQE projection")
     _require(
         tuple(_array(cell["cqe_order"], f"{name}.cqe_order")) == native_ids,
         f"{name} CQE order disagrees with native WQE order",

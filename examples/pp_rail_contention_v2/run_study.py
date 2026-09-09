@@ -153,7 +153,7 @@ def prepare_cell(cell, root, references, locks, txt2bin):
     projection = project_declared_clos(fabric)
     graph = reference.build_graph(cell.width, cell.ep_width)
     write_json(out / "placement.json", asdict(placement))
-    write_json(out / "fabric.json", asdict(fabric))
+    write_json(out / "fabric.json", fabric.to_dict())
     write_json(out / "endpoint_by_rank.json", projection.endpoint_by_rank)
     write_json(out / "semantic_graph.json", execution_graph_to_json(graph))
     (out / "clos.topo").write_bytes(projection.topology_text.encode())

@@ -5,6 +5,19 @@ backend submodules.
 
 ## Interface
 
+- `PacketPortContext`, `PacketPortLedger` and the neutral native
+  `simllm/ports/packet_port.h` expose one version 2 packet vocabulary to wire
+  and GPU peer ports. Immutable capability and timestamp-boundary context
+  accompany unchanged native rows. The ledger validates identity, payload
+  coverage and transport retirement; it never grants service or advances time.
+- `PeerPacketConfig` selects declared local packet service in `HtsimStepSink`.
+  One retained domain calendar feeds original-graph extent events, checked
+  `ExecutionResult`, `StepResult` and request time to first token (TTFT) and
+  time per output token (TPOT). `peer_evidence` retains phase boundaries, packet
+  observations, physical resource visits, reservations and unfinished transport
+  state; `close_peer_packets()` drains that state at the final request boundary.
+  Absent selection preserves the analytic artifacts exactly.
+
 - `HtsimRnicConfig` + `build_htsim_rnic_command` + `run_htsim_rnic`: direct
   GOAL-driven `htsim_rnic` runs (profiles `rnic-nn`, `rnic-nn-fluid`,
   `rnic-cn`; a run is valid only with `physical_quiescence=verified`),
@@ -765,6 +778,15 @@ The evidence classes, mlx5 hook and boundary-test matrix are recorded in
 
 ## Status
 
+The [live peer packet study](../../examples/local_peer_packet_runtime_v1/RESULTS.md) establishes the shared packet vocabulary and
+packet-derived local request timing. Its 136 exact timing checks have zero
+picosecond residual; all 36 instances in four behavioral families hold with
+no fatal finding. Native wire interface versions 1 and 2 and the complete
+accepted locality and mixed-attribution artifact families remain exact. This
+closes BACK-48 and TRAF-45 and supplies the peer-port part of COMP-40. The
+selected local calendar retains physical ownership after logical visibility;
+resource work sums stay separate from critical-path token latency.
+
 **BACK-38 and HTSIM-28 deliver retained physical execution across a checked
 step's ordered artifacts.** The explicit `flow_session` option preserves the
 native topology, random state, transport, congestion controller and network
@@ -1439,6 +1461,19 @@ created" statement stands and refers to different, never-registered work.
 
 ### Completeness
 
+- BACK-73 (Completeness; P2; M): project the retained local packet calendar's
+  realized blocker predecessors into packet-level critical-path reporting.
+  The initial TRAF-45 path retains every resource visit and projects total
+  local completion into request latency, but explicitly rejects detailed packet
+  breakdown selection. Build an acyclic causal predecessor chain that joins
+  graph eligibility, finite-buffer and credit release, link grants and consumer
+  visibility. Acceptance: selected intervals exactly cover the local critical
+  duration and conserve the step/request attribution without summing overlapping
+  waits; a converging phase has a different per-resource work sum from its
+  wall duration; and disabled reporting preserves all packet timestamps,
+  completion order, bytes and serialized accepted outputs exactly. TRAF-54
+  retains collective protocol work and does not own this reporting surface.
+
 - BACK-72 (Completeness; P2; M): extend the optional physical step session to
   locality remapping, custom topology, calibrated collective surcharges,
   registration, dependency cross-checks, packet/bottleneck reports, empty
@@ -1627,19 +1662,6 @@ created" statement stands and refers to different, never-registered work.
   event streams byte-identical. COMP-15 keeps the stack's own calibrated
   service, its receive leg and its metric projection; this task owns only the
   device-facing emission contract at the plugin boundary.
-- BACK-48 (Completeness; P2; M): make the ABI v2 packet vocabulary usable by
-  non-wire ports. The vocabulary is reachable only through `NetworkPort`, so a
-  GPU peer port cannot emit `PacketTxStarted`, `PacketTxFinished`,
-  `PacketRxArrived` or an attempt terminal in the same language, and a consumer
-  would have to learn a second event grammar per port kind. Make scope, event
-  kind, packet identity and terminal semantics port-kind independent, with
-  capability gating deciding which kinds a port may emit: a peer port that
-  cannot mark ECN or transport PFC advertises that and rejects a request for it
-  explicitly, exactly as a v2 consumer paired with a v1-only producer already
-  rejects before any handler installation. Acceptance: one consumer reads wire
-  and peer attempts through the same vocabulary without a port-kind switch, an
-  unsupported capability request is rejected before any state mutation, and both
-  ABI v1 and the accepted ABI v2 wire artifacts stay byte-identical.
 - BACK-49 (Completeness; P2; L): teach the composed-observation contract a
   DMA-mode cell family, which is the prerequisite that currently blocks any
   fabric-attached device from reaching the reported metric chain. The contract
