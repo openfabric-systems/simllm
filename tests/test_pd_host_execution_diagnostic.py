@@ -16,6 +16,7 @@ from examples.pd_session_identity_v1.run_study import exact_json_bytes, sha
 from examples.pd_session_target_scale_v1 import native as target
 from simllm.core import DeclaredKvHandoffPolicy
 from simllm.core.pd_session import DisaggregatedRequestTimeline
+from simllm.core.step import StepRecordStream, step_record_from_json
 
 FROZEN = json.loads((run_study.HERE / "expectations.json").read_bytes())
 
@@ -326,14 +327,16 @@ def retain_fixture(data, path):
            "probe-restoration.json": exact_json_bytes(data["probe_restoration"])}
     for entry in data["cells"]:
         raw[entry["cell"]["id"] + ".json"] = exact_json_bytes(entry["cell"])
-    for role in ("prefill", "decode"):
-        engine = "simllm-" + role + "-0"
-        raw["engine-work/" + engine + "/step-records.jsonl"] = lines(
-            [step["record"] for step in data["unique_steps"] if step["engine_id"] == engine])
     for name, content in raw.items():
         file = path / name
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_bytes(content)
+    for role in ("prefill", "decode"):
+        engine = "simllm-" + role + "-0"
+        stream = StepRecordStream(path / "engine-work" / engine / "step-records.jsonl")
+        for step in data["unique_steps"]:
+            if step["engine_id"] == engine:
+                stream.append(step_record_from_json(step["record"]))
     return {p.relative_to(path).as_posix(): p.read_bytes() for p in path.rglob("*") if p.is_file()}
 
 
@@ -481,6 +484,41 @@ def test_complete_pair_comparison_preserves_nonopaque_metadata(serial_trace):
 def test_noncanonical_or_nonfinite_data_is_never_rewritten(raw):
     with pytest.raises(ValueError):
         run_study.parse(raw, "fixture")
+
+
+@pytest.mark.parametrize("change", ["compact", "crlf", "missing-lf", "blank-line", "extra-field", "reorder"])
+def test_native_writer_admission_keeps_exact_source_bytes(serial_trace, tmp_path, change):
+    original = serial_trace["unique_steps"][0]["record"]
+    path = tmp_path / "native.jsonl"
+    StepRecordStream(path).append(step_record_from_json(original))
+    raw = path.read_bytes()
+    assert run_study.native_steps(raw, "fixture") == [original]
+    if change == "compact":
+        changed = exact_json_bytes(original) + b"\n"
+    elif change == "crlf":
+        changed = raw.replace(b"\n", b"\r\n")
+    elif change == "missing-lf":
+        changed = raw[:-1]
+    elif change == "blank-line":
+        changed = raw + b"\n"
+    elif change == "extra-field":
+        changed = (json.dumps({**original, "unknown": 1}) + "\n").encode("ascii")
+    else:
+        changed = (json.dumps(dict(reversed(tuple(original.items())))) + "\n").encode("ascii")
+    with pytest.raises((checks.GuardFailure, ValueError)):
+        run_study.native_steps(changed, "fixture")
+
+
+@pytest.mark.parametrize("raw", [b'{"nested":{"x":1,"x":2}}', b'{"x":1e999}', b'{"x":-1e999}', b'{"x":NaN}', b'{"x":Infinity}'])
+def test_native_and_diagnostic_parsers_reject_duplicates_and_nonfinite_values(raw):
+    with pytest.raises(checks.GuardFailure):
+        run_study.parse_value(raw, "fixture")
+
+
+@pytest.mark.parametrize("raw", [b'{}', b'{}\r\n', b'{}\n\n'])
+def test_progress_framing_cannot_be_normalized(raw):
+    with pytest.raises(ValueError):
+        run_study.progress_rows(raw, "fixture")
 
 
 def test_probe_source_is_joined_to_actual_function_definition(tmp_path):

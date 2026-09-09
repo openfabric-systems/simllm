@@ -26,16 +26,23 @@ from examples.pd_host_execution_diagnostic_v1.timing import profile_rows
 from examples.pd_session_identity_v1.run_study import exact_json_bytes, sha, write
 from examples.pd_session_target_scale_v1.checks import Evidence, GuardFailure, integer
 from examples.pd_session_v1 import run_study as baseline
+from simllm.core.step import step_record_from_json, step_record_to_json
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-FREEZE_COMMIT = "8f06648d26bbfb2bfff4751d29a2e2bf232b440d"
+FREEZE_COMMIT = "11d7bb0c28a166939ebab0ec0367430afa57f2a8"
 
 
-def parse(raw, label):
-    value = json.loads(raw)
-    if exact_json_bytes(value) != raw:
-        raise GuardFailure("noncanonical or duplicate-member JSON: " + label)
+def parse_value(raw, label):
+    def unique(pairs):
+        value = {}
+        for key, child in pairs:
+            if key in value:
+                raise GuardFailure("duplicate-member JSON: " + label)
+            value[key] = child
+        return value
+
+    value = json.loads(raw, object_pairs_hook=unique)
 
     def finite(item):
         if isinstance(item, dict):
@@ -47,6 +54,30 @@ def parse(raw, label):
     if not finite(value):
         raise GuardFailure("nonfinite JSON value: " + label)
     return value
+
+
+def parse(raw, label):
+    value = parse_value(raw, label)
+    if exact_json_bytes(value) != raw:
+        raise GuardFailure("noncanonical JSON: " + label)
+    return value
+
+
+def native_steps(raw, label):
+    """Check the unchanged native writer without normalizing original objects."""
+    values = [parse_value(line, label) for line in raw.splitlines()]
+    encoded = b"".join((json.dumps(step_record_to_json(step_record_from_json(value))) + "\n").encode("ascii")
+                       for value in values)
+    if raw != encoded:
+        raise GuardFailure("native step writer bytes differ: " + label)
+    return values
+
+
+def progress_rows(raw, label):
+    values = [parse(line, label) for line in raw.splitlines()]
+    if raw != b"".join(exact_json_bytes(value) + b"\n" for value in values):
+        raise GuardFailure("progress writer bytes differ: " + label)
+    return values
 
 
 def file_locks(args, frozen, evidence, label):
@@ -223,10 +254,9 @@ def profile_admission(data, exports, frozen, evidence):
 def raw_admission(path, data, frozen, evidence, admitted_bytes):
     expected_requests = [*data["baseline_controls"],
                          *(row for entry in data["cells"] for row in entry["cell"]["requests"])]
-    progress = [parse(line, "request progress") for line in admitted_bytes["request-progress.jsonl"].splitlines()]
+    progress = progress_rows(admitted_bytes["request-progress.jsonl"], "request progress")
     evidence.equal("raw:complete-progress", progress, expected_requests)
-    construction = [parse(line, "construction progress")
-                    for line in admitted_bytes["construction-progress.jsonl"].splitlines()]
+    construction = progress_rows(admitted_bytes["construction-progress.jsonl"], "construction progress")
     evidence.equal("raw:construction", construction, data["construction"])
     exports = {}
     expected_profiles = {row[field + "_path"] for row in data["profiles"] for field in ("raw", "export")}
@@ -249,7 +279,7 @@ def raw_admission(path, data, frozen, evidence, admitted_bytes):
     for role in ("prefill", "decode"):
         engine = "simllm-" + role + "-0"
         name = "engine-work/" + engine + "/step-records.jsonl"
-        records = [parse(line, name) for line in admitted_bytes[name].splitlines()]
+        records = native_steps(admitted_bytes[name], name)
         evidence.equal("raw:steps:" + role, records, [row["record"] for row in data["unique_steps"] if row["engine_id"] == engine])
     if data["arm"] == "instrumented":
         evidence.equal("raw:restoration", parse(admitted_bytes["probe-restoration.json"], "restoration"), data["probe_restoration"])
