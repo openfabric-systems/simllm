@@ -49,6 +49,7 @@ simllm_oracle = "simllm.adapters.vllm.oracle:register_oracle_hooks"
 include = ["simllm*"]
 
 [tool.setuptools.package-data]
+"simllm.backends.nvswitch" = ["CMakeLists.txt", "*.h", "*.cpp"]
 "simllm.backends.rnic" = [
     "CMakeLists.txt",
     "README.md",

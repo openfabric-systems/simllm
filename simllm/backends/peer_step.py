@@ -39,6 +39,7 @@ class PeerPacketConfig:
     options: NvlinkAlignedOptions = field(default_factory=NvlinkAlignedOptions)
     credit_return_processing_ps: int = 0
     acknowledgement_processing_ps: int = 0
+    native_switch_library: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.fabric, FabricTopologyManifest):
@@ -66,7 +67,8 @@ class PeerPacketConfig:
                                             self.acknowledgement_processing_ps)
             # Constructor preflight installs no events or simulator work.
             GpuPeerPacketSession(f"validate:{domain.domain_id}", by_id[domain.domain_id],
-                                 binding, options=self.options)
+                                 binding, options=self.options,
+                                 native_switch_library=self.native_switch_library)
 
     def validate_placement(self, placement: PlacementManifest | None) -> None:
         if not isinstance(placement, PlacementManifest):
@@ -180,6 +182,7 @@ class PeerPacketRuntime:
                 f"local-peer:{domain.domain_id}", profiles[domain.domain_id],
                 NvlinkPhysicalBinding(domain, config.credit_return_processing_ps,
                                       config.acknowledgement_processing_ps), options=config.options,
+                native_switch_library=config.native_switch_library,
             ) for domain in config.fabric.peer_fabrics
         }
         self._rank_domain = {port.gpu_rank: domain.domain_id for domain in config.fabric.peer_fabrics

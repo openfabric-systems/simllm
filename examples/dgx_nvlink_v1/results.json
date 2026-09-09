@@ -1,0 +1,2361 @@
+{
+  "component_configurations": 192,
+  "components": [
+    {
+      "capacity": 272,
+      "completion_ps": 46427,
+      "generation": "a100",
+      "pattern": "pair",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 46427,
+      "generation": "a100",
+      "pattern": "bidirectional",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 46427,
+      "generation": "a100",
+      "pattern": "disjoint",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 46427,
+      "generation": "a100",
+      "pattern": "fanin-1",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 95761,
+      "generation": "a100",
+      "pattern": "fanin-3",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 194429,
+      "generation": "a100",
+      "pattern": "fanin-7",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 46427,
+      "generation": "a100",
+      "pattern": "pair",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 46427,
+      "generation": "a100",
+      "pattern": "bidirectional",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 46427,
+      "generation": "a100",
+      "pattern": "disjoint",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 46427,
+      "generation": "a100",
+      "pattern": "fanin-1",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 95761,
+      "generation": "a100",
+      "pattern": "fanin-3",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 194429,
+      "generation": "a100",
+      "pattern": "fanin-7",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46427,
+      "generation": "a100",
+      "pattern": "pair",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46427,
+      "generation": "a100",
+      "pattern": "bidirectional",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46427,
+      "generation": "a100",
+      "pattern": "disjoint",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46427,
+      "generation": "a100",
+      "pattern": "fanin-1",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 89947,
+      "generation": "a100",
+      "pattern": "fanin-3",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 176987,
+      "generation": "a100",
+      "pattern": "fanin-7",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46427,
+      "generation": "a100",
+      "pattern": "pair",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46427,
+      "generation": "a100",
+      "pattern": "bidirectional",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46427,
+      "generation": "a100",
+      "pattern": "disjoint",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46427,
+      "generation": "a100",
+      "pattern": "fanin-1",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 89947,
+      "generation": "a100",
+      "pattern": "fanin-3",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 176987,
+      "generation": "a100",
+      "pattern": "fanin-7",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 416432,
+      "generation": "a100",
+      "pattern": "pair",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 416432,
+      "generation": "a100",
+      "pattern": "bidirectional",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 416432,
+      "generation": "a100",
+      "pattern": "disjoint",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 416432,
+      "generation": "a100",
+      "pattern": "fanin-1",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 1205776,
+      "generation": "a100",
+      "pattern": "fanin-3",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 2784464,
+      "generation": "a100",
+      "pattern": "fanin-7",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 416432,
+      "generation": "a100",
+      "pattern": "pair",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 416432,
+      "generation": "a100",
+      "pattern": "bidirectional",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 416432,
+      "generation": "a100",
+      "pattern": "disjoint",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 416432,
+      "generation": "a100",
+      "pattern": "fanin-1",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 1205776,
+      "generation": "a100",
+      "pattern": "fanin-3",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 2784464,
+      "generation": "a100",
+      "pattern": "fanin-7",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 70908,
+      "generation": "a100",
+      "pattern": "pair",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 70908,
+      "generation": "a100",
+      "pattern": "bidirectional",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 70908,
+      "generation": "a100",
+      "pattern": "disjoint",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 70908,
+      "generation": "a100",
+      "pattern": "fanin-1",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 157948,
+      "generation": "a100",
+      "pattern": "fanin-3",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 332028,
+      "generation": "a100",
+      "pattern": "fanin-7",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 70908,
+      "generation": "a100",
+      "pattern": "pair",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 70908,
+      "generation": "a100",
+      "pattern": "bidirectional",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 70908,
+      "generation": "a100",
+      "pattern": "disjoint",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 70908,
+      "generation": "a100",
+      "pattern": "fanin-1",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 157948,
+      "generation": "a100",
+      "pattern": "fanin-3",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 332028,
+      "generation": "a100",
+      "pattern": "fanin-7",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 24667,
+      "generation": "a100",
+      "pattern": "pair",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 24667,
+      "generation": "a100",
+      "pattern": "bidirectional",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 24667,
+      "generation": "a100",
+      "pattern": "disjoint",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 24667,
+      "generation": "a100",
+      "pattern": "fanin-1",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 52241,
+      "generation": "a100",
+      "pattern": "fanin-3",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 107389,
+      "generation": "a100",
+      "pattern": "fanin-7",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 24667,
+      "generation": "a100",
+      "pattern": "pair",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 24667,
+      "generation": "a100",
+      "pattern": "bidirectional",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 24667,
+      "generation": "a100",
+      "pattern": "disjoint",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 24667,
+      "generation": "a100",
+      "pattern": "fanin-1",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 52241,
+      "generation": "a100",
+      "pattern": "fanin-3",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 107389,
+      "generation": "a100",
+      "pattern": "fanin-7",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 24667,
+      "generation": "a100",
+      "pattern": "pair",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 24667,
+      "generation": "a100",
+      "pattern": "bidirectional",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 24667,
+      "generation": "a100",
+      "pattern": "disjoint",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 24667,
+      "generation": "a100",
+      "pattern": "fanin-1",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46427,
+      "generation": "a100",
+      "pattern": "fanin-3",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 89947,
+      "generation": "a100",
+      "pattern": "fanin-7",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 24667,
+      "generation": "a100",
+      "pattern": "pair",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 24667,
+      "generation": "a100",
+      "pattern": "bidirectional",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 24667,
+      "generation": "a100",
+      "pattern": "disjoint",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 24667,
+      "generation": "a100",
+      "pattern": "fanin-1",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46427,
+      "generation": "a100",
+      "pattern": "fanin-3",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 89947,
+      "generation": "a100",
+      "pattern": "fanin-7",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 231472,
+      "generation": "a100",
+      "pattern": "pair",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 231472,
+      "generation": "a100",
+      "pattern": "bidirectional",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 231472,
+      "generation": "a100",
+      "pattern": "disjoint",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 231472,
+      "generation": "a100",
+      "pattern": "fanin-1",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 672656,
+      "generation": "a100",
+      "pattern": "fanin-3",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 1555024,
+      "generation": "a100",
+      "pattern": "fanin-7",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 231472,
+      "generation": "a100",
+      "pattern": "pair",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 231472,
+      "generation": "a100",
+      "pattern": "bidirectional",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 231472,
+      "generation": "a100",
+      "pattern": "disjoint",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 231472,
+      "generation": "a100",
+      "pattern": "fanin-1",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 672656,
+      "generation": "a100",
+      "pattern": "fanin-3",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 1555024,
+      "generation": "a100",
+      "pattern": "fanin-7",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 38272,
+      "generation": "a100",
+      "pattern": "pair",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 38272,
+      "generation": "a100",
+      "pattern": "bidirectional",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 38272,
+      "generation": "a100",
+      "pattern": "disjoint",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 38272,
+      "generation": "a100",
+      "pattern": "fanin-1",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 81788,
+      "generation": "a100",
+      "pattern": "fanin-3",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 168828,
+      "generation": "a100",
+      "pattern": "fanin-7",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 38272,
+      "generation": "a100",
+      "pattern": "pair",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 38272,
+      "generation": "a100",
+      "pattern": "bidirectional",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 38272,
+      "generation": "a100",
+      "pattern": "disjoint",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 38272,
+      "generation": "a100",
+      "pattern": "fanin-1",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 81788,
+      "generation": "a100",
+      "pattern": "fanin-3",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 168828,
+      "generation": "a100",
+      "pattern": "fanin-7",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 46125,
+      "generation": "h100",
+      "pattern": "pair",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 46125,
+      "generation": "h100",
+      "pattern": "bidirectional",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 46125,
+      "generation": "h100",
+      "pattern": "disjoint",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 46125,
+      "generation": "h100",
+      "pattern": "fanin-1",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 94855,
+      "generation": "h100",
+      "pattern": "fanin-3",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 192315,
+      "generation": "h100",
+      "pattern": "fanin-7",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 46125,
+      "generation": "h100",
+      "pattern": "pair",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 46125,
+      "generation": "h100",
+      "pattern": "bidirectional",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 46125,
+      "generation": "h100",
+      "pattern": "disjoint",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 46125,
+      "generation": "h100",
+      "pattern": "fanin-1",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 94855,
+      "generation": "h100",
+      "pattern": "fanin-3",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 192315,
+      "generation": "h100",
+      "pattern": "fanin-7",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46125,
+      "generation": "h100",
+      "pattern": "pair",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46125,
+      "generation": "h100",
+      "pattern": "bidirectional",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46125,
+      "generation": "h100",
+      "pattern": "disjoint",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46125,
+      "generation": "h100",
+      "pattern": "fanin-1",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 89645,
+      "generation": "h100",
+      "pattern": "fanin-3",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 176685,
+      "generation": "h100",
+      "pattern": "fanin-7",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46125,
+      "generation": "h100",
+      "pattern": "pair",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46125,
+      "generation": "h100",
+      "pattern": "bidirectional",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46125,
+      "generation": "h100",
+      "pattern": "disjoint",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46125,
+      "generation": "h100",
+      "pattern": "fanin-1",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 89645,
+      "generation": "h100",
+      "pattern": "fanin-3",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 176685,
+      "generation": "h100",
+      "pattern": "fanin-7",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 411600,
+      "generation": "h100",
+      "pattern": "pair",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 411600,
+      "generation": "h100",
+      "pattern": "bidirectional",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 411600,
+      "generation": "h100",
+      "pattern": "disjoint",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 411600,
+      "generation": "h100",
+      "pattern": "fanin-1",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 1191280,
+      "generation": "h100",
+      "pattern": "fanin-3",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 2750640,
+      "generation": "h100",
+      "pattern": "fanin-7",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 411600,
+      "generation": "h100",
+      "pattern": "pair",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 411600,
+      "generation": "h100",
+      "pattern": "bidirectional",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 411600,
+      "generation": "h100",
+      "pattern": "disjoint",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 411600,
+      "generation": "h100",
+      "pattern": "fanin-1",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 1191280,
+      "generation": "h100",
+      "pattern": "fanin-3",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 2750640,
+      "generation": "h100",
+      "pattern": "fanin-7",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 55200,
+      "generation": "h100",
+      "pattern": "pair",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 55200,
+      "generation": "h100",
+      "pattern": "bidirectional",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 55200,
+      "generation": "h100",
+      "pattern": "disjoint",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 55200,
+      "generation": "h100",
+      "pattern": "fanin-1",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 98720,
+      "generation": "h100",
+      "pattern": "fanin-3",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 185760,
+      "generation": "h100",
+      "pattern": "fanin-7",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 55200,
+      "generation": "h100",
+      "pattern": "pair",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 55200,
+      "generation": "h100",
+      "pattern": "bidirectional",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 55200,
+      "generation": "h100",
+      "pattern": "disjoint",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 55200,
+      "generation": "h100",
+      "pattern": "fanin-1",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 98720,
+      "generation": "h100",
+      "pattern": "fanin-3",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 185760,
+      "generation": "h100",
+      "pattern": "fanin-7",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 12500000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 24365,
+      "generation": "h100",
+      "pattern": "pair",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 24365,
+      "generation": "h100",
+      "pattern": "bidirectional",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 24365,
+      "generation": "h100",
+      "pattern": "disjoint",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 24365,
+      "generation": "h100",
+      "pattern": "fanin-1",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 51335,
+      "generation": "h100",
+      "pattern": "fanin-3",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 105275,
+      "generation": "h100",
+      "pattern": "fanin-7",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 24365,
+      "generation": "h100",
+      "pattern": "pair",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 24365,
+      "generation": "h100",
+      "pattern": "bidirectional",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 24365,
+      "generation": "h100",
+      "pattern": "disjoint",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 24365,
+      "generation": "h100",
+      "pattern": "fanin-1",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 51335,
+      "generation": "h100",
+      "pattern": "fanin-3",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 105275,
+      "generation": "h100",
+      "pattern": "fanin-7",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 24365,
+      "generation": "h100",
+      "pattern": "pair",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 24365,
+      "generation": "h100",
+      "pattern": "bidirectional",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 24365,
+      "generation": "h100",
+      "pattern": "disjoint",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 24365,
+      "generation": "h100",
+      "pattern": "fanin-1",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46125,
+      "generation": "h100",
+      "pattern": "fanin-3",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 89645,
+      "generation": "h100",
+      "pattern": "fanin-7",
+      "payload": 256,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 24365,
+      "generation": "h100",
+      "pattern": "pair",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 24365,
+      "generation": "h100",
+      "pattern": "bidirectional",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 24365,
+      "generation": "h100",
+      "pattern": "disjoint",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 24365,
+      "generation": "h100",
+      "pattern": "fanin-1",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 46125,
+      "generation": "h100",
+      "pattern": "fanin-3",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 89645,
+      "generation": "h100",
+      "pattern": "fanin-7",
+      "payload": 256,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 226640,
+      "generation": "h100",
+      "pattern": "pair",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 226640,
+      "generation": "h100",
+      "pattern": "bidirectional",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 226640,
+      "generation": "h100",
+      "pattern": "disjoint",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 226640,
+      "generation": "h100",
+      "pattern": "fanin-1",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 658160,
+      "generation": "h100",
+      "pattern": "fanin-3",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 1521200,
+      "generation": "h100",
+      "pattern": "fanin-7",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 226640,
+      "generation": "h100",
+      "pattern": "pair",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 226640,
+      "generation": "h100",
+      "pattern": "bidirectional",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 226640,
+      "generation": "h100",
+      "pattern": "disjoint",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 226640,
+      "generation": "h100",
+      "pattern": "fanin-1",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 658160,
+      "generation": "h100",
+      "pattern": "fanin-3",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 272,
+      "completion_ps": 1521200,
+      "generation": "h100",
+      "pattern": "fanin-7",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 33440,
+      "generation": "h100",
+      "pattern": "pair",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 33440,
+      "generation": "h100",
+      "pattern": "bidirectional",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 33440,
+      "generation": "h100",
+      "pattern": "disjoint",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 33440,
+      "generation": "h100",
+      "pattern": "fanin-1",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 55200,
+      "generation": "h100",
+      "pattern": "fanin-3",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 98720,
+      "generation": "h100",
+      "pattern": "fanin-7",
+      "payload": 4096,
+      "policy": "identity",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 33440,
+      "generation": "h100",
+      "pattern": "pair",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 33440,
+      "generation": "h100",
+      "pattern": "bidirectional",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 33440,
+      "generation": "h100",
+      "pattern": "disjoint",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 33440,
+      "generation": "h100",
+      "pattern": "fanin-1",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 55200,
+      "generation": "h100",
+      "pattern": "fanin-3",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    },
+    {
+      "capacity": 65536,
+      "completion_ps": 98720,
+      "generation": "h100",
+      "pattern": "fanin-7",
+      "payload": 4096,
+      "policy": "round_robin_candidate",
+      "rate": 25000000000
+    }
+  ],
+  "evidence_class": "declared_model_not_hardware_measurement",
+  "expectations_commit": "24f41b8",
+  "fatal_guards": "no violations",
+  "hardware_captures": 0,
+  "live": [
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "a100",
+      "jct_ps": 679008,
+      "pattern": "tp",
+      "rate": 12500000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 226336
+      },
+      "ttft_ps": 226336,
+      "width": 2
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "a100",
+      "jct_ps": 405888,
+      "pattern": "ep-balanced",
+      "rate": 12500000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 135296
+      },
+      "ttft_ps": 135296,
+      "width": 2
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "a100",
+      "jct_ps": 405888,
+      "pattern": "ep-skewed",
+      "rate": 12500000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 135296
+      },
+      "ttft_ps": 135296,
+      "width": 2
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "a100",
+      "jct_ps": 1782372,
+      "pattern": "tp",
+      "rate": 12500000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 594124
+      },
+      "ttft_ps": 594124,
+      "width": 4
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "a100",
+      "jct_ps": 558216,
+      "pattern": "ep-balanced",
+      "rate": 12500000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 186072
+      },
+      "ttft_ps": 186072,
+      "width": 4
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "a100",
+      "jct_ps": 405888,
+      "pattern": "ep-skewed",
+      "rate": 12500000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 135296
+      },
+      "ttft_ps": 135296,
+      "width": 4
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "a100",
+      "jct_ps": 2254680,
+      "pattern": "tp",
+      "rate": 12500000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 751560
+      },
+      "ttft_ps": 751560,
+      "width": 8
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "a100",
+      "jct_ps": 928128,
+      "pattern": "ep-balanced",
+      "rate": 12500000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 309376
+      },
+      "ttft_ps": 309376,
+      "width": 8
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "a100",
+      "jct_ps": 405888,
+      "pattern": "ep-skewed",
+      "rate": 12500000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 135296
+      },
+      "ttft_ps": 135296,
+      "width": 8
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "a100",
+      "jct_ps": 417888,
+      "pattern": "tp",
+      "rate": 25000000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 139296
+      },
+      "ttft_ps": 139296,
+      "width": 2
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "a100",
+      "jct_ps": 275328,
+      "pattern": "ep-balanced",
+      "rate": 25000000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 91776
+      },
+      "ttft_ps": 91776,
+      "width": 2
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "a100",
+      "jct_ps": 275328,
+      "pattern": "ep-skewed",
+      "rate": 25000000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 91776
+      },
+      "ttft_ps": 91776,
+      "width": 2
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "a100",
+      "jct_ps": 999012,
+      "pattern": "tp",
+      "rate": 25000000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 333004
+      },
+      "ttft_ps": 333004,
+      "width": 4
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "a100",
+      "jct_ps": 362376,
+      "pattern": "ep-balanced",
+      "rate": 25000000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 120792
+      },
+      "ttft_ps": 120792,
+      "width": 4
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "a100",
+      "jct_ps": 275328,
+      "pattern": "ep-skewed",
+      "rate": 25000000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 91776
+      },
+      "ttft_ps": 91776,
+      "width": 4
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "a100",
+      "jct_ps": 1287000,
+      "pattern": "tp",
+      "rate": 25000000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 429000
+      },
+      "ttft_ps": 429000,
+      "width": 8
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "a100",
+      "jct_ps": 536472,
+      "pattern": "ep-balanced",
+      "rate": 25000000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 178824
+      },
+      "ttft_ps": 178824,
+      "width": 8
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "a100",
+      "jct_ps": 275328,
+      "pattern": "ep-skewed",
+      "rate": 25000000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 91776
+      },
+      "ttft_ps": 91776,
+      "width": 8
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "h100",
+      "jct_ps": 671760,
+      "pattern": "tp",
+      "rate": 12500000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 223920
+      },
+      "ttft_ps": 223920,
+      "width": 2
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "h100",
+      "jct_ps": 398640,
+      "pattern": "ep-balanced",
+      "rate": 12500000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 132880
+      },
+      "ttft_ps": 132880,
+      "width": 2
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "h100",
+      "jct_ps": 398640,
+      "pattern": "ep-skewed",
+      "rate": 12500000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 132880
+      },
+      "ttft_ps": 132880,
+      "width": 2
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "h100",
+      "jct_ps": 1771500,
+      "pattern": "tp",
+      "rate": 12500000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 590500
+      },
+      "ttft_ps": 590500,
+      "width": 4
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "h100",
+      "jct_ps": 543720,
+      "pattern": "ep-balanced",
+      "rate": 12500000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 181240
+      },
+      "ttft_ps": 181240,
+      "width": 4
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "h100",
+      "jct_ps": 398640,
+      "pattern": "ep-skewed",
+      "rate": 12500000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 132880
+      },
+      "ttft_ps": 132880,
+      "width": 4
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "h100",
+      "jct_ps": 2241240,
+      "pattern": "tp",
+      "rate": 12500000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 747080
+      },
+      "ttft_ps": 747080,
+      "width": 8
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "h100",
+      "jct_ps": 866490,
+      "pattern": "ep-balanced",
+      "rate": 12500000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 288830
+      },
+      "ttft_ps": 288830,
+      "width": 8
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "h100",
+      "jct_ps": 398640,
+      "pattern": "ep-skewed",
+      "rate": 12500000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 132880
+      },
+      "ttft_ps": 132880,
+      "width": 8
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "h100",
+      "jct_ps": 410640,
+      "pattern": "tp",
+      "rate": 25000000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 136880
+      },
+      "ttft_ps": 136880,
+      "width": 2
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "h100",
+      "jct_ps": 268080,
+      "pattern": "ep-balanced",
+      "rate": 25000000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 89360
+      },
+      "ttft_ps": 89360,
+      "width": 2
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "h100",
+      "jct_ps": 268080,
+      "pattern": "ep-skewed",
+      "rate": 25000000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 89360
+      },
+      "ttft_ps": 89360,
+      "width": 2
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "h100",
+      "jct_ps": 988140,
+      "pattern": "tp",
+      "rate": 25000000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 329380
+      },
+      "ttft_ps": 329380,
+      "width": 4
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "h100",
+      "jct_ps": 347880,
+      "pattern": "ep-balanced",
+      "rate": 25000000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 115960
+      },
+      "ttft_ps": 115960,
+      "width": 4
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "h100",
+      "jct_ps": 268080,
+      "pattern": "ep-skewed",
+      "rate": 25000000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 89360
+      },
+      "ttft_ps": 89360,
+      "width": 4
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "h100",
+      "jct_ps": 1273560,
+      "pattern": "tp",
+      "rate": 25000000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 424520
+      },
+      "ttft_ps": 424520,
+      "width": 8
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "h100",
+      "jct_ps": 507480,
+      "pattern": "ep-balanced",
+      "rate": 25000000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 169160
+      },
+      "ttft_ps": 169160,
+      "width": 8
+    },
+    {
+      "compute_ps": [
+        37000,
+        37000,
+        37000
+      ],
+      "generation": "h100",
+      "jct_ps": 268080,
+      "pattern": "ep-skewed",
+      "rate": 25000000000,
+      "tpot_ps": {
+        "denominator": 1,
+        "numerator": 89360
+      },
+      "ttft_ps": 89360,
+      "width": 8
+    }
+  ],
+  "live_configurations": 36,
+  "live_rate_pairs_with_changed_jct": 18,
+  "relation_instances_by_family": {
+    "component_conformance": 192,
+    "credit_backpressure": 2,
+    "isolated_rate_direction": 32,
+    "live_conformance": 36,
+    "single_packet_equation": 16
+  },
+  "status": "VALID_MODEL_CONFORMANCE"
+}

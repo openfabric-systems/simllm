@@ -126,6 +126,7 @@ class NvlinkCausalEngine:
         self, profile: NvlinkCandidateProfile, options: NvlinkAlignedOptions,
         *, on_packet_event: Callable[[str, NvlinkFlitPacket, int], None] | None = None,
         physical: NvlinkPhysicalBinding | None = None,
+        native_switch_library: str | None = None,
     ) -> None:
         if not isinstance(profile, NvlinkCandidateProfile):
             raise TypeError("profile must be an NvlinkCandidateProfile")
@@ -163,6 +164,16 @@ class NvlinkCausalEngine:
                 profile.switch.buffer_capacity_bytes != physical.fabric.switch_input_buffer_bytes
             ):
                 raise ValueError("physical input buffer and candidate capacity declarations disagree")
+        self._native_switch = None
+        if native_switch_library is not None:
+            if not isinstance(native_switch_library, str) or not native_switch_library:
+                raise ValueError("native switch selection requires an explicit library path")
+            if physical is None:
+                raise ValueError("native switch selection requires explicit physical attachments")
+            from .nvswitch import NativeSwitch
+            self._native_switch = NativeSwitch(
+                native_switch_library, physical.fabric, options.switch_arbitration,
+            )
         self._used = False
         self._streaming = False
         self._observer = on_packet_event
@@ -753,9 +764,30 @@ class NvlinkCausalEngine:
             )
             candidates.append(_NvlinkVoqHead(original_index=index, packet=policy_packet,
                                              shared_capacity_id=self._rx_buffer_id(packet) if self.physical is not None else None))
-        selected = self._switch_policy.select(candidates, shared_capacities={
-            name: pool.available for name, pool in self._buffers.items()
-        } if self.physical is not None else None)
+        native_finishes = {}
+        if self._native_switch is None:
+            selected = self._switch_policy.select(candidates, shared_capacities={
+                name: pool.available for name, pool in self._buffers.items()
+            } if self.physical is not None else None)
+        else:
+            # Queues and credits are read-only inputs to the native allocator.
+            # Only native state advances crossbar input/output occupancy.
+            pools = sorted({candidate.shared_capacity_id for candidate in candidates})
+            pool_ids = {name: index for index, name in enumerate(pools)}
+            heads = []
+            for candidate in candidates:
+                packet = candidate.packet
+                path = self._packet_paths[packet.packet_id]
+                heads.append((candidate.original_index, packet.source, packet.destination,
+                              pool_ids[candidate.shared_capacity_id], packet.wire_bytes,
+                              path.output_link.link_rate_bps))
+            grants = self._native_switch.plan(
+                self._now, int(self.profile.switch.service_rate_bytes_per_second),
+                heads, [self._buffers[name].available for name in pools],
+            )
+            by_index = {candidate.original_index: candidate for candidate in candidates}
+            selected = tuple(by_index[index] for index, _ in grants)
+            native_finishes = dict(grants)
         for candidate in selected:
             index = candidate.original_index
             packet = self._packets[index]
@@ -769,18 +801,24 @@ class NvlinkCausalEngine:
                 self.profile.rx.buffer_capacity_bytes,
                 None,
             )
-            duration = _serialize_ps(
-                packet.wire_bytes, int(self.profile.switch.service_rate_bytes_per_second or 0)
-            )
+            if self._native_switch is None:
+                duration = _serialize_ps(
+                    packet.wire_bytes, int(self.profile.switch.service_rate_bytes_per_second or 0)
+                )
+                if self.physical is not None:
+                    path = self._packet_paths[packet.packet_id]
+                    duration = max(duration, self._physical_serialize(
+                        packet.wire_bytes, path.output_link.link_rate_bps))
+                finished = self._now + duration
+            else:
+                finished = native_finishes[index]
             if self.physical is not None:
                 path = self._packet_paths[packet.packet_id]
-                assert path.output_link is not None and path.output_resource is not None
-                duration = max(duration, self._physical_serialize(packet.wire_bytes, path.output_link.link_rate_bps))
-                self._links[path.output_resource] = self._now + duration
-            finished = self._now + duration
+                self._links[path.output_resource] = finished
             input_port, output_port = self._switch_ports(packet)
-            self._switch_inputs[input_port] = finished
-            self._switch_outputs[output_port] = finished
+            if self._native_switch is None:
+                self._switch_inputs[input_port] = finished
+                self._switch_outputs[output_port] = finished
             self._update(
                 index,
                 input_port=input_port,

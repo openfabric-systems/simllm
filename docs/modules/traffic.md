@@ -1255,7 +1255,71 @@ maintainer decision: TRAF-4, the binomial broadcast closed-form validation; no
 active path renders a broadcast, and the M1, M4 and M5 patterns cover the
 shipped collectives.
 
+The next transport-calibration priority after P0 correctness work is the
+single-node tensor-parallel (TP) and expert-parallel (EP) workstream:
+PLACE-6 binds captured physical topology, BACK-74 extends native switch
+service, and TRAF-92 identifies the product and closes live precision.
+TRAF-54 supplies collective protocol, BACK-73 critical-path attribution and
+TRAF-44 selectable direct-mesh profiles. These P1 slices precede further
+multi-node transport calibration and optional P2 expansion. Merlin endpoint
+qualification under TRAF-65, TRAF-73 and TRAF-86 can proceed without an
+NVSwitch allocation; it does not qualify an eight-GPU switched board.
+
 ### Precision
+
+- TRAF-92 (Precision; P1; L): calibrate and qualify realistic one-node TP and
+  EP on an eight-A100 HGX/DGX NVSwitch system and on the separately identified
+  Merlin direct meshes. The live peer engine already moves request time to
+  first token (TTFT) and time per output token (TPOT), but its generic switch
+  and packet parameters are declared. The
+  [DGX A100/H100 software study](../../examples/dgx_nvlink_v1/RESULTS.md)
+  demonstrates exact native/Python agreement and live transport effects,
+  but does not establish a hardware-qualified eight-A100 model. Replace that
+  declared surrogate with a versioned, topology- and software-scoped measured
+  profile. Its 192 component and 36 live configurations are conformance
+  evidence, not hardware-calibration samples.
+  PLACE-6 supplies captured port binding; BACK-74 extends native conformance;
+  TRAF-54 owns protocol expansion, not a second transport scheduler. Reuse
+  TRAF-65, TRAF-73 and TRAF-86 endpoint evidence only within its documented
+  topology, producer and observation boundaries. Merlin A100 `NV4` and GH200
+  `NV6` have no NVSwitch to measure; obtain a qualified eight-A100 switched
+  allocation for the switch arm. If unavailable, record that arm as blocked
+  while the Merlin arm proceeds, with no substituted eight-rank cross-node
+  capture or transferred switch calibration.
+  A read-only scheduler inventory on 2026-09-09 confirmed that Merlin's GPU
+  cluster exposes four-A100-SXM4 and four-GH200 nodes, with no eight-GPU
+  switched target listed. The switched hardware arm therefore waits on a
+  separately identified allocation; the Merlin arm remains available.
+  Freeze parameter-identification cells, physical bounds, held-out cells and
+  error bands in an expectations-only commit before harness changes and runs.
+  Start with all ordered peer pairs, disjoint simultaneous pairs, bidirectional
+  pairs, source fan-out and receiver fan-in. Sweep payload and concurrency,
+  including one through seven donors on the eight-GPU board. Compare producer
+  issue, documented link/counter observations and destination visibility;
+  distinguish source/HBM supply, wire serialization, switch grants and receiver
+  acceptance. Do not fit hidden packet size, buffer depth or arbitration from
+  aggregate completion time alone. The switched A100 ceilings are 300 GB/s
+  per GPU per direction and 50 GB/s per GPU per switch plane; the Merlin A100
+  direct-pair ceiling is 100 GB/s. Useful payload cannot exceed these limits.
+  Then capture TP all-reduce, all-gather and reduce-scatter, and EP dispatch
+  and combine with both balanced and skewed expert assignments. Use widths
+  2, 4 and 8 only where one physical node supports them, multiple payload and
+  token batches, and isolated versus overlapping compute/communication.
+  Pin software, clocks, actual algorithm/protocol/channel selection and the
+  destination-byte checksum. Separate GPU reduction work, memory service,
+  launch/registration and communication so each is charged once; do not assign
+  a later-generation switch's reduction capability to A100.
+  Acceptance: all required fatal observations are decidable and hold; every
+  held-out phase completion is within max(10 percent, 1 microsecond) of its
+  observation, with the old surrogate's errors reported on the same cells;
+  and original-graph prefill plus multiple decode steps reach per-request
+  TTFT/TPOT within a prospectively frozen end-to-end band. Publish raw flow
+  completion time and phase makespan, and use only realized critical-path
+  waits in the additive latency breakdown. Preserve exact bytes, timestamps,
+  order and metrics with the new profile disabled. Component conformance,
+  calibration and live metric evidence stay separate. Closure advances M4
+  local communication and M5 EP precision; it does not calibrate cross-node
+  Slingshot, H200, B200 or NVL72, whose product evidence remains separate.
 
 - TRAF-81 (Precision; P1; L): complete the blocked rank-16 cell in the
   [independent collective-floor extrapolation study](../../examples/collective_floor_extrapolation_v1/RESULTS.md).
@@ -2321,7 +2385,7 @@ shipped collectives.
   own, and this task is what lets a record say which collectives a single
   table was and was not fitted on, whether or not that capture ever lands.
 
-- TRAF-44 (Completeness; P2; M): add a selectable A100-scoped intra-node
+- TRAF-44 (Completeness; P1; M): add a selectable A100-scoped intra-node
   collective profile so an A100 study stops borrowing B200 numbers. The only
   calibrated local profile today is `b200-nccl-2.27-local-v1`, fitted from a
   published third-party capture of hardware this project cannot reach. The
@@ -2335,8 +2399,9 @@ shipped collectives.
   profile must carry its own provenance record, declare a validity window that
   states where its bandwidth term holds rather than implying one slope
   everywhere, and refuse widths it did not measure, which here excludes width
-  8. This is P2 while no study selects it and becomes P1 when an A100-scoped
-  study opts in. Land it after or together with TRAF-43, since adding a second
+  8. This is P1 since 2026-09-09 because TRAF-92 selects the Merlin direct-mesh
+  arm; it supplies no eight-A100 NVSwitch calibration. Land it after or
+  together with TRAF-43, since adding a second
   single-slope profile would propagate the mid-range error that task exists to
   remove. Acceptance requires the new arm to be an explicit selection whose
   absence preserves every accepted artifact byte for byte.
@@ -2406,7 +2471,14 @@ shipped collectives.
   software triggers; only TRAF-65's live metric closure waits on them. This is
   P1 because that
   accepted live closure requires the collective protocol, while the analytic
-  protocol remains the exact bypass.
+  protocol remains the exact bypass. The next reviewable consumer is TRAF-92's
+  one-node TP and balanced/skewed EP on PLACE-6's topology. The closed TRAF-45
+  already supplies live physical packet service, so extend that implementation
+  rather than rebuilding it; BACK-74 extends native queue ownership and BACK-73
+  explains its critical path. Keep NVIDIA Collective Communications Library
+  (NCCL) channels distinct from the six physical switch planes. Capture
+  algorithm and protocol selection, GPU reduction work and synchronization;
+  semantic ring steps or aggregate constants alone do not qualify the protocol.
 - TRAF-55 (Completeness; P2; M): make the registration handshake port traffic.
   `CollectiveRegistrationLedger` charges a declared constant that no packet
   carries, so a registration is invisible to every port, occupies no link and

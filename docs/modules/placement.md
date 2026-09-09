@@ -36,6 +36,12 @@ both.
   switch input storage remain shared across destinations and virtual channels.
   A GPU belongs to one timing domain. `to_dict()` and `save()` omit an empty
   peer inventory, preserving every accepted absent-peer serialized artifact.
+- `dgx_peer_fabric("a100" | "h100", node_id=..., ranks=..., ... )`: the
+  eight-GPU HGX/DGX peer inventory, with explicit timing and buffer inputs.
+  A100 has six switch chips and 96 links; H100 has four chips and 144 links.
+  Port identities are stable logical attachments and lane-matched routing is
+  declared. The [DGX study](../../examples/dgx_nvlink_v1/RESULTS.md) exercises
+  both through packet service and request latency.
 - `RankMapper`: rank to GOAL-rank assignment mirroring the htsim drivers'
   `-goal_rank_mapping` (`gpu-rank` implemented; `unique-nic` needs the
   fabric manifest), plus `is_intra_node`. Construction validates and snapshots
@@ -90,6 +96,28 @@ pre-change placement records byte for byte. See the
 ## Open tasks
 
 ### Completeness
+
+- PLACE-6 (Completeness; P1; M): bind the shipped HGX/DGX A100 and H100
+  peer presets to a captured eight-GPU system's physical device and port
+  inventory. `dgx_peer_fabric` supplies the public attachment counts and all
+  56 ordered rank pairs, with A100's six parallel chips and H100's four;
+  the [DGX study](../../examples/dgx_nvlink_v1/RESULTS.md) validates software
+  routing and shared capacities. Remaining work is the mapping from the
+  preset's logical ports to GPU module IDs, active NVLink indices, switch
+  identities and actual routing evidence from a qualified capture. Preserve
+  host and network attachments as separate identities: HGX is the GPU
+  baseboard/platform and DGX the complete server. The archived public A100
+  link table has an apparent `233` switch-port typo, so do not silently
+  turn it into register-exact topology or infer device order from rank number.
+  Acceptance: captured GPU/board identity, NVLink status and NVIDIA Collective
+  Communications Library topology agree on all 56 pair paths; each path joins
+  two ports of one switch; capacities conserve full-duplex physical links;
+  and absent capture selection preserves current manifests exactly.
+  Keep Merlin's four-A100 NV4 and four-GH200 NV6 direct meshes separate from
+  the eight-GPU switched presets. Two four-GPU nodes are not one switched
+  allocation. TRAF-92 owns product timing calibration; BACK-74 owns further
+  native switch state. This remains P1 for realistic one-node parallelism;
+  broader discovery remains PLACE-1.
 
 - PLACE-1 (Completeness; P1; L): fabric topology schema contents and general
   NIC selection in the mapper, sourcing intra-node structure from NCCL
