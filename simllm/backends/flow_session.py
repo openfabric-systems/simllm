@@ -6,6 +6,7 @@ import json
 import math
 import re
 import struct
+import subprocess
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from types import MappingProxyType
@@ -191,6 +192,7 @@ class FlowSession:
         self._opened = False
         self._closed = False
         self._poisoned = False
+        self._cleanup_failure: BaseException | None = None
         self._injections: dict[int, dict[str, Any]] = {}
         self._identities: set[tuple[str, str, str]] = set()
         self._events: list[Mapping[str, Any]] = []
@@ -274,8 +276,14 @@ class FlowSession:
             self._stream.abort()
 
     def _failure(self, error: BaseException) -> FlowSessionError:
-        self.abort()
+        self._abort_after_failure()
         return FlowSessionError(str(error))
+
+    def _abort_after_failure(self) -> None:
+        try:
+            self.abort()
+        except BaseException as error:  # noqa: BLE001, preserve the primary protocol failure.
+            self._cleanup_failure = error
 
     def _exchange(self, verb: str, fields: dict[str, Any], expected: set[str]) -> dict[str, Any]:
         if self.config.exchange_timeout_s is None:
@@ -301,6 +309,9 @@ class FlowSession:
         except OwnedBinaryReadError as error:
             self._transcript.append(("response", error.partial))
             raise
+        except subprocess.TimeoutExpired as error:
+            self._transcript.append(("response", error.output or b""))
+            raise
         size = struct.unpack(">I", header)[0]
         if not 0 < size <= _FRAME_LIMIT:
             self._transcript.append(("response", header))
@@ -309,6 +320,9 @@ class FlowSession:
             body = self._stream.read_exact(size)
         except OwnedBinaryReadError as error:
             self._transcript.append(("response", header + error.partial))
+            raise
+        except subprocess.TimeoutExpired as error:
+            self._transcript.append(("response", header + (error.output or b"")))
             raise
         self._transcript.append(("response", header + body))
         response = json.loads(body.decode("utf-8"), object_pairs_hook=_pairs,
@@ -355,7 +369,7 @@ class FlowSession:
             return self
         except BaseException as error:
             if not isinstance(error, Exception):
-                self.abort()
+                self._abort_after_failure()
                 raise
             raise self._failure(error) from error
 
@@ -414,7 +428,7 @@ class FlowSession:
             return sequence
         except BaseException as error:
             if not isinstance(error, Exception):
-                self.abort()
+                self._abort_after_failure()
                 raise
             raise self._failure(error) from error
 
@@ -616,7 +630,7 @@ class FlowSession:
                                      cursor, counters, quiescent, boundary_time, boundary_id)
         except BaseException as error:
             if not isinstance(error, Exception):
-                self.abort()
+                self._abort_after_failure()
                 raise
             raise self._failure(error) from error
 
@@ -669,7 +683,7 @@ class FlowSession:
             return self._drain
         except BaseException as error:
             if not isinstance(error, Exception):
-                self.abort()
+                self._abort_after_failure()
                 raise
             raise self._failure(error) from error
 
@@ -680,4 +694,4 @@ class FlowSession:
         if exc_type is None:
             self.close()
         else:
-            self.abort()
+            self._abort_after_failure()

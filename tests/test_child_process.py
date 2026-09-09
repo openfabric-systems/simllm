@@ -375,6 +375,7 @@ def test_exchange_budget_is_fixed_and_excludes_prior_client_idle(monkeypatch, al
     now, aborted = [0], []
     process = OwnedBinaryProcess.__new__(OwnedBinaryProcess)
     process._deadline, process._io_deadline, process._io_owner = 30, None, None
+    process._io_timeout_s = None
     process._active_io_calls = 0
     process._closed, process._failure = False, None
     process._lock, process.command = threading.RLock(), ("controlled-clock",)
@@ -471,6 +472,36 @@ def test_exchange_allowance_cannot_extend_the_child_lifetime():
         with pytest.raises(subprocess.TimeoutExpired), process.io_deadline(10):
             process.read_exact(1)
         _wait_until_not_live(process.pid)
+
+
+def test_public_finish_timeout_survives_its_outer_cleanup_failure(monkeypatch):
+    process = OwnedBinaryProcess((sys.executable, "-c", "import time; time.sleep(30)"), timeout_s=10)
+    abort = process.abort
+
+    def fail_abort():
+        abort()
+        raise OSError("secondary finish cleanup")
+
+    monkeypatch.setattr(process, "abort", fail_abort)
+    with pytest.raises(subprocess.TimeoutExpired) as error, process.io_deadline(.2):
+        process.finish()
+    assert error.value.timeout == .2 and str(process._cleanup_failure) == "secondary finish cleanup"
+    _wait_until_not_live(process.pid)
+
+
+def test_owned_stream_context_preserves_the_original_body_exception(monkeypatch):
+    process = OwnedBinaryProcess((sys.executable, "-c", "import time; time.sleep(30)"), timeout_s=10)
+    abort, original = process.abort, ValueError("original context failure")
+
+    def fail_abort():
+        abort()
+        raise OSError("secondary context cleanup")
+
+    monkeypatch.setattr(process, "abort", fail_abort)
+    with pytest.raises(ValueError) as error, process:
+        raise original
+    assert error.value is original
+    _wait_until_not_live(process.pid)
 
 
 @pytest.mark.skipif(os.name != "nt", reason="Windows Job Object control")
