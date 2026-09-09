@@ -2458,26 +2458,35 @@ class HtsimStepSink:
                 "shared deployment composition remains CORE-70"
             )
 
-    def _deferred_state(self) -> tuple:
-        from simllm.core.value_snapshot import value_snapshot
-
+    def _deferred_state_values(self) -> tuple:
+        """Read the complete current selection before its owner's snapshot."""
         config_values = {field.name: getattr(self.config, field.name)
                          for field in fields(self.config) if field.name != "provider"}
         provider = self.config.provider
         if not hasattr(provider, "__dict__"):
             raise TypeError("deferred compute provider requires explicit value state")
-        return value_snapshot((config_values, type(provider).__module__, type(provider).__qualname__,
-                               vars(provider), vars(self._rank_mapper), vars(self._registration_ledger)))
+        return (config_values, type(provider).__module__, type(provider).__qualname__,
+                vars(provider), vars(self._rank_mapper), vars(self._registration_ledger))
+
+    def _deferred_state(self) -> tuple:
+        from simllm.core.value_snapshot import value_snapshot
+
+        return value_snapshot(self._deferred_state_values())
+
+    def _deferred_publication_values(self) -> dict[str, object]:
+        """Read every current row; a prior row edit must remain observable."""
+        return {name: getattr(self, name) for name in _DEFERRED_PUBLICATIONS}
 
     def _deferred_publications(self) -> tuple:
         from simllm.core.value_snapshot import value_snapshot
 
-        return value_snapshot({name: getattr(self, name) for name in _DEFERRED_PUBLICATIONS})
+        return value_snapshot(self._deferred_publication_values())
 
     def _deferred_bindings(self) -> tuple:
         bindings = []
         for name in ("_plan_step", "_execute_plan", "_simulate_step", "_publish", "_publish_result",
                      "_deferred_state", "_deferred_publications", "_deferred_bindings",
+                     "_deferred_state_values", "_deferred_publication_values",
                      "deferred_publication", "prepare_deferred", "publish_deferred",
                      "validate_deferred_mode"):
             method = getattr(self, name)
@@ -2494,14 +2503,16 @@ class HtsimStepSink:
         price.validate()
         # Capture implementations before submission; an instance shadow cannot
         # replace the authority's reader with a fabricated self-report.
-        state_reader = HtsimStepSink._deferred_state
-        publication_reader = HtsimStepSink._deferred_publications
+        state_reader = HtsimStepSink._deferred_state_values
+        publication_reader = HtsimStepSink._deferred_publication_values
         binding_reader = HtsimStepSink._deferred_bindings
 
         def actual_values(payload: DeferredStepPrice) -> tuple:
             sink = payload.sink
-            return (id(sink), id(sink.config), id(sink.config.provider), payload.record, payload.simulation,
-                    state_reader(sink), publication_reader(sink),
+            # Preserve the state/publication validation order without encoding
+            # their snapshots again. The core owns the sole immutable capture.
+            return (state_reader(sink), publication_reader(sink),
+                    id(sink), id(sink.config), id(sink.config.provider), payload.record, payload.simulation,
                     tuple(tuple(id(part) for part in binding) for binding in binding_reader(sink)))
 
         return PublicationBinding(self, price, actual_values)
