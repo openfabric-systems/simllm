@@ -156,7 +156,8 @@
       "CORE-53",
       "CORE-54",
       "CORE-68",
-      "TRAF-64"
+      "TRAF-64",
+      "COMP-7"
     ]
   },
   "construction": {
@@ -347,7 +348,8 @@
     "b100_hbm_bytes_per_second": 8000000000000,
     "burst_makespan_ceiling": "Unique service sum plus the sum of every declared handoff, since every request arrives at the same time.",
     "burst_makespan_floor": "Largest single request dependent service chain and the unique globally serialized service sum, interpreted only under the explicit compatibility authority.",
-    "decode_service_floor_ps": 40108032,
+    "compatibility_resident_streaming_floor_ps": 40108032,
+    "compute_bound_scope": "The existing roofline streams all 32 resident experts, while a token activates top_k=8. The 40108032 ps floor is conditional on that all-resident streaming surrogate, not a hardware byte floor for one routed token. COMP-7 owns routed expert demand.",
     "handoff_bounds_ps": {
       "16": {
         "ceiling": 679145600,
@@ -364,9 +366,9 @@
       "ceiling": 100000000000,
       "floor": 1000000
     },
-    "per_rank_active_weight_bytes": 320864256,
+    "per_rank_resident_compatibility_weight_bytes": 320864256,
     "serial_request_ceiling": "Five times the nonempty-step service ceiling plus declared handoff.",
-    "serial_request_floor": "Prefill service plus declared handoff plus four positive decode services. Each serial decode service exceeds the active-weight byte floor."
+    "serial_request_floor": "Prefill service plus declared handoff plus four positive decode services. Each serial decode service exceeds the frozen compatibility all-resident weight-streaming bound."
   },
   "scales": [
     {

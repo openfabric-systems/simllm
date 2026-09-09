@@ -85,9 +85,13 @@ A declared slower route at 10 Gbit/s plus 50 microseconds gives ceilings of
 364,572,800 and 679,145,600 picoseconds. Both frozen handoff durations fit.
 These declared bounds do not constitute a network measurement.
 
-The active per-rank weight count is 320,864,256 bytes. Dividing by the B100
-profile's 8 TB/s memory ceiling gives a 40,108,032-picosecond decode-service
-floor. The existing accepted decode values exceed it. A serial request cannot
+The resident per-rank weight inventory is 320,864,256 bytes. The existing
+compatibility roofline streams all 32 resident experts even though one token
+activates eight. Dividing its charged resident bytes by the B100 profile's
+8 TB/s memory ceiling gives a 40,108,032-picosecond conditional model floor.
+This is not a first-principles hardware floor for one routed token; COMP-7 owns
+routed expert demand. The accepted decode values exceed this model floor.
+A serial request cannot
 finish before prefill, handoff and all four positive decode services. A loose
 ceiling is five frozen per-step ceilings plus handoff. For a simultaneous
 burst, the compatibility model's unique service sum is a makespan floor, and
