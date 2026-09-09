@@ -190,4 +190,10 @@ python examples/dgx_nvlink_v1/run_study.py --library "$SIMLLM_NVSWITCH_LIBRARY" 
 
 The Matplotlib generator writes PDF for vector export, SVG for web viewing and
 PNG for the README. Its topology counts come from the same preset constants.
-The inset depicts the declared model queues, not a vendor die schematic.
+The inset shows queued packets in first-in, first-out (FIFO) symbols,
+selection gates, a crossbar connection and returned storage credits. Each
+selected physical link carries 25 GB/s per direction. Feed F and drain D
+share the GPU-wide 300 GB/s (A100) or 450 GB/s (H100) budget across all links.
+The illustrated crossbar rate X and 64 KiB buffers are declared study
+settings; FIFO slot counts and header/data packet sizes are symbolic. The
+inset depicts the model queues, not a vendor die schematic.
