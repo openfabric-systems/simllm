@@ -216,18 +216,20 @@ class PacketStepBreakdown:
             raise ValueError("packet breakdown does not match StepResult")
 
 
-def build_packet_breakdown(plan: _PlannedStep, fabric_services, starts, finishes):
+def build_packet_breakdown(plan: _PlannedStep, fabric_services, starts, finishes, *,
+                           local_services=None):
     """Project retained backend rows and analytic intervals without rescheduling."""
     visits = []
     cursor = plan.virtual_time_ps
     host_remaining = plan.exposed_host_ps
     masked_local = masked_fabric = 0
-    for artifact, fabric, first, last in zip(
-        plan.artifacts, fabric_services, starts, finishes, strict=True
+    if local_services is None:
+        local_services = tuple(artifact.local_service_ps for artifact in plan.artifacts)
+    for artifact, fabric, first, last, local in zip(
+        plan.artifacts, fabric_services, starts, finishes, local_services, strict=True
     ):
         operation_id = artifact.artifact_id
         compute = artifact.collective_operation_id is None
-        local = artifact.local_service_ps
         host = min(host_remaining, local) if compute else 0
         host_remaining -= host
 

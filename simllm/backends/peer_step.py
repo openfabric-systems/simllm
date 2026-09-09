@@ -167,12 +167,41 @@ class PeerStepEvidence:
                 or result.completed_at_ps != self.execution_result.completed_at_ps
                 or result.step_latency_ps != result.completed_at_ps - self.graph.released_at_ps):
             raise ValueError("peer packet evidence disagrees with the returned StepResult")
+        from simllm.backends.peer_critical_path import validate_packet_projection
+        selected = [validate_packet_projection(row) for row in self.session_observations]
+        if any(row is not None for row in selected):
+            if not all(row is not None for row in selected):
+                raise ValueError("peer domains disagree on detailed reporting selection")
+            expected, actual = {}, {}
+            for artifact in self.artifacts:
+                phase = artifact.local_phase
+                if phase is not None and phase.extents:
+                    key = (phase.phase.phase.operation_id, phase.released_at_ps)
+                    if key in expected:
+                        raise ValueError("peer artifacts repeat a phase identity")
+                    expected[key] = phase
+            for _, phases in selected:
+                for phase in phases:
+                    if phase.execution_id == self.graph.execution_id:
+                        key = (phase.operation_id, phase.released_at_ps)
+                        actual.setdefault(key, []).append(phase)
+            if set(actual) != set(expected):
+                raise ValueError("critical paths do not cover the original graph phases")
+            for key, local in expected.items():
+                paths = actual[key]
+                if max(path.visible_at_ps for path in paths) != local.visible_at_ps:
+                    raise ValueError("critical phase visibility differs from original graph")
+                if Counter(packet for path in paths for packet in path.packet_ids) != Counter(
+                    packet for extent in local.extents for packet in extent.packet_ids
+                ):
+                    raise ValueError("critical paths change original graph packet membership")
 
 
 class PeerPacketRuntime:
     """One non-rewindable local runtime retained for the lifetime of a step sink."""
 
-    def __init__(self, config: PeerPacketConfig, placement: PlacementManifest) -> None:
+    def __init__(self, config: PeerPacketConfig, placement: PlacementManifest, *,
+                 capture_critical_path: bool = False) -> None:
         config = copy.deepcopy(config)
         config.validate_placement(placement)
         self.config = config
@@ -183,6 +212,7 @@ class PeerPacketRuntime:
                 NvlinkPhysicalBinding(domain, config.credit_return_processing_ps,
                                       config.acknowledgement_processing_ps), options=config.options,
                 native_switch_library=config.native_switch_library,
+                capture_critical_path=capture_critical_path,
             ) for domain in config.fabric.peer_fabrics
         }
         self._rank_domain = {port.gpu_rank: domain.domain_id for domain in config.fabric.peer_fabrics

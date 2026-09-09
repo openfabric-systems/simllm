@@ -326,8 +326,6 @@ class HtsimStepSinkConfig:
             self.peer_packet.validate_placement(self.placement_manifest)
             if self.flow_session is not None:
                 raise ValueError("retained physical wire and local composition remains BACK-72")
-            if self.emit_packet_breakdown or self.emit_bottleneck_report:
-                raise ValueError("detailed peer packet critical-path reporting remains BACK-73")
             if (self.collective_floor_calibration is not None
                     or self.collective_latency_profile not in (None, "legacy")
                     or self.collective_fixed_cost_arm != "off"):
@@ -1260,7 +1258,10 @@ class HtsimStepSink:
         self._peer_runtime = None
         if config.peer_packet is not None:
             from simllm.backends.peer_step import PeerPacketRuntime
-            self._peer_runtime = PeerPacketRuntime(config.peer_packet, placement)
+            self._peer_runtime = PeerPacketRuntime(
+                config.peer_packet, placement,
+                capture_critical_path=config.emit_packet_breakdown or config.emit_bottleneck_report,
+            )
         if self._rank_mapper is not None:
             groups = (("tp_ranks", config.tp_ranks),)
             if config.ep_ranks is not None:
@@ -2272,6 +2273,7 @@ class HtsimStepSink:
 
             packet_breakdown = build_packet_breakdown(
                 plan, fabric_services, fabric_starts, fabric_finishes,
+                local_services=local_services if self._peer_runtime is not None else None,
             )
             packet_breakdown.validate_result(result)
         bottleneck_report = None
