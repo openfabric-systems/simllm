@@ -12,6 +12,7 @@ from typing import Any
 from simllm.backends.step_lowerer import SerialStepLowerer, SerialStepLowererConfig
 from simllm.compute import ModelDims, step_kernel, step_kernels, step_shape
 from simllm.compute.device_model import ShapeAxis, ShapeSchema, ShapeVector
+from simllm.compute.kimi_k3 import KIMI_K3_GEOMETRY_SCHEMA, KimiK3Spec
 from simllm.core import (
     RequestPhase,
     ScheduledRequest,
@@ -39,6 +40,7 @@ from .model_inventory import (
     ModelGeometry,
     ModelKernelInventory,
     PhaseLaunchCount,
+    model_geometry_from_obj,
 )
 
 SUPPORTED_SUITE_SCHEMA = "simllm-transformer-dag-suite-v1"
@@ -390,6 +392,7 @@ class FrameworkConfigurationProjection:
     dense_stack: FrameworkDenseStack | None = None
     text_stack: FrameworkTextStack | None = None
     deepseek_stack: FrameworkDeepseekStack | None = None
+    kimi_k3_stack: KimiK3Spec | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.framework, FrameworkIdentity):
@@ -405,6 +408,7 @@ class FrameworkConfigurationProjection:
             self.dense_stack is not None,
             self.text_stack is not None,
             self.deepseek_stack is not None,
+            self.kimi_k3_stack is not None,
         )
         if stacks.count(True) != 1:
             raise TypeError("configuration projection requires exactly one typed stack")
@@ -420,6 +424,8 @@ class FrameworkConfigurationProjection:
             self.deepseek_stack, FrameworkDeepseekStack
         ):
             raise TypeError("configuration projection DeepSeek stack must be typed")
+        if self.kimi_k3_stack is not None and not isinstance(self.kimi_k3_stack, KimiK3Spec):
+            raise TypeError("configuration projection Kimi K3 stack must be typed")
 
     def to_obj(self) -> dict[str, Any]:
         framework = self.framework.to_obj()
@@ -435,6 +441,8 @@ class FrameworkConfigurationProjection:
             value["dense_stack"] = self.dense_stack.to_obj()
         elif self.text_stack is not None:
             value["text_stack"] = self.text_stack.to_obj()
+        elif self.kimi_k3_stack is not None:
+            value["kimi_k3_stack"] = self.kimi_k3_stack.to_obj()
         else:
             assert self.deepseek_stack is not None
             value["deepseek_stack"] = self.deepseek_stack.to_obj()
@@ -480,6 +488,8 @@ def _model_identity(value: object) -> ModelCheckpointIdentity:
         frozenset(core_fields | metadata_fields | structure)
         for structure in structure_fields
     }
+    if isinstance(value.get("geometry"), dict) and value["geometry"].get("schema") == KIMI_K3_GEOMETRY_SCHEMA:
+        accepted.add(frozenset(core_fields | metadata_fields))
     if actual_fields not in accepted:
         raise ModelExtractionError(
             "suite.reference_model: expected exact local or API-metadata identity fields"
@@ -497,7 +507,7 @@ def _model_identity(value: object) -> ModelCheckpointIdentity:
         weight_bytes=value["weight_bytes"],
         dtype=value["dtype"],
         quantization=value["quantization"],
-        geometry=ModelGeometry.from_obj(geometry, "suite.reference_model.geometry"),
+        geometry=model_geometry_from_obj(geometry, "suite.reference_model.geometry"),
     )
 
 
@@ -677,6 +687,8 @@ def validate_framework_dims(
 ) -> None:
     """Reject any framework projection that defaulted or changed geometry."""
 
+    if not isinstance(dims, ModelDims) or not isinstance(identity.geometry, ModelGeometry):
+        raise ModelExtractionError("uniform framework dimensions require a uniform model geometry")
     if dims.defaulted_fields:
         raise ModelExtractionError(
             "framework geometry used defaults: " + ", ".join(dims.defaulted_fields)
@@ -1872,7 +1884,7 @@ def extract_model_inventory(
     suite_raw: bytes,
     framework: FrameworkIdentity,
     checkpoint_root: Path,
-    framework_dims: ModelDims,
+    framework_dims: ModelDims | None,
     step_records_path: Path,
     framework_projection: FrameworkConfigurationProjection | None = None,
     attention_shape_version: int = 1,
@@ -1894,6 +1906,24 @@ def extract_model_inventory(
     )
     validate_checkpoint(checkpoint_root, model, metadata_only=metadata_only)
     case_records_from_suite(suite)
+    if isinstance(model.geometry, KimiK3Spec):
+        from .kimi_k3 import build_kimi_k3_inventory, validate_kimi_k3_suite
+
+        validate_kimi_k3_suite(suite)
+        if attention_shape_version != 1:
+            raise ModelExtractionError("K3 owns exact causal pairs in its typed operator shapes")
+        if framework_dims is not None:
+            raise ModelExtractionError("K3 must not pass through uniform ModelDims")
+        if framework_projection is None or framework_projection.kimi_k3_stack != model.geometry:
+            raise ModelExtractionError("native K3 geometry does not match the exact checkpoint contract")
+        if any(name in reference_model for name in ("dense_stack", "text_stack", "deepseek_stack")):
+            raise ModelExtractionError("K3 cannot also declare a uniform or alternate text stack")
+        if any(cell.get("mtp_enabled", False) for cell in suite["graph_cells"]):
+            raise ModelExtractionError("K3 multi-token prediction is outside the declared model")
+        return build_kimi_k3_inventory(
+            suite_raw=suite_raw, suite=suite, model=model, framework=framework,
+            records=_records_from_suite(suite, step_records_path),
+        )
     has_dense_contract = "dense_stack" in reference_model
     has_text_contract = "text_stack" in reference_model
     has_deepseek_contract = "deepseek_stack" in reference_model

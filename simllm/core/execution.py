@@ -109,19 +109,31 @@ class DependencyOrigin(str, enum.Enum):
 
 @dataclass(frozen=True)
 class ComputeWork:
-    """One kernel or fused kernel region submitted for GPU execution.
+    """One compute region, with an explicit structural or executable scope.
 
     ``nominal_duration_ps`` is supplied by the selected compute provider.
     Shape and demand stay on the record so a higher-fidelity runtime may
     replace or adjust that estimate without changing the graph structure.
+    ``logical-operator`` identifies mathematics before a device implementation
+    binds it. Unknown demand is ``None``, never a zero-cost assumption.
+    Logical regions cannot execute merely because a duration is supplied.
+    ``synthetic-operator`` names a separately identified diagnostic binding.
     """
 
     kernel: str
     config: tuple[tuple[str, ConfigScalar], ...] = ()
-    flops: int = 0
-    hbm_bytes: int = 0
+    flops: int | None = 0
+    hbm_bytes: int | None = 0
     nominal_duration_ps: int | None = None
     uncertainty_fraction: float | None = None
+    scope: str = "kernel-region"
+
+    def require_executable(self) -> None:
+        """Reject structural work before any service or state is adopted."""
+        if self.scope not in {"kernel-region", "synthetic-operator"}:
+            raise ValueError("logical-operator work requires an explicit implementation binding")
+        if self.flops is None or self.hbm_bytes is None:
+            raise ValueError("compute demand is unbound; bind arithmetic and HBM traffic explicitly")
 
 
 @dataclass(frozen=True)

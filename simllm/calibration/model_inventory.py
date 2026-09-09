@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from simllm.compute.device_model import ShapeSchema, ShapeVector
+from simllm.compute.kimi_k3 import KIMI_K3_GEOMETRY_SCHEMA, KimiK3Spec
 
 from .record_types import RecordObject
 
@@ -208,7 +209,7 @@ class ModelCheckpointIdentity:
     weight_bytes: int
     dtype: str
     quantization: str
-    geometry: ModelGeometry
+    geometry: ModelGeometry | KimiK3Spec
 
     def __post_init__(self) -> None:
         _string(self.name, "ModelCheckpointIdentity.name")
@@ -218,8 +219,8 @@ class ModelCheckpointIdentity:
         _integer(self.weight_bytes, "ModelCheckpointIdentity.weight_bytes", positive=True)
         _string(self.dtype, "ModelCheckpointIdentity.dtype")
         _string(self.quantization, "ModelCheckpointIdentity.quantization")
-        if not isinstance(self.geometry, ModelGeometry):
-            raise TypeError("ModelCheckpointIdentity.geometry: expected ModelGeometry")
+        if not isinstance(self.geometry, (ModelGeometry, KimiK3Spec)):
+            raise TypeError("ModelCheckpointIdentity.geometry: expected typed model geometry")
 
     def to_obj(self) -> dict[str, Any]:
         return {
@@ -263,8 +264,14 @@ class ModelCheckpointIdentity:
             quantization=_string(
                 payload["quantization"], f"{path}.quantization"
             ),
-            geometry=ModelGeometry.from_obj(payload["geometry"], f"{path}.geometry"),
+            geometry=model_geometry_from_obj(payload["geometry"], f"{path}.geometry"),
         )
+
+
+def model_geometry_from_obj(value: object, path: str = "geometry") -> ModelGeometry | KimiK3Spec:
+    if isinstance(value, dict) and value.get("schema") == KIMI_K3_GEOMETRY_SCHEMA:
+        return KimiK3Spec.from_obj(value)
+    return ModelGeometry.from_obj(value, path)
 
 
 @dataclass(frozen=True, slots=True)
@@ -375,8 +382,9 @@ class KernelProjection:
     family_id: str
     shape_vector: ShapeVector
     logical_launch_count: int
-    aggregate_flops: int
-    aggregate_hbm_bytes: int
+    aggregate_flops: int | None
+    aggregate_hbm_bytes: int | None
+    scope: str = "kernel-region"
 
     def __post_init__(self) -> None:
         _string(self.family_id, "KernelProjection.family_id")
@@ -386,8 +394,12 @@ class KernelProjection:
             self.logical_launch_count,
             "KernelProjection.logical_launch_count",
         )
-        _integer(self.aggregate_flops, "KernelProjection.aggregate_flops")
-        _integer(self.aggregate_hbm_bytes, "KernelProjection.aggregate_hbm_bytes")
+        if self.scope not in {"kernel-region", "logical-operator"}:
+            raise ValueError("inventory projection has an unknown work scope")
+        for name in ("aggregate_flops", "aggregate_hbm_bytes"):
+            value = getattr(self, name)
+            if self.scope != "logical-operator" or value is not None:
+                _integer(value, f"KernelProjection.{name}")
 
     @property
     def attention_pairs(self) -> int:
@@ -404,6 +416,8 @@ class KernelProjection:
     def attention_flops_per_pair(self) -> int | None:
         """Exact aggregate coefficient; zero pairs cannot identify one."""
         pairs = self.attention_pairs
+        if self.aggregate_flops is None:
+            return None
         if pairs == 0:
             if self.aggregate_flops:
                 raise ValueError("zero attention pairs require zero FLOPs")
@@ -414,13 +428,16 @@ class KernelProjection:
         return coefficient
 
     def to_obj(self) -> dict[str, Any]:
-        return {
+        value = {
             "family_id": self.family_id,
             "shape_vector": self.shape_vector.to_obj(),
             "logical_launch_count": self.logical_launch_count,
             "aggregate_flops": self.aggregate_flops,
             "aggregate_hbm_bytes": self.aggregate_hbm_bytes,
         }
+        if self.scope != "kernel-region":
+            value["scope"] = self.scope
+        return value
 
     @classmethod
     def from_obj(cls, value: object, path: str) -> KernelProjection:
@@ -432,7 +449,17 @@ class KernelProjection:
             "aggregate_flops",
             "aggregate_hbm_bytes",
         }
+        if "scope" in payload:
+            expected.add("scope")
         _fields(payload, expected, path)
+        scope = _string(payload.get("scope", "kernel-region"), f"{path}.scope")
+
+        def demand(name: str) -> int | None:
+            value = payload[name]
+            if scope == "logical-operator" and value is None:
+                return None
+            return _integer(value, f"{path}.{name}")
+
         return cls(
             family_id=_string(payload["family_id"], f"{path}.family_id"),
             shape_vector=ShapeVector.from_obj(
@@ -442,12 +469,9 @@ class KernelProjection:
                 payload["logical_launch_count"],
                 f"{path}.logical_launch_count",
             ),
-            aggregate_flops=_integer(
-                payload["aggregate_flops"], f"{path}.aggregate_flops"
-            ),
-            aggregate_hbm_bytes=_integer(
-                payload["aggregate_hbm_bytes"], f"{path}.aggregate_hbm_bytes"
-            ),
+            aggregate_flops=demand("aggregate_flops"),
+            aggregate_hbm_bytes=demand("aggregate_hbm_bytes"),
+            scope=scope,
         )
 
 
@@ -671,6 +695,11 @@ class ModelKernelInventory:
                         f"launch count {projection.logical_launch_count}, expected "
                         f"{expected_count}"
                     )
+                expected_scope = "logical-operator" if isinstance(self.model.geometry, KimiK3Spec) else "kernel-region"
+                if projection.scope != expected_scope:
+                    raise ValueError("inventory projection scope disagrees with model geometry")
+                if family.shape_schema_id == ATTENTION_PAIR_SHAPE_SCHEMA and not isinstance(self.model.geometry, ModelGeometry):
+                    raise ValueError("uniform attention pair geometry cannot describe K3")
                 if family.shape_schema_id == ATTENTION_PAIR_SHAPE_SCHEMA:
                     pairs = projection.attention_pairs
                     geometry = self.model.geometry
