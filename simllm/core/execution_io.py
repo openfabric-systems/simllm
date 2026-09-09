@@ -164,8 +164,11 @@ def _validate_work(work: WorkPayload, path: str) -> None:
     if isinstance(work, ComputeWork):
         _string(work.kernel, f"{path}.kernel")
         _validate_config(work.config, f"{path}.config")
-        _integer(work.flops, f"{path}.flops", nonnegative=True)
-        _integer(work.hbm_bytes, f"{path}.hbm_bytes", nonnegative=True)
+        if work.scope not in {"kernel-region", "logical-operator", "synthetic-operator"}:
+            _fail(f"{path}.scope", "unknown compute scope")
+        demand_integer = _optional_integer if work.scope == "logical-operator" else _integer
+        demand_integer(work.flops, f"{path}.flops", nonnegative=True)
+        demand_integer(work.hbm_bytes, f"{path}.hbm_bytes", nonnegative=True)
         if work.nominal_duration_ps is not None:
             _integer(
                 work.nominal_duration_ps,
@@ -849,7 +852,7 @@ def execution_graph_from_observations(
 
 def _work_to_json(work: WorkPayload) -> dict[str, Any]:
     if isinstance(work, ComputeWork):
-        return {
+        value = {
             "kind": "compute",
             "kernel": work.kernel,
             "config": [[name, value] for name, value in work.config],
@@ -858,6 +861,9 @@ def _work_to_json(work: WorkPayload) -> dict[str, Any]:
             "nominal_duration_ps": work.nominal_duration_ps,
             "uncertainty_fraction": work.uncertainty_fraction,
         }
+        if work.scope != "kernel-region":
+            value["scope"] = work.scope
+        return value
     if isinstance(work, KvCacheWork):
         return {
             "kind": "kv-cache",
@@ -950,13 +956,15 @@ def _work_from_json(value: Any, path: str) -> WorkPayload:
                 "hbm_bytes",
                 "nominal_duration_ps",
                 "uncertainty_fraction",
+                "scope",
             },
         )
         return ComputeWork(
             kernel=_string(payload["kernel"], f"{path}.kernel"),
             config=_config_from_json(payload.get("config", []), f"{path}.config"),
-            flops=_integer(payload.get("flops", 0), f"{path}.flops", nonnegative=True),
-            hbm_bytes=_integer(payload.get("hbm_bytes", 0), f"{path}.hbm_bytes", nonnegative=True),
+            flops=_optional_integer(payload.get("flops", 0), f"{path}.flops", nonnegative=True),
+            hbm_bytes=_optional_integer(payload.get("hbm_bytes", 0), f"{path}.hbm_bytes", nonnegative=True),
+            scope=_string(payload.get("scope", "kernel-region"), f"{path}.scope"),
             nominal_duration_ps=_optional_integer(
                 payload.get("nominal_duration_ps"),
                 f"{path}.nominal_duration_ps",

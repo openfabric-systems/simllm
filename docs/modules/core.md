@@ -479,6 +479,21 @@ fabricates a byte. CORE-16 owns remainder chunking. Control sends reserve
 than 1,024 destinations or a collective allocation reaching that boundary
 fails preflight before authority mutation.
 
+`ComputeWork` distinguishes executable kernel regions, unbound logical
+operators and explicitly synthetic operators. The default `kernel-region`
+scope preserves historical serialization. Only `logical-operator` permits
+null arithmetic or memory demand, and that scope rejects before runtime
+mutation or GOAL emission even if a nominal duration is supplied. A synthetic
+binding records a separate graph identity and its service assumptions; it
+cannot enter physical bottleneck classification.
+
+`CoarseDeviceRuntime(serial_compute=True)` grants one compute operation per
+group. This explicit diagnostic policy preserves the graph's queues and
+causal edges. The default false value preserves the existing grouped resource
+schedule exactly. Independently admitting new work during an active group
+remains CORE-12 work; a graph longest-path calculation does not establish that
+runtime behavior.
+
 `ExecutionLowerer` and `DeviceRuntime` remain narrow protocols.
 `CoarseDeviceRuntime` is the first additive implementation. Its
 `CoarseDeviceProfile` fixes the initial eight-GPU/eight-RNIC mapping, while
