@@ -108,7 +108,7 @@ import hashlib
 from collections import deque
 from collections.abc import Mapping, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor, wait
-from dataclasses import asdict, dataclass, field, replace
+from dataclasses import asdict, dataclass, field, fields, replace
 from pathlib import Path
 from threading import Lock
 from typing import TYPE_CHECKING
@@ -1195,6 +1195,53 @@ class _PreparedStep:
 
     record: StepRecord
     simulation: _SimulatedStep
+
+
+_DEFERRED_PUBLICATIONS = (
+    "outcomes", "locality_outcomes", "collective_timing_outcomes",
+    "collective_floor_timing_outcomes", "dependency_cross_check_reports",
+    "collective_registration_outcomes", "packet_breakdowns", "bottleneck_reports",
+    "session_evidence", "peer_evidence",
+)
+
+
+@dataclass(frozen=True)
+class DeferredStepPrice:
+    """Private deterministic price, published only by engine retirement."""
+
+    sink: HtsimStepSink
+    config: HtsimStepSinkConfig
+    provider: ComputeProvider
+    record: StepRecord
+    simulation: _SimulatedStep
+    state: tuple
+    record_state: tuple
+    simulation_state: tuple
+    publications: tuple
+    bindings: tuple
+
+    @property
+    def result(self) -> StepResult:
+        result = self.simulation.result
+        if result is None:
+            raise RuntimeError("deferred price has no result")
+        return result
+
+    def validate(self) -> None:
+        from simllm.core.value_snapshot import value_snapshot
+
+        if self.sink.config is not self.config or self.config.provider is not self.provider:
+            raise RuntimeError("deferred sink configuration or provider was replaced")
+        if self.sink._deferred_bindings() != self.bindings:
+            raise RuntimeError("deferred sink source binding changed")
+        self.sink.validate_deferred_mode()
+        if self.sink._deferred_state() != self.state:
+            raise RuntimeError("deferred sink configuration values changed")
+        if (value_snapshot(self.record) != self.record_state
+                or value_snapshot(self.simulation) != self.simulation_state):
+            raise RuntimeError("deferred sink input or prepared payload changed")
+        if self.sink._deferred_publications() != self.publications:
+            raise RuntimeError("deferred sink published or changed outcomes before completion")
 
 
 class HtsimStepSink:
@@ -2392,6 +2439,117 @@ class HtsimStepSink:
 
     def __call__(self, record: StepRecord) -> StepResult | None:
         return self._publish(self._simulate_step(record), record)
+
+    def validate_deferred_mode(self) -> None:
+        """Admit isolated local service before a native scheduler reserves work."""
+        cfg = self.config
+        if (type(self) is not HtsimStepSink or cfg.profile != "rnic-nn-fluid"
+                or cfg.placement_manifest is None or self._rank_mapper is None
+                or len(set(self._rank_mapper._host_by_rank.values())) != 1
+                or cfg.flow_session is not None or cfg.peer_packet is not None
+                or self._peer_runtime is not None or self._request_metric_reducer is not None
+                or cfg.resolved_collective_registration is not None
+                or cfg.collective_floor_calibration is not None or cfg.dependency_cross_check is not None
+                or cfg.emit_packet_breakdown or cfg.emit_bottleneck_report
+                or cfg.collective_fixed_cost_envelope != "intra-node-fixed-cost-v1"
+                or cfg.collective_fixed_cost_arm not in ("lower", "upper")):
+            raise NotImplementedError(
+                "independent engine service requires an isolated declared local collective sink; "
+                "shared deployment composition remains CORE-70"
+            )
+
+    def _deferred_state_values(self) -> tuple:
+        """Read the complete current selection before its owner's snapshot."""
+        config_values = {field.name: getattr(self.config, field.name)
+                         for field in fields(self.config) if field.name != "provider"}
+        provider = self.config.provider
+        if not hasattr(provider, "__dict__"):
+            raise TypeError("deferred compute provider requires explicit value state")
+        return (config_values, type(provider).__module__, type(provider).__qualname__,
+                vars(provider), vars(self._rank_mapper), vars(self._registration_ledger))
+
+    def _deferred_state(self) -> tuple:
+        from simllm.core.value_snapshot import value_snapshot
+
+        return value_snapshot(self._deferred_state_values())
+
+    def _deferred_publication_values(self) -> dict[str, object]:
+        """Read every current row; a prior row edit must remain observable."""
+        return {name: getattr(self, name) for name in _DEFERRED_PUBLICATIONS}
+
+    def _deferred_publications(self) -> tuple:
+        from simllm.core.value_snapshot import value_snapshot
+
+        return value_snapshot(self._deferred_publication_values())
+
+    def _deferred_bindings(self) -> tuple:
+        bindings = []
+        for name in ("_plan_step", "_execute_plan", "_simulate_step", "_publish", "_publish_result",
+                     "_deferred_state", "_deferred_publications", "_deferred_bindings",
+                     "_deferred_state_values", "_deferred_publication_values",
+                     "deferred_publication", "prepare_deferred", "publish_deferred",
+                     "validate_deferred_mode"):
+            method = getattr(self, name)
+            function = getattr(method, "__func__", method)
+            bindings.append((getattr(method, "__self__", None), function, getattr(function, "__code__", None)))
+        return tuple(bindings)
+
+    def deferred_publication(self, price: DeferredStepPrice):
+        """Let the core privately freeze the exact price and its full payload."""
+        from simllm.core.engine_steps import PublicationBinding
+
+        if not isinstance(price, DeferredStepPrice) or price.sink is not self:
+            raise ValueError("deferred price belongs to another sink")
+        price.validate()
+        # Capture implementations before submission; an instance shadow cannot
+        # replace the authority's reader with a fabricated self-report.
+        state_reader = HtsimStepSink._deferred_state_values
+        publication_reader = HtsimStepSink._deferred_publication_values
+        binding_reader = HtsimStepSink._deferred_bindings
+
+        def actual_values(payload: DeferredStepPrice) -> tuple:
+            sink = payload.sink
+            # Preserve the state/publication validation order without encoding
+            # their snapshots again. The core owns the sole immutable capture.
+            return (state_reader(sink), publication_reader(sink),
+                    id(sink), id(sink.config), id(sink.config.provider), payload.record, payload.simulation,
+                    tuple(tuple(id(part) for part in binding) for binding in binding_reader(sink)))
+
+        return PublicationBinding(self, price, actual_values)
+
+    def prepare_deferred(self, record: StepRecord) -> DeferredStepPrice:
+        """Price deterministic local service without publishing any sink row."""
+        from simllm.core.value_snapshot import value_snapshot
+
+        self.validate_deferred_mode()
+        config, provider = self.config, self.config.provider
+        state, publications = self._deferred_state(), self._deferred_publications()
+        record_state, bindings = value_snapshot(record), self._deferred_bindings()
+        simulation = self._simulate_step(record)
+        if simulation.result is None:
+            if record.scheduled or not (record.finished_request_ids or record.preempted_request_ids):
+                raise ValueError("deferred empty step requires a genuine native completion")
+            simulation = replace(simulation, result=StepResult(record.step_index, 0, record.virtual_time_ps))
+        price = DeferredStepPrice(self, config, provider, record, simulation, state,
+                                   record_state, value_snapshot(simulation), publications, bindings)
+        price.validate()
+        return price
+
+    def publish_deferred(self, price: DeferredStepPrice, runtime, receipt) -> StepResult:
+        """Consume the price only inside its sole core completion callback."""
+        try:
+            if not isinstance(price, DeferredStepPrice) or price.sink is not self:
+                raise ValueError("deferred price belongs to another sink")
+            price.validate()
+            runtime.claim_publication(receipt, publisher=self, payload=price,
+                                      record=price.record, result=price.result)
+            result = self._publish(price.simulation, price.record)
+            if result is not price.result:
+                raise RuntimeError("deferred sink changed its owned result during publication")
+            return result
+        except Exception as error:
+            runtime.invalidate(str(error))
+            raise
 
     def close_peer_packets(self) -> tuple[dict, ...]:
         """Drain retained physical tails after the final consumed logical step."""

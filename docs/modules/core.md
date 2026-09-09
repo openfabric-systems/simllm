@@ -64,6 +64,22 @@ own modules.
   packet backend, and completes at the last required arrival. TRAF-62 and
   TRAF-64 retain the PLACE-5-dependent target-topology qualification.
 
+- `simllm.core.engine_steps.EngineStepRuntime` owns independent whole-engine
+  service on one `VirtualClock`. A receipt binds its engine, input record,
+  private prepared price and completion sequence. Each engine has one pending
+  slot; its five completion events, queue visit and step result are read-only
+  projections joined by engine and step identity. A zero-service drain requires
+  a real finished or preempted native request.
+- Submission publishes the input record. Only the due retirement callback may
+  consume a bound publisher's exact prepared payload. Typed snapshots include
+  every resolved configuration field, provider value and existing publication
+  row. A failed guard poisons the owner and prevents retry. Whole-engine visits
+  describe declared service; their summed work remains distinct from elapsed
+  request time. The [independent completion qualification](../../examples/independent_engine_completion_v1/RESULTS.md)
+  closes CORE-68 with 112 native requests across all six frozen processes.
+  Its declared service envelope preserves native token and cache visibility
+  until each engine's own completion event.
+
 ### Execution and completion boundary
 
 `simllm.core` publishes four versioned contracts:
@@ -1368,24 +1384,6 @@ capture exists.
   supplies the missing target-record coverage. Preserve the original void
   study without rescoring it; this task stays open on COMP-73.
 
-- CORE-68 (Precision; P1; L): replace the disaggregated driver's globally
-  serialized engine service with independent-engine completion scheduling.
-  The existing driver synchronously finishes a selected engine step and
-  advances the shared clock before another engine can start, so it supplies
-  a compatibility timing model even when all 56 engines are retained. Keep
-  one event authority and the existing StepRecord, CompletionEvent and
-  StepResult metric chain. Distinct ready engine resources must overlap;
-  request dependencies and a prefill-to-decode handoff must still gate
-  visibility. Freeze deterministic service, arrival, engine-count and handoff
-  sweeps before implementation. Require two and four independent ready engines
-  to finish equal service in one service interval, preserve same-engine
-  exclusion, and move live request TTFT, TPOT and completed-token throughput by
-  the exact causal schedule without a fitted speed multiplier. Keep the
-  explicit serialized compatibility arm and the accepted one-plus-one results
-  byte-identical. CORE-52 proves host retention and routing only; CORE-51 and
-  CORE-54 retain this independent-engine timing requirement. No GPU measurement
-  is required to establish the resource independence and causality rules.
-
 - CORE-8 (Precision; P1; L): establish the cross-layer authority and
   queue-visit contract above before residual-driven calibration. Define one
   loss-checked projection from each authoritative runtime object into
@@ -1508,6 +1506,33 @@ capture exists.
   preserve the CORE-26 baseline exactly.
 
 ### Completeness
+
+- CORE-70 (Completeness; P2; L): extend independent native engine completion
+  beyond its isolated synchronous single-sequence envelope. Compose shared
+  fabric or peer-packet service, collective registration and the request-metric
+  sink reducer. Add explicitly admitted paced/replay, multi-sequence and native
+  version/request extensions with their existing framework owners (including
+  VLLM-8 and VLLM-10). CORE-68 admits in-process vLLM 0.27.1 with declared local
+  service and rejects these combinations before native scheduling mutates state.
+  Preserve that explicit rejection and the serialized compatibility path.
+  Join each shared resource's sole timing authority to the engine's due event,
+  including late completion, registration visibility and critical-path metric
+  attribution; never preprice shared contention as an isolated constant.
+  Freeze overlapping-engine load and message-size sweeps with exact byte,
+  request and completion conservation and a live TTFT/TPOT effect. Depends on
+  CORE-68 and each enabled resource's owning runtime.
+
+- CORE-69 (Completeness; P2; L): support cancellation, reset and recovery
+  while an independent native engine step is pending. CORE-68's initial
+  envelope rejects these operations before they mutate native request or
+  cache ownership; keep that explicit rejection and its serialized off path
+  exact. Define one cancellation authority that resolves the pending receipt,
+  native in-flight reservation, cache references and event exactly once,
+  including same-time completion races and runtime failures. Freeze late
+  cancellation, duplicate cancellation, reset and failure-recovery sweeps;
+  require no early cache release, leaked pending work or duplicate completion
+  through the native request metric path. Do not retry partially mutated
+  scheduler state as recovery. Depends on CORE-68.
 
 - CORE-3 (Completeness; P1; L): widen the KV lifecycle case matrix, sweep and
   reporting surface. The accounting itself has landed: `KvLifecycleLedger`
@@ -1680,9 +1705,9 @@ capture exists.
   delivered through the real vLLM scheduler-side KV connector and a shared
   virtual clock, with the declared-constant handoff, role-aware manifests and
   one-plus-one live run. This umbrella remains open on CORE-52, CORE-53,
-  TRAF-64 and CORE-68; those residuals own live 448-rank scale, lookup
-  pricing, topology-qualified packet handoff and independent-engine timing.
-  PLACE-5, TRAF-62 and VLLM-35 are complete.
+  and TRAF-64; those residuals own live 448-rank scale, lookup
+  pricing and topology-qualified packet handoff. CORE-68 qualifies independent
+  engine timing. PLACE-5, TRAF-62 and VLLM-35 are complete.
 - CORE-54 (Completeness; P1; L): reproduce the public DeepSeek-V3 deployment
   curve inside the simulator, evidence first. Freeze the published anchors
   from [the deployment disclosures](../papers/deepseek-deployment-disclosures.md)
@@ -1702,8 +1727,7 @@ capture exists.
   uncertainties, and a second legend carrying DeepSeek's own H800
   production profile and declared what-if configurations including the
   16-prefill plus 40-decode target. Depends on COMP-67's column, CORE-52
-  and CORE-53's concurrent scaled session, CORE-68's independent-engine
-  timing, SGL-33's SGLang-side session,
+  and CORE-53's concurrent scaled session, SGL-33's SGLang-side session,
   TRAF-61 and the GH200-anchored campaign tables; a bar this task cannot
   meet is reported as a refutation with findings, never absorbed by
   loosening the frozen anchors. The first scored run is honestly REFUTED:
@@ -1743,7 +1767,7 @@ capture exists.
   than extrapolating a pass. VLLM-35 and PLACE-5 are complete. The
   [prospective scale protocol](../../examples/pd_session_target_scale_v1/expectations.md)
   qualifies actual host retention and routing under the existing globally
-  serialized compatibility timing authority. CORE-68 separately owns
+  serialized compatibility timing authority. CORE-68 separately qualifies
   independent-engine service; this feasibility task does not qualify physical
   cross-engine concurrency or a deployment frontier.
   The first [target-scale campaign](../../examples/pd_session_target_scale_v1/RESULTS.md)

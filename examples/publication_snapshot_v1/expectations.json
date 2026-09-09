@@ -1,0 +1,257 @@
+{
+  "schema": "simllm-publication-snapshot-expectations-v1",
+  "task": "CORE-68",
+  "before_commit": "ce8bf357e7477291d2a3cfc55b8a6875dd789c06",
+  "allowed_package_change": "simllm/backends/step_sink.py",
+  "before_sink_sha256": "1981c094e2d2ebe43ddabab77c1ffc6f931f1fbd3fd305d960ca3c7145055dc2",
+  "snapshot_source_sha256": "07bc7adc817367fc037081eebe6c25508d1f4794d846648e21db6bc41787320e",
+  "cases": [
+    {
+      "id": "h0-q1",
+      "history": 0,
+      "width": 1
+    },
+    {
+      "id": "h1-q1",
+      "history": 1,
+      "width": 1
+    },
+    {
+      "id": "h1-q4",
+      "history": 1,
+      "width": 4
+    },
+    {
+      "id": "h1-q16",
+      "history": 1,
+      "width": 16
+    },
+    {
+      "id": "h4-q1",
+      "history": 4,
+      "width": 1
+    },
+    {
+      "id": "h4-q4",
+      "history": 4,
+      "width": 4
+    },
+    {
+      "id": "h4-q16",
+      "history": 4,
+      "width": 16
+    },
+    {
+      "id": "h16-q1",
+      "history": 16,
+      "width": 1
+    },
+    {
+      "id": "h16-q4",
+      "history": 16,
+      "width": 4
+    },
+    {
+      "id": "h16-q16",
+      "history": 16,
+      "width": 16
+    }
+  ],
+  "new_binding_entries": 2,
+  "new_binding_visits": 8,
+  "dimensions": {
+    "num_layers": 1,
+    "hidden_size": 64,
+    "intermediate_size": 128,
+    "num_heads": 4,
+    "num_kv_heads": 4,
+    "head_size": 16,
+    "vocab_size": 256,
+    "dtype_bytes": 2
+  },
+  "configuration": {
+    "profile": "rnic-nn-fluid",
+    "tp_ranks": [
+      0,
+      1
+    ],
+    "gpu": "b100",
+    "provider_efficiency": 0.7,
+    "nodes": 1,
+    "gpus_per_node": 2,
+    "collective_envelope": "intra-node-fixed-cost-v1",
+    "collective_arm": "lower",
+    "context_length": 16
+  },
+  "publication_names": [
+    "outcomes",
+    "locality_outcomes",
+    "collective_timing_outcomes",
+    "collective_floor_timing_outcomes",
+    "dependency_cross_check_reports",
+    "collective_registration_outcomes",
+    "packet_breakdowns",
+    "bottleneck_reports",
+    "session_evidence",
+    "peer_evidence"
+  ],
+  "synthetic_populated_names": [
+    "outcomes",
+    "locality_outcomes",
+    "collective_timing_outcomes"
+  ],
+  "jobs": [
+    {
+      "id": "l1-h0",
+      "layers": 1,
+      "history": 0
+    },
+    {
+      "id": "l1-h1",
+      "layers": 1,
+      "history": 1
+    },
+    {
+      "id": "l1-h4",
+      "layers": 1,
+      "history": 4
+    },
+    {
+      "id": "l2-h0",
+      "layers": 2,
+      "history": 0
+    },
+    {
+      "id": "l2-h1",
+      "layers": 2,
+      "history": 1
+    },
+    {
+      "id": "l2-h4",
+      "layers": 2,
+      "history": 4
+    }
+  ],
+  "step_floor_per_layer_ps": 2048,
+  "step_ceiling_per_layer_ps": 1000000000,
+  "common_corruptions": [
+    "prior-row",
+    "provider-values",
+    "config-evidence",
+    "config-replacement",
+    "provider-replacement",
+    "prepared-payload-forgery",
+    "typed-config",
+    "nonfinite-state-before-simulation",
+    "nonfinite-publication-before-simulation",
+    "cycle-publication",
+    "unsupported-publication",
+    "binding-forgery",
+    "early-publication",
+    "duplicate-publication"
+  ],
+  "new_helper_corruptions": [
+    "state-instance-shadow",
+    "state-class-shadow",
+    "publications-instance-shadow",
+    "publications-class-shadow",
+    "state-binding-forgery",
+    "publications-binding-forgery"
+  ],
+  "control_corruptions": [
+    "source-receipt",
+    "profile-calls",
+    "count-law",
+    "job-result",
+    "missing-mutation",
+    "disk-only-bytes"
+  ],
+  "limits": {
+    "wall_seconds": 600,
+    "rss_cap_kib": 8388608,
+    "sample_seconds": 0.25
+  },
+  "required_stages": [
+    "protocol",
+    "before-capture",
+    "before-admission",
+    "after-capture",
+    "after-admission",
+    "paired-relations",
+    "corruption-controls",
+    "final-receipts"
+  ],
+  "behavioral_instances": 10,
+  "behavioral_families": 1,
+  "exact_oracles": 20,
+  "common_errors": {
+    "prior-row": {
+      "type": "ValueError",
+      "message": "pending engine prepared publication values changed"
+    },
+    "provider-values": {
+      "type": "ValueError",
+      "message": "pending engine prepared publication values changed"
+    },
+    "config-evidence": {
+      "type": "ValueError",
+      "message": "pending engine prepared publication values changed"
+    },
+    "config-replacement": {
+      "type": "ValueError",
+      "message": "pending engine prepared publication values changed"
+    },
+    "provider-replacement": {
+      "type": "ValueError",
+      "message": "pending engine prepared publication values changed"
+    },
+    "prepared-payload-forgery": {
+      "type": "ValueError",
+      "message": "pending engine prepared publication values changed"
+    },
+    "typed-config": {
+      "type": "ValueError",
+      "message": "pending engine prepared publication values changed"
+    },
+    "nonfinite-state-before-simulation": {
+      "type": "ValueError",
+      "message": "deferred values must be finite"
+    },
+    "nonfinite-publication-before-simulation": {
+      "type": "ValueError",
+      "message": "deferred values must be finite"
+    },
+    "cycle-publication": {
+      "type": "ValueError",
+      "message": "deferred value state contains a cycle"
+    },
+    "unsupported-publication": {
+      "type": "TypeError",
+      "message": "unsupported deferred value type: builtins.object"
+    },
+    "binding-forgery": {
+      "type": "ValueError",
+      "message": "pending engine prepared publication values changed"
+    },
+    "early-publication": {
+      "type": "RuntimeError",
+      "message": "publication is outside its owned engine retirement"
+    },
+    "duplicate-publication": {
+      "type": "RuntimeError",
+      "message": "deferred sink published or changed outcomes before completion"
+    }
+  },
+  "new_helper_error": {
+    "type": "ValueError",
+    "message": "pending engine prepared publication values changed"
+  },
+  "new_helpers": [
+    "_deferred_state_values",
+    "_deferred_publication_values"
+  ],
+  "top_level_snapshot_calls": {
+    "before": 3,
+    "after": 1
+  }
+}
