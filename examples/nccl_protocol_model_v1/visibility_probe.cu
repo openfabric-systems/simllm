@@ -3,7 +3,7 @@
 #include <cuda/atomic>
 #include <cstdio>
 #include <cstdlib>
-#define CUDA(x) do { auto e=(x); if(e!=cudaSuccess) { std::fprintf(stderr,"CUDA: %s\n",cudaGetErrorString(e)); std::exit(2); } } while(0)
+#define CUDA(x) do { auto cuda_status_=(x); if(cuda_status_!=cudaSuccess) { std::fprintf(stderr,"CUDA: %s\n",cudaGetErrorString(cuda_status_)); std::exit(2); } } while(0)
 using Word=unsigned long long;
 using Atomic=cuda::atomic_ref<Word,cuda::thread_scope_system>;
 struct alignas(128) Inbox { Word ready; Word data; };
