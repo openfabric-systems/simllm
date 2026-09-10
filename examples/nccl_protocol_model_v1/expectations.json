@@ -84,6 +84,8 @@
     4136960
   ],
   "method_payloads_bytes": [
+    8,
+    1024,
     524288,
     786432,
     1048576,
@@ -140,6 +142,7 @@
   ],
   "clock_mutation": false,
   "seed": 20260910,
-  "amendment": "expectations_v2.md",
-  "band_calibration_scope": "architecture, width, protocol, using only frozen calibration cells"
+  "amendment": "expectations_v3.md",
+  "band_calibration_scope": "architecture, width, protocol, using only frozen calibration cells",
+  "startup_fit": "shared method-scoped apparent startup from LL calibration; rank-selected nonnegative design in fixed column order"
 }
