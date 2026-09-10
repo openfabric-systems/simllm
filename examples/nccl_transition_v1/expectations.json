@@ -1,0 +1,65 @@
+{
+  "schema": "simllm-nccl-transition-expectations-v1",
+  "architectures": [
+    "a100",
+    "gh200"
+  ],
+  "widths": [
+    2,
+    4
+  ],
+  "nccl_version": "2.31.2",
+  "nccl_tests_commit": "b4d5beebca8a76cf01335f724d154b9b9d394d96",
+  "dense_grid": {
+    "start_bytes": 262144,
+    "end_bytes": 4194304,
+    "step_bytes": 16384
+  },
+  "control_grid": {
+    "start_bytes": 524288,
+    "end_bytes": 2621440,
+    "step_bytes": 32768
+  },
+  "auto_repeats": 5,
+  "control_repeats": 3,
+  "legacy_warmup": 5,
+  "legacy_iterations": 20,
+  "timing_warmup": 20,
+  "timing_iterations": 100,
+  "diagnostic_warmup": 5,
+  "diagnostic_iterations": 5,
+  "algorithms": [
+    "Ring",
+    "Tree"
+  ],
+  "protocols": [
+    "LL",
+    "LL128",
+    "Simple"
+  ],
+  "fixed_channels": [
+    4,
+    8,
+    16,
+    24
+  ],
+  "graph_replays": 1,
+  "random_seed": 20260910,
+  "process_timeout_seconds": 180,
+  "egress_gbps": {
+    "a100": 300,
+    "gh200": 450
+  },
+  "peer_gbps": {
+    "a100": 100,
+    "gh200": 150
+  },
+  "floor_tolerance_fraction": 0.02,
+  "unstable_iqr_fraction": 0.1,
+  "historical_reproduction_fraction": 0.1,
+  "harness_agreement_fraction": 0.1,
+  "harness_agreement_us": 2,
+  "min_automatic_step_fraction": 0.05,
+  "step_noise_iqr_multiplier": 2,
+  "intervention_excess_step_reduction_fraction": 0.5
+}
