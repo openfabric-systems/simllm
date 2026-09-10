@@ -1878,6 +1878,24 @@ NVSwitch allocation; it does not qualify an eight-GPU switched board.
   before its error is computed. The mechanism stays landed and inert: no
   shipped profile carries a curve, an uncurved width charges exactly the flat
   slope it always did, and no reported TTFT or TPOT moves.
+  The [dense Merlin follow-up](../../examples/nccl_transition_v1/RESULTS.md)
+  identifies the two-GPU mechanism through direct NCCL callbacks and fixed
+  protocol interventions: Ring/LL changes to Ring/Simple between 576 and
+  592 KiB on A100 and between 864 and 880 KiB on GH200, with eight channels
+  on both sides. On the matched control intervals, fixing Ring/LL reduces the
+  automatic 57.28 and 20.64 percent increases to 4.89 and 1.75 percent.
+  Its 241-size grid also refutes extending the sparse A100 four-GPU pass to
+  arbitrary intermediate payloads: the unchanged model misses the inherited
+  timing median by 20.20 percent at 1552 KiB. The independent benchmark's
+  worst four-GPU A100 error is 19.69 percent. Both GH200 four-GPU comparisons
+  remain within 15 percent. These residuals are post-specified descriptive
+  checks, with the earlier measurements and model left unchanged. The next
+  candidate has measured protocol boundaries and channel-count changes to
+  represent; this task stays open for its accuracy and bypass acceptance.
+  The A100 timing methods fail their 10 percent or 2 microsecond agreement
+  bound, so their boundaries remain separate in calibration. Launch-mode
+  sensitivity supplies component evidence for COMP-44 without closing its
+  host-cost identification or changing any reported token latency.
 - TRAF-16 (Precision; P1; L): preserve participant-local per-rank frontiers
   across graph-artifact and placement-subphase process boundaries. Current
   process quiescence strengthens 284 participant-local edges to artifact-wide
