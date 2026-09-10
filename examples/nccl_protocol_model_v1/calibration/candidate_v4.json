@@ -1,7 +1,7 @@
 [
   {
     "schema": "simllm-nccl-ring-protocol-model-v1",
-    "model_id": "a100-nccl-2.31-ring-w2-v2",
+    "model_id": "a100-nccl-2.31-ring-w2-v1",
     "architecture": "a100",
     "width": 2,
     "payload_min_bytes": 262144,
@@ -15,7 +15,7 @@
         "LL"
       ],
       [
-        592016,
+        606208,
         "SIMPLE"
       ]
     ],
@@ -46,7 +46,7 @@
     "protocol_radius_ppm": [
       [
         "LL",
-        68937
+        157723
       ],
       [
         "LL128",
@@ -54,52 +54,17 @@
       ],
       [
         "SIMPLE",
-        137159
+        126177
       ]
     ],
-    "method_intercept_ps": 0,
+    "method_intercept_ps": 2340547,
     "method_physical_fraction_ppm": 0,
     "visibility_rtt_ps": null,
-    "selection_resolution_bytes": 16,
-    "choice_costs": [
-      [
-        "LL",
-        7799999,
-        26214400
-      ],
-      [
-        "LL128",
-        17799999,
-        14246956
-      ],
-      [
-        "SIMPLE",
-        15200000,
-        13107200
-      ]
-    ],
-    "protocol_method_costs": [
-      [
-        "LL",
-        0,
-        94950
-      ],
-      [
-        "LL128",
-        0,
-        0
-      ],
-      [
-        "SIMPLE",
-        2943500,
-        0
-      ]
-    ],
-    "center_method": "event"
+    "selection_resolution_bytes": 16384
   },
   {
     "schema": "simllm-nccl-ring-protocol-model-v1",
-    "model_id": "a100-nccl-2.31-ring-w4-v2",
+    "model_id": "a100-nccl-2.31-ring-w4-v1",
     "architecture": "a100",
     "width": 4,
     "payload_min_bytes": 262144,
@@ -113,7 +78,7 @@
         "LL"
       ],
       [
-        1474256,
+        1474560,
         "LL128"
       ]
     ],
@@ -144,60 +109,25 @@
     "protocol_radius_ppm": [
       [
         "LL",
-        148359
+        144519
       ],
       [
         "LL128",
-        174040
+        135073
       ],
       [
         "SIMPLE",
         88876
       ]
     ],
-    "method_intercept_ps": 0,
+    "method_intercept_ps": 3616039,
     "method_physical_fraction_ppm": 0,
     "visibility_rtt_ps": null,
-    "selection_resolution_bytes": 16,
-    "choice_costs": [
-      [
-        "LL",
-        10199999,
-        17934597
-      ],
-      [
-        "LL128",
-        25400000,
-        7123478
-      ],
-      [
-        "SIMPLE",
-        28800001,
-        6553600
-      ]
-    ],
-    "protocol_method_costs": [
-      [
-        "LL",
-        555243,
-        234655
-      ],
-      [
-        "LL128",
-        4651818,
-        0
-      ],
-      [
-        "SIMPLE",
-        0,
-        0
-      ]
-    ],
-    "center_method": "event"
+    "selection_resolution_bytes": 16384
   },
   {
     "schema": "simllm-nccl-ring-protocol-model-v1",
-    "model_id": "gh200-nccl-2.31-ring-w2-v2",
+    "model_id": "gh200-nccl-2.31-ring-w2-v1",
     "architecture": "gh200",
     "width": 2,
     "payload_min_bytes": 262144,
@@ -211,7 +141,7 @@
         "LL"
       ],
       [
-        888000,
+        901120,
         "SIMPLE"
       ]
     ],
@@ -242,7 +172,7 @@
     "protocol_radius_ppm": [
       [
         "LL",
-        110061
+        57613
       ],
       [
         "LL128",
@@ -250,52 +180,17 @@
       ],
       [
         "SIMPLE",
-        41460
+        40139
       ]
     ],
     "method_intercept_ps": 0,
-    "method_physical_fraction_ppm": 0,
+    "method_physical_fraction_ppm": 4988,
     "visibility_rtt_ps": null,
-    "selection_resolution_bytes": 16,
-    "choice_costs": [
-      [
-        "LL",
-        7800001,
-        17476266
-      ],
-      [
-        "LL128",
-        17799999,
-        9497971
-      ],
-      [
-        "SIMPLE",
-        15200000,
-        8738133
-      ]
-    ],
-    "protocol_method_costs": [
-      [
-        "LL",
-        0,
-        0
-      ],
-      [
-        "LL128",
-        0,
-        0
-      ],
-      [
-        "SIMPLE",
-        31533,
-        0
-      ]
-    ],
-    "center_method": "event"
+    "selection_resolution_bytes": 16384
   },
   {
     "schema": "simllm-nccl-ring-protocol-model-v1",
-    "model_id": "gh200-nccl-2.31-ring-w4-v2",
+    "model_id": "gh200-nccl-2.31-ring-w4-v1",
     "architecture": "gh200",
     "width": 4,
     "payload_min_bytes": 262144,
@@ -309,7 +204,7 @@
         "LL"
       ],
       [
-        2488016,
+        2490368,
         "LL128"
       ]
     ],
@@ -340,55 +235,20 @@
     "protocol_radius_ppm": [
       [
         "LL",
-        98145
+        58260
       ],
       [
         "LL128",
-        52346
+        40806
       ],
       [
         "SIMPLE",
         31396
       ]
     ],
-    "method_intercept_ps": 0,
+    "method_intercept_ps": 79761,
     "method_physical_fraction_ppm": 0,
     "visibility_rtt_ps": null,
-    "selection_resolution_bytes": 16,
-    "choice_costs": [
-      [
-        "LL",
-        10200000,
-        11155064
-      ],
-      [
-        "LL128",
-        25400000,
-        4748986
-      ],
-      [
-        "SIMPLE",
-        28800001,
-        4369067
-      ]
-    ],
-    "protocol_method_costs": [
-      [
-        "LL",
-        89250,
-        0
-      ],
-      [
-        "LL128",
-        182805,
-        0
-      ],
-      [
-        "SIMPLE",
-        0,
-        0
-      ]
-    ],
-    "center_method": "event"
+    "selection_resolution_bytes": 16384
   }
 ]

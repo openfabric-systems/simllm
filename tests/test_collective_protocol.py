@@ -85,7 +85,9 @@ def record(phase, tokens):
             for i in range(tokens)
         ]
     )
-    return StepRecord(step_index=0, virtual_time_ps=0, scheduled=scheduled, num_sampled=len(scheduled))
+    return StepRecord(
+        step_index=0, virtual_time_ps=0, scheduled=scheduled, num_sampled=len(scheduled)
+    )
 
 
 @pytest.mark.parametrize(
@@ -168,7 +170,7 @@ def test_rate_and_rtt_have_separate_nonnegative_ownership():
 
 
 def test_boundary_uncertainty_unites_source_resolution_interval_only():
-    model = models()[0]
+    model = NcclRingProtocolModel.from_json(json.loads(MODELS.with_name("candidate_v4.json").read_text())[0])
     boundary, new = model.protocol_starts[1]
     size = boundary - 8192
     estimate = model.predict(size)
@@ -199,6 +201,28 @@ def test_live_original_graph_changes_token_time_by_collective_service(
             results[arm].request_metrics, results["central"].request_metrics, strict=True
         ):
             assert changed.completed_at_ps - base.completed_at_ps == expected
+    if phase is RequestPhase.DECODE:
+        second = {
+            arm: instance(replace(item, step_index=1, virtual_time_ps=results[arm].completed_at_ps))
+            for arm, instance in instances.items()
+        }
+        for arm in ("lower", "upper"):
+            expected = 2 * (getattr(estimate, arm + "_ps") - estimate.central_ps)
+            for changed, base in zip(
+                second[arm].request_metrics, second["central"].request_metrics, strict=True
+            ):
+                assert changed.tpot_ps is not None and base.tpot_ps is not None
+                assert changed.tpot_ps - base.tpot_ps == expected
+                assert changed.ttft_ps - base.ttft_ps == expected
+    else:
+        for arm in ("lower", "upper"):
+            expected = 2 * (getattr(estimate, arm + "_ps") - estimate.central_ps)
+            assert (
+                results[arm].request_metrics[0].ttft_ps
+                - results["central"].request_metrics[0].ttft_ps
+                == expected
+            )
+
     for arm, instance in instances.items():
         rows = instance.collective_timing_outcomes[0].artifacts
         ids = {
@@ -220,3 +244,15 @@ def test_unsupported_scope_fails_before_state_publication(tmp_path):
             instance(record(RequestPhase.PREFILL, 32))
         assert instance.outcomes == []
         assert instance.collective_timing_outcomes == []
+
+
+def test_source_chooser_resolves_the_fresh_payload_inside_the_old_bracket():
+    model = models()[0]
+    assert model.protocol(589824) == "LL"
+    assert model.protocol(598016) == "SIMPLE"
+    assert model.protocol(606208) == "SIMPLE"
+    assert model.center_method == "event"
+    estimate = model.predict(1048576)
+    assert estimate.central_ps == estimate.reference_ps + estimate.method_allowance_ps
+    with pytest.raises(ValueError, match="three protocols"):
+        replace(model, choice_costs=(("LL", 1, 1),))

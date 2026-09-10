@@ -252,6 +252,9 @@ class NcclRingProtocolModel:
     method_physical_fraction_ppm: int = 0
     visibility_rtt_ps: int | None = None
     selection_resolution_bytes: int = 0
+    choice_costs: tuple[tuple[str, int, int], ...] = ()
+    protocol_method_costs: tuple[tuple[str, int, int], ...] = ()
+    center_method: str = "midpoint"
 
     def __post_init__(self) -> None:
         if not isinstance(self.model_id, str) or not self.model_id.strip():
@@ -279,6 +282,20 @@ class NcclRingProtocolModel:
             _integer(name, getattr(self, name))
         if self.visibility_rtt_ps is not None:
             _integer("visibility_rtt_ps", self.visibility_rtt_ps)
+        if self.center_method not in ("midpoint", "event", "reference"):
+            raise ValueError("center_method must be midpoint, event or reference")
+        for name in ("choice_costs", "protocol_method_costs"):
+            values = tuple(tuple(row) for row in getattr(self, name))
+            object.__setattr__(self, name, values)
+            if values:
+                if (
+                    any(len(row) != 3 for row in values)
+                    or tuple(row[0] for row in values) != PROTOCOLS
+                ):
+                    raise ValueError(f"{name} must cover the three protocols in order")
+                for _, first, second in values:
+                    _integer(name, first)
+                    _integer(name, second)
         if self.payload_min_bytes > self.payload_max_bytes:
             raise ValueError("model payload bounds are inverted")
         object.__setattr__(
@@ -309,6 +326,11 @@ class NcclRingProtocolModel:
         _integer("payload_bytes", payload_bytes, 1)
         if not self.payload_min_bytes <= payload_bytes <= self.payload_max_bytes:
             raise ValueError("payload lies outside the calibrated protocol model")
+        if self.choice_costs:
+            # NCCL examines Simple before LL128 and LL when predicted costs tie.
+            return min(
+                reversed(self.choice_costs), key=lambda row: row[1] * MIB + row[2] * payload_bytes
+            )[0]
         return next(
             protocol for start, protocol in reversed(self.protocol_starts) if payload_bytes >= start
         )
@@ -344,7 +366,20 @@ class NcclRingProtocolModel:
         reference = (
             self.startup_ps + max(floor, service.gpu_service_ps(geometry)) + publication + extension
         )
-        method = self.method_intercept_ps + _ceil(floor * self.method_physical_fraction_ppm, 10**6)
+        method_intercept = self.method_intercept_ps
+        method_fraction = self.method_physical_fraction_ppm
+        if self.protocol_method_costs:
+            _, method_intercept, method_fraction = next(
+                row for row in self.protocol_method_costs if row[0] == geometry.protocol
+            )
+        method = method_intercept + _ceil(floor * method_fraction, 10**6)
+        center = reference + (
+            method
+            if self.center_method == "event"
+            else _ceil(method, 2)
+            if self.center_method == "midpoint"
+            else 0
+        )
         fraction = dict(self.protocol_radius_ppm).get(geometry.protocol, self.residual_fraction_ppm)
         radius = _ceil(reference * fraction, 10**6)
         lower = max(self.startup_ps + floor, reference - radius)
@@ -361,7 +396,7 @@ class NcclRingProtocolModel:
             floor,
             reference,
             method,
-            reference + _ceil(method, 2),
+            center,
             lower,
             upper,
             publication,
@@ -380,6 +415,12 @@ class NcclRingProtocolModel:
         if payload.pop("schema", None) != "simllm-nccl-ring-protocol-model-v1":
             raise ValueError("unsupported protocol model schema")
         expected = set(cls.__dataclass_fields__)
+        for name, default in (
+            ("choice_costs", ()),
+            ("protocol_method_costs", ()),
+            ("center_method", "midpoint"),
+        ):
+            payload.setdefault(name, default)
         if set(payload) != expected:
             raise ValueError("protocol model fields do not match the strict schema")
         try:

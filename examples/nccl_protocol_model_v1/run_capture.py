@@ -54,6 +54,8 @@ def main():
                             "grid": grid,
                         }
                     )
+    if config.get("fresh_only", False):
+        plan = [cell for cell in plan if cell["kind"] in ("fresh_legacy", "fresh_reference")]
     random.Random(config["seed"]).shuffle(plan)
     (out / "plan.json").write_text(json.dumps(plan, indent=2) + "\n")
     environment = {k: v for k, v in os.environ.items() if not k.startswith("NCCL_")}

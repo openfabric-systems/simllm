@@ -39,10 +39,13 @@ cp "${PRIOR}/build/all_reduce_perf" "${OUT}/bin/"
 cp "${PRIOR}/legacy_dense.cu" "${OUT}/bin/legacy_fresh.cu"
 python3 - "${OUT}/bin" <<'PY'
 from pathlib import Path
+import json
 import sys
 root=Path(sys.argv[1]);p=root/'legacy_fresh.cu';s=p.read_text()
 old='for (size_t b = 262144; b <= 4194304; b += 16384) sizes.push_back(b);'
-new='for (size_t b = 270336; b <= 4136960; b += 65536) sizes.push_back(b);'
+config=json.loads((root/'expectations.json').read_text())
+grid=config['fresh_payloads_bytes']
+new=f'for (size_t b = {grid[0]}; b <= {grid[-1]}; b += 65536) sizes.push_back(b);'
 assert s.count(old)==1
 p.write_text(s.replace(old,new))
 PY
