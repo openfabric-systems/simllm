@@ -124,7 +124,7 @@
   "minimum_qualifying_band_coverage": 0.99,
   "maximum_band_width_fraction": 0.4,
   "band_calibration": "maximum absolute fractional residual over fixed-protocol controls and automatic 128-KiB anchors, plus the 90th percentile relative interquartile repeat spread; no validation-size residual enters the band",
-  "parameter_fit": "nonnegative nonlinear least squares with pipeline max; four mechanism costs per architecture, width and protocol; deterministic seeds",
+  "parameter_fit": "nonnegative nonlinear least squares of fractional residuals with pipeline max; same mechanism costs and deterministic seeds",
   "method_delta_fit": "nonnegative intercept and physical-service coefficient from inherited minus reference medians at automatic 128-KiB anchors",
   "physical_sweep_rates": [
     0.5,
@@ -142,7 +142,8 @@
   ],
   "clock_mutation": false,
   "seed": 20260910,
-  "amendment": "expectations_v3.md",
+  "amendment": "expectations_v4.md",
   "band_calibration_scope": "architecture, width, protocol, using only frozen calibration cells",
-  "startup_fit": "shared method-scoped apparent startup from LL calibration; rank-selected nonnegative design in fixed column order"
+  "startup_fit": "shared method-scoped apparent startup from LL calibration; rank-selected nonnegative design in fixed column order",
+  "protocol_selection_resolution_bytes": 16384
 }
