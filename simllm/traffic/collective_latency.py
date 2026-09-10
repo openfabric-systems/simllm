@@ -28,6 +28,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 
 from simllm.core.execution import CollectiveWork
+from simllm.traffic.collective_protocol import NcclRingProtocolModel
 
 PICOSECONDS_PER_SECOND = 1_000_000_000_000
 LEGACY_COLLECTIVE_LATENCY_PROFILE = "legacy"
@@ -276,6 +277,8 @@ class CollectiveLatencyProfile:
     propagation_reference_ps: int
     provenance: CollectiveLatencyProvenance | None = None
     bandwidth_curves: tuple[tuple[int, CollectiveBandwidthCurve], ...] = ()
+    protocol_models: tuple[tuple[int, NcclRingProtocolModel], ...] = ()
+    protocol_arm: str = "central"
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -360,6 +363,25 @@ class CollectiveLatencyProfile:
             raise ValueError(
                 "bandwidth_curves widths must be unique and increasing"
             )
+        object.__setattr__(self, "protocol_models", tuple(tuple(row) for row in self.protocol_models))
+        if self.protocol_arm not in ("lower", "central", "upper"):
+            raise ValueError("protocol_arm must be lower, central or upper")
+        protocol_widths = []
+        for width, model in self.protocol_models:
+            _require_int("protocol model width", width, minimum=2)
+            if not isinstance(model, NcclRingProtocolModel):
+                raise TypeError("protocol_models require NcclRingProtocolModel objects")
+            if width not in widths or model.width != width:
+                raise ValueError("protocol model and profile participant widths disagree")
+            if width in curve_widths:
+                raise ValueError("a width cannot select both a bandwidth curve and a protocol model")
+            if self.base_latency_ps(width) != model.startup_ps:
+                raise ValueError("protocol startup must equal the profile base charged once")
+            if (source_min, source_max) != (model.payload_min_bytes, model.payload_max_bytes):
+                raise ValueError("protocol model and profile payload scopes disagree")
+            protocol_widths.append(width)
+        if protocol_widths != sorted(set(protocol_widths)):
+            raise ValueError("protocol model widths must be unique and increasing")
         if self.provenance is not None:
             if not isinstance(self.provenance, CollectiveLatencyProvenance):
                 raise TypeError(
@@ -465,6 +487,21 @@ class CollectiveLatencyProfile:
                 return curve
         return None
 
+    def protocol_model(self, participant_count: int) -> NcclRingProtocolModel | None:
+        """Return the explicitly selected protocol model, or the exact bypass."""
+        return next((model for width, model in self.protocol_models if width == participant_count), None)
+
+    def validate_protocol_work(self, work: CollectiveWork, *, dtype_bytes: int) -> None:
+        """Reject a protocol calibration transfer before runtime state changes."""
+        if not self.protocol_models:
+            return
+        if (work.collective, work.algorithm_hint) != ("all-reduce", "ring") or dtype_bytes != 4:
+            raise ValueError("NCCL protocol profiles require float32 Ring all-reduce")
+        model = self.protocol_model(len(work.ranks))
+        if model is None:
+            raise ValueError("no protocol model covers the requested participant width")
+        model.predict(work.payload_bytes)
+
     def endpoint_serialization_ps(
         self,
         participant_count: int,
@@ -484,6 +521,14 @@ class CollectiveLatencyProfile:
             participant_count,
             endpoint_bytes,
         )
+        model = self.protocol_model(participant_count)
+        if model is not None:
+            numerator = endpoint_bytes * participant_count
+            denominator = 2 * (participant_count - 1)
+            if numerator % denominator:
+                raise ValueError("endpoint bytes do not identify an exact Ring payload")
+            estimate = model.predict(numerator // denominator)
+            return getattr(estimate, self.protocol_arm + "_ps") - model.startup_ps
         curve = self.bandwidth_curve(participant_count)
         if curve is None:
             return _ceil_div(
@@ -765,6 +810,8 @@ class CollectiveFixedCostEnvelope:
                 "envelope arms must share bandwidth_bytes_per_second so the "
                 "bracket isolates the fixed cost"
             )
+        if lower.protocol_models != upper.protocol_models or lower.protocol_arm != upper.protocol_arm:
+            raise ValueError("fixed-cost envelope arms must share their protocol service")
         if lower.bandwidth_curves != upper.bandwidth_curves:
             raise ValueError(
                 "envelope arms must share their bandwidth curves so the bracket "
