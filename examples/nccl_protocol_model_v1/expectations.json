@@ -122,7 +122,7 @@
   "minimum_qualifying_band_coverage": 0.99,
   "maximum_band_width_fraction": 0.4,
   "band_calibration": "maximum absolute fractional residual over fixed-protocol controls and automatic 128-KiB anchors, plus the 90th percentile relative interquartile repeat spread; no validation-size residual enters the band",
-  "parameter_fit": "nonnegative least squares, separately by architecture, width and protocol; original tiny-message floor plus a fixed physical byte floor and three nonnegative mechanism costs",
+  "parameter_fit": "nonnegative nonlinear least squares with pipeline max; four mechanism costs per architecture, width and protocol; deterministic seeds",
   "method_delta_fit": "nonnegative intercept and physical-service coefficient from inherited minus reference medians at automatic 128-KiB anchors",
   "physical_sweep_rates": [
     0.5,
@@ -139,5 +139,7 @@
     1000000
   ],
   "clock_mutation": false,
-  "seed": 20260910
+  "seed": 20260910,
+  "amendment": "expectations_v2.md",
+  "band_calibration_scope": "architecture, width, protocol, using only frozen calibration cells"
 }
