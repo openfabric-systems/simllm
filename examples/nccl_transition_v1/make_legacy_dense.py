@@ -21,17 +21,15 @@ def transform(source, config):
     grid = config["dense_grid"]
     replacements = {
         "  sizes.push_back(8);\n"
-        "  for (int k = 10; k <= 30; ++k) sizes.push_back(1ull << k);":
-        "  for (size_t b = %d; b <= %d; b += %d) sizes.push_back(b);"
-        % (grid["start_bytes"], grid["end_bytes"], grid["step_bytes"]),
-        "const Op ops[] = {Op::AllReduce, Op::AllGather, Op::ReduceScatter, Op::Broadcast};":
-        "const Op ops[] = {Op::AllReduce};",
+        "  for (int k = 10; k <= 30; ++k) sizes.push_back(1ull << k);": (f"  for (size_t b = {grid['start_bytes']}; b <= {grid['end_bytes']}; "
+         f"b += {grid['step_bytes']}) sizes.push_back(b);"),
+        "const Op ops[] = {Op::AllReduce, Op::AllGather, Op::ReduceScatter, Op::Broadcast};": "const Op ops[] = {Op::AllReduce};",
     }
     for old, new in replacements.items():
         if source.count(old) != 1:
             raise ValueError("Inherited source changed: transformation is not unique")
         source = source.replace(old, new)
-    body = source[source.index("#include"):]
+    body = source[source.index("#include") :]
     return (
         "// Dense compatibility capture derived from the hardware envelope.\n"
         "// Preserves its all-reduce buffers, warmups and per-rank event timing.\n"
@@ -51,8 +49,10 @@ def main():
     # The timing body must be byte-identical to the inherited implementation.
     start = "          for (int it = 0; it < kWarmup; ++it) issue();"
     end = "          if (op == Op::AllReduce) {"
+
     def block(text):
-        return text[text.index(start):text.index(end)]
+        return text[text.index(start) : text.index(end)]
+
     if block(source) != block(output):
         raise ValueError("Compatibility timing body changed")
     args.output.write_text(output)

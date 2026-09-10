@@ -75,10 +75,21 @@ nvidia-smi --query-gpu=index,clocks.sm,clocks.mem,power.draw,temperature.gpu --f
   --loop=5 > "${OUT}/state_samples.csv" 2>&1 &
 MONITOR_PID=$!
 trap 'kill "${MONITOR_PID}" 2>/dev/null || true' EXIT
-python3 "${OUT}/run_campaign.py" --expectations "${OUT}/expectations.json" \
+nvcc -shared -std=c++17 -Xcompiler -fPIC -I"${NCCL_ROOT}/include" \
+  -I"${STAGE}/nccl-tests/src" "${OUT}/selection_observer.cc" \
+  -o "${OUT}/libnccl-selection-observer.so" > "${OUT}/observer_build.log" 2>&1
+sha256sum "${OUT}/libnccl-selection-observer.so" >> "${OUT}/binary.sha256"
+if [ "${NCCL_TRANSITION_OBSERVER_ONLY:-0}" != 1 ]; then
+  python3 "${OUT}/run_campaign.py" --expectations "${OUT}/expectations.json" \
+    --binary "${OUT}/build/all_reduce_perf" --legacy "${OUT}/legacy_dense" \
+    --output "${OUT}/raw" --architecture "${ARCH}" --freeze "${FREEZE}" \
+    --implementation "${IMPLEMENTATION}" > "${OUT}/campaign.log" 2>&1
+fi
+python3 "${OUT}/run_observer.py" --expectations "${OUT}/expectations.json" \
   --binary "${OUT}/build/all_reduce_perf" --legacy "${OUT}/legacy_dense" \
-  --output "${OUT}/raw" --architecture "${ARCH}" --freeze "${FREEZE}" \
-  --implementation "${IMPLEMENTATION}" > "${OUT}/campaign.log" 2>&1
+  --plugin "${OUT}/libnccl-selection-observer.so" --output "${OUT}/observer" \
+  --architecture "${ARCH}" --implementation "${IMPLEMENTATION}" \
+  > "${OUT}/observer.log" 2>&1
 kill "${MONITOR_PID}" 2>/dev/null || true
 wait "${MONITOR_PID}" 2>/dev/null || true
 trap - EXIT
