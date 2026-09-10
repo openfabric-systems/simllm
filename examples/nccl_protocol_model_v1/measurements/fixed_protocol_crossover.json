@@ -1,0 +1,44 @@
+[
+  {
+    "architecture": "a100",
+    "recorded_chooser_costs": {
+      "LL": [
+        7.8,
+        40.0
+      ],
+      "LL128": [
+        17.8,
+        73.6
+      ],
+      "SIMPLE": [
+        15.2,
+        80.0
+      ]
+    },
+    "heuristic_crossing_bytes_approximate": 591999.9999999999,
+    "first_fixed_control_simple_no_slower_bytes": 1605632,
+    "ll_at_1mib_us": 40.29009,
+    "simple_at_1mib_us": 47.84315
+  },
+  {
+    "architecture": "gh200",
+    "recorded_chooser_costs": {
+      "LL": [
+        7.8,
+        60.0
+      ],
+      "LL128": [
+        17.8,
+        110.4
+      ],
+      "SIMPLE": [
+        15.2,
+        120.0
+      ]
+    },
+    "heuristic_crossing_bytes_approximate": 887999.9999999999,
+    "first_fixed_control_simple_no_slower_bytes": 1146880,
+    "ll_at_1mib_us": 27.14889,
+    "simple_at_1mib_us": 29.36859
+  }
+]

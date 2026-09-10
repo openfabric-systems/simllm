@@ -1,0 +1,42 @@
+{
+  "schema": "simllm-nccl-protocol-capture-identity-v1",
+  "integrity": "valid",
+  "nccl_commit": "7b83616df3ae082a1f32bb74c27458bfe8153a13",
+  "nccl_tests_commit": "b4d5beebca8a76cf01335f724d154b9b9d394d96",
+  "htsim_commit": "6efec16c54595e8905d37eb45ed9fc9fd7650be2",
+  "final_parameters_reproduced_byte_identically": true,
+  "captures": [
+    {
+      "architecture": "a100",
+      "candidate_commit": "b3aa02b46e627c1f11aadde8b27f27498c06b03f",
+      "candidate_commit_time": "2026-09-10T15:59:04+02:00",
+      "capture_started": "2026-09-10T15:59:34+02:00",
+      "capture_completed": "2026-09-10T16:01:14+02:00",
+      "reference_binary_sha256": "678384c669e9b3e35984206b84946a5bbf101fddc8e5724146d5e7de55b06f9d",
+      "reference_binary_identical_across_captures": true,
+      "library_sha256": "dba12e429fe11268b895d0531ba96a7f679f35227d5b1ec77c5febbcd02281bd",
+      "original_harness_only_grid_changed": true,
+      "second_grid_config_sha256": "dac6d1b22f623ccbbd7b65b40c6d36f5b803d8589a07d20cd3dc1a1fcc7ee3d5",
+      "model_sha256": "f605e7bcce9e9d1fc19b076a2a7c32e122f482f5ec5b8dcb774f97eb46ab76ce",
+      "original_job": "204703",
+      "first_job": "204938",
+      "second_job": "205023"
+    },
+    {
+      "architecture": "gh200",
+      "candidate_commit": "b3aa02b46e627c1f11aadde8b27f27498c06b03f",
+      "candidate_commit_time": "2026-09-10T15:59:04+02:00",
+      "capture_started": "2026-09-10T16:06:54+02:00",
+      "capture_completed": "2026-09-10T16:08:04+02:00",
+      "reference_binary_sha256": "7169bfc372c7e944e66b494ab6888a15ac9ffa8e4213db17cbd06130f5f9741e",
+      "reference_binary_identical_across_captures": true,
+      "library_sha256": "1dbd9a78c092f7b20e597793ca21622644ba1d1baba8a82292605e808f276dd9",
+      "original_harness_only_grid_changed": true,
+      "second_grid_config_sha256": "dac6d1b22f623ccbbd7b65b40c6d36f5b803d8589a07d20cd3dc1a1fcc7ee3d5",
+      "model_sha256": "f605e7bcce9e9d1fc19b076a2a7c32e122f482f5ec5b8dcb774f97eb46ab76ce",
+      "original_job": "204704",
+      "first_job": "204940",
+      "second_job": "205024"
+    }
+  ]
+}

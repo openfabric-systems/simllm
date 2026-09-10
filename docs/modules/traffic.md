@@ -1896,6 +1896,27 @@ NVSwitch allocation; it does not qualify an eight-GPU switched board.
   bound, so their boundaries remain separate in calibration. Launch-mode
   sensitivity supplies component evidence for COMP-44 without closing its
   host-cost identification or changing any reported token latency.
+  The [protocol-work follow-up](../../examples/nccl_protocol_model_v1/RESULTS.md)
+  adds a selectable Ring model with LL and LL128 data/flag occupancy, Simple
+  synchronization and publication costs, source-derived channels and work
+  rounds, and NCCL's own protocol-selection costs. The shaded software and
+  timing-method envelope covers all 480 medians on another 60-size grid
+  captured after the parameter lock. Each original GPU-event curve stays within 12.25 percent;
+  four-GPU A100 still reaches 11.04 percent reference error and a 47.09 percent
+  full band against the frozen 10 and 40 percent limits. Those limits and the
+  existing full-range/anchor requirements keep this task open. The scoped
+  256-KiB to 4-MiB model rejects unsupported shapes; its explicit absence
+  preserves the earlier path. Enabled lower, central and upper profiles reach
+  StepResult and live TTFT/TPOT: a controlled graph's token-time difference is
+  exactly twice its collective-service difference. This is integration evidence,
+  not end-to-end inference accuracy. A first independent candidate's coverage
+  failure is retained; its data become development inputs only after a new
+  expectations freeze, and no second-grid value sets the final band. The
+  isolated A100 timing controls identify no general host-side cause, leaving
+  COMP-44 open. TRAF-54 retains packet expansion and the physical timing
+  authority; this analytic profile cannot run alongside a second peer-packet
+  calendar. [Public reference controls](../../examples/nccl_protocol_model_v1/public_comparisons.md)
+  distinguish vendor benchmark examples from comparable hardware evidence.
 - TRAF-16 (Precision; P1; L): preserve participant-local per-rank frontiers
   across graph-artifact and placement-subphase process boundaries. Current
   process quiescence strengthens 284 participant-local edges to artifact-wide

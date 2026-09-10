@@ -229,8 +229,12 @@ class NcclProtocolEstimate:
 class NcclRingProtocolModel:
     """Scoped, protocol-discontinuous service with a calibrated uncertainty band.
 
-    `protocol_starts` identifies observed software selections. Source-derived
-    channel and work quantization generates the remaining payload structure.
+    `choice_costs` selects the protocol with NCCL's software cost estimate;
+    its latency and per-MiB coefficients do not price hardware service.
+    Without those costs, `protocol_starts` preserves the earlier observed
+    selection intervals. Source-derived channel and work quantization generates
+    the remaining payload structure. Protocol-specific method costs distinguish
+    GPU-event and benchmark timing boundaries.
     No per-payload timing anchor is stored. The optional RTT partitions an
     identified composite cost; only a value exceeding that budget adds time.
     That explicit counterfactual never silently fits an additional RTT twice.

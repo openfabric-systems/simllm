@@ -53,8 +53,9 @@ def curves(models, points, output, label):
     fig.text(0.09, 0.966, "NCCL protocol work explains the timing step", fontsize=13, weight="bold")
     fig.text(0.09, 0.930, label, fontsize=9, color="#657380")
     handles = [
-        Line2D([], [], color="#25313b", lw=1.3, label="Model center"),
-        Patch(facecolor="#aac9df", alpha=0.5, label="Software + method envelope"),
+        Line2D([], [], color="#25313b", lw=1.3, label="Model: GPU events"),
+        Line2D([], [], color="#25313b", lw=1.0, ls="--", label="Model: benchmark"),
+        Patch(facecolor="#aac9df", alpha=0.5, label="Software + method band"),
         Line2D(
             [],
             [],
@@ -63,20 +64,19 @@ def curves(models, points, output, label):
             mfc="white",
             mec="#25313b",
             ls="none",
-            label="Original GPU-event timing",
+            label="GPU-event measurement",
         ),
-        Line2D(
-            [], [], marker="+", ms=4, color="#657380", ls="none", label="NVIDIA benchmark on Merlin"
-        ),
+        Line2D([], [], marker="+", ms=4, color="#657380", ls="none", label="Benchmark measurement"),
+        Line2D([], [], marker="x", ms=4, color="#b67600", ls="none", label="Outside band"),
     ]
     fig.legend(
         handles=handles,
         loc="upper left",
         bbox_to_anchor=(0.08, 0.904),
-        ncol=2,
+        ncol=3,
         frameon=False,
-        fontsize=8,
-        columnspacing=1.4,
+        fontsize=7.4,
+        columnspacing=1.1,
     )
     for model in models:
         ax = axes[0 if model.width == 2 else 1, 0 if model.architecture == "a100" else 1]
@@ -104,6 +104,15 @@ def curves(models, points, output, label):
         ax.plot(
             x, [e.central_ps / 1e6 for e in estimates], color=COLORS[model.width], lw=1.2, zorder=4
         )
+        if model.center_method == "event":
+            ax.plot(
+                x,
+                [e.reference_ps / 1e6 for e in estimates],
+                color=COLORS[model.width],
+                lw=0.9,
+                ls="--",
+                zorder=4,
+            )
         for lane, marker in [("timing", "+"), ("legacy", "o")]:
             subset = sorted([r for r in rows if r["lane"] == lane], key=lambda r: int(r["bytes"]))
             ax.scatter(
@@ -117,10 +126,20 @@ def curves(models, points, output, label):
                 alpha=0.70,
                 zorder=3,
             )
-        missed = [r for r in rows if not float(r["lower_us"]) <= float(r["measured_us"]) <= float(r["upper_us"])]
-        ax.scatter([int(r["bytes"]) / 2**20 for r in missed],
-                   [float(r["measured_us"]) for r in missed], marker="x", color="#b67600",
-                   s=15, linewidths=.8, zorder=6)
+        missed = [
+            r
+            for r in rows
+            if not float(r["lower_us"]) <= float(r["measured_us"]) <= float(r["upper_us"])
+        ]
+        ax.scatter(
+            [int(r["bytes"]) / 2**20 for r in missed],
+            [float(r["measured_us"]) for r in missed],
+            marker="x",
+            color="#b67600",
+            s=15,
+            linewidths=0.8,
+            zorder=6,
+        )
         for start, protocol in model.protocol_starts[1:]:
             ax.axvline(start / 2**20, color="#8896a3", ls=(0, (2, 3)), lw=0.7)
             ax.text(
@@ -178,7 +197,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument(
         "--label",
-        default="Retrospective dense comparison | 241 payloads per hardware curve | NCCL 2.31.2",
+        default="Development comparison | 301 payloads per curve | Both methods measured on Merlin",
     )
     args = parser.parse_args()
     configure()

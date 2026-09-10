@@ -95,8 +95,11 @@ within 15 percent on the dense grid for both timing methods.
   shapes and 89 of 241 four-GPU shapes exceed the larger of 10 percent or
   2 microseconds. Worst relative differences are 12.35 and 16.05 percent.
   Both GH200 widths meet the bound at every shape. The timing methods remain
-  separate; these are local event durations per call, not common-clock
-  collective phase spans or isolated device service times.
+  separate. **Timing-boundary correction:** the original harness uses GPU
+  events, while the pinned nccl-tests default uses host elapsed time through
+  stream completion. The [protocol follow-up source audit](../nccl_protocol_model_v1/source_audit.md)
+  documents this correction. Neither is an isolated device service time or
+  a common-clock collective phase span. The measured values are unchanged.
 - **H3, recorded selection:** the full history is available. A100's main
   two-GPU protocol switch lies before the initially named 768 to 1280 KiB
   neighborhood. That neighborhood contains channel changes, so the broad

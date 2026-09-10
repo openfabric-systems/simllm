@@ -1,0 +1,189 @@
+{
+  "schema": "simllm-nccl-protocol-study-v1",
+  "expectations_commit": "0c64d2c2",
+  "chronology": "Retrospective calibration and withheld regression; existing timing captures predate this model.",
+  "source_geometry": {
+    "checked_callback_cells": 3044,
+    "disagreements": [],
+    "status": "valid"
+  },
+  "dense_comparison": [
+    {
+      "architecture": "a100",
+      "width": 2,
+      "lane": "timing",
+      "partition": "all",
+      "points": 241,
+      "covered": 241,
+      "worst_center_error_pct": 11.455776348883017,
+      "worst_payload_bytes": 376832,
+      "maximum_band_width_fraction": 0.4449059922847257
+    },
+    {
+      "architecture": "a100",
+      "width": 2,
+      "lane": "timing",
+      "partition": "withheld",
+      "points": 210,
+      "covered": 210,
+      "worst_center_error_pct": 11.455776348883017,
+      "worst_payload_bytes": 376832,
+      "maximum_band_width_fraction": 0.4449059922847257
+    },
+    {
+      "architecture": "a100",
+      "width": 2,
+      "lane": "legacy",
+      "partition": "all",
+      "points": 241,
+      "covered": 241,
+      "worst_center_error_pct": -9.532784394827697,
+      "worst_payload_bytes": 1441792,
+      "maximum_band_width_fraction": 0.4499737090420513
+    },
+    {
+      "architecture": "a100",
+      "width": 2,
+      "lane": "legacy",
+      "partition": "withheld",
+      "points": 210,
+      "covered": 210,
+      "worst_center_error_pct": -8.654714827026734,
+      "worst_payload_bytes": 638976,
+      "maximum_band_width_fraction": 0.4389420716696389
+    },
+    {
+      "architecture": "a100",
+      "width": 4,
+      "lane": "timing",
+      "partition": "all",
+      "points": 241,
+      "covered": 241,
+      "worst_center_error_pct": 14.30869372501109,
+      "worst_payload_bytes": 704512,
+      "maximum_band_width_fraction": 0.4942321754759412
+    },
+    {
+      "architecture": "a100",
+      "width": 4,
+      "lane": "timing",
+      "partition": "withheld",
+      "points": 210,
+      "covered": 210,
+      "worst_center_error_pct": 14.30869372501109,
+      "worst_payload_bytes": 704512,
+      "maximum_band_width_fraction": 0.4838113632524354
+    },
+    {
+      "architecture": "a100",
+      "width": 4,
+      "lane": "legacy",
+      "partition": "all",
+      "points": 241,
+      "covered": 241,
+      "worst_center_error_pct": -12.512983100443442,
+      "worst_payload_bytes": 3145728,
+      "maximum_band_width_fraction": 0.4619687852174176
+    },
+    {
+      "architecture": "a100",
+      "width": 4,
+      "lane": "legacy",
+      "partition": "withheld",
+      "points": 210,
+      "covered": 210,
+      "worst_center_error_pct": -11.701545873423512,
+      "worst_payload_bytes": 3112960,
+      "maximum_band_width_fraction": 0.4619687852174176
+    },
+    {
+      "architecture": "gh200",
+      "width": 2,
+      "lane": "timing",
+      "partition": "all",
+      "points": 241,
+      "covered": 240,
+      "worst_center_error_pct": 6.451442614155378,
+      "worst_payload_bytes": 278528,
+      "maximum_band_width_fraction": 0.1241656524218097
+    },
+    {
+      "architecture": "gh200",
+      "width": 2,
+      "lane": "timing",
+      "partition": "withheld",
+      "points": 210,
+      "covered": 209,
+      "worst_center_error_pct": 6.451442614155378,
+      "worst_payload_bytes": 278528,
+      "maximum_band_width_fraction": 0.1241656524218097
+    },
+    {
+      "architecture": "gh200",
+      "width": 2,
+      "lane": "legacy",
+      "partition": "all",
+      "points": 241,
+      "covered": 238,
+      "worst_center_error_pct": 8.529601383837072,
+      "worst_payload_bytes": 278528,
+      "maximum_band_width_fraction": 0.12658963027628475
+    },
+    {
+      "architecture": "gh200",
+      "width": 2,
+      "lane": "legacy",
+      "partition": "withheld",
+      "points": 210,
+      "covered": 207,
+      "worst_center_error_pct": 8.529601383837072,
+      "worst_payload_bytes": 278528,
+      "maximum_band_width_fraction": 0.12658963027628475
+    },
+    {
+      "architecture": "gh200",
+      "width": 4,
+      "lane": "timing",
+      "partition": "all",
+      "points": 241,
+      "covered": 240,
+      "worst_center_error_pct": -6.9761606948344435,
+      "worst_payload_bytes": 1884160,
+      "maximum_band_width_fraction": 0.12500519372902702
+    },
+    {
+      "architecture": "gh200",
+      "width": 4,
+      "lane": "timing",
+      "partition": "withheld",
+      "points": 210,
+      "covered": 209,
+      "worst_center_error_pct": -6.9761606948344435,
+      "worst_payload_bytes": 1884160,
+      "maximum_band_width_fraction": 0.12500519372902702
+    },
+    {
+      "architecture": "gh200",
+      "width": 4,
+      "lane": "legacy",
+      "partition": "all",
+      "points": 241,
+      "covered": 238,
+      "worst_center_error_pct": -7.04846345331277,
+      "worst_payload_bytes": 1884160,
+      "maximum_band_width_fraction": 0.12280123033369897
+    },
+    {
+      "architecture": "gh200",
+      "width": 4,
+      "lane": "legacy",
+      "partition": "withheld",
+      "points": 210,
+      "covered": 207,
+      "worst_center_error_pct": -7.04846345331277,
+      "worst_payload_bytes": 1884160,
+      "maximum_band_width_fraction": 0.12276725700616374
+    }
+  ],
+  "integrity_status": "valid"
+}
