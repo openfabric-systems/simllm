@@ -108,6 +108,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--stage", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--resume", type=Path)
     args = parser.parse_args()
     cfg = json.loads((args.stage / "hardware_expectations.json").read_text())
     args.output.mkdir(parents=True, exist_ok=True)
@@ -115,6 +116,15 @@ def main():
     plan_bytes = (json.dumps(planned, indent=2) + "\n").encode()
     (args.output / "conditions.json").write_bytes(plan_bytes)
     (args.output / "conditions.sha256").write_text(hashlib.sha256(plan_bytes).hexdigest() + "\n")
+    if args.resume:
+        if (args.resume / "conditions.json").read_bytes() != plan_bytes:
+            raise RuntimeError("continuation manifest differs")
+        checkpoint = json.loads((args.resume.parent / "checkpoint.json").read_text())
+        if checkpoint["status"] != "intentional_quiescent_checkpoint" or checkpoint["gpu_processes"]:
+            raise RuntimeError("previous allocation lacks a valid quiescent checkpoint")
+        (args.output / "resume.json").write_text(json.dumps({
+            "source_capture": args.resume.parent.name, "expectations_commit": "3615669d"
+        }, indent=2) + "\n")
     qualified = {0}
     pilots = []
     for sms in cfg["resource_sms"]:
@@ -148,9 +158,22 @@ def main():
     schedule = [(repeat, cell) for repeat in range(cfg["process_repetitions"]) for cell in eligible]
     random.Random(cfg["seed"]).shuffle(schedule)
     (args.output / "timed_schedule.json").write_text(json.dumps(schedule, indent=2) + "\n")
+    if args.resume:
+        previous_schedule = json.loads((args.resume / "timed_schedule.json").read_text())
+        if previous_schedule != [[repeat, cell] for repeat, cell in schedule]:
+            raise RuntimeError("continued capability or timed schedule differs")
     for index, (repeat, cell) in enumerate(schedule):
-        result = invoke(args.stage, args.output, cfg, cell, tag=f"timed-r{repeat}-{cell['condition_id']}",
-                        seed=cfg["seed"] + index)
+        tag = f"timed-r{repeat}-{cell['condition_id']}"
+        previous = args.resume / f"{tag}.record.json" if args.resume else None
+        if previous and previous.exists():
+            result = json.loads(previous.read_text())
+            if result["status"] != 0 or result["cell"] != cell or result["observer"]:
+                raise RuntimeError("previous timed record is not reusable")
+            result["source_capture"] = args.resume.parent.name
+            result["record_sha256"] = hashlib.sha256(previous.read_bytes()).hexdigest()
+            result["csv_sha256"] = hashlib.sha256((args.resume / f"{tag}.csv").read_bytes()).hexdigest()
+        else:
+            result = invoke(args.stage, args.output, cfg, cell, tag=tag, seed=cfg["seed"] + index)
         result["repeat"] = repeat
         records.append(result)
         if result["status"] != 0:

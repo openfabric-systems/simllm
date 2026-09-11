@@ -29,6 +29,7 @@ class NcclStripe:
     load_masks: tuple[int, ...]
     local_load_bytes: int
     shared_staging_bytes: int
+    shared_tail_load_bytes: int
 
 
 def protocol_stripes(payload: int, protocol: str, warps: int) -> tuple[NcclStripe, ...]:
@@ -49,15 +50,16 @@ def protocol_stripes(payload: int, protocol: str, warps: int) -> tuple[NcclStrip
                           for group in range(4))
             load = 16 * sum(mask.bit_count() for mask in masks)
             wire = 2048
-            # storeRegs stages a final partial vector before scalar tail stores.
-            staging = 16 if useful % 16 else 0
+            # storeRegs also stages inactive vectors beyond the useful tail.
+            staging = 1920 - (useful // 16) * 16
+            tail_load = useful % 16
         else:
             unit = 8 if protocol == "LL" else 16
             masks = ((1 << ceil_div(useful, unit)) - 1,)
-            load, staging = useful, 0
+            load, staging, tail_load = useful, 0, 0
             wire = ceil_div(useful, 8) * 16 if protocol == "LL" else useful
         stripes.append(NcclStripe(index, index % warps, offset, useful, wire,
-                                  masks, load, staging))
+                                  masks, load, staging, tail_load))
     return tuple(stripes)
 
 
@@ -98,6 +100,8 @@ class NcclRingProgram:
     source_commit: str = NCCL_SOURCE_COMMIT
 
     def __post_init__(self) -> None:
+        object.__setattr__(self, "ranks", tuple(self.ranks))
+        object.__setattr__(self, "channel_bytes", tuple(self.channel_bytes))
         if self.source_commit != NCCL_SOURCE_COMMIT:
             raise ValueError("NCCL program source identity is not supported")
         if self.protocol not in PROTOCOLS or self.connection_mode != "buffered":
@@ -111,7 +115,7 @@ class NcclRingProgram:
                 or any(value % 16 for value in self.channel_bytes[:-1])
                 or sum(self.channel_bytes) != self.payload_bytes):
             raise ValueError("channel partition must conserve bytes with aligned channel starts")
-        if type(self.warps) is not int or not 3 <= self.warps <= (20 if self.protocol == "LL128" else 17):
+        if type(self.warps) is not int or not 3 <= self.warps <= {"LL": 16, "LL128": 20, "SIMPLE": 17}[self.protocol]:
             raise ValueError("invalid primitive warp count")
         if not isinstance(self.communicator, str) or not self.communicator.strip():
             raise ValueError("communicator identity must be nonblank")

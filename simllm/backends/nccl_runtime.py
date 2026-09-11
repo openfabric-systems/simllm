@@ -283,8 +283,8 @@ class _Block:
         self.finish_waiting = False
         self.data_fence_callback = None
 
-    def service(self, kind, units, callback, *, memory=False):
-        self.gpu.service(self.id, kind, units, callback, memory=memory)
+    def service(self, kind, units, callback, *, memory=False, shared=False):
+        self.gpu.service(self.id, kind, units, callback, memory=memory, shared=shared)
 
     def transfer(self, destination, size, kind, callback):
         self.pending_stores += 1
@@ -302,6 +302,9 @@ class _Block:
         self.service("block_setup", self.profile.block_setup_cycles, self.initialize)
 
     def initialize(self):
+        # loadSendSync/loadSendConn refresh the constructor's cached head.
+        self.send_conn.cached_head = self.send_conn.returned_head
+        self.op.log("constructor_head_load", self.send_conn)
         if self.program.protocol == "SIMPLE":
             # Source constructor rounds both endpoints and publishes recv head.
             self.send_conn.producer_step = ceil_div(self.send_conn.producer_step, 4) * 4
@@ -452,11 +455,47 @@ class _Block:
                 self.inflight_data += 1
                 self.transfer(self.next_rank, stripe.encoded_bytes, "data",
                               lambda: sent_visible(reservation, stripe.index))
-            if p.output_store:
-                self.service("output_store", stripe.useful_bytes + stripe.shared_staging_bytes,
-                             done, memory=True)
-            else:
+            if not p.output_store:
                 done()
+            elif self.program.protocol == "LL128":
+                output_ll128()
+            else:
+                self.service("output_store", stripe.useful_bytes, done, memory=True)
+
+        def output_ll128():
+            # Aligned global stores and shared staging have distinct service.
+            # The warp barrier orders staged tail reads, not a global-memory fence.
+            unfinished = 2
+
+            def branch_done():
+                nonlocal unfinished
+                unfinished -= 1
+                if unfinished == 0:
+                    done()
+
+            tail = stripe.shared_tail_load_bytes
+            aligned = stripe.useful_bytes - tail
+            if aligned:
+                self.service("output_store", aligned, branch_done, memory=True)
+            else:
+                branch_done()
+
+            def tail_store():
+                self.service("output_store", tail, branch_done, memory=True)
+
+            def tail_read():
+                if tail:
+                    self.service("shared_tail_load", tail, tail_store, shared=True)
+                else:
+                    branch_done()
+
+            def warp_barrier():
+                self.service("output_warp_barrier", self.profile.barrier_cycles_per_warp, tail_read)
+
+            if stripe.shared_staging_bytes:
+                self.service("shared_staging_store", stripe.shared_staging_bytes, warp_barrier, shared=True)
+            else:
+                warp_barrier()
 
         def done():
             self.stripe(warp, index + 1)

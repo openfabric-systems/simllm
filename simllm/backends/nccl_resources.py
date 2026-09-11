@@ -12,6 +12,7 @@ class NcclGpuProfile:
     available_sms: int
     clock_hz: int
     memory_bytes_per_second: int
+    shared_memory_bytes_per_second: int
     block_setup_cycles: int
     warp_issue_cycles: int
     barrier_cycles_per_warp: int
@@ -32,6 +33,7 @@ class NcclGpuProfile:
             if type(value) is not int or value < 0:
                 raise ValueError(f"{item.name} must be a nonnegative integer")
         if min(self.available_sms, self.clock_hz, self.memory_bytes_per_second,
+               self.shared_memory_bytes_per_second,
                self.blocks_per_sm, self.warps_per_sm, self.registers_per_sm,
                self.shared_bytes_per_sm, self.poll_interval_cycles) <= 0:
             raise ValueError("GPU capacities and polling cadence must be positive")
@@ -40,6 +42,8 @@ class NcclGpuProfile:
         return (cycles * 10**12 + self.clock_hz - 1) // self.clock_hz
 
     def residency(self, warps: int) -> int:
+        if type(warps) is not int or warps <= 0:
+            raise ValueError("warp count must be a positive integer")
         limits = [self.blocks_per_sm, self.warps_per_sm // warps]
         if self.registers_per_thread:
             limits.append(self.registers_per_sm // (32 * warps * self.registers_per_thread))
@@ -88,6 +92,9 @@ class NcclGpuResources:
         return tuple(dict(row) for row in self._residency_events)
 
     def admit(self, block_id: str, rank: int, warps: int, callback: Callable[[], None]) -> None:
+        if (not isinstance(block_id, str) or not block_id.strip() or type(rank) is not int
+                or rank < 0 or not callable(callback)):
+            raise ValueError("block identity, rank and completion callback must be valid")
         if block_id in self._identities or self.profile.residency(warps) < 1:
             raise ValueError("block identity repeats or its resource footprint cannot reside")
         self._identities.add(block_id)
@@ -125,16 +132,19 @@ class NcclGpuResources:
         self._grant(rank)
 
     def service(self, block_id: str, kind: str, units: int, callback: Callable[[], None],
-                *, memory: bool = False) -> None:
+                *, memory: bool = False, shared: bool = False) -> None:
         """Issue ready instruction cycles or local bytes, never a whole-CTA fit."""
+        if memory and shared:
+            raise ValueError("a visit must select one memory resource")
         if type(units) is not int or units < 0:
             raise ValueError("resource work units must be nonnegative integers")
         rank, sm, _, _ = self._resident[block_id]
-        key = (rank, "memory") if memory else (rank, "sm", sm)
+        key = (rank, "memory") if memory else (rank, "shared" if shared else "sm", sm)
         eligible = self.calendar.now_ps
         start = max(eligible, self._cursors.get(key, 0))
-        duration = ((units * 10**12 + self.profile.memory_bytes_per_second - 1)
-                    // self.profile.memory_bytes_per_second if memory else self.profile.cycles_ps(units))
+        rate = self.profile.shared_memory_bytes_per_second if shared else self.profile.memory_bytes_per_second
+        duration = ((units * 10**12 + rate - 1) // rate
+                    if memory or shared else self.profile.cycles_ps(units))
         finish = start + duration
         self._cursors[key] = finish
         visit = NcclResourceVisit(block_id, rank, ":".join(map(str, key)), kind,

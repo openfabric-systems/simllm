@@ -15,6 +15,7 @@ ARCH="${NCCL_FIFO_ARCH:?set NCCL_FIFO_ARCH}"
 LIBRARY="${NCCL_FIFO_LIBRARY:?set NCCL_FIFO_LIBRARY}"
 HEADERS="${NCCL_FIFO_PROFILER_HEADERS:?set NCCL_FIFO_PROFILER_HEADERS}"
 OUT="${DATA}/${ARCH}/${SLURM_JOB_ID}"
+PYTHON="${NCCL_FIFO_PYTHON:-python3}"
 mkdir -p "${OUT}/bin"
 module purge
 case "${ARCH}" in
@@ -34,17 +35,28 @@ nvidia-smi nvlink -s > "${OUT}/nvlink_status.txt" 2>&1
 nvidia-smi --query-compute-apps=gpu_uuid,pid,process_name,used_memory --format=csv > "${OUT}/processes_before.csv"
 test "$(tail -n +2 "${OUT}/processes_before.csv" | wc -l)" -eq 0
 sha256sum "${LIBRARY}/lib/libnccl.so.2" > "${OUT}/library.sha256"
-python3 - "${OUT}" "${ARCH}" <<'PY'
+"${PYTHON}" - "${OUT}" "${ARCH}" <<'PY'
 from pathlib import Path
 import json,sys
 out=Path(sys.argv[1]);cfg=json.loads((out/'bin/hardware_expectations.json').read_text())
 assert (out/'library.sha256').read_text().split()[0] == cfg['library_sha256'][sys.argv[2]]
 PY
+if [ -n "${NCCL_FIFO_RESUME:-}" ]; then
+ for item in channel_probe.cu channel_observer.cc hardware_expectations.json; do
+  cmp "${OUT}/bin/${item}" "${NCCL_FIFO_RESUME}/bin/${item}"
+ done
+ for item in gpu_identity.csv topology.txt library.sha256 nvcc_version.txt; do
+  cmp "${OUT}/${item}" "${NCCL_FIFO_RESUME}/${item}"
+ done
+ cp "${NCCL_FIFO_RESUME}/bin/channel_probe" "${NCCL_FIFO_RESUME}/bin/libnccl-channel-observer.so" "${OUT}/bin/"
+ printf '%s\n' '3615669d' > "${OUT}/continuation_expectations_commit.txt"
+else
 nvcc -O3 -std=c++17 -arch="sm_${TARGET}" -I"${LIBRARY}/include" \
  "${OUT}/bin/channel_probe.cu" -L"${LIBRARY}/lib" -lnccl -lcuda -lpthread \
  -o "${OUT}/bin/channel_probe" > "${OUT}/probe_build.log" 2>&1
 nvcc -shared -std=c++17 -Xcompiler -fPIC -I"${LIBRARY}/include" -I"${HEADERS}" \
  "${OUT}/bin/channel_observer.cc" -o "${OUT}/bin/libnccl-channel-observer.so" > "${OUT}/observer_build.log" 2>&1
+fi
 sha256sum "${OUT}/bin/"* > "${OUT}/staged.sha256"
 ldd "${OUT}/bin/channel_probe" > "${OUT}/linked_libraries.txt"
 # The allocation's default application clock is the only lock target. Failure
@@ -57,7 +69,9 @@ nvidia-smi --query-gpu=index,clocks.sm,clocks.mem,power.draw,temperature.gpu --f
 MONITOR=$!
 cleanup() { kill "${MONITOR}" 2>/dev/null || true; if [ "${LOCKED}" = 1 ]; then nvidia-smi -rgc > "${OUT}/clock_restore.log" 2>&1 || true; fi; }
 trap cleanup EXIT
-python3 -u "${OUT}/bin/run_capture.py" --stage "${OUT}/bin" --output "${OUT}/raw" > "${OUT}/campaign.log" 2>&1
+CONTINUE_ARGS=()
+if [ -n "${NCCL_FIFO_RESUME:-}" ]; then CONTINUE_ARGS=(--resume "${NCCL_FIFO_RESUME}/raw"); fi
+"${PYTHON}" -u "${OUT}/bin/run_capture.py" --stage "${OUT}/bin" --output "${OUT}/raw" "${CONTINUE_ARGS[@]}" > "${OUT}/campaign.log" 2>&1
 cleanup
 trap - EXIT
 nvidia-smi --query-compute-apps=gpu_uuid,pid,process_name,used_memory --format=csv > "${OUT}/processes_after.csv"

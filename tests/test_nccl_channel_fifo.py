@@ -22,6 +22,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def gpu(sms=4, **kwargs):
     values = json.loads((ROOT / "examples/nccl_channel_fifo_v1/expectations.json").read_text())["synthetic_gpu"]
+    staging = json.loads((ROOT / "examples/nccl_channel_fifo_v1/expectations_shared_staging.json").read_text())
+    values["shared_memory_bytes_per_second"] = staging["shared_memory_bytes_per_second"]
     return NcclGpuProfile(available_sms=sms, **{**values, **kwargs})
 
 
@@ -187,3 +189,73 @@ def test_receiver_delay_holds_resident_blocks_and_increases_only_dependent_work(
     assert results[1].protocol_data_bytes == results[0].protocol_data_bytes
     assert sum(v.units for v in results[1].resource_visits if v.kind == "flag_poll") > sum(
         v.units for v in results[0].resource_visits if v.kind == "flag_poll")
+
+
+def test_program_snapshots_descriptor_sequences_and_rejects_extra_ll_warp():
+    ranks, partition = [0, 1], [32, 32]
+    program = NcclRingProgram(64, ranks, "LL", partition, 4)
+    ranks.reverse()
+    partition[:] = [64]
+    assert program.ranks == (0, 1)
+    assert program.channel_bytes == (32, 32)
+    with pytest.raises(ValueError, match="warp"):
+        replace(program, warps=17)
+
+
+@pytest.mark.parametrize("protocol", ["LL", "LL128", "SIMPLE"])
+def test_constructor_refreshes_returned_capacity_before_waiting(protocol):
+    model = runtime()
+    program = NcclRingProgram(64, (0, 1), protocol, (64,), 4)
+    # A previous completed invocation exhausted the old cached window.
+    for src, dst in [(0, 1), (1, 0)]:
+        conn = model.connection(program, 0, src, dst)
+        conn.producer_step = conn.consumer_step = conn.returned_head = 8
+        conn.cached_head = 0
+    result = model.run("constructor", "o", program)
+    assert not any(v.kind == "head_poll" for v in result.resource_visits)
+    assert all(row["cached_head"] == 8 for row in result.fifo_events
+               if row["kind"] == "constructor_head_load")
+    model.session.drain()
+
+
+@pytest.mark.parametrize("protocol", ["LL", "LL128", "SIMPLE"])
+def test_empty_tail_ranks_execute_control_and_complete(protocol):
+    model = runtime(width=4)
+    result = model.run("empty", "o", NcclRingProgram(4, (0, 1, 2, 3), protocol, (4,), 4))
+    result.validate()
+    assert result.useful_network_bytes == 24
+    assert sum(v.units for v in result.resource_visits if v.kind == "output_store") == 16
+    model.session.drain()
+
+
+@pytest.mark.parametrize("useful,shared_store,shared_load", [
+    (4, 1920, 4), (12, 1920, 12), (16, 1904, 0), (20, 1904, 4),
+    (120, 1808, 8), (1024, 896, 0), (1916, 16, 12), (1920, 0, 0),
+])
+def test_ll128_store_regs_stages_all_nonoutput_vectors(useful, shared_store, shared_load):
+    stripe, = protocol_stripes(useful, "LL128", 4)
+    assert stripe.shared_staging_bytes == shared_store
+    assert stripe.shared_tail_load_bytes == shared_load
+
+
+@pytest.mark.parametrize("size", [16, 128, 1920])
+@pytest.mark.parametrize("rate", [500_000_000_000, 1_000_000_000_000, 2_000_000_000_000])
+@pytest.mark.parametrize("sms", [1, 2])
+def test_shared_memory_rate_and_sm_domains_have_independent_oracle(size, rate, sms):
+    calendar = engine(ranks=2)
+    resources = NcclGpuResources(calendar, gpu(sms, shared_memory_bytes_per_second=rate))
+    completions = []
+    for index in range(2):
+        block = f"b{index}"
+
+        def job(block=block):
+            def finish():
+                completions.append(calendar.now_ps)
+                resources.release(block)
+            resources.service(block, "shared", size, finish, shared=True)
+
+        resources.admit(block, 0, 4, job)
+    calendar.advance_until(lambda: len(completions) == 2)
+    service = (size * 10**12 + rate - 1) // rate
+    assert max(completions) == service * (2 if sms == 1 else 1)
+    assert sum(v.units for v in resources.visits) == 2 * size
