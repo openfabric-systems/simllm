@@ -1,0 +1,9 @@
+{
+  "schema": "simllm-nccl-shared-staging-expectations-v1",
+  "source_commit": "7b83616df3ae082a1f32bb74c27458bfe8153a13",
+  "stripe_useful_bytes": [4, 12, 16, 20, 120, 1024, 1916, 1920],
+  "shared_memory_bytes_per_second": 1000000000000,
+  "shared_serializer_bytes": [16, 128, 1920],
+  "shared_rate_multipliers": [0.5, 1, 2],
+  "evidence_class": "declared_model_correction_after_source_review"
+}
