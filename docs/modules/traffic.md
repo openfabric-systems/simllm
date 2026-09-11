@@ -1931,6 +1931,15 @@ NVSwitch allocation; it does not qualify an eight-GPU switched board.
   together with this task's inherited range, anchor and bypass obligations.
   Reproduce resolved intervention deltas within the plan's quantitative bound;
   a band that covers points without identifying those costs does not close it.
+  The [channel-resource study](../../examples/nccl_channel_fifo_v1/RESULTS.md)
+  makes the source path and original-graph metrics executable with declared
+  costs. Its sensitivity matrix has nearly aligned polling/publication
+  responses, so those terms still need independent primitive probes. The
+  [identification capture](../../examples/nccl_channel_fifo_v1/hardware_expectations.md)
+  keeps requested and realized channels separate; incomplete or unrealized
+  controls cannot establish a causal service-cost contrast. Buffered Simple
+  read placement on Ampere must also be represented by TRAF-54 before that
+  default source branch qualifies. No existing hardware bar changes.
 - TRAF-16 (Precision; P1; L): preserve participant-local per-rank frontiers
   across graph-artifact and placement-subphase process boundaries. Current
   process quiescence strengthens 284 participant-local edges to artifact-wide
@@ -2519,10 +2528,10 @@ NVSwitch allocation; it does not qualify an eight-GPU switched board.
 
 - TRAF-54 (Completeness; P1; L): land the packetized NCCL and RCCL collective
   protocol layer over the GPU ports. The opt-in buffered Ring float32
-  source slice executes LL, LL128 and Simple on two/four-rank direct meshes
+  peer-write source slice executes LL, LL128 and Simple on two/four-rank direct meshes
   through `PeerPacketConfig.nccl` and the retained physical calendar. Its
   declared GPU costs are uncalibrated. The
-  [channel execution study](../../examples/nccl_channel_fifo_v1/expectations.md)
+  [channel execution study](../../examples/nccl_channel_fifo_v1/RESULTS.md)
   checks partial-warp stores, shared connection sequences, finite SM residency,
   source progress, and the original graph's token metrics. Hardware
   identification follows the separately frozen
@@ -2559,7 +2568,15 @@ NVSwitch allocation; it does not qualify an eight-GPU switched board.
   and byte/control transitions are separate fatal guards from timing accuracy.
   Source instruction groups remain declared service units until independent
   instruction, memory, polling and publication probes identify their costs.
-  Registered/direct-read, proxy and switched branches reject explicitly.
+  Buffered Simple read placement, registered/direct-read, proxy and switched
+  branches reject explicitly. The pinned source selects sender-side Simple
+  buffers on direct Ampere NVLink by default, so the write-only Simple path
+  cannot qualify that default. Its physical read request/response dependencies
+  must land before fitting A100 Simple. Per-channel Ring permutations, separate
+  per-SM shared-memory service, minimum allocated block warps and source-to-
+  packet identity joins are executable. Actual source traces, selected buffer
+  placement, channel partitions and binary resource footprints still require
+  the separate diagnostic qualification.
   GPU-plus-packet critical-path report composition remains required; the
   generic packet-only breakdown rejects this selection and protocol resource
   visits remain additive work observations. Do not infer hardware accuracy or

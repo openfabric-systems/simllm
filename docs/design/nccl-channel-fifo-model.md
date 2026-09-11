@@ -4,8 +4,11 @@ Implement each communication channel as finite state that produces, consumes,
 and reuses protocol slots while competing for GPU and link service. Completion
 follows the executed dependency graph. The
 [article summary and primary-source review](../papers/nccl-channel-fifo-source-review.md)
-supplies the guidance and version corrections. This is an implementation plan,
-not a claim that the runtime or a new hardware validation has already landed.
+supplies the guidance and version corrections. The
+[channel execution study](../../examples/nccl_channel_fifo_v1/RESULTS.md)
+implements the first buffered-write Ring slice and the shared-resource checks
+in steps 1 and 2. Source/hardware qualification, cost identification and a
+fresh uncertainty-band validation retain their separate obligations below.
 
 ## Required outcome and ownership
 
@@ -84,7 +87,7 @@ Logical channel IDs, physical link IDs, and hardware virtual channels remain
 different identities. A channel binds to its captured peer connection and
 resolved physical path set, which may use several links. The native C++ switch
 allocator is relevant only when a switched topology selects it; BACK-74 owns
-its extension. The pinned htsim tree has no NCCL/NVLink execution model to copy.
+its extension. The pinned htsim tree has no source-level NCCL channel execution model to copy.
 The existing transport is reused rather than supplemented by a second timer.
 
 The old analytic `NcclRingProtocolModel` remains an explicit, exact bypass.
@@ -138,7 +141,7 @@ notifications are distinct causal edges.
 
 Use the default allocation arithmetic in the source review, then apply actual
 communicator overrides. Do not charge every reserved slot as a full data
-transfer. For Simple direct-read/direct-write or registered-buffer branches,
+transfer. For buffered Simple read placement, direct-read/direct-write or registered-buffer branches,
 retain their synchronization while omitting copies the source omits. Reject
 an unimplemented selected branch explicitly instead of substituting a generic
 FIFO-copy path.

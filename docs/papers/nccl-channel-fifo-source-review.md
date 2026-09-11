@@ -108,6 +108,16 @@ and connection: the pinned
 uses platform and topology checks. The software's 128-byte line size alone
 does not establish general 128-byte atomicity.
 
+**Buffered Simple can fetch data from the sender.** On direct Ampere NVLink,
+`ncclTopoCheckP2p` enables read placement by default. `p2pSendConnect` places
+the Simple FIFO in sender memory and `p2pRecvConnect` maps that remote buffer;
+LL and LL128 retain receiver-side buffers. This buffered transport placement
+is separate from registered-user-buffer `DirectRead`. A model needs the
+selected buffer location and read request/response dependencies, not only a
+protocol name or a constant round-trip penalty. See the pinned
+[`p2p.cc`](https://github.com/NVIDIA/nccl/blob/7b83616df3ae082a1f32bb74c27458bfe8153a13/src/transport/p2p.cc)
+and [implementation study](../../examples/nccl_channel_fifo_v1/RESULTS.md).
+
 **Waiting is conditional and runs inside the existing GPU kernel.** LL and
 LL128 check reusable-buffer head counters as well as inline readiness flags.
 Simple checks peer progress, executes barriers, and publishes counters with
