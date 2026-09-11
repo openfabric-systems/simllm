@@ -1,0 +1,18 @@
+{
+  "schema": "simllm-nccl-simple-read-expectations-v1",
+  "source_commit": "7b83616df3ae082a1f32bb74c27458bfe8153a13",
+  "evidence_class": "declared_model_not_hardware_measurement",
+  "widths": [2, 4],
+  "placements": ["buffered", "buffered_read"],
+  "channels": [1, 2],
+  "available_sms": [1, 4],
+  "link_rates_bytes_per_second": [12500000000, 50000000000],
+  "payload_bytes": [64, 4096, 16384],
+  "read_service_delays_ps": [0, 10000, 1000000],
+  "memory_rates_bytes_per_second": [50000000000, 100000000000],
+  "isolated_read_bytes": [16, 256, 1024],
+  "warps": 5,
+  "gpu_inputs": "../nccl_channel_fifo_v1/expectations.json",
+  "shared_memory_inputs": "../nccl_channel_fifo_v1/expectations_shared_staging.json",
+  "fixed_graph_compute_ps": 200000
+}
