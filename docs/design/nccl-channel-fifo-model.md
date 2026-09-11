@@ -10,6 +10,30 @@ implements the first buffered-write Ring slice and the shared-resource checks
 in steps 1 and 2. Source/hardware qualification, cost identification and a
 fresh uncertainty-band validation retain their separate obligations below.
 
+## Major finding and implementation handoff
+
+The [A100 placement audit](../../examples/nccl_channel_fifo_v1/HARDWARE_RESULTS.md)
+confirms that default Simple buffers reside at the sender. The receiver reads
+that memory after seeing progress. This is a major mechanism finding because
+it changes where data service occurs and which operations wait for a round
+trip. The existing structural Simple implementation is buffered-write only;
+it cannot qualify default A100 Simple. LL and LL128 retain receiver-side
+buffers, so this finding does not explain an LL128 residual.
+
+TRAF-93 owns implementation from the
+[read-path expectations freeze](../../examples/nccl_simple_read_v1/expectations.md)
+`a7e5db7d`. Reuse the existing dependent-read packet path; insert the owning
+GPU's memory service between request arrival and response eligibility. Preserve
+source-local stores, publication, consumer readiness and buffer reuse as
+separate events. The explicit write branch remains the exact bypass.
+
+TRAF-94 owns the [standardized primitive experiment](nccl-primitive-identification-v1.md),
+frozen in `22e9690a`, including its runner, source-qualified pilot and hardware
+execution. The design separates ready and delayed peers, empty and nonempty
+work, copy and reduction, memory working sets and execution-resource sharing.
+The current handoff contains both freezes and the completed A100 identification
+results. It contains no buffered-read implementation or new primitive timing.
+
 ## Required outcome and ownership
 
 | Maintainer requirement | Concrete implementation obligation | Owning task |

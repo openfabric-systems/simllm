@@ -1830,6 +1830,25 @@ NVSwitch allocation; it does not qualify an eight-GPU switched board.
   latency-dominated regime is not a fabric bandwidth, so the B200 refit must
   extend past the payload where bus bandwidth flattens rather than only adding
   point-to-point samples inside the existing window.
+- TRAF-94 (Precision; P1; L): identify the channel model's GPU and control
+  service costs with the [standardized primitive experiment](../design/nccl-primitive-identification-v1.md)
+  and its [versioned matrix](../../examples/nccl_primitive_identification_v1/manifest.json).
+  The design is frozen in `22e9690a`; the runner and hardware campaign remain
+  unimplemented. The surrogate is the declared cycle/memory profile, whose
+  polling and publication effects are not separately identified by collective
+  timing. Build source-faithful ready-peer/delayed-publication,
+  delayed-consumption, empty/nonempty, copy/reduction and memory-working-set
+  probes before expanding to channel/warp/SM sharing. Freeze the expanded,
+  capability-qualified cell inventory before ordinary timing. Capture exact
+  source/build identity, realized geometry, local timer boundaries and source
+  work separately from timed runs. Do not subtract clocks from different GPUs
+  or interpret a requested SM grant as actual block residency. Acceptance:
+  complete five-process records with valid source/byte/identity guards;
+  parameter separability or explicit joint intervals; resolved held-out
+  intervention deltas within the greater of 10 percent or the frozen
+  repeat-spread threshold. TRAF-93 supplies the Simple read branch;
+  TRAF-43 retains full collective accuracy and uncertainty qualification,
+  COMP-44 retains host cost. No new hardware primitive results are claimed.
 - TRAF-43 (Precision; P1; M): replace the single-slope collective serializer
   with a regime-aware form. The shipped model charges one
   `bandwidth_bytes_per_second` at every payload, and the
@@ -1938,8 +1957,9 @@ NVSwitch allocation; it does not qualify an eight-GPU switched board.
   [identification capture](../../examples/nccl_channel_fifo_v1/hardware_expectations.md)
   keeps requested and realized channels separate; incomplete or unrealized
   controls cannot establish a causal service-cost contrast. Buffered Simple
-  read placement on Ampere must also be represented by TRAF-54 before that
-  default source branch qualifies. No existing hardware bar changes.
+  read placement on Ampere must be represented by TRAF-93 before that default
+  source branch qualifies. TRAF-94 supplies independently identified costs;
+  TRAF-54 remains the wider protocol integration task. No hardware bar changes.
   The completed [A100 identification](../../examples/nccl_channel_fifo_v1/HARDWARE_RESULTS.md)
   contains 1,398 five-repeat payload/control points. At 1 MiB and 32 active
   LL128 channels, an 8-to-32-SM green-context intervention reduces time from
@@ -2533,6 +2553,29 @@ NVSwitch allocation; it does not qualify an eight-GPU switched board.
   inventing order between independent operations and retain every supported
   projection byte and timestamp exactly.
 
+- TRAF-93 (Completeness; P1; M): implement buffered Simple peer reads on the
+  retained calendar. **Major finding:** the separate A100 placement audit
+  confirms sender-side Simple buffers in the default read-capable connection;
+  the current `connection_mode="buffered"` executes receiver-side writes.
+  This changes the dependency graph and prevents qualification of default
+  A100 Simple. It does not explain residuals whose selected protocol is LL128.
+  The [expectations-only freeze](../../examples/nccl_simple_read_v1/expectations.md)
+  is `a7e5db7d`; implementation and model study have not started. Next owner:
+  extend `NcclRingProgram`/`NcclExecutionConfig` with explicit `buffered_read`;
+  preserve LL/LL128 writes; execute sender-local FIFO stores, ordered tail
+  publication, receiver-issued requests, owner-memory service after request
+  arrival, dependent responses, consumer work and head return. Extend the
+  existing `GpuPeerPacketSession`/`NvlinkCausalEngine` response gate rather
+  than adding another clock or an unconditional round-trip cost. Source-memory
+  service must share the owning GPU's memory resource without requiring the
+  sender block to remain resident. Join each extent to its connection, stripe
+  and sequence. Acceptance is the frozen request/service/response order,
+  exact isolated-delay and memory-rate relations, empty-slice and reuse
+  guards, original-graph TTFT/TPOT deltas under link-rate and SM sweeps, and
+  exact write/source-off bypass. Keep unsupported registered/direct-read,
+  proxy and switched paths explicit under TRAF-54. Completing this task
+  enables the source branch; TRAF-94 and TRAF-43 retain physical cost and
+  accuracy qualification.
 - TRAF-54 (Completeness; P1; L): land the packetized NCCL and RCCL collective
   protocol layer over the GPU ports. The opt-in buffered Ring float32
   peer-write source slice executes LL, LL128 and Simple on two/four-rank direct meshes
@@ -2575,8 +2618,10 @@ NVSwitch allocation; it does not qualify an eight-GPU switched board.
   and byte/control transitions are separate fatal guards from timing accuracy.
   Source instruction groups remain declared service units until independent
   instruction, memory, polling and publication probes identify their costs.
-  Buffered Simple read placement, registered/direct-read, proxy and switched
-  branches reject explicitly. The pinned source selects sender-side Simple
+  TRAF-93 owns the major buffered Simple read finding and its implementation;
+  TRAF-94 owns standardized primitive cost identification. Buffered Simple
+  read placement, registered/direct-read, proxy and switched branches reject
+  explicitly. The pinned source selects sender-side Simple
   buffers on direct Ampere NVLink by default, so the write-only Simple path
   cannot qualify that default. Its physical read request/response dependencies
   must land before fitting A100 Simple. Per-channel Ring permutations, separate

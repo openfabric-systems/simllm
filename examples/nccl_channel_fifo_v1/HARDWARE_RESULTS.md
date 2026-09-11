@@ -160,7 +160,7 @@ not establish the cause of the larger difference between the old independent
 benchmark and original harness, whose execution contexts also differed.
 COMP-44 retains host-cost identification.
 
-## Source placement and channel peers
+## Major finding: sender-side Simple buffers and channel peers
 
 The separately frozen diagnostic runs after ordinary timing. It uses the
 same A100 node, library, probe and observer and captures 70 configurations:
@@ -183,8 +183,12 @@ Simple's FIFO to sender memory in this mode; explicit
 receiver-side payload buffers even when their connection is read-capable.
 This confirms the need to distinguish buffered Simple reads from registered
 direct reads and from buffered writes. The first structural Simple path is
-write-only, so default A100 Simple qualification awaits TRAF-54's live read
-request/response dependency. A constant extra round trip is insufficient.
+write-only, so default A100 Simple qualification awaits TRAF-93's live read
+request/response dependency. This is a major structural finding, distinct from
+the unresolved LL128 residual. A constant extra round trip is insufficient.
+The [read-path freeze](../nccl_simple_read_v1/expectations.md) precedes its
+implementation; TRAF-94 owns the separately
+[standardized primitive experiment](../../docs/design/nccl-primitive-identification-v1.md).
 
 ## Reproduction and queued continuation
 
