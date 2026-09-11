@@ -97,10 +97,9 @@ def invoke(stage, output, cfg, cell, *, tag, observe=False, seed=0):
             selections = sorted({(row["rank"], row["count"] * 4, row["algo"], row["proto"],
                                   row["#channels"], row["#warps"]) for row in observed if row["kind"] == "collective"})
             record["selections"] = selections
-            if not selections or any(row[2] != "RING" or row[3] not in ("LL", "LL128", "SIMPLE") for row in selections):
-                # Public descriptor spelling is retained; comparison is case-insensitive.
-                if not selections or any(row[2].upper() != "RING" or row[3].upper() not in ("LL", "LL128", "SIMPLE") for row in selections):
-                    raise RuntimeError("missing or unsupported source selection")
+            # Public descriptor spelling is retained; compare case-insensitively.
+            if not selections or any(row[2].upper() != "RING" or row[3].upper() not in ("LL", "LL128", "SIMPLE") for row in selections):
+                raise RuntimeError("missing or unsupported source selection")
     stem.with_suffix(".record.json").write_text(json.dumps(record, indent=2) + "\n")
     return record
 
