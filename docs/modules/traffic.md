@@ -1917,6 +1917,20 @@ NVSwitch allocation; it does not qualify an eight-GPU switched board.
   authority; this analytic profile cannot run alongside a second peer-packet
   calendar. [Public reference controls](../../examples/nccl_protocol_model_v1/public_comparisons.md)
   distinguish vendor benchmark examples from comparable hardware evidence.
+  The [source-derived FIFO plan](../design/nccl-channel-fifo-model.md), informed
+  by the [article and primary-source review](../papers/nccl-channel-fifo-source-review.md),
+  sets the next implementation and identification sequence. TRAF-54 supplies
+  finite per-channel state and shared GPU resource service; this task validates
+  their independently identified costs against new observations. Vary actual
+  channel count, available streaming multiprocessors and LL/LL128/Simple
+  separately, with source-faithful partial work and buffer-reuse controls.
+  Previously inspected grids remain retrospective for the new candidate.
+  Freeze the source, interventions and acceptance before implementation, then
+  lock parameters before opening new validation. Preserve the 10-percent
+  reference, 15-percent original-method and 40-percent full-band requirements,
+  together with this task's inherited range, anchor and bypass obligations.
+  Reproduce resolved intervention deltas within the plan's quantitative bound;
+  a band that covers points without identifying those costs does not close it.
 - TRAF-16 (Precision; P1; L): preserve participant-local per-rank frontiers
   across graph-artifact and placement-subphase process boundaries. Current
   process quiescence strengthens 284 participant-local edges to artifact-wide
@@ -2504,43 +2518,59 @@ NVSwitch allocation; it does not qualify an eight-GPU switched board.
   projection byte and timestamp exactly.
 
 - TRAF-54 (Completeness; P1; L): land the packetized NCCL and RCCL collective
-  protocol layer over the GPU ports. TRAF-45 owns the leg below this one, which
-  turns a directed intra-node segment into packets on a port; this task owns
-  the collective protocol above it, which today has no packet form at all: a
-  logical channel is a planner index rather than a thing bound to a port, a
-  chunk is a byte count rather than a sequence of packets on that port, and the
-  ring step order exists only in the analytic plan. Bind each channel of a
-  communicator to a named GPU port, map the chunk expansion of
-  `simllm.compute.nccl_stack` onto packets emitted through that port, and let
-  the ring step order fall out of per-port arrival rather than out of a
-  precomputed sum. Scope boundary: this task adds no port, no packet vocabulary
-  and no port-kind taxonomy; it consumes TRAF-45's leg, COMP-40's port events
-  and BACK-48's port-kind-independent vocabulary. It also consumes TRAF-65's
-  candidate A100 transport profile and NCCL validation rows, while keeping an
-  NCCL logical channel distinct from a physical link and from any
-  transaction-layer virtual channel the hardware study cannot observe.
-  Acceptance: a collective's
-  completion is the arrival time of its last packet rather than a composed
-  constant, byte conservation holds against the same endpoint ledger the
-  analytic path uses, the analytic path stays selectable and reproduces every
-  accepted `nvlink_locality_v1`, `mixed_attribution_v1` and
-  `nccl_registration_v1` artifact byte-identically, and the interim
-  constant-completion section of this document is replaced rather than amended.
-  Trigger: TRAF-45 lands the packetized intra-node leg, COMP-40 emits port
-  packet events and TRAF-65 publishes its candidate profile and conformance
-  fixtures for the selected architecture. That publication is an intermediate
-  handoff, not TRAF-65 closure. The hardware capture may run before those
-  software triggers; only TRAF-65's live metric closure waits on them. This is
-  P1 because that
-  accepted live closure requires the collective protocol, while the analytic
-  protocol remains the exact bypass. The next reviewable consumer is TRAF-92's
-  one-node TP and balanced/skewed EP on PLACE-6's topology. The closed TRAF-45
-  already supplies live physical packet service, so extend that implementation
-  rather than rebuilding it; BACK-74 extends native queue ownership and the
-  retained BACK-73 reporter explains its critical path. Keep NVIDIA Collective Communications Library
-  (NCCL) channels distinct from the six physical switch planes. Capture
-  algorithm and protocol selection, GPU reduction work and synchronization;
-  semantic ring steps or aggregate constants alone do not qualify the protocol.
+  protocol layer over the GPU ports. The next slice implements Ring float32
+  sum all-reduce on the separately scoped two- and four-GPU A100 and GH200
+  direct meshes, following the
+  [source-derived channel FIFO plan](../design/nccl-channel-fifo-model.md).
+  The executable aggregate surrogate counts protocol work but has no timed
+  per-channel first-in, first-out (FIFO) lifecycle, shared GPU instruction
+  service or source-ordered primitive execution. Replace it on the enabled
+  path with persistent communicator/channel/directed-connection state,
+  eight-slot sequence and reuse accounting, LL/LL128 readiness flags, Simple
+  progress counters shared across protocol switches on the same connection,
+  partial channel and active-lane work, and the source's
+  conditional polling, barrier, fence and publication operations. LL and LL128
+  also have buffer-reuse gates; do not add an unconditional round trip or a
+  separately launched polling kernel.
+  Pin the actual NCCL version and connection branches. The zero-time
+  `simllm.compute.nccl_stack` name skeleton remains an observation projection;
+  it does not become another timing authority. Extend the existing
+  `NvlinkCausalEngine` admission and completion seam so each source operation
+  releases its successors on the same retained calendar. Keep logical channels,
+  physical link/path identities and hardware virtual channels separate.
+  The closed TRAF-45 supplies live physical packet service; reuse that leg,
+  COMP-40's port events and BACK-48's port-kind-independent vocabulary.
+  Required peer-read or control request/response behavior must reach this
+  retained path before a source branch that uses it qualifies.
+  Model finite streaming-multiprocessor residency and shared memory/link
+  resource service. Fit startup, work, polling and synchronization using
+  independent source-faithful channel, resource, protocol and receiver-delay
+  interventions, not payload-specific offsets. TRAF-43 owns the measured
+  accuracy, interval and intervention-delta bars; COMP-44 owns host initiation.
+  TRAF-65's candidate A100 profile remains scoped by its evidence, and
+  TRAF-73/TRAF-86 retain unidentified transport parameters. Captured geometry
+  and byte/control transitions are separate fatal guards from timing accuracy.
+  Acceptance: source-conformant FIFO transitions, no overwrite or early reuse,
+  exact useful and protocol-byte accounting, and collective completion after
+  every required output visibility and kernel dependency. The last payload
+  packet alone does not establish completion. Propagate the resulting time
+  through `CompletionEvent`, `StepResult`, time to first token and time per
+  output token with an original-graph sanity study. Charge no aggregate
+  collective time when structural execution owns completion. The explicit
+  analytic bypass preserves every accepted `nvlink_locality_v1`,
+  `mixed_attribution_v1` and `nccl_registration_v1` artifact, as well as the
+  existing analytic protocol profile, byte-identically.
+  The hardware identification can proceed before the full software path is
+  integrated, under its own expectations freeze; component evidence alone
+  cannot close this task. TRAF-92 consumes the qualified path for one-node
+  tensor-parallel and balanced/skewed expert-parallel workloads on PLACE-6's
+  captured topology. BACK-74 extends native switch ownership only for switched
+  systems; the retained BACK-73 reporter supplies critical-path attribution.
+  Wider collective and RCCL protocol support remain in this entry until
+  source-specific conformance and live acceptance hold. Unimplemented selected
+  branches reject explicitly and keep the analytic off path available.
+  Replace the interim constant-completion section when that wider scope lands;
+  the first Ring implementation does not close the entire task.
 - TRAF-55 (Completeness; P2; M): make the registration handshake port traffic.
   `CollectiveRegistrationLedger` charges a declared constant that no packet
   carries, so a registration is invisible to every port, occupies no link and
