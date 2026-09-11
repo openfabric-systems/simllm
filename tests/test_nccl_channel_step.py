@@ -102,3 +102,16 @@ def test_explicit_off_keeps_existing_packet_artifacts_identical(tmp_path):
     assert first(record(0, 0)) == second(record(0, 0))
     assert first.peer_evidence == second.peer_evidence
     assert first.close_peer_packets() == second.close_peer_packets()
+
+
+def test_channel_peer_map_reaches_original_graph(tmp_path):
+    cfg = config(tmp_path, width=4)
+    mapped = replace(cfg.peer_packet.nccl, channel_rank_orders=((0, 1, 2, 3), (0, 2, 1, 3)))
+    sink = HtsimStepSink(replace(cfg, peer_packet=replace(cfg.peer_packet, nccl=mapped)),
+                         request_metric_reducer=HtsimRequestMetricReducer({"r": 0}))
+    result = sink(record(0, 0))
+    sink.peer_evidence[-1].validate_result(result)
+    phases = [a.local_phase for a in sink.peer_evidence[-1].artifacts if a.local_phase is not None]
+    assert all(p.nccl.program.channel_rank_orders == mapped.channel_rank_orders for p in phases)
+    assert result.request_metrics[0].ttft_ps == result.step_latency_ps
+    sink.close_peer_packets()

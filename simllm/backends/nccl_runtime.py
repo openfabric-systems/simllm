@@ -29,20 +29,26 @@ class NcclExecutionConfig:
     channels: int = 4
     warps: int = 20
     connection_mode: str = "buffered"
+    channel_rank_orders: tuple[tuple[int, ...], ...] | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.gpu, NcclGpuProfile):
             raise TypeError("NCCL execution requires a typed GPU profile")
         if type(self.channels) is not int or not 1 <= self.channels <= 64:
             raise ValueError("NCCL channels must be in 1..64")
-        self.program(16 * self.channels, (0, 1))
+        if self.channel_rank_orders is not None:
+            object.__setattr__(self, "channel_rank_orders", tuple(tuple(order) for order in self.channel_rank_orders))
+            if not self.channel_rank_orders:
+                raise ValueError("channel peer map must not be empty")
+        self.program(16 * self.channels, (0, 1) if self.channel_rank_orders is None else self.channel_rank_orders[0])
         if self.gpu.residency(self.warps) < 1:
             raise ValueError("NCCL block does not fit the declared SM resources")
 
     def program(self, payload: int, ranks: tuple[int, ...]) -> NcclRingProgram:
         return NcclRingProgram(payload, ranks, self.protocol,
                                balanced_channels(payload, self.channels), self.warps,
-                               self.connection_mode, communicator="ring:" + ":".join(map(str, ranks)))
+                               self.connection_mode, communicator="ring:" + ":".join(map(str, ranks)),
+                               channel_rank_orders=self.channel_rank_orders)
 
 
 @dataclass
@@ -181,9 +187,12 @@ class NcclChannelRuntime:
         if self.gpu.profile.residency(program.warps) < 1:
             raise ValueError("NCCL block cannot reside on the declared GPU")
         fabric = self.session.binding.fabric
-        for index, rank in enumerate(program.ranks):
-            if not fabric.paths_between(rank, program.ranks[(index + 1) % len(program.ranks)]):
-                raise ValueError("NCCL ring edge has no physical route")
+        for channel in range(len(program.channel_bytes)):
+            order = program.ranks_for_channel(channel)
+            for index, rank in enumerate(order):
+                peer = order[(index + 1) % len(order)]
+                fabric.paths_between(rank, peer)
+                fabric.paths_between(peer, rank)
 
     def run(self, execution_id: str, operation_id: str, program: NcclRingProgram,
             *, receiver_delay_ps: int = 0) -> NcclExecutionResult:
@@ -269,8 +278,10 @@ class _Block:
         self.session, self.gpu, self.profile = operation.session, operation.gpu, operation.gpu.profile
         self.channel, self.rank_index = channel, rank_index
         self.rank = self.program.ranks[rank_index]
-        self.next_rank = self.program.ranks[(rank_index + 1) % len(self.program.ranks)]
-        self.prev_rank = self.program.ranks[(rank_index - 1) % len(self.program.ranks)]
+        order = self.program.ranks_for_channel(channel)
+        ring_index = order.index(self.rank)
+        self.next_rank = order[(ring_index + 1) % len(order)]
+        self.prev_rank = order[(ring_index - 1) % len(order)]
         self.id = f"{operation.execution_id}:{operation.operation_id}:c{channel}:r{self.rank}"
         self.send_conn = operation.runtime.connection(self.program, channel, self.rank, self.next_rank)
         self.recv_conn = operation.runtime.connection(self.program, channel, self.prev_rank, self.rank)

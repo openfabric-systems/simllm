@@ -32,8 +32,12 @@ def main():
             inventory = subprocess.check_output([
                 "nvidia-smi", "--query-compute-apps=gpu_uuid,pid,process_name,used_memory",
                 "--format=csv"], universal_newlines=True)
-            children = subprocess.run(["ps", "--ppid", str(parent), "-o", "stat="],
-                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=False).stdout.splitlines()
+            # The compute nodes expose Python 3.6, before text/capture_output.
+            children = subprocess.run(  # noqa: UP022
+                ["ps", "--ppid", str(parent), "-o", "stat="],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                universal_newlines=True, check=False,  # noqa: UP021
+            ).stdout.splitlines()
             live = [state for state in children if not state.strip().startswith("Z")]
             if len(inventory.strip().splitlines()) == 1 and not live:
                 break

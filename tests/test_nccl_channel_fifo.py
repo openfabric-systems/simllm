@@ -259,3 +259,60 @@ def test_shared_memory_rate_and_sm_domains_have_independent_oracle(size, rate, s
     service = (size * 10**12 + rate - 1) // rate
     assert max(completions) == service * (2 if sms == 1 else 1)
     assert sum(v.units for v in resources.visits) == 2 * size
+
+
+@pytest.mark.parametrize("protocol", ["LL", "LL128", "SIMPLE"])
+@pytest.mark.parametrize("sms", [1, 4])
+def test_channel_peer_permutations_follow_source_ring_positions(protocol, sms):
+    model = runtime(width=4, sms=sms)
+    orders = ((0, 1, 2, 3), (0, 2, 1, 3), (0, 3, 1, 2))
+    program = NcclRingProgram(768, (0, 1, 2, 3), protocol, (256, 256, 256), 4,
+                              channel_rank_orders=orders)
+    result = model.run("routes", "o", program)
+    assert result.useful_network_bytes == 4608
+    assert sum(v.units for v in result.resource_visits if v.kind == "output_store") == 3072
+    for channel, order in enumerate(orders):
+        connections = {row["connection"][2:4] for row in result.fifo_events
+                       if row["kind"] == "reserve" and row["connection"][1] == channel}
+        assert connections == {(rank, order[(index + 1) % 4]) for index, rank in enumerate(order)}
+    # Canonical rank 1 occupies Ring position 2 in channel 1.
+    assert program.primitives(1, 1)[0].rank_index == 2
+    assert program.primitives(1, 1)[0].chunk_index == 1
+    model.session.drain()
+
+
+def test_explicit_common_peer_order_has_identical_execution():
+    program = NcclRingProgram(512, (0, 1, 2, 3), "LL128", (256, 256), 4)
+    first, second = runtime(width=4), runtime(width=4)
+    implicit = first.run("equal", "o", program)
+    explicit = second.run("equal", "o", replace(program, channel_rank_orders=(program.ranks,) * 2))
+    assert replace(explicit, program=program) == implicit
+    assert first.session.drain() == second.session.drain()
+
+
+def test_channel_map_is_immutable_and_invalid_maps_reject_before_admission():
+    order = [[0, 1, 2, 3], [0, 2, 1, 3]]
+    cfg = NcclExecutionConfig(gpu(), channels=2, warps=4, channel_rank_orders=order)
+    order[1].reverse()
+    program = cfg.program(512, (0, 1, 2, 3))
+    assert program.channel_rank_orders[1] == (0, 2, 1, 3)
+    for invalid in [(), ((0, 1, 2, 3),), ((0, 1, 2, 3), (0, 1, 1, 3))]:
+        with pytest.raises(ValueError, match="permutation"):
+            replace(program, channel_rank_orders=invalid)
+
+
+@pytest.mark.parametrize("missing", [(0, 2), (1, 0)])
+def test_every_selected_data_and_return_route_is_preflighted(missing):
+    physical = engine(ranks=4)
+    original = physical.physical.fabric
+    incomplete = replace(original, routes=tuple(route for route in original.routes
+        if (route.source_rank, route.destination_rank) != missing))
+    session = GpuPeerPacketSession("missing", physical.profile, replace(physical.physical, fabric=incomplete))
+    model = NcclChannelRuntime(session, gpu())
+    program = NcclRingProgram(512, (0, 1, 2, 3), "LL128", (256, 256), 4,
+        channel_rank_orders=((0, 1, 2, 3), (0, 2, 1, 3)))
+    with pytest.raises(ValueError, match="declared route"):
+        model.run("reject", "o", program)
+    assert model.connections == {}
+    assert session.now_ps == 0
+    assert session.packets == ()

@@ -98,10 +98,13 @@ class NcclRingProgram:
     connection_mode: str = "buffered"
     communicator: str = "ring"
     source_commit: str = NCCL_SOURCE_COMMIT
+    channel_rank_orders: tuple[tuple[int, ...], ...] | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "ranks", tuple(self.ranks))
         object.__setattr__(self, "channel_bytes", tuple(self.channel_bytes))
+        if self.channel_rank_orders is not None:
+            object.__setattr__(self, "channel_rank_orders", tuple(tuple(order) for order in self.channel_rank_orders))
         if self.source_commit != NCCL_SOURCE_COMMIT:
             raise ValueError("NCCL program source identity is not supported")
         if self.protocol not in PROTOCOLS or self.connection_mode != "buffered":
@@ -115,16 +118,25 @@ class NcclRingProgram:
                 or any(value % 16 for value in self.channel_bytes[:-1])
                 or sum(self.channel_bytes) != self.payload_bytes):
             raise ValueError("channel partition must conserve bytes with aligned channel starts")
+        if self.channel_rank_orders is not None and (
+                len(self.channel_rank_orders) != len(self.channel_bytes)
+                or any(len(order) != len(self.ranks) or set(order) != set(self.ranks)
+                       or any(type(rank) is not int for rank in order) for order in self.channel_rank_orders)):
+            raise ValueError("each channel needs one permutation of the communicator ranks")
         if type(self.warps) is not int or not 3 <= self.warps <= {"LL": 16, "LL128": 20, "SIMPLE": 17}[self.protocol]:
             raise ValueError("invalid primitive warp count")
         if not isinstance(self.communicator, str) or not self.communicator.strip():
             raise ValueError("communicator identity must be nonblank")
+
+    def ranks_for_channel(self, channel: int) -> tuple[int, ...]:
+        return self.ranks if self.channel_rank_orders is None else self.channel_rank_orders[channel]
 
     def primitives(self, channel: int, rank_index: int) -> tuple[NcclPrimitive, ...]:
         """Follow runRing's actual chunk order, including empty tail chunks."""
         width = len(self.ranks)
         if not 0 <= channel < len(self.channel_bytes) or not 0 <= rank_index < width:
             raise ValueError("primitive rank/channel is outside its work descriptor")
+        ring_index = self.ranks_for_channel(channel).index(self.ranks[rank_index])
         count = self.channel_bytes[channel]
         base = sum(self.channel_bytes[:channel])
         chunk_limit = {"LL": 32768, "LL128": 576000, "SIMPLE": 2097152}[self.protocol]
@@ -132,11 +144,11 @@ class NcclRingProgram:
         for loop, offset in enumerate(range(0, count, width * chunk_limit)):
             remaining = count - offset
             chunk = min(chunk_limit, ceil_div(remaining, width * 16) * 16)
-            order = [(rank_index + width - 1) % width]
-            order += [(rank_index + width - j) % width for j in range(2, width)]
-            order += [rank_index]
-            order += [(rank_index + width - j) % width for j in range(1, width - 1)]
-            order += [(rank_index + 1) % width]
+            order = [(ring_index + width - 1) % width]
+            order += [(ring_index + width - j) % width for j in range(2, width)]
+            order += [ring_index]
+            order += [(ring_index + width - j) % width for j in range(1, width - 1)]
+            order += [(ring_index + 1) % width]
             for stage, chunk_index in enumerate(order):
                 useful = max(0, min(chunk, remaining - chunk_index * chunk))
                 recv, send = stage > 0, stage < 2 * width - 2
@@ -152,7 +164,7 @@ class NcclRingProgram:
                 for slice_index, size in enumerate(parts):
                     workers = self.warps - 1 if self.protocol == "SIMPLE" else self.warps
                     result.append(NcclPrimitive(
-                        channel, rank_index, loop, stage, slice_index, chunk_index,
+                        channel, ring_index, loop, stage, slice_index, chunk_index,
                         base + offset + chunk_index * chunk + slice_offset, size,
                         recv, send, source_load, output_store, reduce,
                         2 if self.protocol == "SIMPLE" else 1,
