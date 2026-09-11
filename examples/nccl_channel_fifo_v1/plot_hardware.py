@@ -28,9 +28,9 @@ def selection_rows(root, captures):
 
 
 def frame(architectures, title, subtitle, *, height=3.5):
-    fig, axes = plt.subplots(len(architectures), 3, figsize=(7.2, height * len(architectures) + 1), squeeze=False)
+    fig, axes = plt.subplots(len(architectures), 3, figsize=(7.2, height * len(architectures) + 1.4), squeeze=False)
     fig.subplots_adjust(left=0.105, right=0.98, top=1 - 0.95 / fig.get_figheight(),
-                        bottom=0.85 / fig.get_figheight(), hspace=0.45, wspace=0.32)
+                        bottom=1.15 / fig.get_figheight(), hspace=0.45, wspace=0.32)
     fig.text(0.105, 1 - 0.23 / fig.get_figheight(), title, fontsize=12, weight="bold")
     fig.text(0.105, 1 - 0.48 / fig.get_figheight(), subtitle, fontsize=8.2, color="#61707b")
     return fig, axes
@@ -156,6 +156,32 @@ def residual_timings(rows, architectures):
     return fig
 
 
+def thread_timings(rows, architectures):
+    fig, axes = frame(architectures, "Warp count changes work overlap and block footprint",
+                      "Four GPUs; 1 MiB per GPU; actual working warps from the separate observer", height=2.7)
+    handles = []
+    for index, architecture in enumerate(architectures):
+        for ax, protocol in zip(axes[index], PROTOCOLS, strict=True):
+            for channels, color in zip([8, 24, 32], COLORS, strict=False):
+                subset = sorted([r for r in rows if r["architecture"] == architecture and r["family"] == "threads"
+                                 and int(r["width"]) == 4 and r["protocol"] == protocol and int(r["bytes"]) == 1048576
+                                 and int(r["requested_channels"]) == channels], key=lambda r: int(r["warps"]))
+                line = error_curve(ax, subset, [int(r["warps"]) for r in subset], color, f"Requested C={channels}")
+                if index == 0 and protocol == "LL":
+                    handles.append(line)
+                ax.set_xticks([int(r["warps"]) for r in subset])
+            ax.set(title=f"{architecture.upper()}  {protocol.title() if protocol == 'SIMPLE' else protocol}",
+                   xlabel="Working warps per block")
+        axes[index, 0].set_ylabel("Completion time (µs)")
+    fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.09, 1 - 0.56 / fig.get_figheight()), ncol=3, fontsize=7.7, frameon=False)
+    decorate(axes)
+    fig.text(0.105, 0.36 / fig.get_figheight(), "One warp contains 32 threads. Simple includes its additional synchronization warp. Bars show process IQRs.",
+             fontsize=7.7, color="#61707b")
+    fig.text(0.105, 0.14 / fig.get_figheight(), "Crosses mark unrealized channel requests. More warps are not assumed to be faster or to imply more SMs.",
+             fontsize=7.8, color="#61707b")
+    return fig
+
+
 def paired_timers(rows, architectures):
     fig, axes = frame(architectures, "Timer boundaries are paired on the same invocation",
                       "Four GPUs; 1 MiB per GPU; five independent processes per condition", height=2.7)
@@ -176,6 +202,8 @@ def paired_timers(rows, architectures):
         axes[index, 0].set_ylabel("Host wall minus GPU event (µs)")
     fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.09, 1 - 0.56 / fig.get_figheight()), ncol=2, fontsize=8, frameon=False)
     decorate(axes)
+    fig.text(0.105, 0.58 / fig.get_figheight(), "Requested C=24. Crosses mark unrealized channel requests; paired timer differences remain descriptive.",
+             fontsize=7.8, color="#61707b")
     fig.text(0.105, 0.36 / fig.get_figheight(), "Both timers include their own boundaries around the same launch loop. GPU events may include host issue gaps.", fontsize=7.6, color="#61707b")
     fig.text(0.105, 0.14 / fig.get_figheight(), "A paired difference is a measurement-boundary effect; it is not an isolated kernel-entry or host-service constant.", fontsize=7.7, color="#61707b")
     return fig
@@ -196,7 +224,7 @@ def main():
             raise RuntimeError("only a complete audited timing summary may be plotted")
         rows = read(args.data / "measurements.csv")
         draws = [("realized-channels", realized_channels), ("channel-timings", channel_timings),
-                 ("resource-timings", resource_timings), ("residual-window", residual_timings),
+                 ("resource-timings", resource_timings), ("thread-timings", thread_timings), ("residual-window", residual_timings),
                  ("paired-timers", paired_timers)]
     else:
         if not args.root or not args.capture_metadata:

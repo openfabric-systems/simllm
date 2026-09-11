@@ -1940,6 +1940,13 @@ NVSwitch allocation; it does not qualify an eight-GPU switched board.
   controls cannot establish a causal service-cost contrast. Buffered Simple
   read placement on Ampere must also be represented by TRAF-54 before that
   default source branch qualifies. No existing hardware bar changes.
+  The completed [A100 identification](../../examples/nccl_channel_fifo_v1/HARDWARE_RESULTS.md)
+  contains 1,398 five-repeat payload/control points. At 1 MiB and 32 active
+  LL128 channels, an 8-to-32-SM green-context intervention reduces time from
+  132.076 to 41.431 microseconds, resolving a resource effect while preserving
+  the physical link hardware. The 420 unrealized channel-control points have
+  no qualified fixed-request causal claim. GH200 timing completion remains
+  queued on its original node; its partial prefix cannot be a complete curve.
 - TRAF-16 (Precision; P1; L): preserve participant-local per-rank frontiers
   across graph-artifact and placement-subphase process boundaries. Current
   process quiescence strengthens 284 participant-local edges to artifact-wide

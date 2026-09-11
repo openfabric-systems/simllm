@@ -1,0 +1,38 @@
+{
+  "identification_expectations_commit": "c5c9a963",
+  "continuation_expectations_commit": "3615669d",
+  "source_observer_expectations_commit": "34e8170f",
+  "timing_probe_sha256": "a58764afdc43fc4d5c4e6221f3b225961c6609ba85f4cef7bef96439f3b51019",
+  "observer_sha256": "b0c3f5939a2363d0f8e3ed4167a551a74a40640d813877561517291191edbfaf",
+  "external_artifacts": [
+    {
+      "artifact": "hardware-checkpoints.tar.gz",
+      "bytes": 7259153,
+      "sha256": "43ff170ccb323183a6030a6aeb0193023cf486e0be7f21e031c80f8495422f8d"
+    },
+    {
+      "artifact": "a100-continuation.tar.gz",
+      "bytes": 4375231,
+      "sha256": "88d3dacbe5eccb21d5b061062154741045488ed159775b937156dc93073507ba"
+    },
+    {
+      "artifact": "a100-transports.tar.gz",
+      "bytes": 1176985,
+      "sha256": "809f367298603e519616801ba5f5c422f926170e2f2cee6b8f449e764b84b1d7"
+    },
+    {
+      "artifact": "full-pytest.log",
+      "bytes": 7486,
+      "sha256": "dba773dd805981845dccd9ea009d08f6835f1724682b3dfaf32b8a4fff20613f"
+    },
+    {
+      "artifact": "final-pytest-745f7f16.log",
+      "bytes": 7566,
+      "sha256": "28a36734fed85937174fd979e8984da047c001486548a4d525480b3fba7e15ac"
+    }
+  ],
+  "pending": {
+    "gh200_timing": 205467,
+    "gh200_transport": 205513
+  }
+}

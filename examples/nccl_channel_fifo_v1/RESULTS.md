@@ -151,6 +151,16 @@ Simple placement controls, after ordinary timing measurements. Its debug
 timings are excluded from calibration. Broader registered, proxy, grouped
 launch, switched-fabric and RCCL branches remain explicit TRAF-54 work.
 
+## Repository validation
+
+The full repository run on production snapshot `745f7f16` completes with
+`6670 passed, 32 skipped in 2451.23s`. Ruff passes; the module-format and
+tracked-path checks pass. The earlier full run on `1cb7429c` passed 6,622
+checks with 32 skips; the intermediate run was stopped when superseded by
+later source changes and is not a completed gate. A final 48-transfer trace
+join check preserves the corrected fixture's timestamps, resource visits,
+FIFO events and residency events exactly after JSON normalization.
+
 ## Chronology and reproducibility
 
 | Commit | Role |
@@ -199,7 +209,7 @@ python examples/nccl_channel_fifo_v1/plot_hardware.py --data "$NCCL_FIFO_ANALYSI
 
 Raw packet traces, hardware CSVs, binaries, source archives and logs stay
 outside Git. The compact tables, figures and digest manifest accompany this
-report. The hardware report records its allocation membership, realized
-controls and timing limits separately. No independently fitted envelope,
+report. The [hardware report](HARDWARE_RESULTS.md) records its allocation membership,
+realized controls and timing limits separately. No independently fitted envelope,
 full collective/RCCL coverage, GPU-plus-packet additive critical-path report,
 or end-to-end model Pareto frontier is claimed by this component study.
