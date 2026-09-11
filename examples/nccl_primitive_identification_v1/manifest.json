@@ -1,0 +1,32 @@
+{
+  "schema": "simllm-nccl-primitive-identification-plan-v1",
+  "status": "design_frozen_runner_and_hardware_pending",
+  "owner_task": "TRAF-94",
+  "source_commit": "7b83616df3ae082a1f32bb74c27458bfe8153a13",
+  "architectures": ["a100", "gh200"],
+  "protocols": ["LL", "LL128", "SIMPLE"],
+  "simple_placements": ["buffered", "buffered_read"],
+  "dtype": "float32",
+  "baseline": {"ranks": 2, "active_channels": 1, "available_sms": "full", "useful_bytes": 1920},
+  "working_warps": {"LL": [4, 8, 16], "LL128": [8, 16, 20], "SIMPLE": [5, 9, 17]},
+  "baseline_working_warps": {"LL": 8, "LL128": 8, "SIMPLE": 5},
+  "stages": [
+    {"id": "ready_publication", "family": ["already_ready", "delayed_publication"], "delay_cycles": [0, 256, 1024, 4096], "useful_bytes": [0, 16, 1920]},
+    {"id": "reuse", "family": ["delayed_consumption"], "delay_cycles": [0, 256, 1024, 4096], "reservations": [1, 4, 8, 9, 17], "useful_bytes": [16, 1920]},
+    {"id": "data_work", "family": ["copy", "sum"], "useful_bytes": [0, 4, 16, 120, 256, 1920, 32768], "working_set": ["reused", "rotating_64MiB"]},
+    {"id": "sharing", "family": ["copy", "sum"], "active_channels": [1, 8, 32], "available_sms": [8, 16, 32, "full"], "working_warps": "protocol_grid", "useful_bytes_per_channel": [1920]},
+    {"id": "confirmation", "role": "held_out_after_parameter_lock", "ranks": [2, 4], "active_channels": [2, 12], "available_sms": [16, "full"], "useful_bytes_per_channel": [124, 1924, 32772], "delay_cycles": [512, 2048]}
+  ],
+  "ordinary_processes_per_cell": 5,
+  "warmup_iterations": 20,
+  "recorded_iterations": 100,
+  "ordering_seed": 9411,
+  "pair_order": "alternating_AB_BA",
+  "timing_boundaries": ["same_device_interval", "cuda_event", "host_wall"],
+  "cross_gpu_clock_subtraction": false,
+  "diagnostic_separate_from_timing": true,
+  "pre_timing_gate": "freeze_capability_qualified_expanded_inventory_and_digest",
+  "required_row_fields": ["schema", "manifest_digest", "cell_id", "process_id", "repetition", "identity_digest", "requested", "realized", "family", "phase", "timer", "units", "raw_duration", "observed_local_delay", "correctness", "qualification", "reason"],
+  "resolved_contrast": "abs(paired_median_delta) > 2*(IQR_A+IQR_B)",
+  "confirmation_error_bound": "max(0.10*abs(measured_delta), frozen_repeat_spread_resolution)"
+}
