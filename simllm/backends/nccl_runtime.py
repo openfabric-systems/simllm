@@ -8,7 +8,7 @@ instruction latency, cache behavior, or a calibrated hardware envelope.
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 
-from simllm.backends.htsim_nvlink import NvlinkTransfer
+from simllm.backends.htsim_nvlink import NvlinkOperation, NvlinkTransfer
 from simllm.backends.nccl_resources import NcclGpuProfile, NcclGpuResources
 from simllm.traffic.nccl_program import (
     BUFFER_BYTES,
@@ -168,7 +168,7 @@ class NcclExecutionResult:
             transfer = extent.transfer
             binding = bindings[transfer.extent_id]
             endpoints = binding.connection[2:4]
-            if binding.role in ("head", "constructor_head"):
+            if binding.role in ("head", "constructor_head", "payload_read"):
                 endpoints = endpoints[::-1]
             if (endpoints != (transfer.source, transfer.destination)
                     or binding.transfer_bytes != transfer.payload_bytes
@@ -213,6 +213,7 @@ class NcclChannelRuntime:
         self.connections: dict[tuple, NcclConnection] = {}
         self.results: list[NcclExecutionResult] = []
         self._operations: set[tuple[str, str]] = set()
+        self._communicator_modes: dict[str, str] = {}
         self._failed = False
 
     def connection(self, program, channel, src, dst) -> NcclConnection:
@@ -224,6 +225,12 @@ class NcclChannelRuntime:
             raise ValueError("NCCL runtime needs a valid program and a live session")
         if self.gpu.profile.residency(program.block_warps) < 1:
             raise ValueError("NCCL block cannot reside on the declared GPU")
+        if (program.protocol == "SIMPLE" and program.connection_mode == "buffered_read"
+                and self.session.captures_critical_path):
+            raise ValueError("packet-only critical-path capture cannot represent buffered-read memory service")
+        prior_mode = self._communicator_modes.get(program.communicator)
+        if prior_mode is not None and prior_mode != program.connection_mode:
+            raise ValueError("an admitted NCCL communicator cannot change its buffer placement")
         fabric = self.session.binding.fabric
         for channel in range(len(program.channel_bytes)):
             order = program.ranks_for_channel(channel)
@@ -239,6 +246,7 @@ class NcclChannelRuntime:
                 or any(not isinstance(value, str) or not value for value in (execution_id, operation_id))
                 or type(receiver_delay_ps) is not int or receiver_delay_ps < 0):
             raise ValueError("NCCL operation must be unique with a nonnegative receiver delay")
+        self._communicator_modes.setdefault(program.communicator, program.connection_mode)
         self._operations.add((execution_id, operation_id))
         operation = _Operation(self, execution_id, operation_id, program, receiver_delay_ps)
         try:
@@ -278,13 +286,34 @@ class _Operation:
                                      returned_head=connection.returned_head,
                                      cached_head=connection.cached_head, **fields))
 
-    def transfer(self, source, destination, size, kind, callback):
+    def transfer(
+        self,
+        source,
+        destination,
+        size,
+        kind,
+        callback,
+        *,
+        operation=NvlinkOperation.PEER_WRITE,
+        on_request_visible=None,
+    ):
         self.serial += 1
         name = f"{self.execution_id}:{self.operation_id}:nccl-{self.serial}"
         transfer = NvlinkTransfer(extent_id=name, source=source, destination=destination,
                                   payload_bytes=size, released_at_ps=self.session.now_ps,
+                                  operation=operation,
                                   topology_endpoint_count=max(self.program.ranks) + 1)
-        self.extents.extend(self.session.admit(self.execution_id, self.operation_id, (transfer,)))
+        if operation is NvlinkOperation.PEER_READ:
+            self.extents.extend(self.session.admit_read(
+                self.execution_id,
+                self.operation_id,
+                transfer,
+                on_request_visible,
+            ))
+        else:
+            self.extents.extend(self.session.admit(
+                self.execution_id, self.operation_id, (transfer,)
+            ))
         self.bytes[kind] += size
         self.session.on_visible(name, callback)
         return name
@@ -334,10 +363,41 @@ class _Block:
         self.finish_waiting = False
         self.data_fence_callback = None
 
-    def service(self, kind, units, callback, *, memory=False, shared=False):
-        self.gpu.service(self.id, kind, units, callback, memory=memory, shared=shared)
+    def service(
+        self,
+        kind,
+        units,
+        callback,
+        *,
+        memory=False,
+        shared=False,
+        memory_rank=None,
+    ):
+        self.gpu.service(
+            self.id,
+            kind,
+            units,
+            callback,
+            memory=memory,
+            shared=shared,
+            memory_rank=memory_rank,
+        )
 
-    def transfer(self, destination, size, kind, callback, *, connection, sequence, role, stripe=None, counter=None):
+    def transfer(
+        self,
+        destination,
+        size,
+        kind,
+        callback,
+        *,
+        connection,
+        sequence,
+        role,
+        stripe=None,
+        counter=None,
+        operation=NvlinkOperation.PEER_WRITE,
+        on_request_visible=None,
+    ):
         self.pending_stores += 1
 
         def visible():
@@ -347,7 +407,15 @@ class _Block:
                 self.finish_waiting = False
                 self.session.schedule_callback(self.session.now_ps, self.finish)
 
-        extent_id = self.op.transfer(self.rank, destination, size, kind, visible)
+        extent_id = self.op.transfer(
+            self.rank,
+            destination,
+            size,
+            kind,
+            visible,
+            operation=operation,
+            on_request_visible=on_request_visible,
+        )
         primitive = getattr(self, "primitive", None)
         identity = None if primitive is None else (
             primitive.channel, primitive.rank_index, primitive.ring_loop,
@@ -360,6 +428,7 @@ class _Block:
             0 if stripe is None else stripe.useful_bytes, size,
             () if stripe is None or not primitive.source_load else stripe.load_masks, counter,
         ))
+        return extent_id
 
     def start(self):
         self.service("block_setup", self.profile.block_setup_cycles, self.initialize)
@@ -497,9 +566,46 @@ class _Block:
                 self.poll("flag_poll", ready, lambda: self.service(
                     "peer_buffer_load", stripe.encoded_bytes, compute, memory=True))
             elif p.receive:
-                self.service("peer_buffer_load", stripe.encoded_bytes, compute, memory=True)
+                if self.program.connection_mode == "buffered_read":
+                    issue_buffered_read()
+                else:
+                    self.service("peer_buffer_load", stripe.encoded_bytes, compute, memory=True)
             else:
                 compute()
+
+        def issue_buffered_read():
+            """Issue the receiver's load after Simple tail visibility.
+
+            ``wait_receive`` has already observed the sender's tail.  The
+            packet engine carries the read request to ``prev_rank``; only its
+            visibility makes source-memory service eligible.  Completion of
+            that owner-side service releases response packets, whose final
+            visibility supplies the value consumed by this warp.
+            """
+
+            extent_id = None
+
+            def request_visible():
+                self.service(
+                    "peer_buffer_read_source",
+                    stripe.encoded_bytes,
+                    lambda: self.session.release_read_response(extent_id),
+                    memory=True,
+                    memory_rank=self.prev_rank,
+                )
+
+            extent_id = self.transfer(
+                self.prev_rank,
+                stripe.encoded_bytes,
+                "data",
+                compute,
+                connection=self.recv_conn,
+                sequence=self.recv_step,
+                role="payload_read",
+                stripe=stripe,
+                operation=NvlinkOperation.PEER_READ,
+                on_request_visible=request_visible,
+            )
 
         def sent_visible(reservation, stripe_index):
             reservation.stripes_visible.add(stripe_index)
@@ -517,9 +623,28 @@ class _Block:
             if p.send:
                 reservation = self.send_reservation
                 self.inflight_data += 1
-                self.transfer(self.next_rank, stripe.encoded_bytes, "data",
-                              lambda: sent_visible(reservation, stripe.index),
-                              connection=self.send_conn, sequence=reservation.sequence, role="payload", stripe=stripe)
+                if (self.program.protocol == "SIMPLE"
+                        and self.program.connection_mode == "buffered_read"):
+                    # Buffered-read Simple stores into a sender-owned FIFO.
+                    # No payload crosses NVLink until the downstream receiver
+                    # observes the tail and performs its dependent peer load.
+                    self.service(
+                        "local_fifo_store",
+                        stripe.encoded_bytes,
+                        lambda: sent_visible(reservation, stripe.index),
+                        memory=True,
+                    )
+                else:
+                    self.transfer(
+                        self.next_rank,
+                        stripe.encoded_bytes,
+                        "data",
+                        lambda: sent_visible(reservation, stripe.index),
+                        connection=self.send_conn,
+                        sequence=reservation.sequence,
+                        role="payload",
+                        stripe=stripe,
+                    )
             if not p.output_store:
                 done()
             elif self.program.protocol == "LL128":

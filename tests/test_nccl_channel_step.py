@@ -27,7 +27,16 @@ class FixedCompute(ComputeProvider):
         return DurationEstimate(duration_ps=200000, bound="compute")
 
 
-def config(path, width=2, sms=4, rate=25_000_000_000, protocol="LL128", *, enabled=True):
+def config(
+    path,
+    width=2,
+    sms=4,
+    rate=25_000_000_000,
+    protocol="LL128",
+    *,
+    enabled=True,
+    connection_mode="buffered",
+):
     physical = engine(ranks=width, rate=rate, feed=100_000_000_000)
     ranks = tuple(range(width))
     placement = PlacementManifest(ranks=[RankPlacement(rank, "node-0", rank) for rank in ranks])
@@ -35,7 +44,8 @@ def config(path, width=2, sms=4, rate=25_000_000_000, protocol="LL128", *, enabl
         GpuFabricPlacement(rank, f"gpu{rank}", "node-0", f"pcie{rank}", f"nic{rank}") for rank in ranks
     ), ())], peer_fabrics=(physical.physical.fabric,))
     selected = NcclExecutionConfig(gpu(sms), protocol=protocol, channels=2,
-                                   warps=5 if protocol == "SIMPLE" else 4)
+                                   warps=5 if protocol == "SIMPLE" else 4,
+                                   connection_mode=connection_mode)
     return HtsimStepSinkConfig(
         profile="rnic-nn-fluid", tp_ranks=ranks,
         dims=ModelDims(num_layers=1, hidden_size=256, intermediate_size=512,
@@ -113,5 +123,36 @@ def test_channel_peer_map_reaches_original_graph(tmp_path):
     sink.peer_evidence[-1].validate_result(result)
     phases = [a.local_phase for a in sink.peer_evidence[-1].artifacts if a.local_phase is not None]
     assert all(p.nccl.program.channel_rank_orders == mapped.channel_rank_orders for p in phases)
+    assert result.request_metrics[0].ttft_ps == result.step_latency_ps
+    sink.close_peer_packets()
+
+
+@pytest.mark.parametrize("width", [2, 4])
+def test_simple_buffered_read_reaches_original_graph_metrics(tmp_path, width):
+    sink = HtsimStepSink(
+        config(
+            tmp_path,
+            width,
+            protocol="SIMPLE",
+            connection_mode="buffered_read",
+        ),
+        request_metric_reducer=HtsimRequestMetricReducer({"r": 0}),
+    )
+    result = sink(record(0, 0))
+    evidence = sink.peer_evidence[-1]
+    evidence.validate_result(result)
+    phases = [
+        artifact.local_phase
+        for artifact in evidence.artifacts
+        if artifact.local_phase is not None
+    ]
+    reads = [
+        binding
+        for phase in phases
+        for binding in phase.nccl.transfer_bindings
+        if binding.role == "payload_read"
+    ]
+    assert reads
+    assert all(phase.nccl.program.connection_mode == "buffered_read" for phase in phases)
     assert result.request_metrics[0].ttft_ps == result.step_latency_ps
     sink.close_peer_packets()
