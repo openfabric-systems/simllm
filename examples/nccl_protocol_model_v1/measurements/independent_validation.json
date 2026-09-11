@@ -1,0 +1,120 @@
+{
+  "schema": "simllm-nccl-protocol-validation-v1",
+  "integrity": "valid",
+  "provenance": [
+    {
+      "architecture": "a100",
+      "job_id": "205023",
+      "node": "gpu105",
+      "candidate_commit": "b3aa02b46e627c1f11aadde8b27f27498c06b03f",
+      "processes": 15,
+      "integrity": "valid",
+      "gpu_uuids": [
+        " GPU-d71fbc01-b696-2278-f191-9d838f70b205",
+        " GPU-fbfb0aa0-e7a5-6b7f-1ed6-ba7e9c361c33",
+        " GPU-d2dce93c-2fcb-6ce8-4744-55ee68e5dd4f",
+        " GPU-b830e204-421b-969a-1ee6-f672b22393d4"
+      ]
+    },
+    {
+      "architecture": "gh200",
+      "job_id": "205024",
+      "node": "gpu003",
+      "candidate_commit": "b3aa02b46e627c1f11aadde8b27f27498c06b03f",
+      "processes": 15,
+      "integrity": "valid",
+      "gpu_uuids": [
+        " GPU-9f227d80-aeb5-95ae-81f6-891974cf6685",
+        " GPU-5d321a5a-5442-9281-f60c-a0eaa612df82",
+        " GPU-d8120291-a4a1-d9f3-c4c1-dc320370cc9e",
+        " GPU-a9e235fa-9d7b-c38f-d4d7-c830fbcb05dd"
+      ]
+    }
+  ],
+  "fresh_comparison": [
+    {
+      "architecture": "a100",
+      "width": 2,
+      "lane": "legacy",
+      "points": 60,
+      "covered": 60,
+      "worst_center_error_pct": -7.114032192377817,
+      "worst_payload_bytes": 2318336,
+      "maximum_band_width_fraction": 0.31743759784393044
+    },
+    {
+      "architecture": "a100",
+      "width": 2,
+      "lane": "timing",
+      "points": 60,
+      "covered": 60,
+      "worst_center_error_pct": -8.332774731393776,
+      "worst_payload_bytes": 614400,
+      "maximum_band_width_fraction": 0.3471311445752618
+    },
+    {
+      "architecture": "a100",
+      "width": 4,
+      "lane": "legacy",
+      "points": 60,
+      "covered": 60,
+      "worst_center_error_pct": -12.241548469923336,
+      "worst_payload_bytes": 3497984,
+      "maximum_band_width_fraction": 0.4210245550837794
+    },
+    {
+      "architecture": "a100",
+      "width": 4,
+      "lane": "timing",
+      "points": 60,
+      "covered": 60,
+      "worst_center_error_pct": -11.036509628556935,
+      "worst_payload_bytes": 483328,
+      "maximum_band_width_fraction": 0.47094865879583514
+    },
+    {
+      "architecture": "gh200",
+      "width": 2,
+      "lane": "legacy",
+      "points": 60,
+      "covered": 60,
+      "worst_center_error_pct": 5.508696377358446,
+      "worst_payload_bytes": 286720,
+      "maximum_band_width_fraction": 0.23224795475886906
+    },
+    {
+      "architecture": "gh200",
+      "width": 2,
+      "lane": "timing",
+      "points": 60,
+      "covered": 60,
+      "worst_center_error_pct": 7.636653099914192,
+      "worst_payload_bytes": 286720,
+      "maximum_band_width_fraction": 0.23693205771528672
+    },
+    {
+      "architecture": "gh200",
+      "width": 4,
+      "lane": "legacy",
+      "points": 60,
+      "covered": 60,
+      "worst_center_error_pct": -4.937915204587351,
+      "worst_payload_bytes": 286720,
+      "maximum_band_width_fraction": 0.2044400882364305
+    },
+    {
+      "architecture": "gh200",
+      "width": 4,
+      "lane": "timing",
+      "points": 60,
+      "covered": 60,
+      "worst_center_error_pct": -4.417675476938998,
+      "worst_payload_bytes": 483328,
+      "maximum_band_width_fraction": 0.20744951047378832
+    }
+  ],
+  "uncovered_points": [],
+  "visibility_probe": [],
+  "method_contrasts": [],
+  "parameter_sha256": "f605e7bcce9e9d1fc19b076a2a7c32e122f482f5ec5b8dcb774f97eb46ab76ce"
+}

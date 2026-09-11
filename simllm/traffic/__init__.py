@@ -198,6 +198,14 @@ from simllm.traffic.step_comm import (
     validate_request_moe_fidelity,
 )
 
+from .collective_protocol import (
+    NcclProtocolEstimate,
+    NcclProtocolService,
+    NcclRingGeometry,
+    NcclRingProtocolModel,
+    ring_geometry,
+)
+
 __all__ = [
     "A100_NCCL_2_31_CROSS_NODE_SOCKET_PROFILE",
     "ALWAYS_APPLIED_RULES",
@@ -283,6 +291,10 @@ __all__ = [
     "MoeAllToAll",
     "MoeMessageGrouping",
     "MoeMessageSequence",
+    "NcclProtocolEstimate",
+    "NcclProtocolService",
+    "NcclRingGeometry",
+    "NcclRingProtocolModel",
     "PacketKvHandoffArtifact",
     "PacketKvHandoffPolicy",
     "PipelineStepLowerer",
@@ -334,6 +346,7 @@ __all__ = [
     "resolve_collective_latency_profile",
     "resolve_collective_registration",
     "ring_allreduce",
+    "ring_geometry",
     "routed_moe_conservation",
     "routed_moe_conservation_report",
     "scatter",

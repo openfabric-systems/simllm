@@ -1,0 +1,151 @@
+{
+  "schema": "simllm-nccl-protocol-model-expectations-v1",
+  "known_capture_commit": "25ba229e",
+  "nccl_commit": "7b83616df3ae082a1f32bb74c27458bfe8153a13",
+  "nccl_tests_commit": "b4d5beebca8a76cf01335f724d154b9b9d394d96",
+  "htsim_commit": "6efec16c54595e8905d37eb45ed9fc9fd7650be2",
+  "architectures": [
+    "a100",
+    "gh200"
+  ],
+  "widths": [
+    2,
+    4
+  ],
+  "payload_min_bytes": 262144,
+  "payload_max_bytes": 4194304,
+  "automatic_fit_stride_bytes": 131072,
+  "fixed_protocol_arms": [
+    "Ring_LL",
+    "Ring_LL128",
+    "Ring_Simple"
+  ],
+  "known_anchor_start_bytes": 262144,
+  "fresh_payloads_bytes": [
+    286720,
+    352256,
+    417792,
+    483328,
+    548864,
+    614400,
+    679936,
+    745472,
+    811008,
+    876544,
+    942080,
+    1007616,
+    1073152,
+    1138688,
+    1204224,
+    1269760,
+    1335296,
+    1400832,
+    1466368,
+    1531904,
+    1597440,
+    1662976,
+    1728512,
+    1794048,
+    1859584,
+    1925120,
+    1990656,
+    2056192,
+    2121728,
+    2187264,
+    2252800,
+    2318336,
+    2383872,
+    2449408,
+    2514944,
+    2580480,
+    2646016,
+    2711552,
+    2777088,
+    2842624,
+    2908160,
+    2973696,
+    3039232,
+    3104768,
+    3170304,
+    3235840,
+    3301376,
+    3366912,
+    3432448,
+    3497984,
+    3563520,
+    3629056,
+    3694592,
+    3760128,
+    3825664,
+    3891200,
+    3956736,
+    4022272,
+    4087808,
+    4153344
+  ],
+  "method_payloads_bytes": [
+    8,
+    1024,
+    524288,
+    786432,
+    1048576,
+    1310720,
+    1572864,
+    2097152,
+    3145728,
+    4194304
+  ],
+  "process_repeats": 5,
+  "reference_warmup": 20,
+  "reference_iterations": 100,
+  "method_counts": [
+    [
+      5,
+      20
+    ],
+    [
+      20,
+      20
+    ],
+    [
+      5,
+      100
+    ],
+    [
+      20,
+      100
+    ]
+  ],
+  "ping_pong_warmup": 256,
+  "ping_pong_iterations": 4096,
+  "reference_center_error_limit_pct": 10,
+  "inherited_center_error_limit_pct": 15,
+  "band_coverage_target": 1.0,
+  "minimum_qualifying_band_coverage": 0.99,
+  "maximum_band_width_fraction": 0.4,
+  "band_calibration": "maximum absolute fractional residual over fixed-protocol controls and automatic 128-KiB anchors, plus the 90th percentile relative interquartile repeat spread; no validation-size residual enters the band",
+  "parameter_fit": "nonnegative nonlinear least squares of fractional residuals with pipeline max; same mechanism costs and deterministic seeds",
+  "method_delta_fit": "nonnegative intercept and physical-service coefficient from inherited minus reference medians at automatic 128-KiB anchors",
+  "physical_sweep_rates": [
+    0.5,
+    1.0,
+    2.0
+  ],
+  "physical_sweep_widths": [
+    2,
+    4
+  ],
+  "simple_rtt_sweep_ps": [
+    0,
+    250000,
+    1000000
+  ],
+  "clock_mutation": false,
+  "seed": 20260910,
+  "amendment": "expectations_v4.md",
+  "band_calibration_scope": "architecture, width, protocol, using only frozen calibration cells",
+  "startup_fit": "shared method-scoped apparent startup from LL calibration; rank-selected nonnegative design in fixed column order",
+  "protocol_selection_resolution_bytes": 16384,
+  "fresh_only": true,
+  "phase_expectations": "14070e87"
+}

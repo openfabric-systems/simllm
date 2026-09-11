@@ -1,0 +1,37 @@
+{
+  "schema": "simllm-nccl-protocol-verification-v1",
+  "status": "valid",
+  "pytest": {
+    "command": "pytest -q -p no:cacheprovider",
+    "exit_code": 0,
+    "summary": "6471 passed, 32 skipped in 1813.21s (0:30:13)",
+    "log_sha256": "b565eb5d23aa107e08cf06368ca8e90e2cd9a7b3bafe798f60dccc396742e6f5"
+  },
+  "lint": {
+    "command": "ruff check --no-cache .",
+    "exit_code": 0,
+    "summary": "All checks passed!"
+  },
+  "documentation": {
+    "command": "python scripts/check_docs_format.py",
+    "exit_code": 0,
+    "summary": "OK: 11 module doc(s) match docs/modules/FORMAT.md"
+  },
+  "diff_check": {
+    "command": "git diff --check",
+    "exit_code": 0
+  },
+  "figures": {
+    "inspection": "Four PNG figures inspected visually; four-page vector PDF bundle assembled from the same exports.",
+    "coverage_plot": "Every independent payload and both timing methods shown."
+  },
+  "parameter_reproduction": "Exact byte identity, without second-grid validation inputs.",
+  "source_edit_during_gate": false,
+  "superseded_gate_attempt": {
+    "status": "not_accepted",
+    "reason": "Tracked sources changed while the earlier source-integrity tests were running. Its source-before/source-after guard failed.",
+    "focused_clean_rerun": "73 passed in 37.95s",
+    "final_full_rerun": "6471 passed, 32 skipped"
+  },
+  "evidence_classes": "Unit tests, physical/identity guards, hardware process repeats, timing medians and live metric rows are reported separately."
+}

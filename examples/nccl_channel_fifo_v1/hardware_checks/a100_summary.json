@@ -1,0 +1,31 @@
+{
+  "status": "complete",
+  "global_guards": "valid",
+  "expectations_commit": "c5c9a963",
+  "continuation_expectations_commit": "3615669d",
+  "evidence_use": "identification_only_not_independent_validation",
+  "measurement_conditions": 1398,
+  "unqualified_control_points": 420,
+  "allocations": [
+    {
+      "architecture": "a100",
+      "capture": "205466",
+      "termination": "completed",
+      "probe_sha256": "a58764afdc43fc4d5c4e6221f3b225961c6609ba85f4cef7bef96439f3b51019",
+      "observer_sha256": "b0c3f5939a2363d0f8e3ed4167a551a74a40640d813877561517291191edbfaf",
+      "sampled_sm_clock_mhz_min": 210.0,
+      "sampled_sm_clock_mhz_max": 1410.0,
+      "clock_scope": "allocation samples include idle periods; not per-kernel clocks"
+    },
+    {
+      "architecture": "a100",
+      "capture": "205237",
+      "termination": "intentional_quiescent_checkpoint",
+      "probe_sha256": "a58764afdc43fc4d5c4e6221f3b225961c6609ba85f4cef7bef96439f3b51019",
+      "observer_sha256": "b0c3f5939a2363d0f8e3ed4167a551a74a40640d813877561517291191edbfaf",
+      "sampled_sm_clock_mhz_min": 210.0,
+      "sampled_sm_clock_mhz_max": 1410.0,
+      "clock_scope": "allocation samples include idle periods; not per-kernel clocks"
+    }
+  ]
+}

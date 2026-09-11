@@ -1,0 +1,87 @@
+{
+  "source_model_snapshot": "38ce1f63",
+  "compatible_later_production_snapshot": "745f7f16",
+  "expectations_commit": "e7afffe9",
+  "shared_staging_expectations_commit": "0929a8b8",
+  "evidence_class": "declared_model_not_hardware_accuracy",
+  "files": [
+    {
+      "artifact": "model-corrected/a100_retrospective.csv",
+      "bytes": 854,
+      "sha256": "42764c0a4aedbcff420000dbe9d92db8d5017c43b84ffe1556196aae19cb1866"
+    },
+    {
+      "artifact": "model-corrected/example_trace.json",
+      "bytes": 127500,
+      "sha256": "16d40c6dcb5f095cb0a1492b6a9420e5b7999c0cb9de19a21b2c36d50b81e8f0"
+    },
+    {
+      "artifact": "model-corrected/input-construction-failure.log",
+      "bytes": 706,
+      "sha256": "82236b56fb00a1e3f6cbbfbd3a2e66ddce7715cfa262363a1a4032ff82f68187"
+    },
+    {
+      "artifact": "model-corrected/live_graph.csv",
+      "bytes": 3752,
+      "sha256": "127803feee0c20d8a78adbcef80da0130dcc7b01f1e5246cd5379638f02df9f3"
+    },
+    {
+      "artifact": "model-corrected/protocols.csv",
+      "bytes": 15024,
+      "sha256": "484b801421415112eb69b9fe258486558e1bd5d5aeac89aa1a5db1d2ec4ad87e"
+    },
+    {
+      "artifact": "model-corrected/residency.csv",
+      "bytes": 1999,
+      "sha256": "99828177638c4b79e8b125cb204486a2ef27af2ce63e42c5ca578a4daed22980"
+    },
+    {
+      "artifact": "model-corrected/run.log",
+      "bytes": 8848,
+      "sha256": "4e1c56f66c22126ec6ec36a8e101fbc9d3b5ea50d08e74fa9c498e81689218c8"
+    },
+    {
+      "artifact": "model-corrected/sensitivity.csv",
+      "bytes": 15435,
+      "sha256": "e231b0c1efe24312c5b3f28dde96cd8b5c4cbea7c88b445fb83b54bfb4b5f64b"
+    },
+    {
+      "artifact": "model-corrected/sensitivity.json",
+      "bytes": 2892,
+      "sha256": "830d4e35cefb5511cfef49ec3085c7ce3d6744a0d0f5337055acd737798fe922"
+    },
+    {
+      "artifact": "model-corrected/serialization.csv",
+      "bytes": 2253,
+      "sha256": "0dba5f5485ff22b6244fd67aeb7c1fc852174feb0154864a4a90fe2f40f4782b"
+    },
+    {
+      "artifact": "model-corrected/shared_serialization.csv",
+      "bytes": 558,
+      "sha256": "2a0a44419308b362045f09f8f6a622727388c5ff4acf2d0e4a365463eee5ee69"
+    },
+    {
+      "artifact": "model-corrected/stripe_geometry.csv",
+      "bytes": 75569,
+      "sha256": "e0e9d254e2467ab1d8feec82a45de7809f86085edfa1ca09e5a5c74a566b5dc0"
+    },
+    {
+      "artifact": "model-corrected/summary.json",
+      "bytes": 3556,
+      "sha256": "25dfd88ca6b80702160dd9d0237b19fc1b9dab2ed4bf1c5ea1b8c56cfcd9a47f"
+    },
+    {
+      "artifact": "model-corrected/window.csv",
+      "bytes": 18231,
+      "sha256": "099cb06cad61cd8cb0f9ba6c8c5bd1a0597893394d4afd2aebf02b1f8405d6d3"
+    }
+  ],
+  "final_binding_check": {
+    "production_snapshot": "745f7f16",
+    "attributed_transfers": 48,
+    "timing_and_resource_events": "byte-identical after JSON normalization",
+    "artifact": "model-corrected/example_trace_current.json",
+    "bytes": 155370,
+    "sha256": "605cf2c7cdee0c296678e4c3a27f7ac1d08b460dd87088146924faa244826a5c"
+  }
+}

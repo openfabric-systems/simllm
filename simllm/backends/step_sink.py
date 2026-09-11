@@ -324,6 +324,8 @@ class HtsimStepSinkConfig:
             if not isinstance(self.peer_packet, PeerPacketConfig):
                 raise TypeError("peer_packet must be PeerPacketConfig or None")
             self.peer_packet.validate_placement(self.placement_manifest)
+            if self.peer_packet.nccl is not None and self.dims.dtype_bytes != 4:
+                raise ValueError("NCCL source Ring execution currently requires float32 work")
             if self.flow_session is not None:
                 raise ValueError("retained physical wire and local composition remains BACK-72")
             if (self.collective_floor_calibration is not None
@@ -1382,6 +1384,7 @@ class HtsimStepSink:
         collective_timing_parameters: dict[str, tuple[int, int, int]] = {}
         if collective_profile is not None:
             for operation in collectives:
+                collective_profile.validate_protocol_work(operation.work, dtype_bytes=cfg.dims.dtype_bytes)
                 endpoint_bytes = critical_collective_endpoint_bytes(operation.work)
                 participant_count = len(operation.work.ranks)
                 calibrated_base_latency_ps = collective_profile.base_latency_ps(
@@ -1428,6 +1431,19 @@ class HtsimStepSink:
             ),
             base_tag=cfg.base_tag,
         )
+        protocol_phase_service: dict[str, int] = {}
+        if collective_profile is not None and collective_profile.protocol_models:
+            for operation in collectives:
+                phases = tuple(phase for phase in locality.phases if phase.phase.operation_id == operation.operation_id)
+                if len(phases) != 2 * (len(operation.work.ranks) - 1) or any(
+                    phase.fabric_segments or not phase.nvlink_segments for phase in phases
+                ):
+                    raise ValueError("NCCL protocol profiles require a fully local Ring collective")
+                service = collective_profile.endpoint_serialization_ps(
+                    len(operation.work.ranks), critical_collective_endpoint_bytes(operation.work),
+                )
+                durations = distribute_collective_serialization_ps(service, len(phases))
+                protocol_phase_service.update((phase.phase.phase_id, duration) for phase, duration in zip(phases, durations, strict=True))
         if self._peer_runtime is not None:
             self._peer_runtime.validate_graph(graph, locality)
         projection = project_execution_graph_goal(
@@ -1664,6 +1680,9 @@ class HtsimStepSink:
                         ),
                     )
                 )
+            if self._peer_runtime is not None and self._peer_runtime.executes_nccl:
+                from simllm.backends.peer_step import merge_nccl_phases
+                classified_phases = (merge_nccl_phases(classified_phases),)
             for phase_index, phase in enumerate(classified_phases):
                 from simllm.backends.goal_session import GoalTraceSnapshot
                 collective_floor_term = collective_floor_terms.get(
@@ -1698,7 +1717,7 @@ class HtsimStepSink:
                             else None
                         ),
                         local_service_ps=(
-                            phase.nvlink_service_ps
+                            protocol_phase_service.get(phase.phase.phase_id, phase.nvlink_service_ps)
                             if collective_floor_term is None
                             else collective_floor_term.local_service_ps
                         ),

@@ -1,0 +1,394 @@
+[
+  {
+    "schema": "simllm-nccl-ring-protocol-model-v1",
+    "model_id": "a100-nccl-2.31-ring-w2-v2",
+    "architecture": "a100",
+    "width": 2,
+    "payload_min_bytes": 262144,
+    "payload_max_bytes": 4194304,
+    "startup_ps": 10854413,
+    "peer_rate_bytes_per_second": 100000000000,
+    "endpoint_rate_bytes_per_second": 300000000000,
+    "protocol_starts": [
+      [
+        262144,
+        "LL"
+      ],
+      [
+        592016,
+        "SIMPLE"
+      ]
+    ],
+    "services": [
+      {
+        "protocol": "LL",
+        "channel_mib_ps": 33689670,
+        "instruction_round_ps": 502536,
+        "synchronization_slice_ps": 776920,
+        "publication_ps": 0
+      },
+      {
+        "protocol": "LL128",
+        "channel_mib_ps": 77437281,
+        "instruction_round_ps": 1490135,
+        "synchronization_slice_ps": 3983012,
+        "publication_ps": 0
+      },
+      {
+        "protocol": "SIMPLE",
+        "channel_mib_ps": 120449244,
+        "instruction_round_ps": 0,
+        "synchronization_slice_ps": 3824799,
+        "publication_ps": 0
+      }
+    ],
+    "residual_fraction_ppm": 0,
+    "protocol_radius_ppm": [
+      [
+        "LL",
+        68937
+      ],
+      [
+        "LL128",
+        95866
+      ],
+      [
+        "SIMPLE",
+        137159
+      ]
+    ],
+    "method_intercept_ps": 0,
+    "method_physical_fraction_ppm": 0,
+    "visibility_rtt_ps": null,
+    "selection_resolution_bytes": 16,
+    "choice_costs": [
+      [
+        "LL",
+        7799999,
+        26214400
+      ],
+      [
+        "LL128",
+        17799999,
+        14246956
+      ],
+      [
+        "SIMPLE",
+        15200000,
+        13107200
+      ]
+    ],
+    "protocol_method_costs": [
+      [
+        "LL",
+        0,
+        94950
+      ],
+      [
+        "LL128",
+        0,
+        0
+      ],
+      [
+        "SIMPLE",
+        2943500,
+        0
+      ]
+    ],
+    "center_method": "event"
+  },
+  {
+    "schema": "simllm-nccl-ring-protocol-model-v1",
+    "model_id": "a100-nccl-2.31-ring-w4-v2",
+    "architecture": "a100",
+    "width": 4,
+    "payload_min_bytes": 262144,
+    "payload_max_bytes": 4194304,
+    "startup_ps": 11122718,
+    "peer_rate_bytes_per_second": 100000000000,
+    "endpoint_rate_bytes_per_second": 300000000000,
+    "protocol_starts": [
+      [
+        262144,
+        "LL"
+      ],
+      [
+        1474256,
+        "LL128"
+      ]
+    ],
+    "services": [
+      {
+        "protocol": "LL",
+        "channel_mib_ps": 104953379,
+        "instruction_round_ps": 219330,
+        "synchronization_slice_ps": 0,
+        "publication_ps": 0
+      },
+      {
+        "protocol": "LL128",
+        "channel_mib_ps": 105394393,
+        "instruction_round_ps": 1272409,
+        "synchronization_slice_ps": 1700218,
+        "publication_ps": 0
+      },
+      {
+        "protocol": "SIMPLE",
+        "channel_mib_ps": 75613886,
+        "instruction_round_ps": 0,
+        "synchronization_slice_ps": 3561063,
+        "publication_ps": 0
+      }
+    ],
+    "residual_fraction_ppm": 0,
+    "protocol_radius_ppm": [
+      [
+        "LL",
+        148359
+      ],
+      [
+        "LL128",
+        174040
+      ],
+      [
+        "SIMPLE",
+        88876
+      ]
+    ],
+    "method_intercept_ps": 0,
+    "method_physical_fraction_ppm": 0,
+    "visibility_rtt_ps": null,
+    "selection_resolution_bytes": 16,
+    "choice_costs": [
+      [
+        "LL",
+        10199999,
+        17934597
+      ],
+      [
+        "LL128",
+        25400000,
+        7123478
+      ],
+      [
+        "SIMPLE",
+        28800001,
+        6553600
+      ]
+    ],
+    "protocol_method_costs": [
+      [
+        "LL",
+        555243,
+        234655
+      ],
+      [
+        "LL128",
+        4651818,
+        0
+      ],
+      [
+        "SIMPLE",
+        0,
+        0
+      ]
+    ],
+    "center_method": "event"
+  },
+  {
+    "schema": "simllm-nccl-ring-protocol-model-v1",
+    "model_id": "gh200-nccl-2.31-ring-w2-v2",
+    "architecture": "gh200",
+    "width": 2,
+    "payload_min_bytes": 262144,
+    "payload_max_bytes": 4194304,
+    "startup_ps": 5349964,
+    "peer_rate_bytes_per_second": 150000000000,
+    "endpoint_rate_bytes_per_second": 450000000000,
+    "protocol_starts": [
+      [
+        262144,
+        "LL"
+      ],
+      [
+        888000,
+        "SIMPLE"
+      ]
+    ],
+    "services": [
+      {
+        "protocol": "LL",
+        "channel_mib_ps": 14650034,
+        "instruction_round_ps": 458298,
+        "synchronization_slice_ps": 456277,
+        "publication_ps": 0
+      },
+      {
+        "protocol": "LL128",
+        "channel_mib_ps": 65196583,
+        "instruction_round_ps": 672811,
+        "synchronization_slice_ps": 2707009,
+        "publication_ps": 0
+      },
+      {
+        "protocol": "SIMPLE",
+        "channel_mib_ps": 71572344,
+        "instruction_round_ps": 0,
+        "synchronization_slice_ps": 2247374,
+        "publication_ps": 326010
+      }
+    ],
+    "residual_fraction_ppm": 0,
+    "protocol_radius_ppm": [
+      [
+        "LL",
+        110061
+      ],
+      [
+        "LL128",
+        19607
+      ],
+      [
+        "SIMPLE",
+        41460
+      ]
+    ],
+    "method_intercept_ps": 0,
+    "method_physical_fraction_ppm": 0,
+    "visibility_rtt_ps": null,
+    "selection_resolution_bytes": 16,
+    "choice_costs": [
+      [
+        "LL",
+        7800001,
+        17476266
+      ],
+      [
+        "LL128",
+        17799999,
+        9497971
+      ],
+      [
+        "SIMPLE",
+        15200000,
+        8738133
+      ]
+    ],
+    "protocol_method_costs": [
+      [
+        "LL",
+        0,
+        0
+      ],
+      [
+        "LL128",
+        0,
+        0
+      ],
+      [
+        "SIMPLE",
+        31533,
+        0
+      ]
+    ],
+    "center_method": "event"
+  },
+  {
+    "schema": "simllm-nccl-ring-protocol-model-v1",
+    "model_id": "gh200-nccl-2.31-ring-w4-v2",
+    "architecture": "gh200",
+    "width": 4,
+    "payload_min_bytes": 262144,
+    "payload_max_bytes": 4194304,
+    "startup_ps": 8118019,
+    "peer_rate_bytes_per_second": 150000000000,
+    "endpoint_rate_bytes_per_second": 450000000000,
+    "protocol_starts": [
+      [
+        262144,
+        "LL"
+      ],
+      [
+        2488016,
+        "LL128"
+      ]
+    ],
+    "services": [
+      {
+        "protocol": "LL",
+        "channel_mib_ps": 37134959,
+        "instruction_round_ps": 236444,
+        "synchronization_slice_ps": 0,
+        "publication_ps": 0
+      },
+      {
+        "protocol": "LL128",
+        "channel_mib_ps": 55835166,
+        "instruction_round_ps": 770803,
+        "synchronization_slice_ps": 1097005,
+        "publication_ps": 0
+      },
+      {
+        "protocol": "SIMPLE",
+        "channel_mib_ps": 70055216,
+        "instruction_round_ps": 0,
+        "synchronization_slice_ps": 1640951,
+        "publication_ps": 0
+      }
+    ],
+    "residual_fraction_ppm": 0,
+    "protocol_radius_ppm": [
+      [
+        "LL",
+        98145
+      ],
+      [
+        "LL128",
+        52346
+      ],
+      [
+        "SIMPLE",
+        31396
+      ]
+    ],
+    "method_intercept_ps": 0,
+    "method_physical_fraction_ppm": 0,
+    "visibility_rtt_ps": null,
+    "selection_resolution_bytes": 16,
+    "choice_costs": [
+      [
+        "LL",
+        10200000,
+        11155064
+      ],
+      [
+        "LL128",
+        25400000,
+        4748986
+      ],
+      [
+        "SIMPLE",
+        28800001,
+        4369067
+      ]
+    ],
+    "protocol_method_costs": [
+      [
+        "LL",
+        89250,
+        0
+      ],
+      [
+        "LL128",
+        182805,
+        0
+      ],
+      [
+        "SIMPLE",
+        0,
+        0
+      ]
+    ],
+    "center_method": "event"
+  }
+]

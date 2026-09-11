@@ -1,0 +1,358 @@
+{
+  "schema": "simllm-nccl-protocol-sanity-v1",
+  "integrity": "valid",
+  "parameter_sha256": "f605e7bcce9e9d1fc19b076a2a7c32e122f482f5ec5b8dcb774f97eb46ab76ce",
+  "physical_relation": "Encoded endpoint service scales inversely with fixed-capacity rate to integer-picosecond rounding; GPU work and software chooser held fixed.",
+  "rtt_relation": "Publication count times assumed round trip partitions the identified synchronization cost without double charging; excess alone extends service.",
+  "evidence_class": "Unscored physical and ownership guards, not hardware accuracy measurements.",
+  "rows": [
+    {
+      "architecture": "a100",
+      "width": 2,
+      "bytes": 524288,
+      "rate_scale": 0.5,
+      "physical_floor_ps": 20971520,
+      "reference_ps": 34156693,
+      "central_ps": 36147939
+    },
+    {
+      "architecture": "a100",
+      "width": 2,
+      "bytes": 524288,
+      "rate_scale": 1,
+      "physical_floor_ps": 10485760,
+      "reference_ps": 25436958,
+      "central_ps": 26432581
+    },
+    {
+      "architecture": "a100",
+      "width": 2,
+      "bytes": 524288,
+      "rate_scale": 2,
+      "physical_floor_ps": 5242880,
+      "reference_ps": 25436958,
+      "central_ps": 25934770
+    },
+    {
+      "architecture": "a100",
+      "width": 2,
+      "bytes": 2097152,
+      "rate_scale": 0.5,
+      "physical_floor_ps": 41943040,
+      "reference_ps": 75746247,
+      "central_ps": 78689747
+    },
+    {
+      "architecture": "a100",
+      "width": 2,
+      "bytes": 2097152,
+      "rate_scale": 1,
+      "physical_floor_ps": 20971520,
+      "reference_ps": 63915518,
+      "central_ps": 66859018
+    },
+    {
+      "architecture": "a100",
+      "width": 2,
+      "bytes": 2097152,
+      "rate_scale": 2,
+      "physical_floor_ps": 10485760,
+      "reference_ps": 63915518,
+      "central_ps": 66859018
+    },
+    {
+      "architecture": "a100",
+      "width": 2,
+      "bytes": 1048576,
+      "rtt_ps": 0,
+      "composite_publication_ps": 22948794,
+      "publication_count": 4,
+      "attributed_rtt_ps": 0,
+      "residual_poll_fence_ps": 22948794,
+      "reference_ps": 48859363
+    },
+    {
+      "architecture": "a100",
+      "width": 2,
+      "bytes": 1048576,
+      "rtt_ps": 250000,
+      "composite_publication_ps": 22948794,
+      "publication_count": 4,
+      "attributed_rtt_ps": 1000000,
+      "residual_poll_fence_ps": 21948794,
+      "reference_ps": 48859363
+    },
+    {
+      "architecture": "a100",
+      "width": 2,
+      "bytes": 1048576,
+      "rtt_ps": 1000000,
+      "composite_publication_ps": 22948794,
+      "publication_count": 4,
+      "attributed_rtt_ps": 4000000,
+      "residual_poll_fence_ps": 18948794,
+      "reference_ps": 48859363
+    },
+    {
+      "architecture": "a100",
+      "width": 4,
+      "bytes": 524288,
+      "rate_scale": 0.5,
+      "physical_floor_ps": 10485760,
+      "reference_ps": 21608478,
+      "central_ps": 24624258
+    },
+    {
+      "architecture": "a100",
+      "width": 4,
+      "bytes": 524288,
+      "rate_scale": 1,
+      "physical_floor_ps": 5242880,
+      "reference_ps": 21134213,
+      "central_ps": 22919725
+    },
+    {
+      "architecture": "a100",
+      "width": 4,
+      "bytes": 524288,
+      "rate_scale": 2,
+      "physical_floor_ps": 2621440,
+      "reference_ps": 21134213,
+      "central_ps": 22304591
+    },
+    {
+      "architecture": "a100",
+      "width": 4,
+      "bytes": 2097152,
+      "rate_scale": 0.5,
+      "physical_floor_ps": 22370134,
+      "reference_ps": 46483296,
+      "central_ps": 51135114
+    },
+    {
+      "architecture": "a100",
+      "width": 4,
+      "bytes": 2097152,
+      "rate_scale": 1,
+      "physical_floor_ps": 11185067,
+      "reference_ps": 46483296,
+      "central_ps": 51135114
+    },
+    {
+      "architecture": "a100",
+      "width": 4,
+      "bytes": 2097152,
+      "rate_scale": 2,
+      "physical_floor_ps": 5592534,
+      "reference_ps": 46483296,
+      "central_ps": 51135114
+    },
+    {
+      "architecture": "a100",
+      "width": 4,
+      "bytes": 1048576,
+      "rtt_ps": 0,
+      "composite_publication_ps": 49854882,
+      "publication_count": 6,
+      "attributed_rtt_ps": 0,
+      "residual_poll_fence_ps": 49854882,
+      "reference_ps": 66294202
+    },
+    {
+      "architecture": "a100",
+      "width": 4,
+      "bytes": 1048576,
+      "rtt_ps": 250000,
+      "composite_publication_ps": 49854882,
+      "publication_count": 6,
+      "attributed_rtt_ps": 1500000,
+      "residual_poll_fence_ps": 48354882,
+      "reference_ps": 66294202
+    },
+    {
+      "architecture": "a100",
+      "width": 4,
+      "bytes": 1048576,
+      "rtt_ps": 1000000,
+      "composite_publication_ps": 49854882,
+      "publication_count": 6,
+      "attributed_rtt_ps": 6000000,
+      "residual_poll_fence_ps": 43854882,
+      "reference_ps": 66294202
+    },
+    {
+      "architecture": "gh200",
+      "width": 2,
+      "bytes": 524288,
+      "rate_scale": 0.5,
+      "physical_floor_ps": 13981014,
+      "reference_ps": 20699809,
+      "central_ps": 20699809
+    },
+    {
+      "architecture": "gh200",
+      "width": 2,
+      "bytes": 524288,
+      "rate_scale": 1,
+      "physical_floor_ps": 6990507,
+      "reference_ps": 15882818,
+      "central_ps": 15882818
+    },
+    {
+      "architecture": "gh200",
+      "width": 2,
+      "bytes": 524288,
+      "rate_scale": 2,
+      "physical_floor_ps": 3495254,
+      "reference_ps": 15882818,
+      "central_ps": 15882818
+    },
+    {
+      "architecture": "gh200",
+      "width": 2,
+      "bytes": 2097152,
+      "rate_scale": 0.5,
+      "physical_floor_ps": 27962027,
+      "reference_ps": 48100275,
+      "central_ps": 48131808
+    },
+    {
+      "architecture": "gh200",
+      "width": 2,
+      "bytes": 2097152,
+      "rate_scale": 1,
+      "physical_floor_ps": 13981014,
+      "reference_ps": 38031334,
+      "central_ps": 38062867
+    },
+    {
+      "architecture": "gh200",
+      "width": 2,
+      "bytes": 2097152,
+      "rate_scale": 2,
+      "physical_floor_ps": 6990507,
+      "reference_ps": 38031334,
+      "central_ps": 38062867
+    },
+    {
+      "architecture": "gh200",
+      "width": 2,
+      "bytes": 1048576,
+      "rtt_ps": 0,
+      "composite_publication_ps": 14788284,
+      "publication_count": 4,
+      "attributed_rtt_ps": 0,
+      "residual_poll_fence_ps": 14788284,
+      "reference_ps": 29084791
+    },
+    {
+      "architecture": "gh200",
+      "width": 2,
+      "bytes": 1048576,
+      "rtt_ps": 250000,
+      "composite_publication_ps": 14788284,
+      "publication_count": 4,
+      "attributed_rtt_ps": 1000000,
+      "residual_poll_fence_ps": 13788284,
+      "reference_ps": 29084791
+    },
+    {
+      "architecture": "gh200",
+      "width": 2,
+      "bytes": 1048576,
+      "rtt_ps": 1000000,
+      "composite_publication_ps": 14788284,
+      "publication_count": 4,
+      "attributed_rtt_ps": 4000000,
+      "residual_poll_fence_ps": 10788284,
+      "reference_ps": 29084791
+    },
+    {
+      "architecture": "gh200",
+      "width": 4,
+      "bytes": 524288,
+      "rate_scale": 0.5,
+      "physical_floor_ps": 6990507,
+      "reference_ps": 15108526,
+      "central_ps": 15197776
+    },
+    {
+      "architecture": "gh200",
+      "width": 4,
+      "bytes": 524288,
+      "rate_scale": 1,
+      "physical_floor_ps": 3495254,
+      "reference_ps": 13566399,
+      "central_ps": 13655649
+    },
+    {
+      "architecture": "gh200",
+      "width": 4,
+      "bytes": 524288,
+      "rate_scale": 2,
+      "physical_floor_ps": 1747627,
+      "reference_ps": 13566399,
+      "central_ps": 13655649
+    },
+    {
+      "architecture": "gh200",
+      "width": 4,
+      "bytes": 2097152,
+      "rate_scale": 0.5,
+      "physical_floor_ps": 27962027,
+      "reference_ps": 36080046,
+      "central_ps": 36169296
+    },
+    {
+      "architecture": "gh200",
+      "width": 4,
+      "bytes": 2097152,
+      "rate_scale": 1,
+      "physical_floor_ps": 13981014,
+      "reference_ps": 26203860,
+      "central_ps": 26293110
+    },
+    {
+      "architecture": "gh200",
+      "width": 4,
+      "bytes": 2097152,
+      "rate_scale": 2,
+      "physical_floor_ps": 6990507,
+      "reference_ps": 26203860,
+      "central_ps": 26293110
+    },
+    {
+      "architecture": "gh200",
+      "width": 4,
+      "bytes": 1048576,
+      "rtt_ps": 0,
+      "composite_publication_ps": 22973314,
+      "publication_count": 6,
+      "attributed_rtt_ps": 0,
+      "residual_poll_fence_ps": 22973314,
+      "reference_ps": 36017091
+    },
+    {
+      "architecture": "gh200",
+      "width": 4,
+      "bytes": 1048576,
+      "rtt_ps": 250000,
+      "composite_publication_ps": 22973314,
+      "publication_count": 6,
+      "attributed_rtt_ps": 1500000,
+      "residual_poll_fence_ps": 21473314,
+      "reference_ps": 36017091
+    },
+    {
+      "architecture": "gh200",
+      "width": 4,
+      "bytes": 1048576,
+      "rtt_ps": 1000000,
+      "composite_publication_ps": 22973314,
+      "publication_count": 6,
+      "attributed_rtt_ps": 6000000,
+      "residual_poll_fence_ps": 16973314,
+      "reference_ps": 36017091
+    }
+  ]
+}

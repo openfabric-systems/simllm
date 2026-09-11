@@ -1,0 +1,8 @@
+{
+  "schema": "simllm-nccl-protocol-live-v1",
+  "integrity": "valid",
+  "compute_service_ps_per_kernel": 200000000,
+  "metric_rows": 48,
+  "relation": "two collectives per graph; TTFT and TPOT arm differences equal twice the modeled collective difference",
+  "scope": "integration experiment with fixed compute; not inference accuracy evidence"
+}

@@ -1,0 +1,3295 @@
+{
+  "capture": "205512",
+  "expectations_commit": "34e8170f",
+  "evidence_class": "source_placement_diagnostics_not_timing_calibration",
+  "global_guards": "valid",
+  "ring_maps": [
+    {
+      "id": "ring-map-00",
+      "width": 2,
+      "communicator_channels": 8,
+      "orders_by_channel": [
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "ring-map-01",
+      "width": 2,
+      "communicator_channels": 1,
+      "orders_by_channel": [
+        [
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "ring-map-02",
+      "width": 2,
+      "communicator_channels": 22,
+      "orders_by_channel": [
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "ring-map-03",
+      "width": 2,
+      "communicator_channels": 23,
+      "orders_by_channel": [
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "ring-map-04",
+      "width": 2,
+      "communicator_channels": 24,
+      "orders_by_channel": [
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "ring-map-05",
+      "width": 2,
+      "communicator_channels": 32,
+      "orders_by_channel": [
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "ring-map-06",
+      "width": 4,
+      "communicator_channels": 24,
+      "orders_by_channel": [
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ],
+        [
+          0,
+          2,
+          1,
+          3
+        ],
+        [
+          0,
+          2,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          3,
+          2
+        ],
+        [
+          0,
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ],
+        [
+          0,
+          2,
+          1,
+          3
+        ],
+        [
+          0,
+          2,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          3,
+          2
+        ],
+        [
+          0,
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ],
+        [
+          0,
+          2,
+          1,
+          3
+        ],
+        [
+          0,
+          2,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          3,
+          2
+        ],
+        [
+          0,
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ],
+        [
+          0,
+          2,
+          1,
+          3
+        ],
+        [
+          0,
+          2,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          3,
+          2
+        ],
+        [
+          0,
+          1,
+          2,
+          3
+        ]
+      ]
+    },
+    {
+      "id": "ring-map-07",
+      "width": 4,
+      "communicator_channels": 1,
+      "orders_by_channel": [
+        [
+          0,
+          3,
+          2,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "ring-map-08",
+      "width": 4,
+      "communicator_channels": 8,
+      "orders_by_channel": [
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ],
+        [
+          0,
+          2,
+          1,
+          3
+        ],
+        [
+          0,
+          2,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          3,
+          2
+        ],
+        [
+          0,
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ]
+      ]
+    },
+    {
+      "id": "ring-map-09",
+      "width": 4,
+      "communicator_channels": 22,
+      "orders_by_channel": [
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ],
+        [
+          0,
+          2,
+          1,
+          3
+        ],
+        [
+          0,
+          2,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          3,
+          2
+        ],
+        [
+          0,
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ],
+        [
+          0,
+          2,
+          1,
+          3
+        ],
+        [
+          0,
+          2,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          3,
+          2
+        ],
+        [
+          0,
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ],
+        [
+          0,
+          2,
+          1,
+          3
+        ],
+        [
+          0,
+          2,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          3,
+          2
+        ],
+        [
+          0,
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ],
+        [
+          0,
+          2,
+          1,
+          3
+        ],
+        [
+          0,
+          2,
+          3,
+          1
+        ]
+      ]
+    },
+    {
+      "id": "ring-map-10",
+      "width": 4,
+      "communicator_channels": 23,
+      "orders_by_channel": [
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ],
+        [
+          0,
+          2,
+          1,
+          3
+        ],
+        [
+          0,
+          2,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          3,
+          2
+        ],
+        [
+          0,
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ],
+        [
+          0,
+          2,
+          1,
+          3
+        ],
+        [
+          0,
+          2,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          3,
+          2
+        ],
+        [
+          0,
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ],
+        [
+          0,
+          2,
+          1,
+          3
+        ],
+        [
+          0,
+          2,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          3,
+          2
+        ],
+        [
+          0,
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ],
+        [
+          0,
+          2,
+          1,
+          3
+        ],
+        [
+          0,
+          2,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          3,
+          2
+        ]
+      ]
+    },
+    {
+      "id": "ring-map-11",
+      "width": 4,
+      "communicator_channels": 32,
+      "orders_by_channel": [
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ],
+        [
+          0,
+          2,
+          1,
+          3
+        ],
+        [
+          0,
+          2,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          3,
+          2
+        ],
+        [
+          0,
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ],
+        [
+          0,
+          2,
+          1,
+          3
+        ],
+        [
+          0,
+          2,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          3,
+          2
+        ],
+        [
+          0,
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ],
+        [
+          0,
+          2,
+          1,
+          3
+        ],
+        [
+          0,
+          2,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          3,
+          2
+        ],
+        [
+          0,
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ],
+        [
+          0,
+          2,
+          1,
+          3
+        ],
+        [
+          0,
+          2,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          3,
+          2
+        ],
+        [
+          0,
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ],
+        [
+          0,
+          2,
+          1,
+          3
+        ],
+        [
+          0,
+          2,
+          3,
+          1
+        ],
+        [
+          0,
+          1,
+          3,
+          2
+        ],
+        [
+          0,
+          1,
+          2,
+          3
+        ],
+        [
+          0,
+          3,
+          2,
+          1
+        ],
+        [
+          0,
+          3,
+          1,
+          2
+        ]
+      ]
+    }
+  ],
+  "records": [
+    {
+      "cell": {
+        "width": 2,
+        "channels": 0,
+        "protocol": "LL",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-00",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 16
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 8,
+          "working_warps": 16
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 8,
+          "working_warps": 16
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 0,
+        "protocol": "LL128",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-00",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 16
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 8,
+          "working_warps": 20
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 8,
+          "working_warps": 20
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 0,
+        "protocol": "SIMPLE",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-00",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 16
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 8,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 8,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 0,
+        "protocol": "SIMPLE",
+        "read_enable": 0
+      },
+      "ring_map_id": "ring-map-00",
+      "connections_by_transport": {
+        "P2P/direct pointer": 16
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 8,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 8,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 0,
+        "protocol": "SIMPLE",
+        "read_enable": 1
+      },
+      "ring_map_id": "ring-map-00",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 16
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 8,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 8,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 1,
+        "protocol": "LL",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-01",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 2
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 1,
+          "working_warps": 16
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 1,
+          "working_warps": 16
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 1,
+        "protocol": "LL128",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-01",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 2
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 1,
+          "working_warps": 20
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 1,
+          "working_warps": 20
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 1,
+        "protocol": "SIMPLE",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-01",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 2
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 1,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 1,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 1,
+        "protocol": "SIMPLE",
+        "read_enable": 0
+      },
+      "ring_map_id": "ring-map-01",
+      "connections_by_transport": {
+        "P2P/direct pointer": 2
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 1,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 1,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 1,
+        "protocol": "SIMPLE",
+        "read_enable": 1
+      },
+      "ring_map_id": "ring-map-01",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 2
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 1,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 1,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 8,
+        "protocol": "LL",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-00",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 16
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 8,
+          "working_warps": 16
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 8,
+          "working_warps": 16
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 8,
+        "protocol": "LL128",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-00",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 16
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 8,
+          "working_warps": 20
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 8,
+          "working_warps": 20
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 8,
+        "protocol": "SIMPLE",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-00",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 16
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 8,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 8,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 8,
+        "protocol": "SIMPLE",
+        "read_enable": 0
+      },
+      "ring_map_id": "ring-map-00",
+      "connections_by_transport": {
+        "P2P/direct pointer": 16
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 8,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 8,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 8,
+        "protocol": "SIMPLE",
+        "read_enable": 1
+      },
+      "ring_map_id": "ring-map-00",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 16
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 8,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 8,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 22,
+        "protocol": "LL",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-02",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 44
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 22,
+          "working_warps": 16
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 22,
+          "working_warps": 16
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 22,
+        "protocol": "LL128",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-02",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 44
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 22,
+          "working_warps": 20
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 21,
+          "working_warps": 20
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 22,
+        "protocol": "SIMPLE",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-02",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 44
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 21,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 22,
+        "protocol": "SIMPLE",
+        "read_enable": 0
+      },
+      "ring_map_id": "ring-map-02",
+      "connections_by_transport": {
+        "P2P/direct pointer": 44
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 21,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 22,
+        "protocol": "SIMPLE",
+        "read_enable": 1
+      },
+      "ring_map_id": "ring-map-02",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 44
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 21,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 23,
+        "protocol": "LL",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-03",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 46
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 22,
+          "working_warps": 16
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 23,
+          "working_warps": 16
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 23,
+        "protocol": "LL128",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-03",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 46
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 22,
+          "working_warps": 20
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 21,
+          "working_warps": 20
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 23,
+        "protocol": "SIMPLE",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-03",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 46
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 21,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 23,
+        "protocol": "SIMPLE",
+        "read_enable": 0
+      },
+      "ring_map_id": "ring-map-03",
+      "connections_by_transport": {
+        "P2P/direct pointer": 46
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 21,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 23,
+        "protocol": "SIMPLE",
+        "read_enable": 1
+      },
+      "ring_map_id": "ring-map-03",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 46
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 21,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 24,
+        "protocol": "LL",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-04",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 48
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 24,
+          "working_warps": 16
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 24,
+          "working_warps": 16
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 24,
+        "protocol": "LL128",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-04",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 48
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 22,
+          "working_warps": 20
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 24,
+          "working_warps": 20
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 24,
+        "protocol": "SIMPLE",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-04",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 48
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 24,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 24,
+        "protocol": "SIMPLE",
+        "read_enable": 0
+      },
+      "ring_map_id": "ring-map-04",
+      "connections_by_transport": {
+        "P2P/direct pointer": 48
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 24,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 24,
+        "protocol": "SIMPLE",
+        "read_enable": 1
+      },
+      "ring_map_id": "ring-map-04",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 48
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 24,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 32,
+        "protocol": "LL",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-05",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 64
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 32,
+          "working_warps": 16
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 32,
+          "working_warps": 16
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 32,
+        "protocol": "LL128",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-05",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 64
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 32,
+          "working_warps": 20
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 30,
+          "working_warps": 20
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 32,
+        "protocol": "SIMPLE",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-05",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 64
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 32,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 30,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 32,
+        "protocol": "SIMPLE",
+        "read_enable": 0
+      },
+      "ring_map_id": "ring-map-05",
+      "connections_by_transport": {
+        "P2P/direct pointer": 64
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 32,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 30,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 2,
+        "channels": 32,
+        "protocol": "SIMPLE",
+        "read_enable": 1
+      },
+      "ring_map_id": "ring-map-05",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 64
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 32,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 30,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 0,
+        "protocol": "LL",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-06",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 96
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 24,
+          "working_warps": 16
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 24,
+          "working_warps": 16
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 0,
+        "protocol": "LL128",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-06",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 96
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 22,
+          "working_warps": 20
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 24,
+          "working_warps": 20
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 0,
+        "protocol": "SIMPLE",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-06",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 96
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 24,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 0,
+        "protocol": "SIMPLE",
+        "read_enable": 0
+      },
+      "ring_map_id": "ring-map-06",
+      "connections_by_transport": {
+        "P2P/direct pointer": 96
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 24,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 0,
+        "protocol": "SIMPLE",
+        "read_enable": 1
+      },
+      "ring_map_id": "ring-map-06",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 96
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 24,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 1,
+        "protocol": "LL",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-07",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 4
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 1,
+          "working_warps": 16
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 1,
+          "working_warps": 16
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 1,
+        "protocol": "LL128",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-07",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 4
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 1,
+          "working_warps": 20
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 1,
+          "working_warps": 20
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 1,
+        "protocol": "SIMPLE",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-07",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 4
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 1,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 1,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 1,
+        "protocol": "SIMPLE",
+        "read_enable": 0
+      },
+      "ring_map_id": "ring-map-07",
+      "connections_by_transport": {
+        "P2P/direct pointer": 4
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 1,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 1,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 1,
+        "protocol": "SIMPLE",
+        "read_enable": 1
+      },
+      "ring_map_id": "ring-map-07",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 4
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 1,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 1,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 8,
+        "protocol": "LL",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-08",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 32
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 8,
+          "working_warps": 16
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 8,
+          "working_warps": 16
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 8,
+        "protocol": "LL128",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-08",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 32
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 8,
+          "working_warps": 20
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 8,
+          "working_warps": 20
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 8,
+        "protocol": "SIMPLE",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-08",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 32
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 8,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 8,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 8,
+        "protocol": "SIMPLE",
+        "read_enable": 0
+      },
+      "ring_map_id": "ring-map-08",
+      "connections_by_transport": {
+        "P2P/direct pointer": 32
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 8,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 8,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 8,
+        "protocol": "SIMPLE",
+        "read_enable": 1
+      },
+      "ring_map_id": "ring-map-08",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 32
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 8,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 8,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 22,
+        "protocol": "LL",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-09",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 88
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 22,
+          "working_warps": 16
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 22,
+          "working_warps": 16
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 22,
+        "protocol": "LL128",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-09",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 88
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 22,
+          "working_warps": 20
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 21,
+          "working_warps": 20
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 22,
+        "protocol": "SIMPLE",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-09",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 88
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 21,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 22,
+        "protocol": "SIMPLE",
+        "read_enable": 0
+      },
+      "ring_map_id": "ring-map-09",
+      "connections_by_transport": {
+        "P2P/direct pointer": 88
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 21,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 22,
+        "protocol": "SIMPLE",
+        "read_enable": 1
+      },
+      "ring_map_id": "ring-map-09",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 88
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 21,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 23,
+        "protocol": "LL",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-10",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 92
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 22,
+          "working_warps": 16
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 23,
+          "working_warps": 16
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 23,
+        "protocol": "LL128",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-10",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 92
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 22,
+          "working_warps": 20
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 21,
+          "working_warps": 20
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 23,
+        "protocol": "SIMPLE",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-10",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 92
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 21,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 23,
+        "protocol": "SIMPLE",
+        "read_enable": 0
+      },
+      "ring_map_id": "ring-map-10",
+      "connections_by_transport": {
+        "P2P/direct pointer": 92
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 21,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 23,
+        "protocol": "SIMPLE",
+        "read_enable": 1
+      },
+      "ring_map_id": "ring-map-10",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 92
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 21,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 24,
+        "protocol": "LL",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-06",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 96
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 24,
+          "working_warps": 16
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 24,
+          "working_warps": 16
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 24,
+        "protocol": "LL128",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-06",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 96
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 22,
+          "working_warps": 20
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 24,
+          "working_warps": 20
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 24,
+        "protocol": "SIMPLE",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-06",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 96
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 24,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 24,
+        "protocol": "SIMPLE",
+        "read_enable": 0
+      },
+      "ring_map_id": "ring-map-06",
+      "connections_by_transport": {
+        "P2P/direct pointer": 96
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 24,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 24,
+        "protocol": "SIMPLE",
+        "read_enable": 1
+      },
+      "ring_map_id": "ring-map-06",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 96
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 22,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 24,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 32,
+        "protocol": "LL",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-11",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 128
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 32,
+          "working_warps": 16
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL",
+          "active_channels": 32,
+          "working_warps": 16
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 32,
+        "protocol": "LL128",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-11",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 128
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 32,
+          "working_warps": 20
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "LL128",
+          "active_channels": 30,
+          "working_warps": 20
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 32,
+        "protocol": "SIMPLE",
+        "read_enable": null
+      },
+      "ring_map_id": "ring-map-11",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 128
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 32,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 30,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 32,
+        "protocol": "SIMPLE",
+        "read_enable": 0
+      },
+      "ring_map_id": "ring-map-11",
+      "connections_by_transport": {
+        "P2P/direct pointer": 128
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 32,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 30,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "receiver_write",
+      "qualified": true
+    },
+    {
+      "cell": {
+        "width": 4,
+        "channels": 32,
+        "protocol": "SIMPLE",
+        "read_enable": 1
+      },
+      "ring_map_id": "ring-map-11",
+      "connections_by_transport": {
+        "P2P/direct pointer/read": 128
+      },
+      "selection_by_payload": [
+        {
+          "bytes": 1048576,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 32,
+          "working_warps": 17
+        },
+        {
+          "bytes": 3407872,
+          "algorithm": "RING",
+          "protocol": "SIMPLE",
+          "active_channels": 30,
+          "working_warps": 17
+        }
+      ],
+      "payload_fifo_placement": "sender_read",
+      "qualified": true
+    }
+  ],
+  "raw_connection_and_rank_records": "Retained in the digest-pinned a100-transports.tar.gz archive."
+}

@@ -192,6 +192,9 @@ class NvlinkCausalEngine:
         self._event_order = 0
         self._events: list[tuple[int, int, str, int]] = []
         self._event_count = 0
+        self._callbacks: dict[int, Callable[[], None]] = {}
+        self._next_callback = 0
+        self._driving = False
         self._packets: list[NvlinkFlitPacket] = []
         self._tx_queues: list[deque[int]] = []
         self._read_requests: dict[str, int] = {}
@@ -402,7 +405,38 @@ class NvlinkCausalEngine:
         self._check_drain()
         return self._result(tuple(self._transfers))
 
-    def _drive(self, visible_targets: set[int] | None = None, *, until_ps: int | None = None) -> None:
+    def schedule_callback(self, at_ps: int, callback: Callable[[], None]) -> None:
+        """Schedule a GPU/protocol transition on this sole event calendar."""
+        if type(at_ps) is not int or not self._now <= at_ps < 2**64 or not callable(callback):
+            raise ValueError("calendar callbacks need a callable and nonrewinding uint64 time")
+        index = self._next_callback
+        self._next_callback += 1
+        self._callbacks[index] = callback
+        self._schedule(at_ps, "callback", index)
+
+    def advance_until(self, completed: Callable[[], bool], *, max_events: int = 2000000) -> int:
+        """Resume physical and GPU work until an explicit protocol frontier."""
+        if not callable(completed) or type(max_events) is not int or max_events < 1:
+            raise ValueError("protocol frontier needs a predicate and positive event budget")
+        if not completed():
+            self._drive(completed=completed, max_events=max_events)
+        if not completed():
+            raise RuntimeError("retained calendar stalled before protocol completion")
+        return self._now
+
+    def _drive(self, visible_targets: set[int] | None = None, *, until_ps: int | None = None,
+               completed: Callable[[], bool] | None = None, max_events: int | None = None) -> None:
+        if self._driving:
+            raise RuntimeError("a calendar callback may schedule work but cannot advance time")
+        self._driving = True
+        try:
+            self._drive_events(visible_targets, until_ps=until_ps, completed=completed, max_events=max_events)
+        finally:
+            self._driving = False
+
+    def _drive_events(self, visible_targets: set[int] | None, *, until_ps: int | None,
+                      completed: Callable[[], bool] | None, max_events: int | None) -> None:
+        first_event = self._event_count
         while self._events:
             if until_ps is not None and self._events[0][0] > until_ps:
                 break
@@ -411,6 +445,8 @@ class NvlinkCausalEngine:
                 while self._events and self._events[0][0] == self._now:
                     _, _, kind, index = heappop(self._events)
                     self._event_count += 1
+                    if max_events is not None and self._event_count - first_event > max_events:
+                        raise RuntimeError("protocol frontier exceeded its event budget; possible deadlock")
                     self._handle(kind, index)
                 changed = self._grant_rx()
                 changed = self._grant_switch() or changed
@@ -418,6 +454,8 @@ class NvlinkCausalEngine:
                 if not changed and not (self._events and self._events[0][0] == self._now):
                     break
             if visible_targets is not None and visible_targets <= self._visible:
+                break
+            if completed is not None and completed():
                 break
 
     def _observe(self, kind: str, index: int) -> None:
@@ -1031,6 +1069,9 @@ class NvlinkCausalEngine:
 
     def _handle(self, kind: str, index: int) -> None:
         if kind == "wake":
+            return
+        if kind == "callback":
+            self._callbacks.pop(index)()
             return
         self._last_physical_event_ps = self._now
         if kind == "return":

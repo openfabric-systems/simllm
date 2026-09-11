@@ -7,7 +7,7 @@ observations; graph events carry only logical extent identities and visibility.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, replace
 
 from simllm.backends.htsim_nvlink import (
@@ -144,6 +144,7 @@ class GpuPeerPacketSession:
         self._events: list[CompletionEvent] = []
         self._packet_events: list[PacketAttemptEvent] = []
         self._drained_result: NvlinkAlignedDomainResult | None = None
+        self._visibility_callbacks: dict[str, Callable[[], None]] = {}
 
     @property
     def now_ps(self) -> int:
@@ -304,6 +305,9 @@ class GpuPeerPacketSession:
             self._visible.add(packet.packet_id)
             if all(name in self._visible for name in extent.packet_ids):
                 self._emit(extent, EventPhase.COMPLETED, at_ps)
+                callback = self._visibility_callbacks.pop(packet.extent_id, None)
+                if callback is not None:
+                    self._engine.schedule_callback(at_ps, callback)
             return
         row = replace(self._packets[packet.packet_id], event_kind=kind, event_time_ps=at_ps)
         ledger = self._ledgers[extent.transfer.source]
@@ -319,6 +323,22 @@ class GpuPeerPacketSession:
 
     def advance_to(self, at_ps: int) -> None:
         self._engine.advance_to(at_ps)
+
+    def schedule_callback(self, at_ps: int, callback: Callable[[], None]) -> None:
+        self._engine.schedule_callback(at_ps, callback)
+
+    def on_visible(self, extent_id: str, callback: Callable[[], None]) -> None:
+        """Subscribe once to a whole extent, preserving packet-port projection."""
+        if extent_id not in self._extents or extent_id in self._visibility_callbacks or not callable(callback):
+            raise ValueError("visibility callback requires a unique admitted extent")
+        extent = self._extents[extent_id]
+        if set(extent.packet_ids) <= self._visible:
+            self.schedule_callback(self.now_ps, callback)
+        else:
+            self._visibility_callbacks[extent_id] = callback
+
+    def advance_until(self, completed: Callable[[], bool], *, max_events: int = 2000000) -> int:
+        return self._engine.advance_until(completed, max_events=max_events)
 
     def advance_until_visible(self, extent_ids: Sequence[str]) -> int:
         return self._engine.advance_until_visible(extent_ids)

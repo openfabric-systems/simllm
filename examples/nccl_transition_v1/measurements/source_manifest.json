@@ -1,0 +1,61 @@
+{
+  "schema": "simllm-nccl-transition-artifact-manifest-v1",
+  "inputs": {
+    "examples/a100_hardware_envelope_v1/measurements/lane_b_result.json": "faccbefe305e6d635875daa4638f3ad83e630be9547f9246b899a404049a38d6",
+    "examples/gh200_hardware_envelope_v1/measurements/lane_b_result.json": "0423192907d7abd532f16d202d6459953da6b2d8672ea73ee9c791918f5a97e7",
+    "examples/collective_regime_curve_v1/validation.json": "a9be80402bf62c55dd17d31dc1c54fa06a7a0a92c50aead36a2b9cedecedcaaa",
+    "examples/nccl_transition_v1/expectations.json": "f61a2633d8556d550e1c65e24976148f0c06296f05a67325908eb47e68d6c96f",
+    "examples/nccl_transition_v1/observer_expectations.md": "474d52fdce34ad0bf8016ca8668884437be264455a323622d9a94a7caf7e788a"
+  },
+  "capture_jobs": {
+    "a100": 204703,
+    "gh200": 204704
+  },
+  "observer_jobs": {
+    "a100": 204707,
+    "gh200": 204709
+  },
+  "raw_capture_variables": [
+    "NCCL_A100_CAPTURE",
+    "NCCL_GH200_CAPTURE",
+    "NCCL_A100_OBSERVER",
+    "NCCL_GH200_OBSERVER"
+  ],
+  "renderer": {
+    "python": "3.10.18",
+    "numpy": "2.2.6",
+    "matplotlib": "3.10.8",
+    "font": "DejaVu Sans",
+    "raster_dpi": 300,
+    "size_inches": [
+      7,
+      7
+    ]
+  },
+  "artifacts": {
+    "examples/nccl_transition_v1/RESULTS.md": "ba387467e67c105b1a5026554458d26b0e39971f02c29d0ecead69c33bc6c4e1",
+    "examples/nccl_transition_v1/analyze.py": "1b4b9dde0f8490b49bb00e81961b2474dec64d31eb102bf78c2b09d5f6d0a7c6",
+    "examples/nccl_transition_v1/expectations.json": "f61a2633d8556d550e1c65e24976148f0c06296f05a67325908eb47e68d6c96f",
+    "examples/nccl_transition_v1/expectations.md": "4f2a6f2cbe77a06138f96c2044b0bb1eeaa04bc9d78e559a9b923c6419818bab",
+    "examples/nccl_transition_v1/figures/dense-collective-timing.pdf": "0835575e9d9ca20c9e99afa54b30809f92939ba8809087fe2c4e521685b57fb1",
+    "examples/nccl_transition_v1/figures/dense-collective-timing.png": "77c2ececc4275ba2fe93618f02a90faa992a6ea9433846951e26db6cfd7c31f7",
+    "examples/nccl_transition_v1/figures/dense-model-residuals.pdf": "5fa708b24047c145af8335ed959b6c98c5fe3935338dd780176203c32baa46bb",
+    "examples/nccl_transition_v1/figures/dense-model-residuals.png": "2211f4f48f9df942a00b51dc0c7220d09476b9d151578cb2340aee8d5f9e9226",
+    "examples/nccl_transition_v1/figures/nccl-protocol-controls.pdf": "84bbca731b806b22b223ab2fc23370eb2521a8214394c3148bb606347f53f3ac",
+    "examples/nccl_transition_v1/figures/nccl-protocol-controls.png": "35b88da62262845d206b41594e45a30db226a69f2dc260dce055c9e0d13e5107",
+    "examples/nccl_transition_v1/make_legacy_dense.py": "46380826fc0d8ced5a15338ae3ffa79dab81a2433652163bfefab337901b88ef",
+    "examples/nccl_transition_v1/measurements/analysis.json": "f32e16b3b15ad9b123ba6427d18fd115941b078e7a3f16e0a0128767e102c8b6",
+    "examples/nccl_transition_v1/measurements/callback_choices.csv": "7b2556539174f33e5cdb6faf69edf53635b0ad60b32d41b0b634cc112100e72b",
+    "examples/nccl_transition_v1/measurements/model_residuals.csv": "ffe0d18e8fc2cebace37144fe38d1b65036fa3e8943271c54cc158d8f53bf4be",
+    "examples/nccl_transition_v1/measurements/timing_summary.csv": "7af184792b8535b2fd48e4d5cead1ccedb5d78950fce758f9c1c201ece12c871",
+    "examples/nccl_transition_v1/measurements/tuning.csv": "51cdb7bc60a0d7803622f9547ff4e715da9a215bd9f542f82d3fa15dfcb4b2cc",
+    "examples/nccl_transition_v1/model_residuals.py": "1107fa8be7afa4b2d41c388dc2920df9ead5eea5b39ba74dd4a7c628fce2fc43",
+    "examples/nccl_transition_v1/observe_results.py": "75273ecb7bdcdfd74e313f5d0c37cbf30b694ea2bc51cb0756e32fead4e45725",
+    "examples/nccl_transition_v1/observer_expectations.md": "474d52fdce34ad0bf8016ca8668884437be264455a323622d9a94a7caf7e788a",
+    "examples/nccl_transition_v1/plot_results.py": "8cf79c71ef122e8073115600b32a956108bf89dac035f620b111ba64efb09832",
+    "examples/nccl_transition_v1/run_campaign.py": "6ea30129220c0c024ea4f5b961d7bcacbf18c909801bd635e7f7f711f3651353",
+    "examples/nccl_transition_v1/run_merlin.sbatch": "d8fa9c3ea952466fd065804996aa17b04ba40fa3b2dc2b8f751f6d64a0f718b0",
+    "examples/nccl_transition_v1/run_observer.py": "1b227a5dc86966f85420fb5a4345c3dfb129523839add146e2454d41d94003e5",
+    "examples/nccl_transition_v1/selection_observer.cc": "9f3e9e97370e00aea53e785abcc6f8f787a805f90b0dd4eb061b11307c18892e"
+  }
+}

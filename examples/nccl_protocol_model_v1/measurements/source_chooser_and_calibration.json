@@ -1,0 +1,303 @@
+{
+  "expectations_commit": "14070e87",
+  "base_parameter_sha256": "6d7aff4f86d358da2dd3c8e4015b68d5d53250e2d1fe95d27a6c4189687bfaf5",
+  "chronology": "All comparisons here are development calibration; second-grid validation remains separate.",
+  "audits": [
+    {
+      "architecture": "a100",
+      "width": 2,
+      "source_reconstruction": [
+        {
+          "protocol": "LL",
+          "distinct_software_predictions": 65,
+          "maximum_reconstruction_error_us": 5.43916083017848e-06
+        },
+        {
+          "protocol": "LL128",
+          "distinct_software_predictions": 65,
+          "maximum_reconstruction_error_us": 2.8573426362754617e-06
+        },
+        {
+          "protocol": "SIMPLE",
+          "distinct_software_predictions": 65,
+          "maximum_reconstruction_error_us": 2.111931834747338e-06
+        }
+      ],
+      "automatic_selection_cells": 241,
+      "source_selection_mismatches": [],
+      "method_cells": 301,
+      "calibration_cells": 797,
+      "work_costs_unchanged": true,
+      "software_choice_costs": [
+        [
+          "LL",
+          7799999,
+          26214400
+        ],
+        [
+          "LL128",
+          17799999,
+          14246956
+        ],
+        [
+          "SIMPLE",
+          15200000,
+          13107200
+        ]
+      ],
+      "method_costs": [
+        [
+          "LL",
+          0,
+          94950
+        ],
+        [
+          "LL128",
+          0,
+          0
+        ],
+        [
+          "SIMPLE",
+          2943500,
+          0
+        ]
+      ],
+      "protocol_radius_ppm": [
+        [
+          "LL",
+          68937
+        ],
+        [
+          "LL128",
+          95866
+        ],
+        [
+          "SIMPLE",
+          137159
+        ]
+      ]
+    },
+    {
+      "architecture": "a100",
+      "width": 4,
+      "source_reconstruction": [
+        {
+          "protocol": "LL",
+          "distinct_software_predictions": 65,
+          "maximum_reconstruction_error_us": 2.586363642365086e-06
+        },
+        {
+          "protocol": "LL128",
+          "distinct_software_predictions": 65,
+          "maximum_reconstruction_error_us": 2.606118897574561e-06
+        },
+        {
+          "protocol": "SIMPLE",
+          "distinct_software_predictions": 65,
+          "maximum_reconstruction_error_us": 2.1105332379534048e-06
+        }
+      ],
+      "automatic_selection_cells": 241,
+      "source_selection_mismatches": [],
+      "method_cells": 301,
+      "calibration_cells": 797,
+      "work_costs_unchanged": true,
+      "software_choice_costs": [
+        [
+          "LL",
+          10199999,
+          17934597
+        ],
+        [
+          "LL128",
+          25400000,
+          7123478
+        ],
+        [
+          "SIMPLE",
+          28800001,
+          6553600
+        ]
+      ],
+      "method_costs": [
+        [
+          "LL",
+          555243,
+          234655
+        ],
+        [
+          "LL128",
+          4651818,
+          0
+        ],
+        [
+          "SIMPLE",
+          0,
+          0
+        ]
+      ],
+      "protocol_radius_ppm": [
+        [
+          "LL",
+          148359
+        ],
+        [
+          "LL128",
+          174040
+        ],
+        [
+          "SIMPLE",
+          88876
+        ]
+      ]
+    },
+    {
+      "architecture": "gh200",
+      "width": 2,
+      "source_reconstruction": [
+        {
+          "protocol": "LL",
+          "distinct_software_predictions": 65,
+          "maximum_reconstruction_error_us": 2.5594405386186736e-06
+        },
+        {
+          "protocol": "LL128",
+          "distinct_software_predictions": 65,
+          "maximum_reconstruction_error_us": 3.2643356604467044e-06
+        },
+        {
+          "protocol": "SIMPLE",
+          "distinct_software_predictions": 65,
+          "maximum_reconstruction_error_us": 2.2006118953754594e-06
+        }
+      ],
+      "automatic_selection_cells": 241,
+      "source_selection_mismatches": [],
+      "method_cells": 301,
+      "calibration_cells": 797,
+      "work_costs_unchanged": true,
+      "software_choice_costs": [
+        [
+          "LL",
+          7800001,
+          17476266
+        ],
+        [
+          "LL128",
+          17799999,
+          9497971
+        ],
+        [
+          "SIMPLE",
+          15200000,
+          8738133
+        ]
+      ],
+      "method_costs": [
+        [
+          "LL",
+          0,
+          0
+        ],
+        [
+          "LL128",
+          0,
+          0
+        ],
+        [
+          "SIMPLE",
+          31533,
+          0
+        ]
+      ],
+      "protocol_radius_ppm": [
+        [
+          "LL",
+          110061
+        ],
+        [
+          "LL128",
+          19607
+        ],
+        [
+          "SIMPLE",
+          41460
+        ]
+      ]
+    },
+    {
+      "architecture": "gh200",
+      "width": 4,
+      "source_reconstruction": [
+        {
+          "protocol": "LL",
+          "distinct_software_predictions": 65,
+          "maximum_reconstruction_error_us": 2.099999989013668e-06
+        },
+        {
+          "protocol": "LL128",
+          "distinct_software_predictions": 65,
+          "maximum_reconstruction_error_us": 2.399431835442556e-06
+        },
+        {
+          "protocol": "SIMPLE",
+          "distinct_software_predictions": 65,
+          "maximum_reconstruction_error_us": 2.563723796811246e-06
+        }
+      ],
+      "automatic_selection_cells": 241,
+      "source_selection_mismatches": [],
+      "method_cells": 301,
+      "calibration_cells": 797,
+      "work_costs_unchanged": true,
+      "software_choice_costs": [
+        [
+          "LL",
+          10200000,
+          11155064
+        ],
+        [
+          "LL128",
+          25400000,
+          4748986
+        ],
+        [
+          "SIMPLE",
+          28800001,
+          4369067
+        ]
+      ],
+      "method_costs": [
+        [
+          "LL",
+          89250,
+          0
+        ],
+        [
+          "LL128",
+          182805,
+          0
+        ],
+        [
+          "SIMPLE",
+          0,
+          0
+        ]
+      ],
+      "protocol_radius_ppm": [
+        [
+          "LL",
+          98145
+        ],
+        [
+          "LL128",
+          52346
+        ],
+        [
+          "SIMPLE",
+          31396
+        ]
+      ]
+    }
+  ]
+}
