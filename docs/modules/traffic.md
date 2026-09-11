@@ -2518,14 +2518,21 @@ NVSwitch allocation; it does not qualify an eight-GPU switched board.
   projection byte and timestamp exactly.
 
 - TRAF-54 (Completeness; P1; L): land the packetized NCCL and RCCL collective
-  protocol layer over the GPU ports. The next slice implements Ring float32
-  sum all-reduce on the separately scoped two- and four-GPU A100 and GH200
-  direct meshes, following the
+  protocol layer over the GPU ports. The opt-in buffered Ring float32
+  source slice executes LL, LL128 and Simple on two/four-rank direct meshes
+  through `PeerPacketConfig.nccl` and the retained physical calendar. Its
+  declared GPU costs are uncalibrated. The
+  [channel execution study](../../examples/nccl_channel_fifo_v1/expectations.md)
+  checks partial-warp stores, shared connection sequences, finite SM residency,
+  source progress, and the original graph's token metrics. Hardware
+  identification follows the separately frozen
+  [Merlin control matrix](../../examples/nccl_channel_fifo_v1/hardware_expectations.md).
+  Hardware qualification and the wider source paths follow the
   [source-derived channel FIFO plan](../design/nccl-channel-fifo-model.md).
-  The executable aggregate surrogate counts protocol work but has no timed
-  per-channel first-in, first-out (FIFO) lifecycle, shared GPU instruction
-  service or source-ordered primitive execution. Replace it on the enabled
-  path with persistent communicator/channel/directed-connection state,
+  The aggregate surrogate remains the exact bypass. The enabled source path
+  replaces its maximum-channel operator with per-channel first-in, first-out
+  (FIFO) progress and shared GPU service. Complete qualification of persistent
+  communicator/channel/directed-connection state,
   eight-slot sequence and reuse accounting, LL/LL128 readiness flags, Simple
   progress counters shared across protocol switches on the same connection,
   partial channel and active-lane work, and the source's
@@ -2550,6 +2557,13 @@ NVSwitch allocation; it does not qualify an eight-GPU switched board.
   TRAF-65's candidate A100 profile remains scoped by its evidence, and
   TRAF-73/TRAF-86 retain unidentified transport parameters. Captured geometry
   and byte/control transitions are separate fatal guards from timing accuracy.
+  Source instruction groups remain declared service units until independent
+  instruction, memory, polling and publication probes identify their costs.
+  Registered/direct-read, proxy and switched branches reject explicitly.
+  GPU-plus-packet critical-path report composition remains required; the
+  generic packet-only breakdown rejects this selection and protocol resource
+  visits remain additive work observations. Do not infer hardware accuracy or
+  pure barrier/fence latency from passing source-state and token-metric checks.
   Acceptance: source-conformant FIFO transitions, no overwrite or early reuse,
   exact useful and protocol-byte accounting, and collective completion after
   every required output visibility and kernel dependency. The last payload

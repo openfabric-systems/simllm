@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import copy
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from simllm.backends.htsim_nvlink import (
     NvlinkAlignedOptions,
@@ -12,6 +12,11 @@ from simllm.backends.htsim_nvlink import (
     NvlinkTransfer,
 )
 from simllm.backends.htsim_rnic import FlowCompletion, RnicRunResult
+from simllm.backends.nccl_runtime import (
+    NcclChannelRuntime,
+    NcclExecutionConfig,
+    NcclExecutionResult,
+)
 from simllm.backends.nvlink_runtime import NvlinkPhysicalBinding
 from simllm.compute.gpu_packet_port import GpuPacketExtent, GpuPeerPacketSession
 from simllm.core.authority import work_completed_bytes
@@ -30,6 +35,28 @@ from simllm.placement import FabricTopologyManifest, PlacementManifest
 from simllm.traffic import ClassifiedCommunicationPhase, StepLocalityPlan
 
 
+def merge_nccl_phases(phases: tuple[ClassifiedCommunicationPhase, ...]) -> ClassifiedCommunicationPhase:
+    """Project one whole source collective instead of timing legacy Ring rounds."""
+    if not phases or any(phase.fabric_segments for phase in phases):
+        raise ValueError("source NCCL composition requires fully local phases")
+    first = phases[0]
+    if any((p.phase.operation_id, p.phase.participants) != (first.phase.operation_id, first.phase.participants)
+           for p in phases):
+        raise ValueError("source NCCL phases disagree on semantic ownership")
+    segments = tuple(segment for phase in phases for segment in phase.nvlink_segments)
+    ingress, egress = Counter(), Counter()
+    for segment in segments:
+        egress[segment.source_rank] += segment.payload_bytes
+        ingress[segment.destination_rank] += segment.payload_bytes
+    ledger = tuple((rank, egress[rank], ingress[rank]) for rank in sorted(ingress.keys() | egress.keys()))
+    rate = first.nvlink_bandwidth_bytes_per_second
+    nominal = max((max(a, b) * 10**9 + rate - 1) // rate for _, a, b in ledger) * 1000
+    return ClassifiedCommunicationPhase(
+        replace(first.phase, phase_id=f"{first.phase.operation_id}:nccl-source", segments=segments),
+        (), segments, ledger, rate, nominal,
+    )
+
+
 @dataclass(frozen=True)
 class PeerPacketConfig:
     """Explicit physical inventory plus one declared service profile per domain."""
@@ -40,6 +67,7 @@ class PeerPacketConfig:
     credit_return_processing_ps: int = 0
     acknowledgement_processing_ps: int = 0
     native_switch_library: str | None = None
+    nccl: NcclExecutionConfig | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.fabric, FabricTopologyManifest):
@@ -49,6 +77,11 @@ class PeerPacketConfig:
         # Snapshot the caller's mutable manifest before any runtime is created.
         object.__setattr__(self, "fabric", copy.deepcopy(self.fabric))
         self.fabric.validate()
+        if self.nccl is not None:
+            if not isinstance(self.nccl, NcclExecutionConfig):
+                raise TypeError("peer NCCL selection requires NcclExecutionConfig")
+            if any(domain.switched for domain in self.fabric.peer_fabrics):
+                raise ValueError("NCCL source execution requires direct peer domains")
         if not self.fabric.peer_fabrics:
             raise ValueError("peer_packet requires explicit GPU attachment domains")
         if not isinstance(self.profiles, (tuple, list)) or any(
@@ -86,6 +119,7 @@ class PeerPacketPhaseResult:
     released_at_ps: int
     visible_at_ps: int
     extents: tuple[GpuPacketExtent, ...]
+    nccl: NcclExecutionResult | None = None
 
     @property
     def service_ps(self) -> int:
@@ -205,6 +239,8 @@ class PeerPacketRuntime:
         config = copy.deepcopy(config)
         config.validate_placement(placement)
         self.config = config
+        if config.nccl is not None and capture_critical_path:
+            raise ValueError("NCCL GPU critical-path report composition remains TRAF-54; use protocol evidence")
         profiles = dict(config.profiles)
         self._sessions = {
             domain.domain_id: GpuPeerPacketSession(
@@ -220,6 +256,13 @@ class PeerPacketRuntime:
         self._failed = False
         self._closed = False
         self._completed_executions: set[str] = set()
+        self._nccl = ({name: NcclChannelRuntime(session, config.nccl.gpu)
+                       for name, session in self._sessions.items()} if config.nccl is not None else {})
+        self._nccl_programs: dict[tuple[str, str], tuple[str, object]] = {}
+
+    @property
+    def executes_nccl(self) -> bool:
+        return bool(self._nccl)
 
     def _require_live(self) -> None:
         if self._failed or self._closed:
@@ -247,6 +290,26 @@ class PeerPacketRuntime:
             raise ValueError("local peer runtime cannot execute the same graph twice")
         if any(session.now_ps > graph.released_at_ps for session in self._sessions.values()):
             raise ValueError("next step precedes the retained local calendar")
+        if self.executes_nccl:
+            programs = {}
+            for operation in graph.operations:
+                if isinstance(operation.work, ComputeWork):
+                    continue
+                work = operation.work
+                if not isinstance(work, CollectiveWork) or (work.collective, work.algorithm_hint) != ("all-reduce", "ring"):
+                    raise ValueError("NCCL source path requires Ring all-reduce operations")
+                domains = {self._rank_domain.get(rank) for rank in work.ranks}
+                phases = [phase for phase in locality.phases if phase.phase.operation_id == operation.operation_id]
+                if len(domains) != 1 or None in domains or not phases or any(p.fabric_segments for p in phases):
+                    raise ValueError("NCCL source path requires a fully local declared Ring")
+                domain = next(iter(domains))
+                program = self.config.nccl.program(work.payload_bytes, work.ranks)
+                self._nccl[domain].validate_program(program)
+                if program.useful_network_bytes != sum(p.nvlink_bytes for p in phases):
+                    raise ValueError("source NCCL program disagrees with original Ring byte projection")
+                programs[graph.execution_id, operation.operation_id] = domain, program
+            self._nccl_programs.update(programs)
+            return
         for phase in locality.phases:
             groups = self._transfers(graph.execution_id, phase, graph.released_at_ps)
             for name, transfers in groups.items():
@@ -267,6 +330,16 @@ class PeerPacketRuntime:
 
     def run_phase(self, graph_id: str, phase: ClassifiedCommunicationPhase, at_ps: int) -> PeerPacketPhaseResult:
         self._require_live()
+        if self.executes_nccl:
+            domain, program = self._nccl_programs[graph_id, phase.phase.operation_id]
+            self.advance_to(at_ps)
+            try:
+                result = self._nccl[domain].run(graph_id, phase.phase.operation_id, program)
+                self.advance_to(result.completed_at_ps)
+            except Exception:
+                self._failed = True
+                raise
+            return PeerPacketPhaseResult(phase, at_ps, result.completed_at_ps, result.extents, result)
         groups = self._transfers(graph_id, phase, at_ps)
         operation_id = phase.phase.operation_id
         if operation_id is None:
@@ -376,7 +449,16 @@ def build_peer_step_evidence(
             continue
         expected = Counter((row.source_rank, row.destination_rank, row.payload_bytes) for row in phase.phase.nvlink_segments)
         actual = Counter((extent.transfer.source, extent.transfer.destination, extent.transfer.payload_bytes) for extent in phase.extents)
-        if expected != actual:
+        if phase.nccl is not None:
+            phase.nccl.validate()
+            if (phase.nccl.execution_id != graph.execution_id
+                    or phase.nccl.operation_id != phase.phase.phase.operation_id
+                    or phase.nccl.extents != phase.extents
+                    or phase.nccl.released_at_ps != phase.released_at_ps
+                    or phase.nccl.completed_at_ps != phase.visible_at_ps
+                    or phase.nccl.useful_network_bytes != phase.phase.nvlink_bytes):
+                raise ValueError("NCCL source execution lost its original graph byte/time identity")
+        elif expected != actual:
             raise ValueError("peer extents do not conserve the checked locality bytes")
         for extent in phase.extents:
             if (extent.execution_id != graph.execution_id
@@ -389,12 +471,14 @@ def build_peer_step_evidence(
             if Counter(event.phase for event in rows) != Counter((EventPhase.SUBMITTED, EventPhase.QUEUED, EventPhase.STARTED, EventPhase.COMPLETED)):
                 raise ValueError("logical peer extent has missing or duplicate completion events")
             times = {event.phase: event.timestamp_ps for event in rows}
-            if not (times[EventPhase.SUBMITTED] == times[EventPhase.QUEUED] == phase.released_at_ps
+            release = extent.transfer.released_at_ps if phase.nccl is not None else phase.released_at_ps
+            if not (phase.released_at_ps <= release
+                    and times[EventPhase.SUBMITTED] == times[EventPhase.QUEUED] == release
                     <= times[EventPhase.STARTED] <= times[EventPhase.COMPLETED] <= phase.visible_at_ps):
                 raise ValueError("peer extent events disagree with the phase boundary")
             if next(event.completed_bytes for event in rows if event.phase is EventPhase.COMPLETED) != extent.transfer.payload_bytes:
                 raise ValueError("peer extent completion event lost payload bytes")
-        if phase.extents and max(event.timestamp_ps for event in events if event.phase is EventPhase.COMPLETED
+        if phase.nccl is None and phase.extents and max(event.timestamp_ps for event in events if event.phase is EventPhase.COMPLETED
                                  and event.subject_object_id in {x.subject_object_id for x in phase.extents}) != phase.visible_at_ps:
             raise ValueError("local phase boundary disagrees with extent visibility")
     for operation in graph.operations:
@@ -406,4 +490,12 @@ def build_peer_step_evidence(
     quiesced = None if any(session.has_pending_physical_work for session in sessions) else completion
     result = ExecutionResult(graph.execution_id, completion, tuple(sorted(events, key=lambda row: row.timestamp_ps)), quiesced)
     execution_result_to_json(result)
-    return PeerStepEvidence(graph, result, artifacts, tuple(session.evidence() for session in sessions))
+    observations = tuple(session.evidence() for session in sessions)
+    source_results = [artifact.local_phase.nccl for artifact in artifacts
+                      if artifact.local_phase is not None and artifact.local_phase.nccl is not None]
+    if source_results:
+        observations = tuple({**row, "nccl_operations": [item.summary() for item in source_results
+                             if any(extent.transfer.extent_id in {value["transfer"]["extent_id"]
+                                                                for value in row["extents"]}
+                                    for extent in item.extents)]} for row in observations)
+    return PeerStepEvidence(graph, result, artifacts, observations)

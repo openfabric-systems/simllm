@@ -324,6 +324,8 @@ class HtsimStepSinkConfig:
             if not isinstance(self.peer_packet, PeerPacketConfig):
                 raise TypeError("peer_packet must be PeerPacketConfig or None")
             self.peer_packet.validate_placement(self.placement_manifest)
+            if self.peer_packet.nccl is not None and self.dims.dtype_bytes != 4:
+                raise ValueError("NCCL source Ring execution currently requires float32 work")
             if self.flow_session is not None:
                 raise ValueError("retained physical wire and local composition remains BACK-72")
             if (self.collective_floor_calibration is not None
@@ -1678,6 +1680,9 @@ class HtsimStepSink:
                         ),
                     )
                 )
+            if self._peer_runtime is not None and self._peer_runtime.executes_nccl:
+                from simllm.backends.peer_step import merge_nccl_phases
+                classified_phases = (merge_nccl_phases(classified_phases),)
             for phase_index, phase in enumerate(classified_phases):
                 from simllm.backends.goal_session import GoalTraceSnapshot
                 collective_floor_term = collective_floor_terms.get(
