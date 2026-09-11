@@ -41,7 +41,7 @@ class NcclExecutionConfig:
             if not self.channel_rank_orders:
                 raise ValueError("channel peer map must not be empty")
         self.program(16 * self.channels, (0, 1) if self.channel_rank_orders is None else self.channel_rank_orders[0])
-        if self.gpu.residency(self.warps) < 1:
+        if self.gpu.residency(max(4, self.warps)) < 1:
             raise ValueError("NCCL block does not fit the declared SM resources")
 
     def program(self, payload: int, ranks: tuple[int, ...]) -> NcclRingProgram:
@@ -111,6 +111,25 @@ class NcclConnection:
 
 
 @dataclass(frozen=True)
+class NcclTransferBinding:
+    """Read-only join from a source channel operation to a physical extent."""
+
+    extent_id: str
+    block_id: str
+    connection: tuple[str, int, int, int, int]
+    sequence: int
+    role: str
+    issued_at_ps: int
+    primitive_identity: tuple[int, ...] | None
+    stripe_index: int | None
+    offset_bytes: int | None
+    useful_bytes: int
+    transfer_bytes: int
+    input_load_masks: tuple[int, ...]
+    counter_value: int | None
+
+
+@dataclass(frozen=True)
 class NcclExecutionResult:
     execution_id: str
     operation_id: str
@@ -126,6 +145,7 @@ class NcclExecutionResult:
     resource_visits: tuple
     residency_events: tuple[dict, ...]
     block_completions: tuple[tuple[str, int], ...]
+    transfer_bindings: tuple[NcclTransferBinding, ...]
 
     @property
     def duration_ps(self) -> int:
@@ -139,6 +159,21 @@ class NcclExecutionResult:
         if sum(extent.transfer.payload_bytes for extent in self.extents) != (
                 self.protocol_data_bytes + self.counter_bytes + self.cleanup_bytes):
             raise AssertionError("physical extents lost protocol or counter bytes")
+        bindings = {binding.extent_id: binding for binding in self.transfer_bindings}
+        if len(bindings) != len(self.transfer_bindings) or set(bindings) != {e.transfer.extent_id for e in self.extents}:
+            raise AssertionError("physical extents do not have unique source channel bindings")
+        if sum(binding.useful_bytes for binding in self.transfer_bindings) != self.useful_network_bytes:
+            raise AssertionError("source transfer bindings lost useful bytes")
+        for extent in self.extents:
+            transfer = extent.transfer
+            binding = bindings[transfer.extent_id]
+            endpoints = binding.connection[2:4]
+            if binding.role in ("head", "constructor_head"):
+                endpoints = endpoints[::-1]
+            if (endpoints != (transfer.source, transfer.destination)
+                    or binding.transfer_bytes != transfer.payload_bytes
+                    or binding.issued_at_ps != transfer.released_at_ps):
+                raise AssertionError("source channel and physical extent projections disagree")
         if max(at for _, at in self.block_completions) != self.completed_at_ps:
             raise AssertionError("collective completion is not its final GPU block completion")
         if len(self.block_completions) != len(self.program.ranks) * len(self.program.channel_bytes):
@@ -153,7 +188,9 @@ class NcclExecutionResult:
                 "evidence_class": "declared_model_not_hardware_measurement",
                 "released_at_ps": self.released_at_ps, "completed_at_ps": self.completed_at_ps,
                 "payload_bytes": self.program.payload_bytes, "protocol": self.program.protocol,
-                "width": len(self.program.ranks), "channel_bytes": self.program.channel_bytes,
+                "width": len(self.program.ranks), "ranks": self.program.ranks,
+                "channel_bytes": self.program.channel_bytes,
+                "channel_rank_orders": self.program.channel_rank_orders, "block_warps": self.program.block_warps,
                 "warps": self.program.warps, "connection_mode": self.program.connection_mode,
                 "useful_network_bytes": self.useful_network_bytes,
                 "protocol_data_bytes": self.protocol_data_bytes,
@@ -161,7 +198,8 @@ class NcclExecutionResult:
                 "fifo_events": self.fifo_events,
                 "resource_visits": [asdict(row) for row in self.resource_visits],
                 "residency_events": self.residency_events,
-                "block_completions": self.block_completions}
+                "block_completions": self.block_completions,
+                "transfer_bindings": [asdict(binding) for binding in self.transfer_bindings]}
 
 
 class NcclChannelRuntime:
@@ -184,7 +222,7 @@ class NcclChannelRuntime:
     def validate_program(self, program: NcclRingProgram) -> None:
         if not isinstance(program, NcclRingProgram) or self._failed:
             raise ValueError("NCCL runtime needs a valid program and a live session")
-        if self.gpu.profile.residency(program.warps) < 1:
+        if self.gpu.profile.residency(program.block_warps) < 1:
             raise ValueError("NCCL block cannot reside on the declared GPU")
         fabric = self.session.binding.fabric
         for channel in range(len(program.channel_bytes)):
@@ -222,6 +260,7 @@ class _Operation:
         self.release = self.session.now_ps
         self.receiver_delay = receiver_delay
         self.extents, self.fifo_events, self.completions = [], [], []
+        self.transfer_bindings = []
         self.bytes = {"data": 0, "counter": 0, "cleanup": 0}
         self.visit_start = len(self.gpu.visits)
         self.residency_start = len(self.gpu.residency_events)
@@ -248,6 +287,7 @@ class _Operation:
         self.extents.extend(self.session.admit(self.execution_id, self.operation_id, (transfer,)))
         self.bytes[kind] += size
         self.session.on_visible(name, callback)
+        return name
 
     def start(self):
         self.session.schedule_callback(
@@ -260,7 +300,7 @@ class _Operation:
             for rank_index in range(len(self.program.ranks)):
                 block = _Block(self, channel, rank_index)
                 self.blocks.append(block)
-                self.gpu.admit(block.id, block.rank, self.program.warps, block.start)
+                self.gpu.admit(block.id, block.rank, self.program.block_warps, block.start)
 
     def result(self):
         return NcclExecutionResult(
@@ -268,7 +308,7 @@ class _Operation:
             max(at for _, at in self.completions), tuple(self.extents),
             self.program.useful_network_bytes, self.bytes["data"], self.bytes["counter"],
             self.bytes["cleanup"], tuple(self.fifo_events), self.gpu.visits[self.visit_start:],
-            self.gpu.residency_events[self.residency_start:], tuple(self.completions),
+            self.gpu.residency_events[self.residency_start:], tuple(self.completions), tuple(self.transfer_bindings),
         )
 
 
@@ -297,7 +337,7 @@ class _Block:
     def service(self, kind, units, callback, *, memory=False, shared=False):
         self.gpu.service(self.id, kind, units, callback, memory=memory, shared=shared)
 
-    def transfer(self, destination, size, kind, callback):
+    def transfer(self, destination, size, kind, callback, *, connection, sequence, role, stripe=None, counter=None):
         self.pending_stores += 1
 
         def visible():
@@ -307,7 +347,19 @@ class _Block:
                 self.finish_waiting = False
                 self.session.schedule_callback(self.session.now_ps, self.finish)
 
-        self.op.transfer(self.rank, destination, size, kind, visible)
+        extent_id = self.op.transfer(self.rank, destination, size, kind, visible)
+        primitive = getattr(self, "primitive", None)
+        identity = None if primitive is None else (
+            primitive.channel, primitive.rank_index, primitive.ring_loop,
+            primitive.stage, primitive.slice_index, primitive.chunk_index,
+        )
+        self.op.transfer_bindings.append(NcclTransferBinding(
+            extent_id, self.id, connection.key, sequence, role, self.session.now_ps,
+            identity, None if stripe is None else stripe.index,
+            None if stripe is None else primitive.offset_bytes + stripe.offset_bytes,
+            0 if stripe is None else stripe.useful_bytes, size,
+            () if stripe is None or not primitive.source_load else stripe.load_masks, counter,
+        ))
 
     def start(self):
         self.service("block_setup", self.profile.block_setup_cycles, self.initialize)
@@ -323,7 +375,8 @@ class _Block:
             self.recv_conn.consumer_step = self.recv_step
             head = self.recv_step
             self.op.log("constructor_alignment", self.recv_conn, sequence=head)
-            self.transfer(self.prev_rank, 8, "counter", lambda: self.recv_conn.return_head(head))
+            self.transfer(self.prev_rank, 8, "counter", lambda: self.recv_conn.return_head(head),
+                          connection=self.recv_conn, sequence=head, role="constructor_head", counter=head)
         self.next_primitive()
 
     def poll(self, kind: str, predicate: Callable[[], bool], callback: Callable[[], None]):
@@ -465,7 +518,8 @@ class _Block:
                 reservation = self.send_reservation
                 self.inflight_data += 1
                 self.transfer(self.next_rank, stripe.encoded_bytes, "data",
-                              lambda: sent_visible(reservation, stripe.index))
+                              lambda: sent_visible(reservation, stripe.index),
+                              connection=self.send_conn, sequence=reservation.sequence, role="payload", stripe=stripe)
             if not p.output_store:
                 done()
             elif self.program.protocol == "LL128":
@@ -550,7 +604,8 @@ class _Block:
                     self.op.log("head_visible", self.recv_conn, sequence=head)
 
                 def issued():
-                    self.transfer(self.prev_rank, 8, "counter", returned)
+                    self.transfer(self.prev_rank, 8, "counter", returned, connection=self.recv_conn,
+                                  sequence=sequence, role="head", counter=head)
                     cleanup()
 
                 self.service("head_publication", self.profile.publication_cycles, issued)
@@ -562,7 +617,8 @@ class _Block:
                     self.send_reservation.sequence & LL_CLEAN_MASK) == LL_CLEAN_MASK:
                 extra = BUFFER_BYTES["LL"] // 8 - p.encoded_bytes
                 if extra:
-                    self.transfer(self.next_rank, extra, "cleanup", lambda: None)
+                    self.transfer(self.next_rank, extra, "cleanup", lambda: None, connection=self.send_conn,
+                                  sequence=self.send_reservation.sequence, role="cleanup")
                 self.service("flag_cleanup", ceil_div(extra, 512) * self.profile.warp_issue_cycles,
                              self.advance)
             else:
@@ -575,7 +631,8 @@ class _Block:
                 def visible():
                     reservation.ready = True
                     self.op.log("tail_visible", self.send_conn, sequence=reservation.sequence + p.steps)
-                self.transfer(self.next_rank, 8, "counter", visible)
+                self.transfer(self.next_rank, 8, "counter", visible, connection=self.send_conn,
+                              sequence=reservation.sequence, role="tail", counter=reservation.sequence + p.steps)
                 receive_post()
 
             def fence():

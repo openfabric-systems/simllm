@@ -316,3 +316,36 @@ def test_every_selected_data_and_return_route_is_preflighted(missing):
     assert model.connections == {}
     assert session.now_ps == 0
     assert session.packets == ()
+
+
+def test_three_work_warps_still_reserve_the_launcher_minimum():
+    program = NcclRingProgram(64, (0, 1), "LL", (64,), 3)
+    assert program.block_warps == 4
+    limited = runtime(warps_per_sm=3)
+    with pytest.raises(ValueError, match="reside"):
+        limited.run("minimum", "o", program)
+    assert limited.session.packets == ()
+    assert limited.connections == {}
+    model = runtime(warps_per_sm=4)
+    result = model.run("minimum", "o", program)
+    assert {row["warps"] for row in result.residency_events} == {4}
+    assert {v.units for v in result.resource_visits if v.kind == "primitive_exit_barrier"} == {6}
+    model.session.drain()
+
+
+@pytest.mark.parametrize("protocol", ["LL", "LL128", "SIMPLE"])
+def test_source_channel_bindings_join_every_physical_extent(protocol):
+    model = runtime(width=4)
+    program = NcclRingProgram(512, (0, 1, 2, 3), protocol, (256, 256), 4,
+                              channel_rank_orders=((0, 1, 2, 3), (0, 2, 1, 3)))
+    result = model.run("binding", "o", program)
+    payload = [binding for binding in result.transfer_bindings if binding.role == "payload"]
+    assert sum(binding.useful_bytes for binding in payload) == 3072
+    assert sum(binding.transfer_bytes for binding in payload) == result.protocol_data_bytes
+    assert all(binding.primitive_identity is not None and binding.stripe_index is not None for binding in payload)
+    assert all(binding.offset_bytes + binding.useful_bytes <= 512 for binding in payload)
+    heads = [binding for binding in result.transfer_bindings if binding.role == "head"]
+    assert all(binding.counter_value > binding.sequence and binding.transfer_bytes == 8 for binding in heads)
+    with pytest.raises(AssertionError, match="source channel bindings"):
+        replace(result, transfer_bindings=result.transfer_bindings[:-1]).validate()
+    model.session.drain()

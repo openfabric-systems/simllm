@@ -128,6 +128,11 @@ class NcclRingProgram:
         if not isinstance(self.communicator, str) or not self.communicator.strip():
             raise ValueError("communicator identity must be nonblank")
 
+    @property
+    def block_warps(self) -> int:
+        """Isolated launcher allocation, including its four-warp minimum."""
+        return max(4, self.warps)
+
     def ranks_for_channel(self, channel: int) -> tuple[int, ...]:
         return self.ranks if self.channel_rank_orders is None else self.channel_rank_orders[channel]
 
