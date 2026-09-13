@@ -9,7 +9,7 @@
   "built_in_requires_loaded_runtime_image": true,
   "posix_built_in_requires_loaded_runtime_image": true,
   "posix_image_sources": ["proc-self-maps", "dladdr"],
-  "fatal_controls": ["missing-file", "unknown-module", "unknown-origin", "missing-handle", "invalid-handle", "lookup-failure", "truncated-path", "missing-core-symbol", "unmapped-address", "pseudo-mapping", "relative-or-missing-image"],
+  "fatal_controls": ["missing-file", "unknown-module", "unknown-origin", "missing-handle", "invalid-handle", "lookup-failure", "truncated-path", "missing-core-symbol", "unmapped-address", "pseudo-mapping", "relative-or-missing-image", "loader-lookup-failure", "loader-relative-or-missing-image"],
   "model_behavior_changed": false,
   "behavioral_instance_count": 0,
   "behavioral_score": null

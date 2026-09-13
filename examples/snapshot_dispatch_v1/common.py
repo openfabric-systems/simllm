@@ -121,7 +121,7 @@ def _mapped_image_path(address, maps):
             continue
         if not start <= address < end:
             continue
-        name = fields[5].strip() if len(fields) == 6 else ""
+        name = fields[5] if len(fields) == 6 else ""
         if not name or name.startswith("["):
             raise ValueError("loaded runtime address sits in an anonymous or pseudo mapping")
         if not name.startswith("/"):

@@ -234,3 +234,69 @@ def test_actual_posix_builtin_math_has_runtime_image_bytes():
     before = common.runtime_identity()
     assert before["libraries"]["math"] == value
     assert json.dumps(before, sort_keys=True) == json.dumps(common.runtime_identity(), sort_keys=True)
+
+
+@posix_map_rows
+def test_mapped_image_name_keeps_a_trailing_space(tmp_path, monkeypatch):
+    """A trailing space belongs to the mapped name, so it never selects a shorter file."""
+    path = tmp_path / "trailing.so"
+    path.write_bytes(b"actual library")
+    address = common._core_symbol_address()
+    row = f"{address:012x}-{address + 0x1000:012x} r-xp 00000000 00:1b 4242 {path} "
+    install_maps(monkeypatch, row)
+    assert row.split(maxsplit=5)[5] == f"{path} "
+    with pytest.raises(FileNotFoundError):
+        common._posix_runtime_path()
+    assert path.is_file()
+
+
+@posix_map_rows
+def test_deleted_mapped_image_is_a_missing_image(tmp_path, monkeypatch):
+    """The kernel marks an unlinked image, and an unlinked image has no bytes to hash."""
+    address = common._core_symbol_address()
+    install_maps(monkeypatch, maps_line(address, address + 0x1000, f"{tmp_path / 'gone.so'} (deleted)"))
+    with pytest.raises(FileNotFoundError):
+        common._posix_runtime_path()
+
+
+class LoaderLookup:
+    def __init__(self, name, result=1):
+        self.name, self.result, self.calls = name, result, []
+
+    def __call__(self, address, pointer):
+        self.calls.append(address)
+        getattr(pointer, "_obj", pointer).dli_fname = self.name
+        return self.result
+
+
+def install_loader(monkeypatch, lookup):
+    monkeypatch.setattr(ctypes, "CDLL", lambda name: SimpleNamespace(dladdr=lookup))
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX dynamic loader lookup")
+def test_loader_lookup_returns_the_named_image(tmp_path, monkeypatch):
+    path = tmp_path / "loader-runtime.so"
+    path.write_bytes(b"loader library")
+    lookup = LoaderLookup(str(path).encode())
+    install_loader(monkeypatch, lookup)
+    assert common._loader_image_path(4096) == path.resolve()
+    assert lookup.calls
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX dynamic loader lookup")
+@pytest.mark.parametrize("name,result,error,match", [
+    (b"", 1, OSError, "dladdr"),
+    (b"/unused/image.so", 0, OSError, "dladdr"),
+    (b"relative/image.so", 1, ValueError, "not absolute"),
+])
+def test_loader_lookup_without_a_real_image_rejects(monkeypatch, name, result, error, match):
+    install_loader(monkeypatch, LoaderLookup(name, result))
+    with pytest.raises(error, match=match):
+        common._loader_image_path(4096)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX dynamic loader lookup")
+def test_loader_missing_image_file_rejects(tmp_path, monkeypatch):
+    install_loader(monkeypatch, LoaderLookup(str(tmp_path / "missing.so").encode()))
+    with pytest.raises(FileNotFoundError):
+        common._loader_image_path(4096)

@@ -63,7 +63,10 @@ Built-in rows on Linux name the built-in origin and the actual mapped image. A
 missing `pythonapi` core symbol, no mapping containing the symbol address, an
 anonymous or pseudo mapping (an empty path or one in square brackets such as
 `[vdso]`), a relative or missing image path under strict resolution, and a
-loader lookup failure all reject. A real Linux runtime identity must include a
+loader lookup failure all reject. On the loader branch the same rejections
+apply to its own evidence: a zero return or an empty loader name is a lookup
+failure, and a relative or missing loader name rejects under the identical
+strict resolution. A real Linux runtime identity must include a
 nonempty image hash for its built-in `math` module whenever that module has no
 file, and `runtime_before` must equal `runtime_after`.
 
