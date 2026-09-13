@@ -736,39 +736,48 @@
     },
     "n6_refusals": {
       "asymmetric nvlink count 2 vs 4": {
+        "expected_message": "nvlink count 2 from 0000:03:00.0 to 0000:41:00.0 disagrees with 4",
         "message": "NCCL topology dump refused: nvlink count 2 from 0000:03:00.0 to 0000:41:00.0 disagrees with 4 in the other direction",
         "refused": true
       },
       "control_serialization_joins_identically": true,
       "duplicate busid": {
+        "expected_message": "duplicate pci busid 0000:03:00.0",
         "message": "NCCL topology dump refused: duplicate pci busid 0000:03:00.0",
         "refused": true
       },
       "gpu without rank": {
+        "expected_message": "<gpu> lacks required attribute rank",
         "message": "NCCL topology dump refused: <gpu> lacks required attribute rank",
         "refused": true
       },
       "net without speed": {
+        "expected_message": "<net> lacks required attribute speed",
         "message": "NCCL topology dump refused: <net> lacks required attribute speed",
         "refused": true
       },
       "no nic under a cpu": {
+        "expected_message": "GPU dev 0 at 0000:03:00.0 has 0 NICs",
         "message": "GPU dev 0 at 0000:03:00.0 has 0 NICs under NUMA node 3; the captured-node affinity rule requires exactly one",
         "refused": true
       },
       "non-integer link_width": {
+        "expected_message": "link_width='16.0' is not a nonnegative integer",
         "message": "NCCL topology dump refused: pci 0000:03:00.0 attribute link_width='16.0' is not a nonnegative integer",
         "refused": true
       },
       "nvlink target unknown busid": {
+        "expected_message": "nvlink target 0000:99:00.0 is not a known gpu bus id",
         "message": "NCCL topology dump refused: gpu 0000:03:00.0 nvlink target 0000:99:00.0 is not a known gpu bus id",
         "refused": true
       },
       "two nics under one cpu": {
+        "expected_message": "GPU dev 0 at 0000:03:00.0 has 2 NICs",
         "message": "GPU dev 0 at 0000:03:00.0 has 2 NICs under NUMA node 3; the captured-node affinity rule requires exactly one",
         "refused": true
       },
       "version 2": {
+        "expected_message": "system version '2' is not '1'",
         "message": "NCCL topology dump refused: system version '2' is not '1'",
         "refused": true
       }
@@ -806,7 +815,7 @@
     "nccl_topo.xml": "af3996ac37ffedec0053c574da1cc59aa22df034fb20bc043d844dbf4a921c49",
     "node_inventory.txt": "a0e72c8c66eef9c9317f00ebdf683cb461f62e6d0951a41265f44752b3462f81"
   },
-  "implementation_commit": "edb07066cbb77ec747915f21cf1aaf9e73b44a6c",
+  "implementation_commit": "4bf481a851c8aad1842c90cfa79318e68d84013a",
   "schema": "simllm-nccl-topology-capture-result-v1",
   "status": "PASS"
 }

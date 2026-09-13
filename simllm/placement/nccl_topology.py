@@ -24,7 +24,10 @@ nothing is guessed from what is missing. The accepted structure is::
             net(name, dev, speed, port, guid, maxconn, gdr)
 
 Attributes NCCL writes beyond the required ones (for example ``familyid`` or
-``latency``) are read past, not kept.
+``latency``) are read past, not kept. A PCI device's class must agree with its
+child (``0x030200`` for a GPU, ``0x020000`` for a NIC), and a net name, which
+becomes part of a fabric NIC identity, must be lowercase letters, digits and
+underscores, unique regardless of case.
 
 The join gives each GPU the one NIC under its own ``<cpu>`` element and wires
 every GPU pair with the bonded NVLink count the dump states. Shapes outside
@@ -76,6 +79,11 @@ _CHILD_ELEMENTS: dict[str, frozenset[str]] = {
     "net": frozenset(),
 }
 
+#: PCI class codes a captured device must carry: 3D controller and Ethernet.
+GPU_PCI_CLASS = "0x030200"
+NIC_PCI_CLASS = "0x020000"
+
+_NET_NAME = re.compile(r"[a-z0-9_]+")
 _DECIMAL = re.compile(r"[0-9]+")
 _HEXADECIMAL = re.compile(r"0x[0-9a-f]+")
 _BUS_ID = re.compile(r"[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]")
@@ -203,11 +211,24 @@ class NcclTopologyDump:
         if set(functions) - set(classes):
             unknown = sorted(set(functions) - set(classes))
             raise _refuse(f"device rows name unknown pci bus ids {', '.join(unknown)}")
+        gpu_busids = {gpu.busid for gpu in self.gpus}
+        for device in self.pci:
+            kind, expected = (("gpu", GPU_PCI_CLASS) if device.busid in gpu_busids
+                              else ("nic", NIC_PCI_CLASS))
+            if device.pci_class != expected:
+                raise _refuse(
+                    f"pci {device.busid} class {device.pci_class} disagrees with its {kind} "
+                    f"child, which requires {expected}"
+                )
         _unique([gpu.dev for gpu in self.gpus], "gpu dev")
         _unique([gpu.rank for gpu in self.gpus], "gpu rank")
-        _unique([net.name for net in self.nets], "net name")
+        _unique([net.name.lower() for net in self.nets], "net name (case-insensitive)")
+        for net in self.nets:
+            if not _NET_NAME.fullmatch(net.name):
+                raise _refuse(
+                    f"net name {net.name!r} is not lowercase letters, digits and underscores"
+                )
         _unique([net.dev for net in self.nets], "net dev")
-        gpu_busids = {gpu.busid for gpu in self.gpus}
         counts: dict[tuple[str, str], int] = {}
         for row in self.nvlinks:
             if row.source_busid not in gpu_busids:

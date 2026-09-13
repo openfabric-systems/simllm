@@ -16,8 +16,8 @@ GOAL rank assignment mirrors the htsim RNIC drivers'
 - ``gpu-rank``: one GOAL rank per global rank (GPU). Intra-node traffic is
   visible to the simulator as ranks sharing a node.
 - ``unique-nic``: one GOAL rank per (node, NIC); multiple GPUs behind one NIC
-  share a GOAL rank and intra-node transfers stay off the fabric. Requires
-  the fabric manifest (M4).
+  share a GOAL rank and intra-node transfers stay off the fabric; the mapper
+  mode is PLACE-2.
 """
 
 from __future__ import annotations

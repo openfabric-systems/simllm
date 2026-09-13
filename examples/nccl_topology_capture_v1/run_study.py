@@ -472,6 +472,23 @@ N6_MUTATIONS = {
 }
 
 
+#: The refusal each N6 control must raise, matched as a message substring so the
+#: harness scores the same rejection the tests do rather than any ValueError.
+N6_EXPECTED_MESSAGES = {
+    "version 2": "system version '2' is not '1'",
+    "gpu without rank": "<gpu> lacks required attribute rank",
+    "asymmetric nvlink count 2 vs 4": (
+        "nvlink count 2 from 0000:03:00.0 to 0000:41:00.0 disagrees with 4"
+    ),
+    "two nics under one cpu": "GPU dev 0 at 0000:03:00.0 has 2 NICs",
+    "no nic under a cpu": "GPU dev 0 at 0000:03:00.0 has 0 NICs",
+    "duplicate busid": "duplicate pci busid 0000:03:00.0",
+    "nvlink target unknown busid": "nvlink target 0000:99:00.0 is not a known gpu bus id",
+    "net without speed": "<net> lacks required attribute speed",
+    "non-integer link_width": "link_width='16.0' is not a nonnegative integer",
+}
+
+
 def run_n6(dump) -> dict[str, Any]:
     """Cell N6: each frozen refusal, raised before any schema object exists."""
 
@@ -505,7 +522,12 @@ def run_n6(dump) -> dict[str, Any]:
             try:
                 join(NcclTopologyDump.parse(_mutated_dump_text(change)))
             except ValueError as error:
-                rows[label] = {"message": str(error), "refused": not built}
+                expected = N6_EXPECTED_MESSAGES[label]
+                rows[label] = {
+                    "expected_message": expected,
+                    "message": str(error),
+                    "refused": not built and expected in str(error),
+                }
             except Exception as error:  # noqa: BLE001 - any other type is a wrong refusal
                 rows[label] = {"message": f"{type(error).__name__}: {error}", "refused": False}
             else:

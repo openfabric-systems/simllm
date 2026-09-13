@@ -358,6 +358,18 @@ def test_n6_refusal_precedes_every_schema_object(label, no_schema_objects):
         (lambda root: root.find("cpu/pci/gpu[@dev='2']/nvlink[@target='0000:c1:00.0']").set(
             "tclass", "0x020000"),
          r"tclass 0x020000 disagrees"),
+        (lambda root: root.find("cpu/pci/nic/net[@name='cxi3']").set("name", "CXI3"),
+         r"net name 'CXI3' is not lowercase letters, digits and underscores"),
+        (lambda root: root.find("cpu/pci/nic/net[@name='cxi3']").set("name", "cxi 3"),
+         r"net name 'cxi 3' is not lowercase letters, digits and underscores"),
+        (lambda root: root.find("cpu/pci/nic/net[@name='cxi0']").set("name", "CXI3"),
+         r"duplicate net name \(case-insensitive\) cxi3"),
+        (lambda root: root.find("cpu/pci[@busid='0000:03:00.0']").set("class", "0x030000"),
+         r"pci 0000:03:00.0 class 0x030000 disagrees with its gpu child, which requires 0x030200"),
+        (lambda root: root.find("cpu/pci[@busid='0000:01:00.0']").set("class", "0x020700"),
+         r"pci 0000:01:00.0 class 0x020700 disagrees with its nic child, which requires 0x020000"),
+        (lambda root: root.find("cpu/pci[@busid='0000:03:00.0']").set("vendor", "NVIDIA"),
+         r"vendor='NVIDIA' is not lowercase hexadecimal"),
     ],
 )
 def test_reader_refuses_other_malformed_dumps(change, message, no_schema_objects):
