@@ -1874,9 +1874,6 @@
   },
   "evidence": {
     "behavioral_relation_families": {
-      "b200_at_or_above_h100_fan_in_and_live": {
-        "held": true
-      },
       "b200_equals_h100_isolated_pair": {
         "held": true
       },
@@ -1893,7 +1890,15 @@
       "controls": 7,
       "refused": 7
     },
-    "structural_guard_cells": 4
+    "structural_guard_cells": 4,
+    "structural_observations": {
+      "b200_at_or_above_h100_fan_in_and_live": {
+        "equal_cells": 66,
+        "held": true,
+        "scored": false,
+        "strict_cells": 0
+      }
+    }
   },
   "expectations_commit": "acf0e5e4430da97eaf8d5d8f805087f33c942233",
   "findings": [],
@@ -1904,7 +1909,7 @@
     "nccl_topo.xml": "52206219b633ab5abf9e100172205cc4274a03cafb31b23c0868abb7527d5ebf",
     "node_inventory.txt": "c29f3e2893a79764b3a95d636e2147ced3dad665d79111585f8d122b85732ae0"
   },
-  "implementation_commit": "989482e2ed523922f40392928493d0eb6eab0d7e",
+  "implementation_commit": "8e419ebbdf5383ff5cabc313b1d84261ae16094c",
   "schema": "simllm-hgx-b200-capture-result-v1",
   "status": "PASS"
 }
