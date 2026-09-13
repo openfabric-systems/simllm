@@ -7,7 +7,7 @@ identity) and both switched studies' check runs execute in the study harness.
 Two digests are pinned below from tracked files rather than frozen literals:
 the B200 preset digest the B200 capture tests pin (a post-implementation
 value of that slice) and the B200 study results as regenerated on the stacked
-B200 branch (commit f7d55479), where expectations-amendment-2026-09-13.md moved
+B200 branch (commit 33dae4f6), where expectations-amendment-2026-09-13.md moved
 that identity.
 """
 
@@ -33,6 +33,7 @@ from simllm.placement import (
     dgx_peer_fabric,
     nccl_topology,
     read_gpu_bus_ids,
+    read_gpu_minor_uuids,
     read_inventory_sections,
     read_module_ids,
     read_nvlink_remote_ports,
@@ -58,7 +59,7 @@ PORTS_PER_SWITCH = (32, 40, 40, 32)
 BOARD_IDS = ("0x8300", "0x8b00", "0x9300", "0x9b00", "0xa300", "0xab00", "0xb300", "0xbb00")
 B200_PRESET_DIGEST = (125_741, "ef920aa9abc7b61222880d97b60d2e016b37ed1df46b5c628488054553f5163f")
 DGX_RESULTS_SHA256 = "00d935fc4b26cfc50aa4c5f6b46ba20e3db856d091215c2e616b095fb577fdba"
-B200_RESULTS_SHA256 = "c3ff25efd9abf504f17b7523460b97f0ab3c6e15ab9993f86a9f505a9f9777cb"
+B200_RESULTS_SHA256 = "865884637f4189b2a6fb82e84bf572d11f5a187cc27626a8fbf7b84795abab67"
 REMOTE_BLOCK = "nvidia-smi nvlink -R (remote pci bus id per link)"
 NVSWITCH_BLOCK = "pci devices class 0x0680 (nvswitch/bridge)"
 MODULE_BLOCK = "nvidia-smi -q (GPU board/module ids)"
@@ -86,6 +87,7 @@ def switch_table(inventory=None, remote=None) -> dict[int, tuple[tuple[str, int]
         read_nvlink_remote_ports(inventory[REMOTE_BLOCK]) if remote is None else remote,
         read_nvswitch_list(inventory[NVSWITCH_BLOCK]),
         bus_id_by_uuid=read_gpu_bus_ids(inventory[FULL_QUERY_BLOCK]),
+        uuid_by_minor=read_gpu_minor_uuids(inventory[FULL_QUERY_BLOCK]),
         bus_id_by_gpu_dev={gpu.dev: gpu.busid for gpu in load().gpus},
     )
 
@@ -640,3 +642,23 @@ def test_h200_board_is_refused_for_b200_on_silicon(no_schema_objects):
         r"generation b200 requires device 0x2901 with sm 100"
     )):
         join(generation="b200", switch_ports_by_gpu_dev=None)
+
+
+def test_minor_numbers_name_the_list_order_uuids():
+    uuids = [re.search(r"UUID: (GPU-[0-9a-f-]+)", line).group(1)
+             for line in sections()["nvidia-smi -L"]]
+    assert read_gpu_minor_uuids(sections()[FULL_QUERY_BLOCK]) == dict(enumerate(uuids))
+
+
+def test_swapping_bus_id_lines_with_the_remote_blocks_is_refused():
+    inventory = dict(sections())
+    lines = list(inventory[FULL_QUERY_BLOCK])
+    bus = [index for index, line in enumerate(lines) if line.strip().startswith("Bus Id")]
+    lines[bus[0]], lines[bus[1]] = lines[bus[1]], lines[bus[0]]
+    inventory[FULL_QUERY_BLOCK] = tuple(lines)
+    remote = read_nvlink_remote_ports(inventory[REMOTE_BLOCK])
+    with pytest.raises(ValueError, match=(
+        r"nvlink -R GPU 0 heading UUID GPU-ecccb5a4-cf8b-55c1-d811-31ab6da3878c disagrees with "
+        r"the -q record of Minor Number 0"
+    )):
+        switch_table(inventory, remote=_swapped_gpus(remote))

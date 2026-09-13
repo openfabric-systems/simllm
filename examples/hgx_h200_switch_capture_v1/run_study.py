@@ -64,7 +64,7 @@ if str(REPOSITORY_ROOT) not in sys.path:
 EXPECTATIONS_COMMIT = "3d24b2b1d5a1300e9b7fdb2000acc5167eab94a9"
 AMENDMENT_COMMIT = "e3a94f3490377f26f7ce397a32881d620055b0e2"
 #: The stacked B200 branch commit whose regenerated results the amendment pins.
-B200_BASE_COMMIT = "f7d5547967861e20a6acf66159c997fa06ae28bf"
+B200_BASE_COMMIT = "33dae4f636c1a12c824fe1ae45d815ac50d12f95"
 RESULT_SCHEMA = "simllm-hgx-h200-switch-capture-result-v1"
 EXPECTATIONS_PATH = STUDY_DIR / "expectations.json"
 AMENDMENT_PATH = STUDY_DIR / "expectations-amendment-2026-09-13.json"
@@ -144,6 +144,7 @@ def _switch_table(inventory: dict[str, tuple[str, ...]], dump, remote=None):
     from simllm.placement import (
         captured_switch_ports,
         read_gpu_bus_ids,
+        read_gpu_minor_uuids,
         read_nvlink_remote_ports,
         read_nvswitch_list,
     )
@@ -152,6 +153,7 @@ def _switch_table(inventory: dict[str, tuple[str, ...]], dump, remote=None):
         read_nvlink_remote_ports(inventory[REMOTE_BLOCK]) if remote is None else remote,
         read_nvswitch_list(inventory[NVSWITCH_BLOCK]),
         bus_id_by_uuid=read_gpu_bus_ids(inventory[FULL_QUERY_BLOCK]),
+        uuid_by_minor=read_gpu_minor_uuids(inventory[FULL_QUERY_BLOCK]),
         bus_id_by_gpu_dev={gpu.dev: gpu.busid for gpu in dump.gpus},
     )
 

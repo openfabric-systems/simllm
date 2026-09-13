@@ -18,8 +18,9 @@ and refuse anything they would otherwise have to guess:
   class ``0x0680`` block of one, requiring an NVIDIA bridge-class device on
   every row;
 - :func:`read_module_ids` reads the ``Minor Number`` and ``Module Id`` lines
-  of an ``nvidia-smi -q`` block, and :func:`read_gpu_bus_ids` its ``GPU UUID``
-  and ``Bus Id`` lines;
+  of an ``nvidia-smi -q`` block, :func:`read_gpu_bus_ids` its ``GPU UUID`` and
+  ``Bus Id`` lines, and :func:`read_gpu_minor_uuids` its ``Minor Number`` and
+  ``GPU UUID`` lines;
 - :func:`captured_switch_ports` binds the link table to NCCL devices by bus
   id (nvidia-smi's GPU order is not NCCL's ``dev`` order by definition) and to
   the switch list, refusing a permuted table, a link whose remote device is not
@@ -225,6 +226,24 @@ def read_gpu_bus_ids(lines: Iterable[str]) -> dict[str, str]:
     return bus_ids
 
 
+def read_gpu_minor_uuids(lines: Iterable[str]) -> dict[int, str]:
+    """Read ``{Minor Number: GPU UUID}`` from an ``nvidia-smi -q`` block."""
+
+    uuids: dict[int, str] = {}
+    for record in _query_records(lines):
+        minors, found = record.get("Minor Number", []), record.get("GPU UUID", [])
+        if len(minors) != 1 or len(found) != 1 or not minors[0].isdigit():
+            raise _refuse("a GPU record lacks exactly one integer Minor Number and GPU UUID")
+        if int(minors[0]) in uuids:
+            raise _refuse(f"Minor Number {minors[0]} appears twice")
+        uuids[int(minors[0])] = found[0]
+    if not uuids:
+        raise _refuse("the block holds no GPU record")
+    if len(set(uuids.values())) != len(uuids):
+        raise _refuse("two Minor Numbers name one GPU UUID")
+    return uuids
+
+
 def read_module_ids(lines: Iterable[str]) -> dict[int, int]:
     """Read ``{Minor Number: Module Id}`` from an ``nvidia-smi -q`` block."""
 
@@ -246,14 +265,17 @@ def captured_switch_ports(
     nvswitches: Iterable[InventoryPciDevice],
     *,
     bus_id_by_uuid: Mapping[str, str],
+    uuid_by_minor: Mapping[int, str],
     bus_id_by_gpu_dev: Mapping[int, str],
 ) -> dict[int, tuple[tuple[str, int], ...]]:
     """Bind captured links to NCCL devices and to the listed NVSwitch devices.
 
-    ``bus_id_by_uuid`` comes from :func:`read_gpu_bus_ids` and
-    ``bus_id_by_gpu_dev`` from the NCCL dump. Block ``i`` of the link table must
-    head the GPU the dump places at ``dev`` ``i``, so a table whose GPU blocks
-    are permuted is refused. Every listed device must be an NVIDIA class
+    ``bus_id_by_uuid`` comes from :func:`read_gpu_bus_ids`, ``uuid_by_minor``
+    from :func:`read_gpu_minor_uuids` and ``bus_id_by_gpu_dev`` from the NCCL
+    dump. Block ``i`` of the link table must head the GPU the dump places at
+    ``dev`` ``i``, and its heading UUID must be the one the ``-q`` record of
+    Minor Number ``i`` names, so a table whose GPU blocks are permuted is
+    refused even when the ``-q`` Bus Id lines are permuted with it. Every listed device must be an NVIDIA class
     ``0x0680xx`` switch, every link must reach a listed switch and every listed
     switch must receive a lane. Returns ``{gpu dev: ((switch bus id, switch
     port), ...)}`` in link-index order.
@@ -280,6 +302,11 @@ def captured_switch_ports(
             raise _refuse(
                 f"nvlink -R GPU {gpu} is {block.uuid} at {busid}, but the NCCL dump places dev "
                 f"{gpu} at {bus_id_by_gpu_dev[gpu]}"
+            )
+        if uuid_by_minor.get(gpu) != block.uuid:
+            raise _refuse(
+                f"nvlink -R GPU {gpu} heading UUID {block.uuid} disagrees with the -q record of "
+                f"Minor Number {gpu} ({uuid_by_minor.get(gpu)})"
             )
         for index, (switch, _port) in enumerate(block.links):
             if switch not in switches:

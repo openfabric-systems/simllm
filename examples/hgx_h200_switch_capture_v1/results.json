@@ -648,8 +648,8 @@
       }
     },
     "h7_off_path": {
-      "b200_results_sha256": "c3ff25efd9abf504f17b7523460b97f0ab3c6e15ab9993f86a9f505a9f9777cb",
-      "b200_results_sha256_at_stacked_base": "c3ff25efd9abf504f17b7523460b97f0ab3c6e15ab9993f86a9f505a9f9777cb",
+      "b200_results_sha256": "865884637f4189b2a6fb82e84bf572d11f5a187cc27626a8fbf7b84795abab67",
+      "b200_results_sha256_at_stacked_base": "865884637f4189b2a6fb82e84bf572d11f5a187cc27626a8fbf7b84795abab67",
       "dgx_results_sha256": "00d935fc4b26cfc50aa4c5f6b46ba20e3db856d091215c2e616b095fb577fdba",
       "preset_digests": {
         "a100": {
@@ -693,7 +693,7 @@
     "nccl_topo.xml": "6fd8e122c54349102bf86320018d9cf616d776e1ddbb0223e0183801877e6c5c",
     "node_inventory.txt": "b4f9f5b28d276ddfeb08f09afc664ac86f1b71622f70c4e9ba228163a8a36e7a"
   },
-  "implementation_commit": "e3a94f3490377f26f7ce397a32881d620055b0e2",
+  "implementation_commit": "137d99206243f734fcc80f21950c687bfb6b4039",
   "schema": "simllm-hgx-h200-switch-capture-result-v1",
   "status": "PASS"
 }
