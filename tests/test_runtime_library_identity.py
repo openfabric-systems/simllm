@@ -22,6 +22,7 @@ def test_frozen_library_kind_and_backing_bytes_grid(tmp_path, monkeypatch, kind,
     path = tmp_path / "runtime-image.bin"
     path.write_bytes(content)
     monkeypatch.setattr(common, "_windows_runtime_path", lambda: path)
+    monkeypatch.setattr(common, "_posix_runtime_path", lambda: path)
     module = SimpleNamespace(__file__=str(path)) if kind == "file-backed" else sys
     expected = {"path": str(path.resolve()), "sha256": hashlib.sha256(content).hexdigest()}
     if kind == "built-in":
@@ -109,3 +110,118 @@ def test_actual_windows_builtin_math_has_runtime_image_bytes():
     assert value["origin"] == "built-in"
     assert Path(value["path"]).is_file()
     assert value["sha256"] == hashlib.sha256(Path(value["path"]).read_bytes()).hexdigest()
+
+
+def maps_line(start, end, name=""):
+    """Spell one kernel memory-map row: bounds, permissions, offset, device, inode, path."""
+    return f"{start:012x}-{end:012x} r-xp 00000000 00:1b 4242 {name}".rstrip()
+
+
+def install_maps(monkeypatch, text):
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(common, "_process_maps", lambda: text)
+
+
+def test_posix_lookup_uses_the_mapping_that_contains_the_core_symbol(tmp_path, monkeypatch):
+    path = tmp_path / "actual-runtime.so"
+    path.write_bytes(b"actual library")
+    address = common._core_symbol_address()
+    install_maps(monkeypatch, "\n".join([
+        maps_line(address - 0x3000, address - 0x2000, "[vdso]"),
+        maps_line(address - 0x1000, address),
+        maps_line(address, address + 0x1000, str(path)),
+        maps_line(address + 0x1000, address + 0x2000, str(tmp_path / "later-runtime.so")),
+    ]))
+    assert common._posix_runtime_path() == path.resolve()
+
+
+def test_posix_builtin_identity_hashes_the_mapped_image(tmp_path, monkeypatch):
+    path = tmp_path / "actual-runtime.so"
+    path.write_bytes(b"actual library")
+    address = common._core_symbol_address()
+    install_maps(monkeypatch, maps_line(address, address + 0x1000, str(path)))
+    expected = {"path": str(path.resolve()), "sha256": hashlib.sha256(b"actual library").hexdigest(),
+                "origin": "built-in"}
+    observed = common.library_identity(sys)
+    assert json.dumps(observed, sort_keys=True) == json.dumps(expected, sort_keys=True)
+    path.write_bytes(b"actual library changed")
+    assert common.library_identity(sys)["sha256"] != observed["sha256"]
+
+
+@pytest.mark.parametrize("api", [None, SimpleNamespace()])
+def test_missing_core_symbol_rejects(monkeypatch, api):
+    monkeypatch.setattr(ctypes, "pythonapi", api, raising=False)
+    with pytest.raises(ValueError, match="interpreter core symbol"):
+        common._core_symbol_address()
+
+
+def test_core_symbol_without_an_address_rejects(monkeypatch):
+    monkeypatch.setattr(ctypes, "pythonapi", SimpleNamespace(Py_Initialize=ctypes.c_void_p(0)), raising=False)
+    with pytest.raises(ValueError, match="no usable address"):
+        common._core_symbol_address()
+
+
+@pytest.mark.parametrize("name,match", [
+    ("", "anonymous or pseudo"),
+    ("[vdso]", "anonymous or pseudo"),
+    ("[heap]", "anonymous or pseudo"),
+    ("relative/runtime.so", "not absolute"),
+])
+def test_posix_mapping_without_a_real_image_rejects(monkeypatch, name, match):
+    address = common._core_symbol_address()
+    install_maps(monkeypatch, maps_line(address, address + 0x1000, name))
+    with pytest.raises(ValueError, match=match):
+        common._posix_runtime_path()
+
+
+def test_posix_missing_mapped_image_file_rejects(tmp_path, monkeypatch):
+    address = common._core_symbol_address()
+    install_maps(monkeypatch, maps_line(address, address + 0x1000, str(tmp_path / "missing.so")))
+    with pytest.raises(FileNotFoundError):
+        common._posix_runtime_path()
+
+
+@pytest.mark.parametrize("text", ["", "not a mapping row", "zzzz-zzzz r-xp 00000000 00:1b 4242 image.so"])
+def test_posix_address_outside_every_mapping_rejects(tmp_path, monkeypatch, text):
+    address = common._core_symbol_address()
+    rows = [text, maps_line(address + 0x2000, address + 0x3000, str(tmp_path / "elsewhere.so"))]
+    install_maps(monkeypatch, "\n".join(rows))
+    with pytest.raises(ValueError, match="no process mapping"):
+        common._posix_runtime_path()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX dynamic loader lookup")
+def test_non_linux_posix_asks_the_dynamic_loader(tmp_path, monkeypatch):
+    path = tmp_path / "loader-runtime.so"
+    path.write_bytes(b"loader library")
+    monkeypatch.setattr(sys, "platform", "darwin")
+    monkeypatch.setattr(common, "_process_maps", lambda: pytest.fail("no kernel map off Linux"))
+    monkeypatch.setattr(common, "_loader_image_path", lambda address: path.resolve())
+    assert common._posix_runtime_path() == path.resolve()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX dynamic loader lookup")
+def test_dynamic_loader_lookup_failure_is_fatal():
+    with pytest.raises(OSError, match="dladdr"):
+        common._loader_image_path(1)
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="Linux process memory map")
+def test_kernel_map_and_dynamic_loader_agree_on_the_loaded_image():
+    address = common._core_symbol_address()
+    image = common._mapped_image_path(address, common._process_maps())
+    assert image.is_absolute() and image.is_file()
+    assert image == common._loader_image_path(address)
+
+
+@pytest.mark.skipif(sys.platform == "win32" or hasattr(math, "__file__"),
+                    reason="actual POSIX built-in module lookup")
+def test_actual_posix_builtin_math_has_runtime_image_bytes():
+    value = common.library_identity(math)
+    assert value["origin"] == "built-in"
+    assert Path(value["path"]).is_file()
+    assert value["sha256"] == hashlib.sha256(Path(value["path"]).read_bytes()).hexdigest()
+    assert value["sha256"]
+    before = common.runtime_identity()
+    assert before["libraries"]["math"] == value
+    assert json.dumps(before, sort_keys=True) == json.dumps(common.runtime_identity(), sort_keys=True)
