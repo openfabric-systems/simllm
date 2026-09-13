@@ -18,14 +18,16 @@ nothing is guessed from what is missing. The accepted structure is::
     system(version)
       cpu(numaid, host_hash, affinity, arch, vendor)
         pci(busid, class, vendor, device, link_speed, link_width)
-          gpu(dev, sm, rank, gdr)
+          gpu(dev, sm, rank, gdr)          pci class 0x030200 or 0x030000
             nvlink(target, count, tclass)
-          nic
+          nic                              pci class 0x020000 or 0x020700
             net(name, dev, speed, port, guid, maxconn, gdr)
 
 Attributes NCCL writes beyond the required ones (for example ``familyid`` or
 ``latency``) are read past, not kept. A PCI device's class must agree with its
-child (``0x030200`` for a GPU, ``0x020000`` for a NIC), and a net name, which
+child: a GPU sits under a 3D controller (``0x030200``) or VGA controller
+(``0x030000``), a NIC under an Ethernet (``0x020000``) or InfiniBand
+(``0x020700``) controller, and every other class is refused. A net name, which
 becomes part of a fabric NIC identity, must be lowercase letters, digits and
 underscores, unique regardless of case.
 
@@ -79,9 +81,10 @@ _CHILD_ELEMENTS: dict[str, frozenset[str]] = {
     "net": frozenset(),
 }
 
-#: PCI class codes a captured device must carry: 3D controller and Ethernet.
-GPU_PCI_CLASS = "0x030200"
-NIC_PCI_CLASS = "0x020000"
+#: PCI class codes a captured GPU may carry: 3D controller and VGA controller.
+GPU_PCI_CLASSES = ("0x030200", "0x030000")
+#: PCI class codes a captured NIC may carry: Ethernet and InfiniBand controller.
+NIC_PCI_CLASSES = ("0x020000", "0x020700")
 
 _NET_NAME = re.compile(r"[a-z0-9_]+")
 _DECIMAL = re.compile(r"[0-9]+")
@@ -213,12 +216,12 @@ class NcclTopologyDump:
             raise _refuse(f"device rows name unknown pci bus ids {', '.join(unknown)}")
         gpu_busids = {gpu.busid for gpu in self.gpus}
         for device in self.pci:
-            kind, expected = (("gpu", GPU_PCI_CLASS) if device.busid in gpu_busids
-                              else ("nic", NIC_PCI_CLASS))
-            if device.pci_class != expected:
+            kind, accepted = (("gpu", GPU_PCI_CLASSES) if device.busid in gpu_busids
+                              else ("nic", NIC_PCI_CLASSES))
+            if device.pci_class not in accepted:
                 raise _refuse(
                     f"pci {device.busid} class {device.pci_class} disagrees with its {kind} "
-                    f"child, which requires {expected}"
+                    f"child, which requires one of {', '.join(accepted)}"
                 )
         _unique([gpu.dev for gpu in self.gpus], "gpu dev")
         _unique([gpu.rank for gpu in self.gpus], "gpu rank")

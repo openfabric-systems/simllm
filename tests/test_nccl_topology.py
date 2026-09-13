@@ -364,10 +364,12 @@ def test_n6_refusal_precedes_every_schema_object(label, no_schema_objects):
          r"net name 'cxi 3' is not lowercase letters, digits and underscores"),
         (lambda root: root.find("cpu/pci/nic/net[@name='cxi0']").set("name", "CXI3"),
          r"duplicate net name \(case-insensitive\) cxi3"),
-        (lambda root: root.find("cpu/pci[@busid='0000:03:00.0']").set("class", "0x030000"),
-         r"pci 0000:03:00.0 class 0x030000 disagrees with its gpu child, which requires 0x030200"),
-        (lambda root: root.find("cpu/pci[@busid='0000:01:00.0']").set("class", "0x020700"),
-         r"pci 0000:01:00.0 class 0x020700 disagrees with its nic child, which requires 0x020000"),
+        (lambda root: root.find("cpu/pci[@busid='0000:03:00.0']").set("class", "0x060400"),
+         (r"pci 0000:03:00.0 class 0x060400 disagrees with its gpu child, "
+          r"which requires one of 0x030200, 0x030000")),
+        (lambda root: root.find("cpu/pci[@busid='0000:01:00.0']").set("class", "0x060400"),
+         (r"pci 0000:01:00.0 class 0x060400 disagrees with its nic child, "
+          r"which requires one of 0x020000, 0x020700")),
         (lambda root: root.find("cpu/pci[@busid='0000:03:00.0']").set("vendor", "NVIDIA"),
          r"vendor='NVIDIA' is not lowercase hexadecimal"),
     ],
@@ -375,6 +377,37 @@ def test_n6_refusal_precedes_every_schema_object(label, no_schema_objects):
 def test_reader_refuses_other_malformed_dumps(change, message, no_schema_objects):
     with pytest.raises(ValueError, match=message):
         NcclTopologyDump.parse(mutate(change))
+
+
+def _gpu_class(value):
+    def change(root):
+        root.find("cpu/pci[@busid='0000:03:00.0']").set("class", value)
+        for row in root.iter("nvlink"):
+            if row.get("target") == "0000:03:00.0":
+                row.set("tclass", value)
+    return change
+
+
+def _nic_class(value):
+    def change(root):
+        root.find("cpu/pci[@busid='0000:01:00.0']").set("class", value)
+    return change
+
+
+@pytest.mark.parametrize(
+    ("change", "busid", "pci_class"),
+    [
+        (_gpu_class("0x030200"), "0000:03:00.0", "0x030200"),
+        (_gpu_class("0x030000"), "0000:03:00.0", "0x030000"),
+        (_nic_class("0x020000"), "0000:01:00.0", "0x020000"),
+        (_nic_class("0x020700"), "0000:01:00.0", "0x020700"),
+    ],
+)
+def test_reader_accepts_every_listed_gpu_and_nic_class(change, busid, pci_class):
+    dump = NcclTopologyDump.parse(mutate(change))
+    assert next(device.pci_class for device in dump.pci if device.busid == busid) == pci_class
+    node, mesh = join(dump)
+    assert (node, mesh) == join(load())
 
 
 def _partial_mesh(root):
