@@ -11,7 +11,10 @@ The input is the rented board fixture under `tests/fixtures/nccl_topology/`,
 whose container passes the four NVSwitches through. Cells H1 through H4 and H7
 are structural exact guards, H6 is a rejection control family, and the three
 preset digests, both switched studies' tracked results and their `--check`
-runs are fatal by-construction identities.
+runs are fatal by-construction identities. The expectations-only amendment
+recorded in `AMENDMENT_COMMIT` adds the device-binding and switch-list controls
+and the NIC facts of H2, and moves the B200 results identity to the file as
+regenerated on the stacked B200 branch.
 
 Cell H5 is live and scored. It runs the DGX study's live cells at generation
 `h100` (tensor-parallel all-reduce and expert dispatch and combine at widths
@@ -59,9 +62,17 @@ if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
 
 EXPECTATIONS_COMMIT = "3d24b2b1d5a1300e9b7fdb2000acc5167eab94a9"
-BASE_COMMIT = "af5c0110ae74f69afa69cfec0b42281e123b3170"
+AMENDMENT_COMMIT = "e3a94f3490377f26f7ce397a32881d620055b0e2"
+#: The stacked B200 branch commit whose regenerated results the amendment pins.
+B200_BASE_COMMIT = "f7d5547967861e20a6acf66159c997fa06ae28bf"
 RESULT_SCHEMA = "simllm-hgx-h200-switch-capture-result-v1"
 EXPECTATIONS_PATH = STUDY_DIR / "expectations.json"
+AMENDMENT_PATH = STUDY_DIR / "expectations-amendment-2026-09-13.json"
+FROZEN_FILES = {
+    EXPECTATIONS_COMMIT: ("expectations.md", "expectations.json"),
+    AMENDMENT_COMMIT: ("expectations-amendment-2026-09-13.md",
+                       "expectations-amendment-2026-09-13.json"),
+}
 RESULTS_PATH = STUDY_DIR / "results.json"
 FIXTURE_DIR = REPOSITORY_ROOT / "tests" / "fixtures" / "nccl_topology" / "vastai_hgx_h200_8x"
 DGX_STUDY = REPOSITORY_ROOT / "examples" / "dgx_nvlink_v1"
@@ -69,6 +80,8 @@ B200_STUDY = REPOSITORY_ROOT / "examples" / "hgx_b200_capture_v1"
 REMOTE_BLOCK = "nvidia-smi nvlink -R (remote pci bus id per link)"
 NVSWITCH_BLOCK = "pci devices class 0x0680 (nvswitch/bridge)"
 MODULE_BLOCK = "nvidia-smi -q (GPU board/module ids)"
+FULL_QUERY_BLOCK = "nvidia-smi -q full"
+LSPCI_BLOCK = "lspci nvidia/bridges/nic"
 
 NODE_ID = "hgx-h200"
 LIVE_NODE_ID = "node-0"
@@ -103,16 +116,18 @@ def _git(*args: str) -> bytes:
 
 
 def _require_frozen_expectations() -> None:
-    """Refuse to run unless the freeze precedes HEAD and is unchanged."""
+    """Refuse to run unless both freeze commits precede HEAD and are unchanged."""
 
-    ancestor = subprocess.run(["git", "merge-base", "--is-ancestor", EXPECTATIONS_COMMIT, "HEAD"],
-                              cwd=REPOSITORY_ROOT, check=False)
-    if ancestor.returncode != 0:
-        raise SystemExit(f"frozen commit {EXPECTATIONS_COMMIT} is not an ancestor of HEAD")
-    for name in ("expectations.md", "expectations.json"):
-        relative = (STUDY_DIR / name).relative_to(REPOSITORY_ROOT).as_posix()
-        if (STUDY_DIR / name).read_bytes() != _git("show", f"{EXPECTATIONS_COMMIT}:{relative}"):
-            raise SystemExit(f"{name} differs from frozen commit {EXPECTATIONS_COMMIT}")
+    for commit in (*FROZEN_FILES, B200_BASE_COMMIT):
+        ancestor = subprocess.run(["git", "merge-base", "--is-ancestor", commit, "HEAD"],
+                                  cwd=REPOSITORY_ROOT, check=False)
+        if ancestor.returncode != 0:
+            raise SystemExit(f"commit {commit} is not an ancestor of HEAD")
+    for commit, names in FROZEN_FILES.items():
+        for name in names:
+            relative = (STUDY_DIR / name).relative_to(REPOSITORY_ROOT).as_posix()
+            if (STUDY_DIR / name).read_bytes() != _git("show", f"{commit}:{relative}"):
+                raise SystemExit(f"{name} differs from frozen commit {commit}")
 
 
 def _fixture_bytes(name: str) -> bytes:
@@ -125,15 +140,20 @@ def _inventory() -> dict[str, tuple[str, ...]]:
     return read_inventory_sections(_fixture_bytes("node_inventory.txt").decode("utf-8"))
 
 
-def _switch_table(inventory: dict[str, tuple[str, ...]]):
+def _switch_table(inventory: dict[str, tuple[str, ...]], dump, remote=None):
     from simllm.placement import (
         captured_switch_ports,
+        read_gpu_bus_ids,
         read_nvlink_remote_ports,
-        read_pci_device_list,
+        read_nvswitch_list,
     )
 
-    return captured_switch_ports(read_nvlink_remote_ports(inventory[REMOTE_BLOCK]),
-                                 read_pci_device_list(inventory[NVSWITCH_BLOCK]))
+    return captured_switch_ports(
+        read_nvlink_remote_ports(inventory[REMOTE_BLOCK]) if remote is None else remote,
+        read_nvswitch_list(inventory[NVSWITCH_BLOCK]),
+        bus_id_by_uuid=read_gpu_bus_ids(inventory[FULL_QUERY_BLOCK]),
+        bus_id_by_gpu_dev={gpu.dev: gpu.busid for gpu in dump.gpus},
+    )
 
 
 def _query_records(lines) -> list[dict[str, list[str]]]:
@@ -161,7 +181,7 @@ def _join(dump, inventory, **overrides):
         "propagation_delay_ps": PROPAGATION_DELAY_PS,
         "switch_input_buffer_bytes": SWITCH_INPUT_BUFFER_BYTES,
         "module_id_by_gpu_dev": read_module_ids(inventory[MODULE_BLOCK]),
-        "switch_ports_by_gpu_dev": _switch_table(inventory),
+        "switch_ports_by_gpu_dev": _switch_table(inventory, dump),
     }
     arguments.update(overrides)
     return captured_switched_node(dump, **arguments)
@@ -225,18 +245,39 @@ def run_h1(dump) -> dict[str, Any]:
     }
 
 
-def run_h2(inventory) -> dict[str, Any]:
-    """Cell H2: the three inventory readers."""
+def run_h2(dump, inventory) -> dict[str, Any]:
+    """Cell H2: the inventory readers and the NIC facts beside them."""
 
-    from simllm.placement import read_module_ids, read_nvlink_remote_ports, read_pci_device_list
+    from simllm.placement import (
+        read_gpu_bus_ids,
+        read_module_ids,
+        read_nvlink_remote_ports,
+        read_nvswitch_list,
+    )
 
-    remote = read_nvlink_remote_ports(inventory[REMOTE_BLOCK])
-    devices = read_pci_device_list(inventory[NVSWITCH_BLOCK])
+    blocks = read_nvlink_remote_ports(inventory[REMOTE_BLOCK])
+    remote = {gpu: block.links for gpu, block in blocks.items()}
+    bus_ids = read_gpu_bus_ids(inventory[FULL_QUERY_BLOCK])
+    devices = read_nvswitch_list(inventory[NVSWITCH_BLOCK])
+    functions = [line.split(" ", 1)[0] for line in inventory[LSPCI_BLOCK]
+                 if "Mellanox Technologies ConnectX" in line and "Virtual Function" in line]
+    ansi = re.compile(r"\x1b\[[0-9;]*m")
+    matrix = [ansi.sub("", line) for line in inventory["nvidia-smi topo -m"]]
+    header = matrix[0].split("\t")
+    nics = [index for index, name in enumerate(header) if re.fullmatch(r"NIC[0-9]+", name)]
+    rows = {int(line.split("\t")[0][3:]): line.split("\t")
+            for line in matrix if re.match(r"GPU[0-9]+\t", line)}
     modules = read_module_ids(inventory[MODULE_BLOCK])
     pairs = [pair for rows in remote.values() for pair in rows]
     switches = sorted({busid for busid, _ in pairs})
     per_switch = Counter(busid for busid, _ in set(pairs))
     return {
+        "connectx_virtual_functions": functions,
+        "pix_nics_by_gpu": [[header[index] for index in nics if rows[dev][index].strip() == "PIX"]
+                            for dev in sorted(rows)],
+        "remote_blocks_head_dump_devices": all(
+            bus_ids.get(block.uuid) == next(g.busid for g in dump.gpus if g.dev == gpu)
+            for gpu, block in blocks.items()),
         "distinct_pairs": len(set(pairs)),
         "module_id_by_dev": {str(dev): module for dev, module in sorted(modules.items())},
         "per_gpu": sorted({len(rows) for rows in remote.values()}),
@@ -256,7 +297,7 @@ def run_h3(dump, inventory) -> dict[str, Any]:
 
     from simllm.placement.dgx import DGX_NVLINK_BUNDLES
 
-    table = _switch_table(inventory)
+    table = _switch_table(inventory, dump)
     bundle = DGX_NVLINK_BUNDLES["h100"]
     switches = sorted({busid for rows in table.values() for busid, _ in rows})
     counts = {dev: tuple(Counter(busid for busid, _ in rows)[switch] for switch in switches)
@@ -509,9 +550,9 @@ def run_h5(dump, inventory, output: Path, library: str) -> dict[str, Any]:
 
 
 def _h6_cases(dump, inventory):
-    from simllm.placement import NcclTopologyDump
+    from simllm.placement import NcclTopologyDump, read_nvlink_remote_ports, read_nvswitch_list
 
-    table = _switch_table(inventory)
+    table = _switch_table(inventory, dump)
 
     def five_on_c3():
         rows = list(table[0])
@@ -537,7 +578,7 @@ def _h6_cases(dump, inventory):
         edited = dict(inventory)
         edited[NVSWITCH_BLOCK] = tuple(line for line in inventory[NVSWITCH_BLOCK]
                                        if not line.startswith("0000:c6:00.0"))
-        return _join(dump, inventory, switch_ports_by_gpu_dev=_switch_table(edited))
+        return _join(dump, inventory, switch_ports_by_gpu_dev=_switch_table(edited, dump))
 
     def seventeen_links():
         edited = dict(inventory)
@@ -545,9 +586,44 @@ def _h6_cases(dump, inventory):
         heading = next(i for i, line in enumerate(lines) if line.startswith("GPU 3:"))
         del lines[heading + 18]
         edited[REMOTE_BLOCK] = tuple(lines)
-        return _join(dump, inventory, switch_ports_by_gpu_dev=_switch_table(edited))
+        return _join(dump, inventory, switch_ports_by_gpu_dev=_switch_table(edited, dump))
 
+    def permuted(change):
+        blocks = read_nvlink_remote_ports(inventory[REMOTE_BLOCK])
+        return lambda: _switch_table(inventory, dump, change(blocks))
+
+    def swapped_uuids(blocks):
+        return {**blocks, 0: replace(blocks[0], uuid=blocks[1].uuid),
+                1: replace(blocks[1], uuid=blocks[0].uuid)}
+
+    extra_switch = "0000:c7:00.0 class=0x068000 vendor=0x10de device=0x22a3 numa=1"
+
+    def unused_switch():
+        edited = dict(inventory)
+        edited[NVSWITCH_BLOCK] = (*inventory[NVSWITCH_BLOCK], extra_switch)
+        return _switch_table(edited, dump)
+
+    def absent_switch():
+        root = ElementTree.fromstring(_fixture_bytes("nccl_topo.xml"))
+        root.find(".//gpu[@dev='0']/nvlink[@target='0000:c3:00.0']").set("target", "0000:c7:00.0")
+        return _join(NcclTopologyDump.parse(ElementTree.tostring(root, encoding="unicode")),
+                     inventory)
+
+    misplaced = "but the NCCL dump places dev 0 at 0000:83:00.0"
     return {
+        "swapped gpus": (permuted(lambda blocks: {**blocks, 0: blocks[1], 1: blocks[0]}),
+                         misplaced),
+        "rotated gpus": (permuted(lambda blocks: {gpu: blocks[(gpu + 1) % 8] for gpu in blocks}),
+                         misplaced),
+        "swapped uuids": (permuted(swapped_uuids), misplaced),
+        "switch list class or vendor": (
+            lambda: read_nvswitch_list([*inventory[NVSWITCH_BLOCK],
+                                        extra_switch.replace("vendor=0x10de", "vendor=0x1000")]),
+            "listed switch 0000:c7:00.0 has vendor 0x1000, not 0x10de"),
+        "unused listed switch": (unused_switch, "listed NVSwitch 0000:c7:00.0 receives no lane"),
+        "dump switch absent from list": (
+            absent_switch, ("NCCL switch row of GPU dev 0 names 0000:c7:00.0, which is absent "
+                            "from the captured switch list")),
         "5 lanes on c3": (five_on_c3, ("GPU dev 0 has 5 captured lanes on switch 0000:c3:00.0; "
                                        "chip 1 of generation h100 requires 4")),
         "switch port used twice": (port_twice, "is used by two links"),
@@ -634,8 +710,8 @@ def run_h7(dump, inventory, output: Path, library: str) -> dict[str, Any]:
     b200_relative = (B200_STUDY / "results.json").relative_to(REPOSITORY_ROOT).as_posix()
     return {
         "b200_results_sha256": hashlib.sha256((B200_STUDY / "results.json").read_bytes()).hexdigest(),
-        "b200_results_sha256_at_base": hashlib.sha256(
-            _git("show", f"{BASE_COMMIT}:{b200_relative}")).hexdigest(),
+        "b200_results_sha256_at_stacked_base": hashlib.sha256(
+            _git("show", f"{B200_BASE_COMMIT}:{b200_relative}")).hexdigest(),
         "dgx_results_sha256": hashlib.sha256((DGX_STUDY / "results.json").read_bytes()).hexdigest(),
         "preset_digests": digests,
         "round_trip": loaded == fabric and first.read_bytes() == second.read_bytes(),
@@ -643,7 +719,7 @@ def run_h7(dump, inventory, output: Path, library: str) -> dict[str, Any]:
     }
 
 
-def analyze(cells: dict[str, Any], frozen: dict[str, Any],
+def analyze(cells: dict[str, Any], frozen: dict[str, Any], amendment: dict[str, Any],
             fixture_sha256: dict[str, str]) -> dict[str, Any]:
     """Apply every frozen guard, then score the H5 identity family."""
 
@@ -694,6 +770,11 @@ def analyze(cells: dict[str, Any], frozen: dict[str, Any],
         structural.append("h2: inventory tables")
     if h2["module_id_by_dev"] != gpu["module_id_by_dev"]:
         structural.append("h2: module ids")
+    if (len(h2["connectx_virtual_functions"]) != capture["nic"]["connectx_virtual_functions"]
+            or h2["pix_nics_by_gpu"] != [[f"NIC{dev}"] for dev in range(8)]):
+        structural.append("h2: ConnectX virtual functions and PIX affinity")
+    if h2["remote_blocks_head_dump_devices"] is not True:
+        structural.append("h2: nvlink -R blocks do not head the dump devices")
     if [(row["busid"], row["vendor"], row["device"], row["numa"]) for row in h2["switch_devices"]] != [
             (busid, capture["nvswitch"]["vendor"], capture["nvswitch"]["device"],
              capture["nvswitch"]["numa"]) for busid in capture["nvswitch"]["busids"]]:
@@ -719,7 +800,8 @@ def analyze(cells: dict[str, Any], frozen: dict[str, Any],
         scored.append("h5: bound and declared runs differ")
 
     h6 = cells["h6_refusals"]
-    for label in frozen["cells"]["h6_refusals"]:
+    h6_labels = [*frozen["cells"]["h6_refusals"], *amendment["added_controls"]]
+    for label in h6_labels:
         if h6.get(label, {}).get("refused") is not True:
             rejection.append(f"h6: {label} was not refused before any schema object")
 
@@ -732,7 +814,7 @@ def analyze(cells: dict[str, Any], frozen: dict[str, Any],
         fatal.append("h7: b200 preset digest")
     if h7["dgx_results_sha256"] != artifacts["dgx_nvlink_v1_results"]:
         fatal.append("h7: DGX study results")
-    if h7["b200_results_sha256"] != h7["b200_results_sha256_at_base"]:
+    if h7["b200_results_sha256"] != h7["b200_results_sha256_at_stacked_base"]:
         fatal.append("h7: B200 study results")
     for label, held in h7["study_checks"].items():
         if held is not True:
@@ -747,8 +829,8 @@ def analyze(cells: dict[str, Any], frozen: dict[str, Any],
             "exact_oracle_family": {"held": h5["held"], "instances": h5["live_cells"]},
             "fatal_compatibility_identities": frozen["evidence"]["fatal_compatibility_identities"],
             "rejection_control_family": {
-                "controls": len(frozen["cells"]["h6_refusals"]),
-                "refused": sum(row.get("refused") is True for row in h6.values()),
+                "controls": len(h6_labels),
+                "refused": sum(h6.get(label, {}).get("refused") is True for label in h6_labels),
             },
             "structural_guard_cells": len(frozen["evidence"]["structural_guard_cells"]),
         },
@@ -774,11 +856,12 @@ def run_study(output: Path, library: str) -> dict[str, Any]:
     from simllm.placement import NcclTopologyDump
 
     frozen = json.loads(EXPECTATIONS_PATH.read_text(encoding="utf-8"))
+    amendment = json.loads(AMENDMENT_PATH.read_text(encoding="utf-8"))
     dump = NcclTopologyDump.load(FIXTURE_DIR / "nccl_topo.xml")
     inventory = _inventory()
     cells = {
         "h1_parse": run_h1(dump),
-        "h2_inventory": run_h2(inventory),
+        "h2_inventory": run_h2(dump, inventory),
         "h3_switch_side": run_h3(dump, inventory),
         "h4_gpu_side": run_h4(dump, inventory),
         "h5_live_identity": run_h5(dump, inventory, output, library),
@@ -788,8 +871,9 @@ def run_study(output: Path, library: str) -> dict[str, Any]:
     cells = json.loads(_json_bytes(cells))
     fixture_sha256 = {name: hashlib.sha256(_fixture_bytes(name)).hexdigest()
                       for name in sorted(frozen["baseline"]["fixture"]) if name != "directory"}
-    analysis = analyze(cells, frozen, fixture_sha256)
+    analysis = analyze(cells, frozen, amendment, fixture_sha256)
     summary = {
+        "amendment_commit": AMENDMENT_COMMIT,
         "cells": cells,
         "evidence": analysis["evidence"],
         "expectations_commit": EXPECTATIONS_COMMIT,

@@ -6,8 +6,9 @@ identity) and both switched studies' check runs execute in the study harness.
 
 Two digests are pinned below from tracked files rather than frozen literals:
 the B200 preset digest the B200 capture tests pin (a post-implementation
-value of that slice) and the B200 study results tracked at the base commit
-af5c0110.
+value of that slice) and the B200 study results as regenerated on the stacked
+B200 branch (commit f7d55479), where expectations-amendment-2026-09-13.md moved
+that identity.
 """
 
 from __future__ import annotations
@@ -31,9 +32,11 @@ from simllm.placement import (
     captured_switched_node,
     dgx_peer_fabric,
     nccl_topology,
+    read_gpu_bus_ids,
     read_inventory_sections,
     read_module_ids,
     read_nvlink_remote_ports,
+    read_nvswitch_list,
     read_pci_device_list,
 )
 from simllm.placement.dgx import DGX_NVLINK_BUNDLES
@@ -42,6 +45,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "tests" / "fixtures" / "nccl_topology" / "vastai_hgx_h200_8x"
 B200_FIXTURE = ROOT / "tests" / "fixtures" / "nccl_topology" / "vastai_hgx_b200_8x"
 EXPECTATIONS = ROOT / "examples" / "hgx_h200_switch_capture_v1" / "expectations.json"
+AMENDMENT = ROOT / "examples" / "hgx_h200_switch_capture_v1" / "expectations-amendment-2026-09-13.json"
 NODE = "hgx-h200"
 BUS_IDS = tuple(f"0000:{bus}:00.0" for bus in ("83", "8b", "93", "9b", "a3", "ab", "b3", "bb"))
 PCIE_SWITCHES = tuple(f"0000:{bus}:00.0" for bus in ("81", "89", "91", "99", "a1", "a9", "b1", "b9"))
@@ -54,10 +58,13 @@ PORTS_PER_SWITCH = (32, 40, 40, 32)
 BOARD_IDS = ("0x8300", "0x8b00", "0x9300", "0x9b00", "0xa300", "0xab00", "0xb300", "0xbb00")
 B200_PRESET_DIGEST = (125_741, "ef920aa9abc7b61222880d97b60d2e016b37ed1df46b5c628488054553f5163f")
 DGX_RESULTS_SHA256 = "00d935fc4b26cfc50aa4c5f6b46ba20e3db856d091215c2e616b095fb577fdba"
-B200_RESULTS_SHA256 = "778a66d642e071e83d642b16622e810cda30fed937c6cea70b061304418bc122"
+B200_RESULTS_SHA256 = "c3ff25efd9abf504f17b7523460b97f0ab3c6e15ab9993f86a9f505a9f9777cb"
 REMOTE_BLOCK = "nvidia-smi nvlink -R (remote pci bus id per link)"
 NVSWITCH_BLOCK = "pci devices class 0x0680 (nvswitch/bridge)"
 MODULE_BLOCK = "nvidia-smi -q (GPU board/module ids)"
+FULL_QUERY_BLOCK = "nvidia-smi -q full"
+LSPCI_BLOCK = "lspci nvidia/bridges/nic"
+CONNECTX_VFS = tuple(f"{bus}:00.0" for bus in ("84", "8c", "94", "9c", "a4", "ac", "b4", "bc"))
 
 
 def fixture_bytes(name: str, directory: Path = FIXTURE) -> bytes:
@@ -73,10 +80,14 @@ def sections(directory: Path = FIXTURE) -> dict[str, tuple[str, ...]]:
     return read_inventory_sections(fixture_bytes("node_inventory.txt", directory).decode("utf-8"))
 
 
-def switch_table(inventory=None) -> dict[int, tuple[tuple[str, int], ...]]:
+def switch_table(inventory=None, remote=None) -> dict[int, tuple[tuple[str, int], ...]]:
     inventory = sections() if inventory is None else inventory
-    return captured_switch_ports(read_nvlink_remote_ports(inventory[REMOTE_BLOCK]),
-                                 read_pci_device_list(inventory[NVSWITCH_BLOCK]))
+    return captured_switch_ports(
+        read_nvlink_remote_ports(inventory[REMOTE_BLOCK]) if remote is None else remote,
+        read_nvswitch_list(inventory[NVSWITCH_BLOCK]),
+        bus_id_by_uuid=read_gpu_bus_ids(inventory[FULL_QUERY_BLOCK]),
+        bus_id_by_gpu_dev={gpu.dev: gpu.busid for gpu in load().gpus},
+    )
 
 
 def modules() -> dict[int, int]:
@@ -154,7 +165,8 @@ def test_h1_switch_rows_keep_dump_order():
 
 def test_h2_inventory_parsers_read_links_switches_and_module_ids():
     inventory = sections()
-    remote = read_nvlink_remote_ports(inventory[REMOTE_BLOCK])
+    remote = {gpu: block.links
+              for gpu, block in read_nvlink_remote_ports(inventory[REMOTE_BLOCK]).items()}
     assert sorted(remote) == list(range(8))
     assert sum(len(rows) for rows in remote.values()) == 144
     assert {len(rows) for rows in remote.values()} == {18}
@@ -165,7 +177,7 @@ def test_h2_inventory_parsers_read_links_switches_and_module_ids():
     assert len(set(pairs)) == 144
     per_switch = Counter(busid for busid, _ in set(pairs))
     assert [per_switch[switch] for switch in NVSWITCHES] == list(PORTS_PER_SWITCH)
-    devices = read_pci_device_list(inventory[NVSWITCH_BLOCK])
+    devices = read_nvswitch_list(inventory[NVSWITCH_BLOCK])
     assert [(d.busid, d.pci_class, d.vendor, d.device, d.numa) for d in devices] == [
         (busid, "0x068000", "0x10de", "0x22a3", 1) for busid in NVSWITCHES
     ]
@@ -474,3 +486,157 @@ def test_freeze_pins_the_h200_expectations():
     for name, digest in frozen["baseline"]["fixture"].items():
         if name != "directory":
             assert hashlib.sha256(fixture_bytes(name)).hexdigest() == digest, name
+
+
+def test_h2_inventory_records_the_connectx_functions_beside_each_gpu():
+    inventory = sections()
+    functions = [line.split(" ", 1)[0] for line in inventory[LSPCI_BLOCK]
+                 if "Mellanox Technologies ConnectX" in line and "Virtual Function" in line]
+    assert tuple(functions) == CONNECTX_VFS
+    ansi = re.compile(r"\x1b\[[0-9;]*m")
+    matrix = [ansi.sub("", line) for line in inventory["nvidia-smi topo -m"]]
+    header = matrix[0].split("\t")
+    nics = [index for index, name in enumerate(header) if re.fullmatch(r"NIC[0-9]+", name)]
+    assert [header[index] for index in nics] == [f"NIC{nic}" for nic in range(8)]
+    rows = {int(line.split("\t")[0][3:]): line.split("\t")
+            for line in matrix if re.match(r"GPU[0-9]+\t", line)}
+    assert {dev: [header[index] for index in nics if rows[dev][index].strip() == "PIX"]
+            for dev in range(8)} == {dev: [f"NIC{dev}"] for dev in range(8)}
+
+
+def test_gpu_bus_ids_come_from_the_query_block_in_list_order():
+    uuids = [re.search(r"UUID: (GPU-[0-9a-f-]+)", line).group(1)
+             for line in sections()["nvidia-smi -L"]]
+    bus_ids = read_gpu_bus_ids(sections()[FULL_QUERY_BLOCK])
+    assert [bus_ids[uuid] for uuid in uuids] == list(BUS_IDS)
+    blocks = read_nvlink_remote_ports(sections()[REMOTE_BLOCK])
+    assert [blocks[gpu].uuid for gpu in range(8)] == uuids
+
+
+def _swapped_gpus(remote):
+    return {**remote, 0: remote[1], 1: remote[0]}
+
+
+def _rotated_gpus(remote):
+    return {gpu: remote[(gpu + 1) % 8] for gpu in remote}
+
+
+def _swapped_uuids(remote):
+    from dataclasses import replace
+
+    return {**remote, 0: replace(remote[0], uuid=remote[1].uuid),
+            1: replace(remote[1], uuid=remote[0].uuid)}
+
+
+@pytest.mark.parametrize("permute", (_swapped_gpus, _rotated_gpus, _swapped_uuids))
+def test_permuted_remote_table_is_refused(permute):
+    remote = read_nvlink_remote_ports(sections()[REMOTE_BLOCK])
+    with pytest.raises(ValueError, match=r"nvlink -R GPU 0 is GPU-[0-9a-f-]+ at 0000:[0-9a-f]{2}:00\.0, "
+                                         r"but the NCCL dump places dev 0 at 0000:83:00\.0"):
+        switch_table(remote=permute(remote))
+
+
+def test_remote_heading_without_uuid_is_refused():
+    lines = list(sections()[REMOTE_BLOCK])
+    lines[0] = "GPU 0: NVIDIA H200"
+    with pytest.raises(ValueError, match="GPU 0 heading in the nvlink -R block carries no UUID"):
+        read_nvlink_remote_ports(lines)
+
+
+@pytest.mark.parametrize(
+    ("line", "message"),
+    [
+        ("0000:c7:00.0 class=0x060400 vendor=0x10de device=0x22a3 numa=1",
+         r"listed switch 0000:c7:00\.0 has class 0x060400, not 0x0680xx"),
+        ("0000:c7:00.0 class=0x068000 vendor=0x1000 device=0x22a3 numa=1",
+         r"listed switch 0000:c7:00\.0 has vendor 0x1000, not 0x10de"),
+        ("0000:c7:00.0 vendor=0x10de device=0x22a3",
+         r"listed switch 0000:c7:00\.0 has class None, not 0x0680xx"),
+    ],
+)
+def test_switch_list_requires_nvidia_bridge_class_rows(line, message):
+    with pytest.raises(ValueError, match=message):
+        read_nvswitch_list([*sections()[NVSWITCH_BLOCK], line])
+
+
+def test_listed_switch_that_receives_no_lane_is_refused():
+    inventory = dict(sections())
+    inventory[NVSWITCH_BLOCK] = (*inventory[NVSWITCH_BLOCK],
+                                 "0000:c7:00.0 class=0x068000 vendor=0x10de device=0x22a3 numa=1")
+    with pytest.raises(ValueError, match=r"listed NVSwitch 0000:c7:00\.0 receives no lane"):
+        switch_table(inventory)
+
+
+def test_dump_switch_row_outside_the_switch_list_is_refused(no_schema_objects):
+    root = ElementTree.fromstring(fixture_bytes("nccl_topo.xml"))
+    root.find(".//gpu[@dev='0']/nvlink[@target='0000:c3:00.0']").set("target", "0000:c7:00.0")
+    dump = NcclTopologyDump.parse(ElementTree.tostring(root, encoding="unicode"))
+    with pytest.raises(ValueError, match=(r"NCCL switch row of GPU dev 0 names 0000:c7:00\.0, "
+                                          r"which is absent from the captured switch list")):
+        join(dump)
+
+
+def _inventory_with_unused_switch():
+    inventory = dict(sections())
+    inventory[NVSWITCH_BLOCK] = (*inventory[NVSWITCH_BLOCK],
+                                 "0000:c7:00.0 class=0x068000 vendor=0x10de device=0x22a3 numa=1")
+    return inventory
+
+
+def _dump_with_absent_switch():
+    root = ElementTree.fromstring(fixture_bytes("nccl_topo.xml"))
+    root.find(".//gpu[@dev='0']/nvlink[@target='0000:c3:00.0']").set("target", "0000:c7:00.0")
+    return NcclTopologyDump.parse(ElementTree.tostring(root, encoding="unicode"))
+
+
+def _remote():
+    return read_nvlink_remote_ports(sections()[REMOTE_BLOCK])
+
+
+ADDED_CONTROLS = {
+    "swapped gpus": (lambda: switch_table(remote=_swapped_gpus(_remote())),
+                     r"but the NCCL dump places dev 0 at 0000:83:00\.0"),
+    "rotated gpus": (lambda: switch_table(remote=_rotated_gpus(_remote())),
+                     r"but the NCCL dump places dev 0 at 0000:83:00\.0"),
+    "swapped uuids": (lambda: switch_table(remote=_swapped_uuids(_remote())),
+                      r"but the NCCL dump places dev 0 at 0000:83:00\.0"),
+    "switch list class or vendor": (
+        lambda: read_nvswitch_list([*sections()[NVSWITCH_BLOCK],
+                                    "0000:c7:00.0 class=0x068000 vendor=0x1000 device=0x22a3 numa=1"]),
+        r"has vendor 0x1000, not 0x10de"),
+    "unused listed switch": (lambda: switch_table(_inventory_with_unused_switch()),
+                             r"listed NVSwitch 0000:c7:00\.0 receives no lane"),
+    "dump switch absent from list": (lambda: join(_dump_with_absent_switch()),
+                                     r"absent from the captured switch list"),
+}
+
+
+def test_amendment_pins_the_added_controls_and_the_moved_identity():
+    assert json.loads(AMENDMENT.read_text(encoding="utf-8")) == {
+        "schema": "simllm-hgx-h200-switch-capture-amendment-v1",
+        "date": "2026-09-13",
+        "chronology": ("post-specified to an independent review and the second B200 amendment, "
+                       "frozen before the corrected implementation and its rerun"),
+        "moved_identity": "hgx_b200_capture_v1 results at the stacked base after regeneration",
+        "added_controls": ["swapped gpus", "rotated gpus", "swapped uuids",
+                           "switch list class or vendor", "unused listed switch",
+                           "dump switch absent from list"],
+        "h2_nic_facts": ["eight connectx virtual functions", "pix gpu i to nic i"],
+    }
+    assert sorted(ADDED_CONTROLS) == sorted(
+        json.loads(AMENDMENT.read_text(encoding="utf-8"))["added_controls"])
+
+
+@pytest.mark.parametrize("label", sorted(ADDED_CONTROLS))
+def test_amendment_control_is_refused(label, no_schema_objects):
+    build, message = ADDED_CONTROLS[label]
+    with pytest.raises(ValueError, match=message):
+        build()
+
+
+def test_h200_board_is_refused_for_b200_on_silicon(no_schema_objects):
+    with pytest.raises(ValueError, match=(
+        r"GPU dev 0 at 0000:83:00\.0 reports device 0x10de:0x2335 with sm 90; "
+        r"generation b200 requires device 0x2901 with sm 100"
+    )):
+        join(generation="b200", switch_ports_by_gpu_dev=None)

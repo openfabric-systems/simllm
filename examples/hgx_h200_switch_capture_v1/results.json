@@ -1,4 +1,5 @@
 {
+  "amendment_commit": "e3a94f3490377f26f7ce397a32881d620055b0e2",
   "cells": {
     "h1_parse": {
       "counts": {
@@ -101,6 +102,16 @@
       }
     },
     "h2_inventory": {
+      "connectx_virtual_functions": [
+        "84:00.0",
+        "8c:00.0",
+        "94:00.0",
+        "9c:00.0",
+        "a4:00.0",
+        "ac:00.0",
+        "b4:00.0",
+        "bc:00.0"
+      ],
       "distinct_pairs": 144,
       "module_id_by_dev": {
         "0": 2,
@@ -123,12 +134,39 @@
           4
         ]
       ],
+      "pix_nics_by_gpu": [
+        [
+          "NIC0"
+        ],
+        [
+          "NIC1"
+        ],
+        [
+          "NIC2"
+        ],
+        [
+          "NIC3"
+        ],
+        [
+          "NIC4"
+        ],
+        [
+          "NIC5"
+        ],
+        [
+          "NIC6"
+        ],
+        [
+          "NIC7"
+        ]
+      ],
       "ports_per_switch": [
         32,
         40,
         40,
         32
       ],
+      "remote_blocks_head_dump_devices": true,
       "remote_rows": 144,
       "slots": [
         1,
@@ -563,6 +601,31 @@
         "message": "generation b200 binds 2 NVSwitch chips; the captured links name 4 switches",
         "refused": true
       },
+      "dump switch absent from list": {
+        "expected_message": "NCCL switch row of GPU dev 0 names 0000:c7:00.0, which is absent from the captured switch list",
+        "message": "NCCL switch row of GPU dev 0 names 0000:c7:00.0, which is absent from the captured switch list",
+        "refused": true
+      },
+      "rotated gpus": {
+        "expected_message": "but the NCCL dump places dev 0 at 0000:83:00.0",
+        "message": "nvidia-smi inventory refused: nvlink -R GPU 0 is GPU-ecccb5a4-cf8b-55c1-d811-31ab6da3878c at 0000:8b:00.0, but the NCCL dump places dev 0 at 0000:83:00.0",
+        "refused": true
+      },
+      "swapped gpus": {
+        "expected_message": "but the NCCL dump places dev 0 at 0000:83:00.0",
+        "message": "nvidia-smi inventory refused: nvlink -R GPU 0 is GPU-ecccb5a4-cf8b-55c1-d811-31ab6da3878c at 0000:8b:00.0, but the NCCL dump places dev 0 at 0000:83:00.0",
+        "refused": true
+      },
+      "swapped uuids": {
+        "expected_message": "but the NCCL dump places dev 0 at 0000:83:00.0",
+        "message": "nvidia-smi inventory refused: nvlink -R GPU 0 is GPU-ecccb5a4-cf8b-55c1-d811-31ab6da3878c at 0000:8b:00.0, but the NCCL dump places dev 0 at 0000:83:00.0",
+        "refused": true
+      },
+      "switch list class or vendor": {
+        "expected_message": "listed switch 0000:c7:00.0 has vendor 0x1000, not 0x10de",
+        "message": "nvidia-smi inventory refused: listed switch 0000:c7:00.0 has vendor 0x1000, not 0x10de",
+        "refused": true
+      },
       "switch port used twice": {
         "expected_message": "is used by two links",
         "message": "captured switch 0000:c3:00.0 port 46 is used by two links",
@@ -573,6 +636,11 @@
         "message": "nvidia-smi inventory refused: GPU 0 link 12 reaches 0000:c6:00.0, which is not a listed NVSwitch",
         "refused": true
       },
+      "unused listed switch": {
+        "expected_message": "listed NVSwitch 0000:c7:00.0 receives no lane",
+        "message": "nvidia-smi inventory refused: listed NVSwitch 0000:c7:00.0 receives no lane",
+        "refused": true
+      },
       "virtual row beside real rows": {
         "expected_message": "gpu 0000:83:00.0 mixes the virtual NVSwitch row with real switch rows",
         "message": "NCCL topology dump refused: gpu 0000:83:00.0 mixes the virtual NVSwitch row with real switch rows",
@@ -580,8 +648,8 @@
       }
     },
     "h7_off_path": {
-      "b200_results_sha256": "778a66d642e071e83d642b16622e810cda30fed937c6cea70b061304418bc122",
-      "b200_results_sha256_at_base": "778a66d642e071e83d642b16622e810cda30fed937c6cea70b061304418bc122",
+      "b200_results_sha256": "c3ff25efd9abf504f17b7523460b97f0ab3c6e15ab9993f86a9f505a9f9777cb",
+      "b200_results_sha256_at_stacked_base": "c3ff25efd9abf504f17b7523460b97f0ab3c6e15ab9993f86a9f505a9f9777cb",
       "dgx_results_sha256": "00d935fc4b26cfc50aa4c5f6b46ba20e3db856d091215c2e616b095fb577fdba",
       "preset_digests": {
         "a100": {
@@ -611,8 +679,8 @@
     },
     "fatal_compatibility_identities": 5,
     "rejection_control_family": {
-      "controls": 6,
-      "refused": 6
+      "controls": 12,
+      "refused": 12
     },
     "structural_guard_cells": 5
   },
@@ -625,7 +693,7 @@
     "nccl_topo.xml": "6fd8e122c54349102bf86320018d9cf616d776e1ddbb0223e0183801877e6c5c",
     "node_inventory.txt": "b4f9f5b28d276ddfeb08f09afc664ac86f1b71622f70c4e9ba228163a8a36e7a"
   },
-  "implementation_commit": "7eeec912c647fb77fc47fb139a9e05c6c74fe4e0",
+  "implementation_commit": "e3a94f3490377f26f7ce397a32881d620055b0e2",
   "schema": "simllm-hgx-h200-switch-capture-result-v1",
   "status": "PASS"
 }

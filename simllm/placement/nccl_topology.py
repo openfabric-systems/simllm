@@ -953,6 +953,14 @@ def _captured_switch_side(
         )
     busid_of = {gpu.dev: gpu.busid for gpu in gpus}
     for dev in devs:
+        stray = sorted(row.target for row in dump.switch_rows(busid_of[dev])
+                       if row.target not in switches)
+        if stray:
+            raise ValueError(
+                f"NCCL switch row of GPU dev {dev} names {stray[0]}, which is absent from the "
+                "captured switch list"
+            )
+    for dev in devs:
         captured = Counter(busid for busid, _ in table[dev])
         for chip, (switch, width) in enumerate(zip(switches, bundle, strict=True), 1):
             if captured[switch] != width:
