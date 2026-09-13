@@ -1,0 +1,2 @@
+torch 2.8.0+cu128 cuda 12.8 nccl (2, 27, 3)
+devices 8
