@@ -6,6 +6,7 @@ Every constant here is read from the frozen registration in
 
 import hashlib
 import json
+from dataclasses import fields
 from itertools import pairwise
 from pathlib import Path
 
@@ -14,6 +15,7 @@ import pytest
 from simllm.placement import (
     DeclaredExpertLayout,
     PlacementManifest,
+    RankPlacement,
     declared_local_expert_ids,
     declared_manifest,
     declared_pipeline_partition,
@@ -24,6 +26,7 @@ from simllm.traffic.routed_moe import ExpertPlacementSnapshot
 ROOT = Path(__file__).resolve().parents[1]
 STUDY_DIR = ROOT / "examples" / "declared_expert_placement_v1"
 EXPECTATIONS_PATH = STUDY_DIR / "expectations.json"
+AMENDMENT_PATH = STUDY_DIR / "expectations-amendment-2026-09-13.json"
 
 #: Cell C1: the worked example, 48 layers all carrying an MoE block.
 C1_LAYOUT = {
@@ -37,10 +40,37 @@ C3_LAYOUT = {
     "moe_layers": tuple(range(3, 61)),
     "num_experts": 256,
 }
+#: Cell C8, from the 2026-09-13 amendment: 30 experts over eight EP ranks.
+C8_LAYOUT = {
+    "num_layers": 24,
+    "moe_layers": tuple(range(24)),
+    "num_experts": 30,
+}
+C8_COUNTS = [4, 4, 4, 4, 4, 4, 3, 3]
+C8_LINEAR_OWNERS = {
+    0: [0, 1, 2, 3],
+    1: [4, 5, 6, 7],
+    2: [8, 9, 10, 11],
+    3: [12, 13, 14, 15],
+    4: [16, 17, 18, 19],
+    5: [20, 21, 22, 23],
+    6: [24, 25, 26],
+    7: [27, 28, 29],
+}
+C8_ROUND_ROBIN_OWNERS = {
+    0: [0, 8, 16, 24],
+    5: [5, 13, 21, 29],
+    6: [6, 14, 22],
+    7: [7, 15, 23],
+}
 
 
 def _expectations() -> dict:
     return json.loads(EXPECTATIONS_PATH.read_text(encoding="utf-8"))
+
+
+def _amendment() -> dict:
+    return json.loads(AMENDMENT_PATH.read_text(encoding="utf-8"))
 
 
 def c1_manifest(strategy: str = "linear") -> PlacementManifest:
@@ -60,6 +90,14 @@ def c3_manifest() -> PlacementManifest:
         nodes=8,
         gpus_per_node=8,
         experts=DeclaredExpertLayout(**C3_LAYOUT),
+    )
+
+
+def c8_manifest(strategy: str = "linear") -> PlacementManifest:
+    return declared_manifest(
+        tp=1,
+        dp=8,
+        experts=DeclaredExpertLayout(**C8_LAYOUT, placement_strategy=strategy),
     )
 
 
@@ -222,14 +260,6 @@ def test_c4_pipeline_partition_rows(num_layers, pp, intervals):
 # Cell C5: refusals
 
 
-def test_c5_refuses_an_indivisible_expert_count():
-    layout = DeclaredExpertLayout(
-        num_layers=48, moe_layers=tuple(range(48)), num_experts=30
-    )
-    with pytest.raises(ValueError, match="num_experts"):
-        declared_manifest(tp=4, pp=2, dp=2, experts=layout)
-
-
 def test_c5_refuses_a_moe_layer_outside_the_model():
     with pytest.raises(ValueError, match="moe_layers"):
         DeclaredExpertLayout(
@@ -282,16 +312,19 @@ def test_c5_refuses_a_boolean_expert_count():
         )
 
 
-def test_c5_refusals_precede_any_rank_construction():
-    # the divisibility gate is the one refusal that needs the parallel layout,
-    # so check it cannot leave a partially built manifest behind
-    layout = DeclaredExpertLayout(
-        num_layers=48, moe_layers=tuple(range(48)), num_experts=30
-    )
-    with pytest.raises(ValueError):
-        declared_manifest(tp=4, pp=2, dp=2, experts=layout)
+@pytest.mark.parametrize("num_experts", [0, -1])
+def test_refuses_an_expert_count_below_one(num_experts):
     with pytest.raises(ValueError, match="num_experts"):
-        declared_local_expert_ids(30, 8, 0)
+        DeclaredExpertLayout(
+            num_layers=48, moe_layers=tuple(range(48)), num_experts=num_experts
+        )
+    with pytest.raises(ValueError, match="num_experts"):
+        declared_local_expert_ids(num_experts, 8, 0)
+
+
+def test_refuses_a_negative_moe_layer():
+    with pytest.raises(ValueError, match="moe_layers"):
+        DeclaredExpertLayout(num_layers=48, moe_layers=(-1, 0), num_experts=32)
 
 
 # Cell C6: wire identity
@@ -358,6 +391,59 @@ def test_declared_manifest_without_experts_adds_no_expert_field():
         assert rank.placement_epoch == 0
 
 
+def _expert_twins() -> dict:
+    return {
+        "c1": (
+            lambda: declared_manifest(
+                tp=4,
+                pp=2,
+                dp=2,
+                experts=DeclaredExpertLayout(**C1_LAYOUT, placement_epoch=7),
+            ),
+            lambda: declared_manifest(tp=4, pp=2, dp=2),
+        ),
+        "c3": (
+            c3_manifest,
+            lambda: declared_manifest(tp=8, pp=4, dp=2, nodes=8, gpus_per_node=8),
+        ),
+        "c8": (c8_manifest, lambda: declared_manifest(tp=1, dp=8)),
+    }
+
+
+#: The only rank fields an expert layout may change, besides ``groups["ep"]``.
+EXPERT_RANK_FIELDS = ("pipeline_layer_range", "local_expert_ids", "placement_epoch")
+
+
+@pytest.mark.parametrize("cell", sorted(_expert_twins()))
+def test_expert_manifest_differs_from_its_expert_free_twin_only_in_expert_fields(
+    cell,
+):
+    build_with, build_without = _expert_twins()[cell]
+    with_experts, without = build_with(), build_without()
+
+    for manifest_field in fields(PlacementManifest):
+        if manifest_field.name != "ranks":
+            assert getattr(with_experts, manifest_field.name) == getattr(
+                without, manifest_field.name
+            )
+    for expert_rank, free_rank in zip(with_experts.ranks, without.ranks, strict=True):
+        for rank_field in fields(RankPlacement):
+            name = rank_field.name
+            if name == "groups":
+                groups = dict(expert_rank.groups)
+                assert "ep" in groups and "ep" not in free_rank.groups
+                del groups["ep"]
+                assert list(groups) == list(free_rank.groups)
+                assert groups == free_rank.groups
+            elif name not in EXPERT_RANK_FIELDS:
+                assert getattr(expert_rank, name) == getattr(free_rank, name)
+        assert free_rank.pipeline_layer_range is None
+        assert free_rank.local_expert_ids == {}
+        assert free_rank.placement_epoch == 0
+        assert expert_rank.pipeline_layer_range is not None
+        assert expert_rank.local_expert_ids
+
+
 # Cell C2 conservation: the snapshot projection needs no backend
 
 
@@ -385,6 +471,75 @@ def test_c2_snapshot_conserves_every_layer_expert_pair(world):
         for layer in range(24)
         for expert in range(32)
     }
+
+
+# Cell C8: the remainder layout of the 2026-09-13 amendment
+
+
+@pytest.mark.parametrize(
+    ("strategy", "owners"),
+    [("linear", C8_LINEAR_OWNERS), ("round_robin", C8_ROUND_ROBIN_OWNERS)],
+)
+def test_c8_remainder_layout_counts_and_named_owners(strategy, owners):
+    manifest = c8_manifest(strategy)
+
+    assert len(manifest.ranks) == 8
+    assert manifest.group_ranks(0, "ep") == list(range(8))
+    for rank in manifest.ranks:
+        assert rank.pipeline_layer_range == (0, 24)
+        assert sorted(rank.local_expert_ids) == list(range(24))
+        rows = {tuple(ids) for ids in rank.local_expert_ids.values()}
+        assert len(rows) == 1
+        assert len(next(iter(rows))) == C8_COUNTS[rank.global_rank]
+    for global_rank, expected in owners.items():
+        placement = manifest.by_rank(global_rank)
+        assert all(ids == expected for ids in placement.local_expert_ids.values())
+        assert list(declared_local_expert_ids(30, 8, global_rank, strategy)) == expected
+
+
+@pytest.mark.parametrize("strategy", ["linear", "round_robin"])
+def test_c8_every_expert_is_owned_once_per_layer(strategy):
+    manifest = c8_manifest(strategy)
+
+    for layer in range(24):
+        owned = [
+            expert for rank in manifest.ranks for expert in rank.local_expert_ids[layer]
+        ]
+        assert sorted(owned) == list(range(30))
+
+
+@pytest.mark.parametrize("strategy", ["linear", "round_robin"])
+def test_c8_snapshot_carries_720_owner_entries(strategy):
+    manifest = c8_manifest(strategy)
+    ep_ranks = manifest.group_ranks(0, "ep")
+
+    snapshot = ExpertPlacementSnapshot.from_manifest(manifest, ep_ranks)
+    owners = snapshot.owner_map()
+
+    assert len(snapshot.expert_owners) == 24 * 30 == 720
+    assert set(owners) == {(layer, expert) for layer in range(24) for expert in range(30)}
+    assert all(
+        expert in manifest.by_rank(rank).local_expert_ids[layer]
+        for (layer, expert), rank in owners.items()
+    )
+
+
+@pytest.mark.parametrize("strategy", ["linear", "round_robin"])
+def test_remainder_rule_partitions_every_small_expert_count_and_ep_size(strategy):
+    for ep_size in range(1, 10):
+        for num_experts in range(1, 41):
+            base, remainder = divmod(num_experts, ep_size)
+            owned = [
+                declared_local_expert_ids(num_experts, ep_size, ep_rank, strategy)
+                for ep_rank in range(ep_size)
+            ]
+            assert [len(ids) for ids in owned] == [
+                base + 1 if ep_rank < remainder else base for ep_rank in range(ep_size)
+            ]
+            assert sorted(expert for ids in owned for expert in ids) == list(
+                range(num_experts)
+            )
+            assert all(list(ids) == sorted(ids) for ids in owned)
 
 
 # The frozen registration itself
@@ -449,3 +604,32 @@ def test_freeze_agrees_with_the_m5_record_it_reuses():
         for shape, rows in frozen.items()
         for world, makespan in rows.items()
     } == FROZEN_B_MAKESPAN_PS
+
+
+def test_amendment_pins_the_refuted_rule_and_the_c8_literals():
+    amendment = _amendment()
+
+    assert set(amendment) == {"schema", "date", "chronology", "refuted", "c8"}
+    assert amendment["schema"] == "simllm-declared-expert-placement-amendment-v1"
+    assert amendment["date"] == "2026-09-13"
+    assert amendment["chronology"] == (
+        "post-specified to a review finding, frozen before the corrected builder "
+        "and rerun"
+    )
+    assert amendment["refuted"] == ["divisibility refusal"]
+    assert amendment["c8"] == {
+        "tp": 1,
+        "pp": 1,
+        "dp": 8,
+        "num_layers": 24,
+        "moe_layers": "0..23",
+        "num_experts": 30,
+        "counts": C8_COUNTS,
+        "linear": {str(rank): ids for rank, ids in C8_LINEAR_OWNERS.items()},
+        "round_robin": {str(rank): ids for rank, ids in C8_ROUND_ROBIN_OWNERS.items()},
+        "snapshot_owner_entries": 720,
+    }
+    # the original freeze stays in place, including the rule it refutes
+    assert _expectations()["framework"]["expert_count_rule"] == (
+        "num_experts % (DP * TP) == 0"
+    )

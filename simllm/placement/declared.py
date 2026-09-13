@@ -44,18 +44,18 @@ describe the same deployment. File names are given relative to the installed
   major and tensor-parallel minor, and a member's index inside the group is
   ``dp * TP + tp``. vLLM creates this group for MoE models only, which is why
   the manifest gains it only when an expert layout is declared.
-- EP size and the divisibility gate. With expert parallelism in use the fused
-  MoE layer (``model_executor/layers/fused_moe/config.py``) flattens the
-  tensor group across data parallel, so ``ep_size = DP * TP`` and the experts
-  are not tensor sharded at all. The layer refuses an expert count that
-  ``ep_size`` does not divide, so :func:`declared_manifest` refuses it too
-  rather than modeling the unreachable remainder branch of the expert map.
+- EP size. With expert parallelism in use the fused MoE layer
+  (``model_executor/layers/fused_moe/config.py``) flattens the tensor group
+  across data parallel, so ``ep_size = DP * TP`` and the experts are not
+  tensor sharded at all.
 - Expert map. ``model_executor/layers/fused_moe/expert_map_manager.py``
   (``determine_expert_map``) builds the per-rank expert map from the
-  placement strategy: with ``base = num_experts // ep_size``, ``linear``
-  gives EP rank ``r`` the contiguous block ``[r * base, (r + 1) * base)``
-  and ``round_robin`` gives it the strided set
-  ``{r + k * ep_size : 0 <= k < base}``.
+  placement strategy. With ``base = num_experts // ep_size`` and
+  ``remainder = num_experts % ep_size``, EP rank ``r`` owns ``base + 1``
+  experts when ``r < remainder`` and ``base`` otherwise. ``linear`` gives it
+  the contiguous block starting at ``r * base + min(r, remainder)``, and
+  ``round_robin`` gives it every ``ep_size``-th expert from ``r`` upward,
+  ``range(r, num_experts, ep_size)``, which yields the same counts.
 - Pipeline partition. ``distributed/utils.py`` (``get_pp_indices``) splits
   ``L`` hidden layers into ``base = L // PP`` layers per stage and hands the
   ``L mod PP`` remainder to the stages indexed ``-2, -3, ...`` in that order,
@@ -64,6 +64,12 @@ describe the same deployment. File names are given relative to the installed
   ``[sum(partitions[:p]), sum(partitions[:p + 1]))``. The environment override
   ``VLLM_PP_LAYER_PARTITION`` is deliberately not modeled: a declared layout
   states its own partition through ``num_layers`` and ``pp``.
+
+The ``round_robin`` strategy is the caller's declaration. vLLM falls back to
+``linear`` on its own when the model has at most one expert group, has
+redundant experts, enables expert-parallel load balancing, or uses an
+all-to-all backend without round-robin routing tables; that fallback is not
+modeled here, and an extracted manifest records the map that really ran.
 
 Omitting ``experts`` is the explicit off path. It adds no group, no layer
 range and no expert ownership, and every manifest built without it is byte
@@ -106,9 +112,9 @@ class DeclaredExpertLayout:
     so a consumer can join routed traffic to the placement it was routed
     under.
 
-    Field-local rules are checked here. The two rules that depend on the
-    surrounding parallel layout, ``num_layers >= pp`` and ``num_experts %
-    (dp * tp) == 0``, are checked by :func:`declared_manifest`.
+    Field-local rules are checked here. The one rule that depends on the
+    surrounding parallel layout, ``num_layers >= pp``, is checked by
+    :func:`declared_manifest`.
     """
 
     num_layers: int
@@ -185,10 +191,11 @@ def declared_local_expert_ids(
 ) -> tuple[int, ...]:
     """Return the global expert ids one EP rank owns, in ascending order.
 
-    ``linear`` hands out contiguous blocks of ``num_experts // ep_size``
-    experts; ``round_robin`` hands out every ``ep_size``-th expert starting at
-    ``ep_rank``. Both are the pinned vLLM expert map restricted to the
-    divisible case, which is the only case the fused MoE layer accepts.
+    This is the pinned vLLM expert map, remainder included: EP rank ``r``
+    owns ``num_experts // ep_size`` experts, plus one when ``r`` is below
+    ``num_experts % ep_size``. ``linear`` hands out that many contiguous
+    experts starting at ``r * base + min(r, remainder)``; ``round_robin``
+    hands out every ``ep_size``-th expert starting at ``ep_rank``.
     """
 
     _positive_int("num_experts", num_experts, minimum=1)
@@ -196,20 +203,17 @@ def declared_local_expert_ids(
     _positive_int("ep_rank", ep_rank, minimum=0)
     if ep_rank >= ep_size:
         raise ValueError(f"ep_rank must be < ep_size {ep_size}, got {ep_rank}")
-    if num_experts % ep_size:
-        raise ValueError(
-            f"num_experts {num_experts} must be divisible by the "
-            f"expert-parallel size {ep_size}"
-        )
     if strategy not in DECLARED_EXPERT_PLACEMENT_STRATEGIES:
         raise ValueError(
             "placement_strategy must be one of "
             f"{DECLARED_EXPERT_PLACEMENT_STRATEGIES}, got {strategy!r}"
         )
-    base = num_experts // ep_size
+    base, remainder = divmod(num_experts, ep_size)
     if strategy == "linear":
-        return tuple(range(ep_rank * base, (ep_rank + 1) * base))
-    return tuple(ep_rank + step * ep_size for step in range(base))
+        count = base + 1 if ep_rank < remainder else base
+        start = ep_rank * base + min(ep_rank, remainder)
+        return tuple(range(start, start + count))
+    return tuple(range(ep_rank, num_experts, ep_size))
 
 
 def declared_manifest(
@@ -264,11 +268,6 @@ def declared_manifest(
             raise ValueError(
                 f"num_layers must be >= pp {pp} so every stage owns a layer, "
                 f"got {experts.num_layers}"
-            )
-        if experts.num_experts % ep_size:
-            raise ValueError(
-                f"num_experts {experts.num_experts} must be divisible by the "
-                f"expert-parallel size {ep_size} (dp {dp} times tp {tp})"
             )
         stage_intervals = declared_pipeline_partition(experts.num_layers, pp)
         stage_moe_layers = tuple(

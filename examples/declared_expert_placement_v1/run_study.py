@@ -4,9 +4,12 @@ The study answers one question: can `declared_manifest` emit the
 expert-parallel (EP) group, the pipeline layer range and the per-layer expert
 ownership that the pinned vLLM 0.27.1 creates for the same DP x PP x TP
 layout, without changing one byte of a manifest that does not ask for
-experts? Cells C1, C3, C4 and C6 are structural exact guards over the declared
-builder, C5 is a rejection control family, and the five compatibility digests
-are fatal by-construction identities.
+experts? Cells C1, C3, C4, C6 and C8 are structural exact guards over the
+declared builder, C5 is a rejection control family, and the five compatibility
+digests are fatal by-construction identities. Cell C8 and the withdrawal of
+C5's divisibility refusal come from the 2026-09-13 amendment of the freeze:
+thirty experts over eight EP ranks follow the framework's remainder rule and
+are recorded structurally, with no backend.
 
 Cell C2 is the only timed and only scored cell. For each m5 step shape and
 each expert-parallel width W in 2, 4 and 8 it builds a declared manifest,
@@ -40,9 +43,11 @@ from typing import Any
 STUDY_DIR = Path(__file__).resolve().parent
 REPOSITORY_ROOT = STUDY_DIR.parents[1]
 EXPECTATIONS_PATH = STUDY_DIR / "expectations.json"
+AMENDMENT_PATH = STUDY_DIR / "expectations-amendment-2026-09-13.json"
 RESULTS_PATH = STUDY_DIR / "results.json"
 STUDY_NAME = "declared_expert_placement_v1"
 EXPECTATIONS_COMMIT = "821969ae529eed76e56e9058addf1373516a2e1e"
+AMENDMENT_COMMIT = "121098c3c8e0951e2a6b76d1b668baf431b8bf37"
 RESULT_SCHEMA = "simllm-declared-expert-placement-result-v1"
 DATA_ROOT_ENV = "SIMLLM_DATA_ROOT"
 
@@ -68,6 +73,16 @@ C3_LAYOUT = {
 C4_SHAPES = ((48, 2), (61, 4), (61, 8), (30, 4), (5, 2))
 #: Cell C2 expert-parallel widths.
 C2_WORLDS = (2, 4, 8)
+#: Cell C8: the amendment's remainder layout, 24 MoE layers and 30 experts.
+C8_LAYOUT = {
+    "num_layers": 24,
+    "moe_layers": tuple(range(24)),
+    "num_experts": 30,
+}
+#: The frozen C5 control that each refuted claim of the amendment withdraws.
+WITHDRAWN_C5_REFUSALS = {"divisibility refusal": "num_experts 30 at ep_size 8"}
+#: Structural guard cells the amendment adds to the frozen evidence classes.
+AMENDMENT_STRUCTURAL_CELLS = ("c8_remainder_layout",)
 
 
 def _write_json(path: Path, value: object) -> None:
@@ -90,15 +105,19 @@ def _git_output(*args: str) -> str:
 
 
 def _require_expectations_ancestor() -> None:
-    """Refuse to run unless the freeze really precedes this implementation."""
+    """Refuse to run unless the freeze and its amendment precede this code."""
 
-    completed = subprocess.run(
-        ["git", "merge-base", "--is-ancestor", EXPECTATIONS_COMMIT, "HEAD"],
-        cwd=REPOSITORY_ROOT,
-        check=False,
-    )
-    if completed.returncode != 0:
-        raise SystemExit("the PLACE-3 expectations commit is not an ancestor")
+    for label, commit in (
+        ("expectations", EXPECTATIONS_COMMIT),
+        ("amendment", AMENDMENT_COMMIT),
+    ):
+        completed = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", commit, "HEAD"],
+            cwd=REPOSITORY_ROOT,
+            check=False,
+        )
+        if completed.returncode != 0:
+            raise SystemExit(f"the PLACE-3 {label} commit is not an ancestor")
 
 
 def _default_output_root() -> Path | None:
@@ -136,6 +155,16 @@ def _c2_manifest(world: int):
     from simllm.placement import DeclaredExpertLayout, declared_manifest
 
     return declared_manifest(tp=1, dp=world, experts=DeclaredExpertLayout(**C2_LAYOUT))
+
+
+def _c8_manifest(strategy: str = "linear"):
+    from simllm.placement import DeclaredExpertLayout, declared_manifest
+
+    return declared_manifest(
+        tp=1,
+        dp=8,
+        experts=DeclaredExpertLayout(**C8_LAYOUT, placement_strategy=strategy),
+    )
 
 
 def run_c1() -> dict[str, Any]:
@@ -342,7 +371,7 @@ def run_c4() -> dict[str, Any]:
 
 
 def run_c5() -> dict[str, Any]:
-    """Cell C5: every frozen refusal, each raised before a rank is built."""
+    """Cell C5: every frozen refusal still in force, each a ValueError."""
 
     from simllm.placement import DeclaredExpertLayout, declared_manifest
 
@@ -368,14 +397,6 @@ def run_c5() -> dict[str, Any]:
         ),
         "moe layer 48 with 48 layers": refuses(
             lambda: DeclaredExpertLayout(**{**valid, "moe_layers": tuple(range(49))})
-        ),
-        "num_experts 30 at ep_size 8": refuses(
-            lambda: declared_manifest(
-                tp=4,
-                pp=2,
-                dp=2,
-                experts=DeclaredExpertLayout(**{**valid, "num_experts": 30}),
-            )
         ),
         "num_layers 1 with pp 2": refuses(
             lambda: declared_manifest(
@@ -429,6 +450,53 @@ def run_c6(output_root: Path) -> dict[str, Any]:
     return rows
 
 
+def run_c8() -> dict[str, Any]:
+    """Cell C8: the amendment's remainder layout, recorded with no backend."""
+
+    from simllm.traffic.routed_moe import ExpertPlacementSnapshot
+
+    observed: dict[str, Any] = {}
+    for strategy in ("linear", "round_robin"):
+        manifest = _c8_manifest(strategy)
+        ep_ranks = manifest.group_ranks(0, "ep")
+        layers = sorted(manifest.by_rank(ep_ranks[0]).local_expert_ids)
+        snapshot = ExpertPlacementSnapshot.from_manifest(manifest, ep_ranks)
+        owners = snapshot.owner_map()
+        every_pair = {
+            (layer, expert)
+            for layer in layers
+            for expert in range(C8_LAYOUT["num_experts"])
+        }
+        observed[strategy] = {
+            "counts": [
+                len(manifest.by_rank(rank).local_expert_ids[layers[0]])
+                for rank in ep_ranks
+            ],
+            "ep_ranks": list(ep_ranks),
+            "every_pair_owned_once": (
+                len(owners) == len(snapshot.expert_owners) and set(owners) == every_pair
+            ),
+            "moe_layer_count": len(layers),
+            "one_expert_row_per_layer": all(
+                sorted(manifest.by_rank(rank).local_expert_ids) == layers
+                and len(
+                    {
+                        tuple(ids)
+                        for ids in manifest.by_rank(rank).local_expert_ids.values()
+                    }
+                )
+                == 1
+                for rank in ep_ranks
+            ),
+            "owners": {
+                str(rank): list(manifest.by_rank(rank).local_expert_ids[layers[0]])
+                for rank in ep_ranks
+            },
+            "snapshot_owner_entries": len(snapshot.expert_owners),
+        }
+    return observed
+
+
 def run_compatibility_digests(output_root: Path) -> dict[str, Any]:
     """The fatal identity: the option-absent builder output is byte locked."""
 
@@ -454,9 +522,9 @@ def run_compatibility_digests(output_root: Path) -> dict[str, Any]:
 
 
 def analyze_observation(
-    observation: dict[str, Any], frozen: dict[str, Any]
+    observation: dict[str, Any], frozen: dict[str, Any], amendment: dict[str, Any]
 ) -> dict[str, Any]:
-    """Apply every frozen guard, then score only the six C2 oracle rows."""
+    """Apply every frozen and amended guard, then score only the C2 oracle rows."""
 
     findings: list[str] = []
     cells = observation["cells"]
@@ -464,6 +532,8 @@ def analyze_observation(
 
     if observation.get("expectations_commit") != EXPECTATIONS_COMMIT:
         findings.append("expectations commit identity")
+    if observation.get("amendment_commit") != AMENDMENT_COMMIT:
+        findings.append("amendment commit identity")
 
     # C1
     frozen_c1 = frozen_cells["c1_worked_example"]
@@ -549,10 +619,21 @@ def analyze_observation(
         if cells["c4_partitions"].get(key) != expected:
             findings.append(f"c4: partition {key}")
 
-    # C5
-    if sorted(cells["c5_refusals"]) != sorted(frozen_cells["c5_refusals"]):
+    # C5, less the controls the amendment withdraws
+    withdrawn = set()
+    for claim in amendment["refuted"]:
+        if claim in WITHDRAWN_C5_REFUSALS:
+            withdrawn.add(WITHDRAWN_C5_REFUSALS[claim])
+        else:
+            findings.append(f"amendment: refuted claim {claim!r} names no control")
+    if not withdrawn <= set(frozen_cells["c5_refusals"]):
+        findings.append("amendment: a withdrawn control is not a frozen C5 refusal")
+    in_force = [
+        refusal for refusal in frozen_cells["c5_refusals"] if refusal not in withdrawn
+    ]
+    if sorted(cells["c5_refusals"]) != sorted(in_force):
         findings.append("c5: rejection control family membership")
-    for refusal in frozen_cells["c5_refusals"]:
+    for refusal in in_force:
         if cells["c5_refusals"].get(refusal) is not True:
             findings.append(f"c5: {refusal} was not refused")
 
@@ -567,6 +648,26 @@ def analyze_observation(
         ):
             if row.get(guard) is not True:
                 findings.append(f"c6 {label}: {guard}")
+
+    # C8, the amendment's remainder layout
+    frozen_c8 = amendment["c8"]
+    for strategy in ("linear", "round_robin"):
+        observed = cells["c8_remainder_layout"][strategy]
+        if observed["ep_ranks"] != list(range(frozen_c8["tp"] * frozen_c8["dp"])):
+            findings.append(f"c8 {strategy}: EP group")
+        if observed["counts"] != frozen_c8["counts"]:
+            findings.append(f"c8 {strategy}: per-rank expert counts")
+        for rank, expected in frozen_c8[strategy].items():
+            if observed["owners"].get(rank) != expected:
+                findings.append(f"c8 {strategy}: rank {rank} expert ids")
+        if observed["moe_layer_count"] != frozen_c8["num_layers"]:
+            findings.append(f"c8 {strategy}: MoE layer count")
+        if observed["one_expert_row_per_layer"] is not True:
+            findings.append(f"c8 {strategy}: per-layer identity")
+        if observed["every_pair_owned_once"] is not True:
+            findings.append(f"c8 {strategy}: ownership conservation")
+        if observed["snapshot_owner_entries"] != frozen_c8["snapshot_owner_entries"]:
+            findings.append(f"c8 {strategy}: snapshot owner entries")
 
     # The fatal compatibility digests
     frozen_records = frozen["baseline"]["placement_records"]
@@ -583,7 +684,10 @@ def analyze_observation(
             "rejection_controls": len(cells["c5_refusals"]),
             "scored_exact_oracle_rows": scored_rows,
             "scored_exact_oracle_rows_matched": scored_matches,
-            "structural_guard_cells": len(frozen["evidence"]["structural_guard_cells"]),
+            "structural_guard_cells": (
+                len(frozen["evidence"]["structural_guard_cells"])
+                + len(AMENDMENT_STRUCTURAL_CELLS)
+            ),
         },
         "findings": findings,
         "status": "PASS" if not findings else "VOID",
@@ -596,6 +700,7 @@ def run_study(output_root: Path) -> dict[str, Any]:
     from examples.m5.run_m5 import STEP_SHAPES
 
     frozen = json.loads(EXPECTATIONS_PATH.read_text(encoding="utf-8"))
+    amendment = json.loads(AMENDMENT_PATH.read_text(encoding="utf-8"))
     cells = {
         "c1_worked_example": run_c1(),
         "c2_m5_identity": [
@@ -607,11 +712,17 @@ def run_study(output_root: Path) -> dict[str, Any]:
         "c4_partitions": run_c4(),
         "c5_refusals": run_c5(),
         "c6_round_trip": run_c6(output_root),
+        "c8_remainder_layout": run_c8(),
         "compatibility_digests": run_compatibility_digests(output_root),
     }
-    observation = {"cells": cells, "expectations_commit": EXPECTATIONS_COMMIT}
-    analysis = analyze_observation(observation, frozen)
+    observation = {
+        "amendment_commit": AMENDMENT_COMMIT,
+        "cells": cells,
+        "expectations_commit": EXPECTATIONS_COMMIT,
+    }
+    analysis = analyze_observation(observation, frozen, amendment)
     return {
+        "amendment_commit": AMENDMENT_COMMIT,
         "cells": cells,
         "evidence": analysis["evidence"],
         "expectations_commit": EXPECTATIONS_COMMIT,
@@ -674,6 +785,12 @@ def main() -> None:
             f"expected_ps={row['expected_makespan_ps']} "
             f"match={row['makespan_matches_frozen']} "
             f"goal_identical={row['goal_text_byte_identical']}"
+        )
+    for strategy, row in summary["cells"]["c8_remainder_layout"].items():
+        print(
+            f"C8 {strategy} counts={row['counts']} "
+            f"snapshot_owner_entries={row['snapshot_owner_entries']} "
+            f"every_pair_owned_once={row['every_pair_owned_once']}"
         )
 
     if args.check:
