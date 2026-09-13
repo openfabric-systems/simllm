@@ -34,11 +34,11 @@ PLACEMENT_SCHEMA = "simllm-placement-manifest-v1"
 
 #: Fabric topology manifest: the physical graph under the ranks (nodes, GPUs,
 #: PCIe/NVLink links, NICs, GPU-to-NIC affinity, switches, links, bandwidths,
-#: delays, queue configuration). Intra-node structure can come from NCCL's
-#: detected topology (NCCL_TOPO_DUMP_FILE); the switch-level graph always
-#: comes from a cluster inventory or the simulator topology config. Concrete
-#: contents land with the M4 mapper work (PLACE-1); the schema name is pinned
-#: here so every producer and consumer agrees early.
+#: delays, queue configuration). Intra-node structure comes from a declared
+#: builder or from NCCL's detected topology (NCCL_TOPO_DUMP_FILE, read by
+#: simllm.placement.nccl_topology); the switch-level graph comes from a cluster
+#: inventory or the simulator topology config. The schema name is pinned here
+#: so every producer and consumer agrees.
 FABRIC_SCHEMA = "simllm-fabric-topology-v1"
 
 
