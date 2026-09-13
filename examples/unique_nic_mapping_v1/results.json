@@ -1,0 +1,570 @@
+{
+  "amendment_commit": "2e56b337c0a6c041769b7916efdafa62a23f0050",
+  "evidence": {
+    "fatal_guards": {
+      "compatibility_digests_checked": 7,
+      "m5_makespans_checked": 6,
+      "violations": {
+        "compatibility_digests": [],
+        "m5_makespans": [],
+        "projection_joins": [],
+        "u3_invariants": [],
+        "u5_round_trip": []
+      }
+    },
+    "rejection_controls": {
+      "refused": 10,
+      "total": 10
+    },
+    "scored_identity_families": {
+      "families": {
+        "u1_identity": true,
+        "u2_permutation": true
+      },
+      "held": 2,
+      "total": 2
+    },
+    "scored_relation_instances": {
+      "held": 12,
+      "instances": [
+        {
+          "expected_ps": 12485760,
+          "gpus_per_nic": 1,
+          "holds": true,
+          "payload_bytes": 65536,
+          "quantity": "fct"
+        },
+        {
+          "expected_ps": 12485760,
+          "gpus_per_nic": 1,
+          "holds": true,
+          "payload_bytes": 65536,
+          "quantity": "makespan"
+        },
+        {
+          "expected_ps": 22971520,
+          "gpus_per_nic": 2,
+          "holds": true,
+          "payload_bytes": 65536,
+          "quantity": "fct"
+        },
+        {
+          "expected_ps": 22971520,
+          "gpus_per_nic": 2,
+          "holds": true,
+          "payload_bytes": 65536,
+          "quantity": "makespan"
+        },
+        {
+          "expected_ps": 43943040,
+          "gpus_per_nic": 4,
+          "holds": true,
+          "payload_bytes": 65536,
+          "quantity": "fct"
+        },
+        {
+          "expected_ps": 43943040,
+          "gpus_per_nic": 4,
+          "holds": true,
+          "payload_bytes": 65536,
+          "quantity": "makespan"
+        },
+        {
+          "expected_ps": 169772160,
+          "gpus_per_nic": 1,
+          "holds": true,
+          "payload_bytes": 1048576,
+          "quantity": "fct"
+        },
+        {
+          "expected_ps": 169772160,
+          "gpus_per_nic": 1,
+          "holds": true,
+          "payload_bytes": 1048576,
+          "quantity": "makespan"
+        },
+        {
+          "expected_ps": 337544320,
+          "gpus_per_nic": 2,
+          "holds": true,
+          "payload_bytes": 1048576,
+          "quantity": "fct"
+        },
+        {
+          "expected_ps": 337544320,
+          "gpus_per_nic": 2,
+          "holds": true,
+          "payload_bytes": 1048576,
+          "quantity": "makespan"
+        },
+        {
+          "expected_ps": 673088640,
+          "gpus_per_nic": 4,
+          "holds": true,
+          "payload_bytes": 1048576,
+          "quantity": "fct"
+        },
+        {
+          "expected_ps": 673088640,
+          "gpus_per_nic": 4,
+          "holds": true,
+          "payload_bytes": 1048576,
+          "quantity": "makespan"
+        }
+      ],
+      "total": 12
+    },
+    "structural_guards": [
+      "projection_joins",
+      "u3_invariants",
+      "u5_round_trip"
+    ]
+  },
+  "expectations_commit": "d348c3261851dc4b33be94e65749072effbf87cd",
+  "findings": [],
+  "harness_sha256": "05ed3b168e4297fea935f12847edaa63b8ad2f05855f6968b516bc85821ad63b",
+  "implementation_commit": "2fb5ff7584d22007b293fddf1af0fb4e2ca992af",
+  "observation": {
+    "u1": {
+      "goal_rank_identity": true,
+      "nic_count": 16,
+      "rank_count": 16,
+      "shapes": {
+        "decode8x2048": {
+          "completion_files_identical": true,
+          "goal_artifacts": 48,
+          "goal_text_identical": true,
+          "gpu_rank_backend_rows": 384,
+          "gpu_rank_keys_unique": true,
+          "joined_endpoints_identity": true,
+          "joined_rows": 384,
+          "joined_times_identical": true,
+          "makespan_ps": 374602560,
+          "num_flows": 384,
+          "outcomes_identical": true,
+          "step_result_identical": true,
+          "tag_multiplier": 1
+        },
+        "prefill2048": {
+          "completion_files_identical": true,
+          "goal_artifacts": 48,
+          "goal_text_identical": true,
+          "gpu_rank_backend_rows": 384,
+          "gpu_rank_keys_unique": true,
+          "joined_endpoints_identity": true,
+          "joined_rows": 384,
+          "joined_times_identical": true,
+          "makespan_ps": 17592951360,
+          "num_flows": 384,
+          "outcomes_identical": true,
+          "step_result_identical": true,
+          "tag_multiplier": 1
+        }
+      }
+    },
+    "u2": {
+      "goal_rank_formula_holds": true,
+      "shapes": {
+        "decode8x2048": {
+          "goal_artifacts": 48,
+          "goal_names_identical": true,
+          "goal_text_differs": true,
+          "goal_text_differs_only_in_rank_numbers": true,
+          "gpu_rank_backend_rows": 192,
+          "gpu_rank_keys_unique": true,
+          "joined_endpoints_permuted": true,
+          "joined_rows": 192,
+          "joined_times_identical": true,
+          "makespan_ps": 401578560,
+          "num_flows": 192,
+          "outcomes_identical": true,
+          "step_result_identical": true
+        },
+        "prefill2048": {
+          "goal_artifacts": 48,
+          "goal_names_identical": true,
+          "goal_text_differs": true,
+          "goal_text_differs_only_in_rank_numbers": true,
+          "gpu_rank_backend_rows": 192,
+          "gpu_rank_keys_unique": true,
+          "joined_endpoints_permuted": true,
+          "joined_rows": 192,
+          "joined_times_identical": true,
+          "makespan_ps": 17592951360,
+          "num_flows": 192,
+          "outcomes_identical": true,
+          "step_result_identical": true
+        }
+      }
+    },
+    "u3": {
+      "cases": {
+        "s1048576-gpu-rank-g1": {
+          "backend_rows": 128,
+          "completion_rows_sha256": "b214d7a70a63ec89e54166a5b6b0c068a1d9d140e77ed493ef6e9feeb84278b1",
+          "fabric_bytes": 134217728,
+          "fabric_messages": 128,
+          "flow_fct_ps": [
+            169772160
+          ],
+          "flow_start_ps": [
+            0
+          ],
+          "flows_per_endpoint_egress": [
+            8
+          ],
+          "flows_per_endpoint_ingress": [
+            8
+          ],
+          "goal_ranks": 16,
+          "goal_sha256": "1873f26a3b5cfdf6c95f5dbae430fbb054ca1e0103dd9ab6746edff482eb9a6c",
+          "gpus_per_nic": 1,
+          "joined_rows": 128,
+          "keys_unique_per_endpoint_pair": true,
+          "makespan_ps": 169772160,
+          "mode": "gpu-rank",
+          "nvlink_bytes": 117440512,
+          "payload_bytes": 1048576,
+          "quiescent": true,
+          "tag_multiplier": 1
+        },
+        "s1048576-unique-nic-g1": {
+          "backend_rows": 128,
+          "completion_rows_sha256": "b214d7a70a63ec89e54166a5b6b0c068a1d9d140e77ed493ef6e9feeb84278b1",
+          "fabric_bytes": 134217728,
+          "fabric_messages": 128,
+          "flow_fct_ps": [
+            169772160
+          ],
+          "flow_start_ps": [
+            0
+          ],
+          "flows_per_endpoint_egress": [
+            8
+          ],
+          "flows_per_endpoint_ingress": [
+            8
+          ],
+          "goal_ranks": 16,
+          "goal_sha256": "1873f26a3b5cfdf6c95f5dbae430fbb054ca1e0103dd9ab6746edff482eb9a6c",
+          "gpus_per_nic": 1,
+          "joined_rows": 128,
+          "keys_unique_per_endpoint_pair": true,
+          "makespan_ps": 169772160,
+          "mode": "unique-nic",
+          "nvlink_bytes": 117440512,
+          "payload_bytes": 1048576,
+          "quiescent": true,
+          "tag_multiplier": 1
+        },
+        "s1048576-unique-nic-g2": {
+          "backend_rows": 128,
+          "completion_rows_sha256": "cca8930ac47586f928b36455dd42980fad6e02be23e456282440b827145b9871",
+          "fabric_bytes": 134217728,
+          "fabric_messages": 128,
+          "flow_fct_ps": [
+            337544320
+          ],
+          "flow_start_ps": [
+            0
+          ],
+          "flows_per_endpoint_egress": [
+            16
+          ],
+          "flows_per_endpoint_ingress": [
+            16
+          ],
+          "goal_ranks": 8,
+          "goal_sha256": "afa615a010b01a0456c021695d0d0b13d0c5254977c8a0d5fc539f41f2537147",
+          "gpus_per_nic": 2,
+          "joined_rows": 128,
+          "keys_unique_per_endpoint_pair": true,
+          "makespan_ps": 337544320,
+          "mode": "unique-nic",
+          "nvlink_bytes": 117440512,
+          "payload_bytes": 1048576,
+          "quiescent": true,
+          "tag_multiplier": 4
+        },
+        "s1048576-unique-nic-g4": {
+          "backend_rows": 128,
+          "completion_rows_sha256": "f6fafd599ae4ee792e194b6b2ce949c96e5d50f6b86c6c6677bd5c462fa82227",
+          "fabric_bytes": 134217728,
+          "fabric_messages": 128,
+          "flow_fct_ps": [
+            673088640
+          ],
+          "flow_start_ps": [
+            0
+          ],
+          "flows_per_endpoint_egress": [
+            32
+          ],
+          "flows_per_endpoint_ingress": [
+            32
+          ],
+          "goal_ranks": 4,
+          "goal_sha256": "fce4ba658381eb5a112376f2bdf186095735e30d7156f47d11d119f45b6d7bab",
+          "gpus_per_nic": 4,
+          "joined_rows": 128,
+          "keys_unique_per_endpoint_pair": true,
+          "makespan_ps": 673088640,
+          "mode": "unique-nic",
+          "nvlink_bytes": 117440512,
+          "payload_bytes": 1048576,
+          "quiescent": true,
+          "tag_multiplier": 16
+        },
+        "s65536-gpu-rank-g1": {
+          "backend_rows": 128,
+          "completion_rows_sha256": "271fbf87d45e21cf9b919659d05cebd0c3ba4ab4cb9dadfd764878858401b4db",
+          "fabric_bytes": 8388608,
+          "fabric_messages": 128,
+          "flow_fct_ps": [
+            12485760
+          ],
+          "flow_start_ps": [
+            0
+          ],
+          "flows_per_endpoint_egress": [
+            8
+          ],
+          "flows_per_endpoint_ingress": [
+            8
+          ],
+          "goal_ranks": 16,
+          "goal_sha256": "b3094780977a4600c6a9ab5eb8429ef58f7872a825d2a3de9c89567260d203cb",
+          "gpus_per_nic": 1,
+          "joined_rows": 128,
+          "keys_unique_per_endpoint_pair": true,
+          "makespan_ps": 12485760,
+          "mode": "gpu-rank",
+          "nvlink_bytes": 7340032,
+          "payload_bytes": 65536,
+          "quiescent": true,
+          "tag_multiplier": 1
+        },
+        "s65536-unique-nic-g1": {
+          "backend_rows": 128,
+          "completion_rows_sha256": "271fbf87d45e21cf9b919659d05cebd0c3ba4ab4cb9dadfd764878858401b4db",
+          "fabric_bytes": 8388608,
+          "fabric_messages": 128,
+          "flow_fct_ps": [
+            12485760
+          ],
+          "flow_start_ps": [
+            0
+          ],
+          "flows_per_endpoint_egress": [
+            8
+          ],
+          "flows_per_endpoint_ingress": [
+            8
+          ],
+          "goal_ranks": 16,
+          "goal_sha256": "b3094780977a4600c6a9ab5eb8429ef58f7872a825d2a3de9c89567260d203cb",
+          "gpus_per_nic": 1,
+          "joined_rows": 128,
+          "keys_unique_per_endpoint_pair": true,
+          "makespan_ps": 12485760,
+          "mode": "unique-nic",
+          "nvlink_bytes": 7340032,
+          "payload_bytes": 65536,
+          "quiescent": true,
+          "tag_multiplier": 1
+        },
+        "s65536-unique-nic-g2": {
+          "backend_rows": 128,
+          "completion_rows_sha256": "d2e0d7d6ab005c08d01f0a2227a6dddc6f7a3983813e48d0b10549bce3ae9c4a",
+          "fabric_bytes": 8388608,
+          "fabric_messages": 128,
+          "flow_fct_ps": [
+            22971520
+          ],
+          "flow_start_ps": [
+            0
+          ],
+          "flows_per_endpoint_egress": [
+            16
+          ],
+          "flows_per_endpoint_ingress": [
+            16
+          ],
+          "goal_ranks": 8,
+          "goal_sha256": "61aa71016eab02e3a2b23e771a77981375548a8df1a67b09132afbf427605a14",
+          "gpus_per_nic": 2,
+          "joined_rows": 128,
+          "keys_unique_per_endpoint_pair": true,
+          "makespan_ps": 22971520,
+          "mode": "unique-nic",
+          "nvlink_bytes": 7340032,
+          "payload_bytes": 65536,
+          "quiescent": true,
+          "tag_multiplier": 4
+        },
+        "s65536-unique-nic-g4": {
+          "backend_rows": 128,
+          "completion_rows_sha256": "e342395a761ceae61c353538ffbf80b6ddd718a9bbad849d1533e5a42b38bdad",
+          "fabric_bytes": 8388608,
+          "fabric_messages": 128,
+          "flow_fct_ps": [
+            43943040
+          ],
+          "flow_start_ps": [
+            0
+          ],
+          "flows_per_endpoint_egress": [
+            32
+          ],
+          "flows_per_endpoint_ingress": [
+            32
+          ],
+          "goal_ranks": 4,
+          "goal_sha256": "aded6706fcf053e64c4fde3bae8e2f82896756dc981bb0ac24377e86cbd24c6d",
+          "gpus_per_nic": 4,
+          "joined_rows": 128,
+          "keys_unique_per_endpoint_pair": true,
+          "makespan_ps": 43943040,
+          "mode": "unique-nic",
+          "nvlink_bytes": 7340032,
+          "payload_bytes": 65536,
+          "quiescent": true,
+          "tag_multiplier": 16
+        }
+      }
+    },
+    "u4": {
+      "refusals": [
+        {
+          "diagnostic": "ValueError: goal_rank_mapping='unique-nic' requires fabric_manifest",
+          "label": "unique-nic without fabric",
+          "refused": true,
+          "workdir_absent": true
+        },
+        {
+          "diagnostic": "ValueError: fabric GPU 0 names no NIC in the fabric",
+          "label": "fabric missing a NIC for one GPU",
+          "refused": true,
+          "workdir_absent": true
+        },
+        {
+          "diagnostic": "ValueError: fabric GPU set must equal the placement rank set",
+          "label": "fabric GPU set differs from placement",
+          "refused": true,
+          "workdir_absent": true
+        },
+        {
+          "diagnostic": "ValueError: gpus_per_nic=3 does not divide the width 8 of node 'node-0'",
+          "label": "gpus_per_nic does not divide node width",
+          "refused": true,
+          "workdir_absent": true
+        },
+        {
+          "diagnostic": "ValueError: goal_rank_mapping='unique-nic' with peer_packet is not modeled; a shared NIC endpoint through the peer_packet seam remains PLACE-10",
+          "label": "unique-nic with peer_packet",
+          "refused": true,
+          "workdir_absent": true
+        },
+        {
+          "diagnostic": "ValueError: goal_rank_mapping='unique-nic' with topology is not modeled; a shared NIC endpoint through the topology seam remains PLACE-10",
+          "label": "unique-nic with topology file",
+          "refused": true,
+          "workdir_absent": true
+        },
+        {
+          "diagnostic": "ValueError: goal_rank_mapping='unique-nic' with flow_session is not modeled; a shared NIC endpoint through the flow_session seam remains PLACE-10",
+          "label": "unique-nic with flow_session",
+          "refused": true,
+          "workdir_absent": true
+        },
+        {
+          "diagnostic": "ValueError: goal_rank_mapping='unique-nic' with dependency_cross_check is not modeled; a shared NIC endpoint through the dependency_cross_check seam remains PLACE-10",
+          "label": "unique-nic with dependency_cross_check",
+          "refused": true,
+          "workdir_absent": true
+        },
+        {
+          "diagnostic": "ValueError: num_goal_ranks=7 is below the fabric NIC count 8",
+          "label": "num_goal_ranks below NIC count",
+          "refused": true,
+          "workdir_absent": true
+        },
+        {
+          "diagnostic": "ValueError: fabric GOAL projection contains duplicate key (0, 4, 1000)",
+          "label": "duplicate projection key",
+          "refused": true,
+          "workdir_absent": true
+        }
+      ]
+    },
+    "u5": {
+      "digests": {
+        "fabric_one_plus_one": {
+          "bytes": 21379,
+          "sha256": "36527abf437eb875ce8db097b301bd1c25789f98fd38271378d65f6416361367"
+        },
+        "fabric_one_plus_one_disabled": {
+          "bytes": 8204,
+          "sha256": "f3950a9593817adbba344fa1d91a752b5d44a0d066b0f29163a5add448b84841"
+        },
+        "m4_tp8": {
+          "bytes": 5698,
+          "sha256": "3812aef241d93f2af8d86da0f6bbb606dae9c43c768ceb3efb8d649dc3bacfd6"
+        },
+        "m5_tp1_dp8": {
+          "bytes": 5698,
+          "sha256": "0894fae1687217d88466b5692034a8d1863fb8c658afdfde2c317d1c412f60a5"
+        },
+        "rail_pp8": {
+          "bytes": 52310,
+          "sha256": "8d38cf4b6990bfd75fc90dcfe994180c3c1150adce297b6f71983fd8c9c877db"
+        },
+        "width_tp64": {
+          "bytes": 102050,
+          "sha256": "bed8d26c72feaf117f48b651ec18b4fb0caf39df2e47866a550f74252972aecd"
+        },
+        "worked_example_tp4_pp2_dp2": {
+          "bytes": 10832,
+          "sha256": "2e46eadcaccd83de1778ea98c368585b452b83067489b9a2df064e25a14d857e"
+        }
+      },
+      "m5_makespans_ps": {
+        "decode8x2048": {
+          "2": 563362560,
+          "4": 486963888,
+          "8": 448764528
+        },
+        "prefill2048": {
+          "2": 17592951360,
+          "4": 25646015088,
+          "8": 29672546928
+        }
+      },
+      "other_spelling_refused": true,
+      "round_trips": {
+        "gpu-rank-g1": {
+          "byte_identical": true,
+          "equal": true,
+          "goal_rank_mapping": "gpu-rank"
+        },
+        "unique-nic-g1": {
+          "byte_identical": true,
+          "equal": true,
+          "goal_rank_mapping": "unique-nic"
+        },
+        "unique-nic-g2": {
+          "byte_identical": true,
+          "equal": true,
+          "goal_rank_mapping": "unique-nic"
+        },
+        "unique-nic-g4": {
+          "byte_identical": true,
+          "equal": true,
+          "goal_rank_mapping": "unique-nic"
+        }
+      }
+    }
+  },
+  "schema": "simllm-unique-nic-mapping-result-v1",
+  "status": "PASS"
+}
