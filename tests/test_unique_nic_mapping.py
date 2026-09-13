@@ -597,3 +597,117 @@ def test_default_path_keeps_unjoined_rows_and_unique_nic_refuses_them(tmp_path, 
     nic = _sink(tmp_path, "nic", placement, world=16, fabric=fabric)
     with pytest.raises(ValueError, match="joins no fabric segment"):
         nic(_decode_record())
+
+
+#: Default-mapping GOAL digests as ``(artifact count, SHA-256)``. They were
+#: computed on a pristine checkout of commit 26704c1c, before PLACE-2, by the
+#: same rendering code as ``_default_goal_digest``; the branch reproduces them.
+PRE_CHANGE_GOAL_DIGESTS = {
+    "m5_decode8x2048_ep8_sink": (
+        48,
+        "db9e2c5732be9fad58d93469c45a8c61a9987c2b58f4cc236112cd71d2392053",
+    ),
+    "m5_prefill2048_ep8_sink": (
+        48,
+        "7fe0a81cd445ba5bf8df4077680c5698d1a198e7f337c7d0c0674b3df92d27cf",
+    ),
+    "tp16_two_node_ring_fabric_phases": (
+        120,
+        "552e72d2db3d83a11d968a1fd316249bc4239fef9b053f3daf1892ac016ad4bc",
+    ),
+    "u3_all_pairs_gpu_rank": (
+        1,
+        "b3094780977a4600c6a9ab5eb8429ef58f7872a825d2a3de9c89567260d203cb",
+    ),
+}
+
+
+def _prefill_record() -> StepRecord:
+    return StepRecord(
+        step_index=0,
+        virtual_time_ps=0,
+        scheduled=[
+            ScheduledRequest(
+                "p0",
+                RequestPhase.PREFILL,
+                num_new_tokens=2048,
+                context_length=2048,
+            )
+        ],
+    )
+
+
+def _dense_dims() -> ModelDims:
+    return ModelDims(
+        num_layers=2,
+        hidden_size=1024,
+        intermediate_size=4096,
+        num_heads=16,
+        num_kv_heads=8,
+        head_size=64,
+        vocab_size=49152,
+        dtype_bytes=2,
+    )
+
+
+def _digest_named_payloads(items) -> str:
+    digest = hashlib.sha256()
+    for name, payload in items:
+        digest.update(
+            name.encode() + b"\n" + hashlib.sha256(payload).hexdigest().encode() + b"\n"
+        )
+    return digest.hexdigest()
+
+
+def _default_goal_digest(name: str, tmp_path, monkeypatch) -> tuple[int, str]:
+    if name.startswith("m5_"):
+        _fake_fluid_backend(monkeypatch)
+        workdir = tmp_path / name
+        sink = HtsimStepSink(
+            HtsimStepSinkConfig(
+                profile="rnic-nn-fluid",
+                tp_ranks=(0,),
+                dims=_moe_dims(8, layers=24),
+                workdir=workdir,
+                ep_ranks=tuple(range(8)),
+                linkspeed_bps=400_000_000_000,
+            )
+        )
+        sink(_decode_record() if "decode" in name else _prefill_record())
+        files = sorted(workdir.glob("*.goal"))
+        return len(files), _digest_named_payloads(
+            (path.name, path.read_bytes()) for path in files
+        )
+    if name == "tp16_two_node_ring_fabric_phases":
+        mapper = RankMapper(declared_manifest(tp=16))
+        phases = step_communication_phases(
+            _decode_record(), _dense_dims(), tuple(range(16))
+        )
+        plan = classify_step_locality(phases, rank_mapper=mapper)
+        rendered = [
+            (
+                phase.phase.phase_id,
+                render_fabric_phase_goal(phase, rank_mapper=mapper).render().encode(),
+            )
+            for phase in plan.phases
+            if phase.fabric_segments
+        ]
+        return len(rendered), _digest_named_payloads(rendered)
+    mapper = RankMapper(declared_manifest(tp=1, dp=16))
+    plan = classify_step_locality((_all_pairs_phase(65_536),), rank_mapper=mapper)
+    payload = render_fabric_phase_goal(plan.phases[0], rank_mapper=mapper).render()
+    return 1, hashlib.sha256(payload.encode()).hexdigest()
+
+
+@pytest.mark.parametrize("name", sorted(PRE_CHANGE_GOAL_DIGESTS))
+def test_default_mapping_goal_text_matches_commit_26704c1c(name, tmp_path, monkeypatch):
+    """Default gpu-rank GOAL text reproduces digests pinned at commit 26704c1c.
+
+    The digests come from a pristine checkout of commit 26704c1c, the parent of
+    PLACE-2, rendered by this same code: the m5 decode and prefill steps at EP
+    width 8 through ``HtsimStepSink``, a 16-rank tensor-parallel ring on two
+    nodes through ``render_fabric_phase_goal``, and the U3 all-pairs phase. A
+    later change to the default path fails loudly here.
+    """
+
+    assert _default_goal_digest(name, tmp_path, monkeypatch) == PRE_CHANGE_GOAL_DIGESTS[name]
