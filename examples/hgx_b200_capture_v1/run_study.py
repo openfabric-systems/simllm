@@ -90,6 +90,12 @@ KINDS = ("tp", "ep-balanced", "ep-skewed")
 B200_LANE_PAYLOAD_BYTES_PER_SECOND = 50_000_000_000
 B200_GPU_CEILING_BYTES_PER_SECOND = 18 * B200_LANE_PAYLOAD_BYTES_PER_SECOND
 
+#: G4 relations recorded but never scored. At equal lane rate the switch model has
+#: no per-chip capacity term, so b200 can only equal h100 on these cells; the
+#: relation cannot fail and is disclosed as a structural observation
+#: (post-specified after review, the frozen registry itself is unchanged).
+UNSCORED_G4_RELATIONS = ("b200_at_or_above_h100_fan_in_and_live",)
+
 #: PCI ID database facts the G3 inventory cross-check compares against.
 BOARD_IDS = ["0x5100", "0x5200", "0x6200", "0x6300", "0x7500", "0x7600", "0x8600", "0x8700"]
 PART_NUMBER = "692-2G525-0220-500"
@@ -753,7 +759,7 @@ def analyze(cells: dict[str, Any], frozen: dict[str, Any], amendment: dict[str, 
             {row["rate"] for row in g4["live"]}) != expected_g4["rates_bytes_per_second"]:
         fatal.append("g4: live grid")
     for relation in expected_g4["relations"]:
-        if g4["relations"][relation]["held"] is not True:
+        if relation not in UNSCORED_G4_RELATIONS and g4["relations"][relation]["held"] is not True:
             scored.append(f"g4: relation {relation}")
 
     g5 = cells["g5_refusals"]
@@ -786,8 +792,17 @@ def analyze(cells: dict[str, Any], frozen: dict[str, Any], amendment: dict[str, 
         "evidence": {
             "behavioral_relation_families": {
                 name: {"held": relations[name]["held"]}
-                for name in ("rate_pair_changes_completion", "b200_equals_h100_isolated_pair",
-                             "b200_at_or_above_h100_fan_in_and_live")
+                for name in ("rate_pair_changes_completion", "b200_equals_h100_isolated_pair")
+            },
+            "structural_observations": {
+                name: {
+                    "equal_cells": relations[name]["fan_in_cells"] + relations[name]["live_cells"]
+                    - len(relations[name]["strict_cells"]),
+                    "held": relations[name]["held"],
+                    "scored": False,
+                    "strict_cells": len(relations[name]["strict_cells"]),
+                }
+                for name in UNSCORED_G4_RELATIONS
             },
             "exact_oracle_family": {
                 "held": relations["python_native_exact"]["held"],
