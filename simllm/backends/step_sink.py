@@ -1287,6 +1287,15 @@ class _SimulatedStep:
     bottleneck_report: object = None
     session_evidence: SessionStepEvidence | None = None
     peer_evidence: PeerStepEvidence | None = None
+
+
+@dataclass(frozen=True)
+class _UniqueNicSimulatedStep(_SimulatedStep):
+    """A unique-nic step result that also carries its joined completion rows.
+
+    A separate type keeps the default step result's fields exactly as before.
+    """
+
     fabric_join_outcome: StepFabricJoinOutcome | None = None
 
 
@@ -1302,7 +1311,7 @@ _DEFERRED_PUBLICATIONS = (
     "outcomes", "locality_outcomes", "collective_timing_outcomes",
     "collective_floor_timing_outcomes", "dependency_cross_check_reports",
     "collective_registration_outcomes", "packet_breakdowns", "bottleneck_reports",
-    "session_evidence", "peer_evidence", "fabric_join_outcomes",
+    "session_evidence", "peer_evidence",
 )
 
 
@@ -2498,7 +2507,7 @@ class HtsimStepSink:
                 ))
             bottleneck_report = BottleneckReport(plan.step_index, combine(*rankings))
             bottleneck_report.validate_result(result)
-        return _SimulatedStep(
+        simulated = _SimulatedStep(
             result=result,
             outcome=outcome,
             locality_outcome=locality_outcome,
@@ -2510,18 +2519,19 @@ class HtsimStepSink:
             bottleneck_report=bottleneck_report,
             session_evidence=session_evidence,
             peer_evidence=peer_evidence,
-            fabric_join_outcome=(
-                None
-                if plan.goal_rank_mapping == "gpu-rank"
-                else StepFabricJoinOutcome(
-                    step_index=plan.step_index,
-                    goal_rank_mapping=plan.goal_rank_mapping,
-                    tag_multiplier=(
-                        1 if plan.fabric_projection is None
-                        else plan.fabric_projection.tag_multiplier
-                    ),
-                    segments=tuple(joined_segments),
-                )
+        )
+        if plan.goal_rank_mapping == "gpu-rank":
+            return simulated
+        return _UniqueNicSimulatedStep(
+            **{item.name: getattr(simulated, item.name) for item in fields(_SimulatedStep)},
+            fabric_join_outcome=StepFabricJoinOutcome(
+                step_index=plan.step_index,
+                goal_rank_mapping=plan.goal_rank_mapping,
+                tag_multiplier=(
+                    1 if plan.fabric_projection is None
+                    else plan.fabric_projection.tag_multiplier
+                ),
+                segments=tuple(joined_segments),
             ),
         )
 
@@ -2644,8 +2654,9 @@ class HtsimStepSink:
             self.outcomes.append(simulation.outcome)
         if simulation.locality_outcome is not None:
             self.locality_outcomes.append(simulation.locality_outcome)
-        if simulation.fabric_join_outcome is not None:
-            self.fabric_join_outcomes.append(simulation.fabric_join_outcome)
+        fabric_join_outcome = getattr(simulation, "fabric_join_outcome", None)
+        if fabric_join_outcome is not None:
+            self.fabric_join_outcomes.append(fabric_join_outcome)
         if simulation.collective_timing_outcome is not None:
             self.collective_timing_outcomes.append(
                 simulation.collective_timing_outcome
@@ -2674,6 +2685,7 @@ class HtsimStepSink:
                 or cfg.placement_manifest is None or self._rank_mapper is None
                 or len(set(self._rank_mapper._host_by_rank.values())) != 1
                 or cfg.flow_session is not None or cfg.peer_packet is not None
+                or cfg.goal_rank_mapping != "gpu-rank"
                 or self._peer_runtime is not None or self._request_metric_reducer is not None
                 or cfg.resolved_collective_registration is not None
                 or cfg.collective_floor_calibration is not None or cfg.dependency_cross_check is not None

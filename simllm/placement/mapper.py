@@ -29,6 +29,13 @@ GOAL_RANK_MAPPINGS = ("gpu-rank", "unique-nic")
 
 
 class RankMapper:
+    #: fabric-backed state; a mapper built without a fabric keeps these class
+    #: defaults, so its instance state is exactly the placement-only state
+    fabric: FabricTopologyManifest | None = None
+    _nic_by_rank: dict[int, str] | None = None
+    _goal_rank_by_rank: dict[int, int] | None = None
+    _nic_count = 0
+
     def __init__(
         self,
         placement: PlacementManifest,
@@ -53,7 +60,6 @@ class RankMapper:
                 )
         self.placement = placement
         self.mode = mode
-        self.fabric = fabric
         host_by_rank: dict[int, str] = {}
         local_ranks: set[tuple[str, int]] = set()
         for index, rank in enumerate(placement.ranks):
@@ -84,10 +90,8 @@ class RankMapper:
         # manifest must construct a new mapper rather than changing an active
         # sink's physical authority underneath it.
         self._host_by_rank = host_by_rank
-        self._goal_rank_by_rank = {rank: rank for rank in host_by_rank}
-        self._nic_by_rank: dict[int, str] = {}
-        self._nic_count = 0
         if fabric is not None:
+            self.fabric = fabric
             self._join_fabric(fabric)
 
     def _join_fabric(self, fabric: FabricTopologyManifest) -> None:
@@ -148,8 +152,10 @@ class RankMapper:
         The identity under ``gpu-rank``; under ``unique-nic``, the index of the
         rank's NIC in fabric order (node order, then NIC order within a node).
         """
-        if global_rank not in self._goal_rank_by_rank:
+        if global_rank not in self._host_by_rank:
             raise KeyError(f"global rank {global_rank} not in manifest")
+        if self._goal_rank_by_rank is None:
+            return global_rank
         return self._goal_rank_by_rank[global_rank]
 
     def num_goal_ranks(self) -> int:
@@ -160,7 +166,7 @@ class RankMapper:
 
     def nic_of(self, global_rank: int) -> str:
         """The affine ``nic_id`` of a global rank, read from the fabric manifest."""
-        if self.fabric is None:
+        if self.fabric is None or self._nic_by_rank is None:
             raise ValueError("nic_of requires a fabric topology manifest")
         if global_rank not in self._nic_by_rank:
             raise KeyError(f"global rank {global_rank} not in manifest")
