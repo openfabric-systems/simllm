@@ -42,9 +42,19 @@ both.
   Port identities are stable logical attachments and lane-matched routing is
   declared. The [DGX study](../../examples/dgx_nvlink_v1/RESULTS.md) exercises
   both through packet service and request latency.
+- `NcclTopologyDump.load(path)` and `captured_fabric_node(dump, node_id=...,
+  pool_role=..., global_rank_by_gpu_dev=..., nvlink_propagation_delay_ps=...)`:
+  the strict reader for NCCL's `NCCL_TOPO_DUMP_FILE` system dump (version 1)
+  and the join of one captured node into the existing schemas: a
+  `FabricNodePlacement` whose GPUs each take the one NIC under their own NUMA
+  node, and a direct-mesh `PeerFabric` wired with the bonded NVLink count the
+  dump states. Reading is fail closed; a NUMA node with zero or several NICs,
+  a shared NIC or a partial mesh is refused rather than approximated. The
+  [capture study](../../examples/nccl_topology_capture_v1/RESULTS.md) proves
+  a captured four-A100 node substitutes exactly for its literal twin.
 - `RankMapper`: rank to GOAL-rank assignment mirroring the htsim drivers'
-  `-goal_rank_mapping` (`gpu-rank` implemented; `unique-nic` needs the
-  fabric manifest), plus `is_intra_node`. Construction validates and snapshots
+  `-goal_rank_mapping` (`gpu-rank` implemented; `unique-nic` is refused by
+  the mapper and by the fabric validator, PLACE-2), plus `is_intra_node`. Construction validates and snapshots
   a unique global-rank-to-host projection with nonblank hostnames and unique
   local GPU endpoints, so an active traffic run cannot silently change its
   locality authority.
@@ -93,6 +103,14 @@ resolve to four-link paths, and disabling physical rendering reproduces both
 pre-change placement records byte for byte. See the
 [PLACE-5 result](../../examples/disaggregated_target_topology_v1/RESULTS.md).
 
+A captured node joins the same schemas: the
+[NCCL topology capture study](../../examples/nccl_topology_capture_v1/RESULTS.md)
+reads one Perlmutter A100 node's dump (four GPUs in an NV4 mesh, four
+Slingshot NICs, one per NUMA node), reproduces every frozen inventory literal,
+cross-checks it against the node's `nvidia-smi` and `lspci` records, and
+drives the live peer packet path with results equal to a literal twin on
+every step, with the eight reference artifacts byte identical.
+
 ## Open tasks
 
 ### Completeness
@@ -119,17 +137,30 @@ pre-change placement records byte for byte. See the
   native switch state. This remains P1 for realistic one-node parallelism;
   broader discovery remains PLACE-1.
 
-- PLACE-1 (Completeness; P1; L): fabric topology schema contents and general
-  NIC selection in the mapper, sourcing intra-node structure from NCCL
-  topology dumps. This is no longer blocked: CORE-4 validated the first
-  fixed resource profile of eight GPUs per node, one WQE submission queue or
-  QP per GPU, all
-  eight feeding their GPU-affine 400G RNICs, with intra-node transfers on an
-  NVLink-class path. The fixed rail profile does not need general inventory
-  discovery.
-  P1 since 2026-09-07: TRAF-88's fabric variants opt in; the first slice is
-  the rail-optimized and node-local leaf variants of the reference Clos under
-  the existing `simllm-fabric-topology-v1` schema.
+- PLACE-1 (Completeness; P1; L): general fabric topology contents and NIC
+  selection beyond the landed slices. Landed: the rail-optimized and
+  node-local leaf variants of the reference Clos (`declared_rail_fabric`,
+  TRAF-88's opt-in) and the NCCL topology dump reader with the captured-node
+  join for one NIC per NUMA node
+  ([capture study](../../examples/nccl_topology_capture_v1/RESULTS.md)).
+  Remaining: the mapper's NIC selection for a fabric whose NICs are not one
+  per GPU (frozen with PLACE-2), rendering a captured NIC inventory into a
+  physical fabric with its own link rates, and topology discovery for nodes
+  the fixed eight-GPU rail profile does not describe. CORE-4's fixed profile
+  (eight GPUs, one WQE queue per GPU, eight GPU-affine 400G RNICs, intra-node
+  transfers on an NVLink-class path) needs none of this and stays the
+  default.
+- PLACE-9 (Completeness; P2; M): captured-node shapes the NCCL topology
+  reader refuses. `captured_fabric_node` accepts one NIC under each GPU's
+  NUMA node and a complete NVLink mesh; a NUMA node with several NICs or
+  none, a NIC shared by several GPUs, a partial mesh and an NVSwitch-class
+  dump (`<nvlink>` targets of bridge class) are refused fail closed, and the
+  peer domain is named `<node_id>:nv4` for any lane count. Add explicit
+  selections for those shapes and a lane-count-derived domain name, and
+  render the captured NIC inventory (200 Gbit/s Slingshot ports on the
+  Perlmutter fixture) into a physical fabric graph. Absent selection must
+  keep every current manifest and study artifact byte identical. PLACE-6
+  owns the eight-GPU switched capture; PLACE-2 owns `unique-nic`.
 - PLACE-2 (Completeness; P2; M): `unique-nic` GOAL-rank mapping (depends on
   PLACE-1). Also deferred behind the fixed eight-GPU, eight-RNIC profile;
   `gpu-rank` and `unique-nic`

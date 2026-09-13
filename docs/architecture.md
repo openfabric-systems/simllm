@@ -108,16 +108,19 @@ rank) is recorded.
 
 **Fabric topology manifest** (`simllm-fabric-topology-v1`): nodes, GPUs,
 PCIe/NVLink links, NICs, GPU-to-NIC affinity, switches, links, bandwidths,
-delays, queue configuration. Intra-node structure can be taken from NCCL's
-detected topology (`NCCL_TOPO_DUMP_FILE`); the switch-level graph always
-comes from a cluster inventory or the simulator topology config. NCCL's
-local discovery is not a description of the routed network.
+delays, queue configuration (the queue and link contents beyond the landed
+builders are PLACE-1). Intra-node structure is read from NCCL's detected
+topology (`NCCL_TOPO_DUMP_FILE`) by `simllm.placement.nccl_topology` for a
+node with one NIC per NUMA node and a complete NVLink mesh; other captured
+shapes are PLACE-9. The switch-level graph always comes from a cluster
+inventory or the simulator topology config. NCCL's local discovery is not a
+description of the routed network.
 
 The **mapper** resolves every rank in a communication event to a physical
 endpoint (rank to node to GPU to NIC) and assigns GOAL ranks. GOAL rank
 assignment mirrors the htsim RNIC drivers' `-goal_rank_mapping` option:
 `gpu-rank` (one GOAL rank per GPU) or `unique-nic` (one per NIC; intra-node
-transfers stay off the fabric).
+transfers stay off the fabric; the mapper mode is PLACE-2).
 
 General fabric discovery is not on the critical path for the first execution
 runtime. That profile fixes each node at eight GPUs and one GPU-affine 400G
