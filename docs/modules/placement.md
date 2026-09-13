@@ -63,7 +63,12 @@ both.
   naming the virtual fabric address), and `captured_switched_node(dump,
   generation=..., module_id_by_gpu_dev=..., ...)` joins such a board to the
   preset of its generation, placing each GPU at the slot its captured module
-  id names and declaring the NICs absent.
+  id names and declaring the NICs absent. With `switch_ports_by_gpu_dev`,
+  read from the `nvidia-smi nvlink -R` block by the parsers in
+  `simllm.placement.nvidia_smi_inventory`, the join also binds the preset's
+  chips and switch ports to the captured switches and ports (`dgx_peer_fabric`
+  takes `switch_ids` and `switch_port_ids` for that), refusing a board whose
+  per-switch lane counts differ from the generation's bundle.
 - `RankMapper`: rank to GOAL-rank assignment mirroring the htsim drivers'
   `-goal_rank_mapping` (`gpu-rank` implemented; `unique-nic` is refused by
   the mapper and by the fabric validator, PLACE-2), plus `is_intra_node`. Construction validates and snapshots
@@ -133,6 +138,14 @@ of that board is not observable from a rented container (every remote
 device is the virtual fabric address and no NVSwitch PCI device is visible),
 which is what PLACE-12 records.
 
+A rented HGX H200 board, whose container passes its four NVSwitches
+through, binds the H100 generation on both sides: the
+[HGX H200 switch capture study](../../examples/hgx_h200_switch_capture_v1/RESULTS.md)
+confirms the declared `(4, 5, 5, 4)` bundle on every GPU, maps all 144
+preset switch ports onto captured switch ports, shows every route path
+joining two ports of one captured switch, binds the GPU side with module-id
+slots, and reproduces every live DGX cell identically with the bound fabric.
+
 ## Open tasks
 
 ### Completeness
@@ -146,19 +159,23 @@ which is what PLACE-12 records.
   [HGX B200 capture study](../../examples/hgx_b200_capture_v1/RESULTS.md)
   binds the B200 generation's GPU side to a rented board: lane counts, the
   all-pair matrix, board identity, PCIe placement and the module-id slot
-  order agree, through `captured_switched_node`. Remaining: the same
-  GPU-side binding for an A100 board and an H100 board (no rentable A100
-  board exposed active NVLink; an H100-class capture is the next rental),
-  and NIC affinity on switched boards (the join declares NICs absent and
-  refuses a board exposing a GPU Direct RDMA NIC). Preserve host and network
+  order agree, through `captured_switched_node`, and the
+  [HGX H200 switch capture study](../../examples/hgx_h200_switch_capture_v1/RESULTS.md)
+  binds the H100 generation's GPU side the same way on a rented H200 board
+  (the HGX H100 baseboard). Remaining: the same GPU-side binding for an A100
+  board (no rentable A100 board exposed active NVLink; a bare-metal HGX A100
+  rental is pending) and NIC affinity on switched boards (the join declares
+  NICs absent and refuses a board exposing a GPU Direct RDMA NIC; the H200
+  inventory shows one ConnectX virtual function per PCIe switch but NCCL's
+  dump carries no RDMA row). Preserve host and network
   attachments as separate identities: HGX is the GPU baseboard/platform and
   DGX the complete server. The archived public A100 link table has an
   apparent `233` switch-port typo, so do not silently turn it into
   register-exact topology or infer device order from rank number.
   Acceptance for this task's remaining half: captured GPU/board identity,
-  NVLink status and NCCL topology agree on all 56 pairs for one A100 and one
-  H100 board, with the module-id slot binding, and absent capture selection
-  preserves current manifests exactly. The switch-side clause (each path
+  NVLink status and NCCL topology agree on all 56 pairs for one A100 board,
+  with the module-id slot binding, and absent capture selection preserves
+  current manifests exactly. The switch-side clause (each path
   joins two ports of one switch, switch identities) is PLACE-12. Keep
   Merlin's four-A100 NV4 and four-GH200 NV6 direct meshes separate from the
   eight-GPU switched presets. TRAF-92 owns product timing calibration;
@@ -170,17 +187,21 @@ which is what PLACE-12 records.
   address, no bridge-class PCI device is visible, and NCCL collapses the
   fabric to one target with the lane count, so no capture from such a host
   can say which switch port a lane lands on. This half needs a host that
-  passes its NVSwitch devices through to the tenant; a rented HGX H200
-  container did (four bridge-class devices visible, real remote bus ids on
-  every link, per-switch NCCL rows of 4, 5, 5 and 4 lanes), so the next
-  slice binds the H100 generation's switch side from that capture.
-  Acceptance: on such a host,
+  passes its NVSwitch devices through to the tenant. A rented HGX H200
+  container did, and the
+  [HGX H200 switch capture study](../../examples/hgx_h200_switch_capture_v1/RESULTS.md)
+  binds the H100 generation's switch side: the declared `(4, 5, 5, 4)`
+  bundle equals the captured per-switch lanes on every GPU, the 144 preset
+  switch ports map bijectively onto the captured `(switch, port)` pairs,
+  every path joins two ports of one captured switch, and the bound fabric
+  gives identical live results to the declared preset. Remaining: the same
+  binding for an A100 board (six switches, two lanes per GPU per switch)
+  and a B200 board whose host exposes its two switches. Acceptance for each:
   `nvidia-smi nvlink -R` remote bus ids, the bridge-class PCI devices and
   NCCL's per-switch NVLink rows agree with the preset's per-chip bundle on
   all 56 pair paths, each path joining two ports of one switch, with
-  capacities conserving full-duplex links; the captured per-chip split then
-  replaces the declared bundle for that generation, and absent capture
-  selection preserves current manifests exactly. The live B200 cells equal
+  capacities conserving full-duplex links, and absent capture selection
+  preserves current manifests exactly. The live B200 cells equal
   the H100 cells at equal lane rate because the native crossbar model
   carries no per-chip capacity term; pricing the chip partition is BACK-74's
   model work, which this capture would calibrate.
