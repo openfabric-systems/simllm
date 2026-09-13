@@ -117,11 +117,18 @@ def maps_line(start, end, name=""):
     return f"{start:012x}-{end:012x} r-xp 00000000 00:1b 4242 {name}".rstrip()
 
 
+#: A Linux memory-map row names a POSIX absolute image, which a Windows temporary
+#: directory cannot spell, so the rows built from `tmp_path` run on POSIX only.
+posix_map_rows = pytest.mark.skipif(
+    sys.platform == "win32", reason="Linux memory-map rows carry POSIX absolute image paths")
+
+
 def install_maps(monkeypatch, text):
     monkeypatch.setattr(sys, "platform", "linux")
     monkeypatch.setattr(common, "_process_maps", lambda: text)
 
 
+@posix_map_rows
 def test_posix_lookup_uses_the_mapping_that_contains_the_core_symbol(tmp_path, monkeypatch):
     path = tmp_path / "actual-runtime.so"
     path.write_bytes(b"actual library")
@@ -135,6 +142,7 @@ def test_posix_lookup_uses_the_mapping_that_contains_the_core_symbol(tmp_path, m
     assert common._posix_runtime_path() == path.resolve()
 
 
+@posix_map_rows
 def test_posix_builtin_identity_hashes_the_mapped_image(tmp_path, monkeypatch):
     path = tmp_path / "actual-runtime.so"
     path.write_bytes(b"actual library")
@@ -174,6 +182,7 @@ def test_posix_mapping_without_a_real_image_rejects(monkeypatch, name, match):
         common._posix_runtime_path()
 
 
+@posix_map_rows
 def test_posix_missing_mapped_image_file_rejects(tmp_path, monkeypatch):
     address = common._core_symbol_address()
     install_maps(monkeypatch, maps_line(address, address + 0x1000, str(tmp_path / "missing.so")))
