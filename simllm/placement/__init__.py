@@ -62,6 +62,14 @@ from simllm.placement.nccl_topology import (
     captured_fabric_node,
     captured_switched_node,
 )
+from simllm.placement.nvidia_smi_inventory import (
+    InventoryPciDevice,
+    captured_switch_ports,
+    read_inventory_sections,
+    read_module_ids,
+    read_nvlink_remote_ports,
+    read_pci_device_list,
+)
 from simllm.placement.peer_topology import PeerFabric, PeerPortPlacement, PeerRoute
 from simllm.placement.rail import (
     RAIL_FABRIC_VARIANTS,
@@ -92,6 +100,7 @@ __all__ = [
     "FabricTopologyManifest",
     "GpuFabricPlacement",
     "GroupMembership",
+    "InventoryPciDevice",
     "NcclTopologyDump",
     "NicFabricPlacement",
     "PeerFabric",
@@ -102,11 +111,16 @@ __all__ = [
     "RankPlacement",
     "SglangPoolArrangement",
     "captured_fabric_node",
+    "captured_switch_ports",
     "captured_switched_node",
     "declared_manifest",
     "declared_pipeline_placement",
     "declared_rail_fabric",
     "dgx_peer_fabric",
     "disaggregated_manifests",
+    "read_inventory_sections",
+    "read_module_ids",
+    "read_nvlink_remote_ports",
+    "read_pci_device_list",
     "sglang_disaggregated_manifests",
 ]

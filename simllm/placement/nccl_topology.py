@@ -26,10 +26,12 @@ nothing is guessed from what is missing. The accepted structure is::
         nic                                a socket NIC outside any PCI device
           net(name, dev, speed, port, guid, maxconn, gdr)
 
-A GPU's ``<nvlink>`` rows either name peer GPUs by bus id, or consist of the
-one switch-attached row NCCL writes on NVSwitch boards: target
-``fffffff:ff:ff.0`` with tclass ``0x068000`` and ``count`` lanes. A GPU mixing
-the two kinds is refused. A socket ``<net>`` may repeat under several
+A GPU's ``<nvlink>`` rows either name peer GPUs by bus id, or are
+switch-attached rows of tclass ``0x068000`` with ``count`` lanes each: one
+row per NVSwitch chip naming its bus id when the container passes the
+switches through, or the single row to the virtual address
+``fffffff:ff:ff.0`` NCCL writes when it does not. A GPU mixing peer and
+switch rows, or the virtual row and real switch rows, is refused. A socket ``<net>`` may repeat under several
 ``<cpu>`` elements only when every repetition is attribute-identical.
 
 Attributes NCCL writes beyond the required ones (for example ``familyid`` or
@@ -60,7 +62,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from itertools import combinations, permutations
 from pathlib import Path
@@ -165,7 +167,7 @@ class NcclNvlink:
     def switch_attached(self) -> bool:
         """Whether this is the collapsed NVSwitch row rather than a peer row."""
 
-        return self.target == NVSWITCH_VIRTUAL_TARGET
+        return self.tclass == NVSWITCH_TCLASS
 
 
 @dataclass(frozen=True)
@@ -309,20 +311,28 @@ class NcclTopologyDump:
                 )
         _unique([net.dev for net in self.distinct_nets], "net dev")
         counts: dict[tuple[str, str], int] = {}
-        switch_rows: set[str] = set()
+        switch_targets: dict[str, list[str]] = {}
         for row in self.nvlinks:
             if row.source_busid not in gpu_busids:
                 raise _refuse(f"nvlink source {row.source_busid} is not a gpu")
             if row.target == NVSWITCH_VIRTUAL_TARGET or row.tclass == NVSWITCH_TCLASS:
-                if (row.target, row.tclass) != (NVSWITCH_VIRTUAL_TARGET, NVSWITCH_TCLASS):
+                if row.tclass != NVSWITCH_TCLASS:
                     raise _refuse(
                         f"gpu {row.source_busid} nvlink row to {row.target} with tclass "
-                        f"{row.tclass}; a switch-attached row requires target "
-                        f"{NVSWITCH_VIRTUAL_TARGET} with tclass {NVSWITCH_TCLASS}"
+                        f"{row.tclass}; a switch-attached row requires tclass {NVSWITCH_TCLASS}"
                     )
-                if row.source_busid in switch_rows:
-                    raise _refuse(f"gpu {row.source_busid} repeats its switch-attached nvlink row")
-                switch_rows.add(row.source_busid)
+                if row.target in classes and classes[row.target] != NVSWITCH_TCLASS:
+                    raise _refuse(
+                        f"gpu {row.source_busid} nvlink tclass {row.tclass} disagrees with "
+                        f"target {row.target} class {classes[row.target]}"
+                    )
+                targets = switch_targets.setdefault(row.source_busid, [])
+                if row.target in targets:
+                    raise _refuse(
+                        f"gpu {row.source_busid} repeats its switch-attached nvlink row to "
+                        f"{row.target}"
+                    )
+                targets.append(row.target)
                 continue
             if row.target not in gpu_busids:
                 raise _refuse(
@@ -339,7 +349,12 @@ class NcclTopologyDump:
             if key in counts:
                 raise _refuse(f"gpu {row.source_busid} repeats nvlink target {row.target}")
             counts[key] = row.count
-        mixed = sorted(switch_rows & {source for source, _ in counts})
+        for source, targets in sorted(switch_targets.items()):
+            if NVSWITCH_VIRTUAL_TARGET in targets and len(targets) > 1:
+                raise _refuse(
+                    f"gpu {source} mixes the virtual NVSwitch row with real switch rows"
+                )
+        mixed = sorted(set(switch_targets) & {source for source, _ in counts})
         if mixed:
             raise _refuse(f"gpu {mixed[0]} mixes switch-attached and peer-attached nvlink rows")
         for (source, target), count in sorted(counts.items()):
@@ -384,13 +399,16 @@ class NcclTopologyDump:
         return "/".join((f"numa-{self.numa_of(busid)}",
                          *(f"pci-{hop}" for hop in self.pcie_path(busid))))
 
-    def switch_lanes(self, gpu_busid: str) -> int:
-        """Lanes of a GPU's switch-attached NVLink row, zero when it has none."""
+    def switch_rows(self, gpu_busid: str) -> tuple[NcclNvlink, ...]:
+        """A GPU's switch-attached NVLink rows in dump order."""
 
-        for row in self.nvlinks:
-            if row.source_busid == gpu_busid and row.switch_attached:
-                return row.count
-        return 0
+        return tuple(row for row in self.nvlinks
+                     if row.source_busid == gpu_busid and row.switch_attached)
+
+    def switch_lanes(self, gpu_busid: str) -> int:
+        """Lanes over all of a GPU's switch-attached rows, zero when it has none."""
+
+        return sum(row.count for row in self.switch_rows(gpu_busid))
 
     def nvlink_count(self, source_busid: str, target_busid: str) -> int:
         """Bonded NVLink count from one GPU to another, zero when unlinked."""
@@ -764,14 +782,27 @@ def captured_switched_node(
     propagation_delay_ps: int,
     switch_input_buffer_bytes: int,
     module_id_by_gpu_dev: Mapping[int, int] | None = None,
+    switch_ports_by_gpu_dev: Mapping[int, Sequence[tuple[str, int]]] | None = None,
 ) -> tuple[FabricNodePlacement, PeerFabric]:
     """Join a captured switch-attached eight-GPU board to a declared HGX preset.
 
-    Every GPU must carry exactly one switch-attached NVLink row whose lane count
-    equals the preset generation's lanes per GPU; the dump cannot show how
-    those lanes split across NVSwitch chips, so the returned
+    Every GPU's switch-attached rows must carry the preset generation's lanes
+    per GPU in total, and the returned
     :class:`~simllm.placement.peer_topology.PeerFabric` is
     :func:`~simllm.placement.dgx.dgx_peer_fabric` for the captured ranks.
+
+    ``switch_ports_by_gpu_dev`` binds the switch side as well. It maps every
+    GPU ``dev`` to its links in link-index order, each the ``(switch bus id,
+    switch port)`` nvidia-smi reports (see
+    :func:`~simllm.placement.nvidia_smi_inventory.captured_switch_ports`). The
+    preset's chips, in bundle order, bind to the captured switches in
+    ascending bus-id order; every GPU must carry exactly the bundle's width on
+    each switch, agreeing with its NCCL switch rows, and no switch port may
+    serve two links. Lane ``k`` of a GPU on chip ``s`` is the ``k``-th captured
+    link of that GPU on that switch. Switches are then named
+    ``<domain>:switch-<busid>`` and switch ports
+    ``<domain>:switch-<busid>:port-<n>``; GPU-side names, routes and capacities
+    are the preset's. Without the map the switch side keeps its declared names.
 
     The preset slot of a GPU is its baseboard position. ``module_id_by_gpu_dev``
     maps every GPU ``dev`` to the ``Module Id`` nvidia-smi reports for it, which
@@ -827,6 +858,9 @@ def captured_switched_node(
             f"NIC {rdma[0].name} supports GPU Direct RDMA; NIC selection on a captured "
             "switched board is not modeled"
         )
+    switch_ids, switch_port_ids = _captured_switch_side(
+        dump, generation, node_id, gpus, slot_order, lanes, switch_ports_by_gpu_dev,
+    )
 
     node = FabricNodePlacement(
         node_id=node_id,
@@ -849,5 +883,78 @@ def captured_switched_node(
         ranks=tuple(ranks[dev] for dev in slot_order),
         propagation_delay_ps=propagation_delay_ps,
         switch_input_buffer_bytes=switch_input_buffer_bytes,
+        switch_ids=switch_ids,
+        switch_port_ids=switch_port_ids,
     )
     return node, mesh
+
+
+def _captured_switch_side(
+    dump: NcclTopologyDump,
+    generation: str,
+    node_id: str,
+    gpus: list[NcclGpu],
+    slot_order: list[int],
+    lanes: int,
+    switch_ports_by_gpu_dev: Mapping[int, Sequence[tuple[str, int]]] | None,
+) -> tuple[tuple[str, ...] | None, dict[tuple[int, int, int], str] | None]:
+    """Validate a captured switch-port table and name the preset's switch side."""
+
+    if switch_ports_by_gpu_dev is None:
+        return None, None
+    if not isinstance(switch_ports_by_gpu_dev, Mapping):
+        raise TypeError("switch_ports_by_gpu_dev must be a mapping from GPU dev to links")
+    devs = [gpu.dev for gpu in gpus]
+    if set(switch_ports_by_gpu_dev) != set(devs):
+        raise ValueError(f"switch_ports_by_gpu_dev must name exactly the GPU devs {devs}")
+    table: dict[int, list[tuple[str, int]]] = {}
+    for dev in devs:
+        rows = switch_ports_by_gpu_dev[dev]
+        if not isinstance(rows, (list, tuple)) or any(
+            not isinstance(row, (list, tuple)) or len(row) != 2 or not isinstance(row[0], str)
+            or type(row[1]) is not int or row[1] < 0
+            for row in rows
+        ):
+            raise TypeError(f"captured links of GPU dev {dev} must be (bus id, port) pairs")
+        table[dev] = [(row[0], row[1]) for row in rows]
+        if len(rows) != lanes:
+            raise ValueError(
+                f"GPU dev {dev} has {len(rows)} captured NVLink links; generation {generation} "
+                f"requires {lanes}"
+            )
+    bundle = DGX_NVLINK_BUNDLES[generation]
+    switches = sorted({busid for rows in table.values() for busid, _ in rows})
+    if len(switches) != len(bundle):
+        raise ValueError(
+            f"generation {generation} binds {len(bundle)} NVSwitch chips; the captured links "
+            f"name {len(switches)} switches"
+        )
+    busid_of = {gpu.dev: gpu.busid for gpu in gpus}
+    for dev in devs:
+        captured = Counter(busid for busid, _ in table[dev])
+        for chip, (switch, width) in enumerate(zip(switches, bundle, strict=True), 1):
+            if captured[switch] != width:
+                raise ValueError(
+                    f"GPU dev {dev} has {captured[switch]} captured lanes on switch {switch}; "
+                    f"chip {chip} of generation {generation} requires {width}"
+                )
+        dumped = {row.target: row.count for row in dump.switch_rows(busid_of[dev])}
+        if dumped != dict(captured):
+            raise ValueError(
+                f"captured links of GPU dev {dev} disagree with its NCCL switch rows {dumped}"
+            )
+    used = Counter(pair for rows in table.values() for pair in rows)
+    repeated = sorted(pair for pair, count in used.items() if count > 1)
+    if repeated:
+        raise ValueError(
+            f"captured switch {repeated[0][0]} port {repeated[0][1]} is used by two links"
+        )
+    domain = f"{node_id}:hgx-{generation}-8"
+    switch_ids = tuple(f"{domain}:switch-{switch}" for switch in switches)
+    switch_port_ids: dict[tuple[int, int, int], str] = {}
+    for slot, dev in enumerate(slot_order):
+        for chip, switch in enumerate(switches, 1):
+            ports = [port for busid, port in table[dev] if busid == switch]
+            for lane, port in enumerate(ports):
+                switch_port_ids[slot, chip, lane] = f"{domain}:switch-{switch}:port-{port}"
+    return switch_ids, switch_port_ids
