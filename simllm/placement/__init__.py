@@ -57,7 +57,11 @@ from simllm.placement.manifest import (
     RankPlacement,
 )
 from simllm.placement.mapper import RankMapper
-from simllm.placement.nccl_topology import NcclTopologyDump, captured_fabric_node
+from simllm.placement.nccl_topology import (
+    NcclTopologyDump,
+    captured_fabric_node,
+    captured_switched_node,
+)
 from simllm.placement.peer_topology import PeerFabric, PeerPortPlacement, PeerRoute
 from simllm.placement.rail import (
     RAIL_FABRIC_VARIANTS,
@@ -98,6 +102,7 @@ __all__ = [
     "RankPlacement",
     "SglangPoolArrangement",
     "captured_fabric_node",
+    "captured_switched_node",
     "declared_manifest",
     "declared_pipeline_placement",
     "declared_rail_fabric",
