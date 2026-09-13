@@ -170,10 +170,8 @@ which is what PLACE-12 records.
   address, no bridge-class PCI device is visible, and NCCL collapses the
   fabric to one target with the lane count, so no capture from such a host
   can say which switch port a lane lands on. This half needs a host that
-  passes its NVSwitch devices through to the tenant; a rented HGX H200
-  container did (four bridge-class devices visible, real remote bus ids on
-  every link, per-switch NCCL rows of 4, 5, 5 and 4 lanes), so the next
-  slice binds the H100 generation's switch side from that capture.
+  passes its NVSwitch devices through to the tenant, which some rented
+  containers do; the slice stacked on this one carries such a capture.
   Acceptance: on such a host,
   `nvidia-smi nvlink -R` remote bus ids, the bridge-class PCI devices and
   NCCL's per-switch NVLink rows agree with the preset's per-chip bundle on

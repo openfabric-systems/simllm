@@ -27,11 +27,14 @@ What it changes for the project: PLACE-6's GPU-side clause is literal for
 the B200 board, including the module-id binding it asked for, and the
 preset family gains `b200`; PLACE-9 narrows by the switched-dump shape.
 PLACE-6's switch-side clause is registered as PLACE-12, which needs a host
-that passes its NVSwitches through to the tenant; the B200 container did
-not, and a later HGX H200 rental did. One model finding is recorded
-for the switch owners: the live B200 cells equal the H100 cells everywhere
-at equal lane rate, so the native crossbar model carries no per-chip
-capacity term today.
+that passes its NVSwitches through to the tenant; this B200 container did
+not, and the slice that stacks on this one carries a capture that does. One
+model finding is recorded for the switch owners: the live B200 cells equal
+the H100 cells everywhere at equal lane rate, so the native crossbar model
+carries no per-chip capacity term today; for that reason the frozen
+"B200 at or above H100" family held vacuously, by equality in every cell,
+and it is disclosed here as unscored rather than counted as a behavioral
+pass.
 
 What it does not change: no timing is calibrated (TRAF-92), the A100 and
 H100 presets are byte identical, the DGX study's frozen grid is untouched,
@@ -77,8 +80,23 @@ Every NVLink remote device is `FFFFFFFF:FF:FF.0`, no PCI device of class
 The host's PCIe-switch listing also lacks the bus ids NCCL names, so the
 PCIe placement rests on the dump. Two RDMA-capable devices are listed but
 NCCL exposed no RDMA network. The join refuses a switched board that
-exposes a GPU Direct RDMA NIC; NIC affinity on switched boards is part of
-PLACE-12's bare-metal capture.
+exposes a GPU Direct RDMA NIC; NIC affinity on switched boards remains
+PLACE-6's own clause.
+
+## Amendments
+
+The first amendment (`bc1e5c8f`) corrected two captured facts before the
+harness ran: module ids are exposed and bind the slots, and two RDMA-capable
+devices sit in the container. The second amendment (`989482e2`), frozen
+after an independent review and before the corrected join and its rerun,
+withdrew G5's last control (generation `h100` accepted against the
+eighteen-lane board on lane count alone) and added a silicon check: the
+join now refuses a board whose GPUs do not report the generation's PCI
+device id and streaming-multiprocessor version, a GPU outside a PCIe switch,
+and a PCIe switch nested in a PCIe switch. G5 keeps seven controls with the
+`h100` request refused on silicon, and the tracked results were regenerated
+by the corrected join (commit `f7d55479`; the results stamp names its
+parent `989482e2`, the checked-out commit at run time).
 
 ## Reproduction
 
