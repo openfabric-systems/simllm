@@ -26,19 +26,21 @@ Capture facts, read from these files:
   each of four PCIe switches (class `0x060400`, vendor `0x1000`) at `45`,
   `56`, `67`, `7a`; GPUs 0 through 3 on NUMA node 0 and 4 through 7 on NUMA
   node 1.
-- NVLink: every GPU reports eighteen active links at 53.125 GB/s (the
-  NVLink 5 signalling rate); `nvidia-smi topo -m` shows `NV18` for all 56
-  ordered pairs; every link's remote device is the virtual fabric address
-  `FFFFFFFF:FF:FF.0`, no PCI device of class `0x0680` is visible, and no
-  `Module ID` is exposed. The NVSwitch side is therefore not observable
-  from this container.
+- NVLink: every GPU reports eighteen active links at 53.125 GB/s (the NVLink
+  5 signalling rate); `nvidia-smi topo -m` shows `NV18` for all 56 ordered
+  pairs; every link's remote device is the virtual fabric address
+  `FFFFFFFF:FF:FF.0`, no PCI device of class `0x0680` is visible, and
+  `Module Id` is exposed (device order 0 through 7 carries module ids 4, 2,
+  1, 3, 8, 6, 5, 7). The NVSwitch side is therefore not observable from this
+  container.
 - NCCL: version 2.27.3 through PyTorch 2.8.0 (CUDA 12.8 build), socket
-  network only (`eth0` at 10 Gbit/s, no GPU Direct RDMA), NVLS multicast
-  available. The dump gives each GPU one `<nvlink target="fffffff:ff:ff.0"
-  count="18" tclass="0x068000"/>` row, i.e. the switch fabric collapsed to one
-  bridge-class target, and lists the socket NIC once under each `<cpu>`
-  element. The graph search selected 16 ring and 16 tree channels of type
-  NVL and 8 NVLS channels.
+  network only (`eth0` at 10 Gbit/s; two RDMA-capable devices `mlx5_0` and
+  `mlx5_1` are listed in the container but NCCL exposed no RDMA network and
+  no GPU Direct RDMA), NVLS multicast available. The dump gives each GPU one
+  `<nvlink target="fffffff:ff:ff.0" count="18" tclass="0x068000"/>` row,
+  i.e. the switch fabric collapsed to one bridge-class target, and lists the
+  socket NIC once under each `<cpu>` element. The graph search selected 16
+  ring and 16 tree channels of type NVL and 8 NVLS channels.
 
 The capture script is `examples/nccl_topology_capture_v1/capture_container.sh`.
 Two earlier rentals of hosts advertised as eight-GPU A100 SXM4 boards showed
