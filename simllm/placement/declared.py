@@ -56,6 +56,10 @@ describe the same deployment. File names are given relative to the installed
   the contiguous block starting at ``r * base + min(r, remainder)``, and
   ``round_robin`` gives it every ``ep_size``-th expert from ``r`` upward,
   ``range(r, num_experts, ep_size)``, which yields the same counts.
+  Under ``round_robin`` that ``torch.arange`` raises for an EP rank above
+  the expert count, so a layout with ``num_experts < ep_size - 1`` is
+  refused; a rank at the expert count owns nothing, as ranks beyond the
+  remainder do under ``linear``.
 - Pipeline partition. ``distributed/utils.py`` (``get_pp_indices``) splits
   ``L`` hidden layers into ``base = L // PP`` layers per stage and hands the
   ``L mod PP`` remainder to the stages indexed ``-2, -3, ...`` in that order,
@@ -183,6 +187,21 @@ def declared_pipeline_partition(num_layers: int, pp: int) -> tuple[tuple[int, in
     return tuple(intervals)
 
 
+def _check_round_robin_expert_count(num_experts: int, ep_size: int, strategy: str) -> None:
+    """Refuse a ``round_robin`` layout the pinned expert map cannot build.
+
+    ``torch.arange(r, num_experts, ep_size)`` raises for every EP rank ``r``
+    above ``num_experts``, so the highest rank ``ep_size - 1`` fails whenever
+    ``num_experts < ep_size - 1``.
+    """
+
+    if strategy == "round_robin" and num_experts < ep_size - 1:
+        raise ValueError(
+            f"num_experts {num_experts} must be >= ep_size - 1 ({ep_size - 1}) "
+            "under round_robin placement"
+        )
+
+
 def declared_local_expert_ids(
     num_experts: int,
     ep_size: int,
@@ -195,7 +214,10 @@ def declared_local_expert_ids(
     owns ``num_experts // ep_size`` experts, plus one when ``r`` is below
     ``num_experts % ep_size``. ``linear`` hands out that many contiguous
     experts starting at ``r * base + min(r, remainder)``; ``round_robin``
-    hands out every ``ep_size``-th expert starting at ``ep_rank``.
+    hands out every ``ep_size``-th expert starting at ``ep_rank``. A
+    ``round_robin`` layout whose EP size exceeds the expert count by more than
+    one is refused, because the framework's expert map fails for its highest
+    ranks.
     """
 
     _positive_int("num_experts", num_experts, minimum=1)
@@ -208,6 +230,7 @@ def declared_local_expert_ids(
             "placement_strategy must be one of "
             f"{DECLARED_EXPERT_PLACEMENT_STRATEGIES}, got {strategy!r}"
         )
+    _check_round_robin_expert_count(num_experts, ep_size, strategy)
     base, remainder = divmod(num_experts, ep_size)
     if strategy == "linear":
         count = base + 1 if ep_rank < remainder else base
@@ -269,6 +292,9 @@ def declared_manifest(
                 f"num_layers must be >= pp {pp} so every stage owns a layer, "
                 f"got {experts.num_layers}"
             )
+        _check_round_robin_expert_count(
+            experts.num_experts, ep_size, experts.placement_strategy
+        )
         stage_intervals = declared_pipeline_partition(experts.num_layers, pp)
         stage_moe_layers = tuple(
             tuple(layer for layer in experts.moe_layers if start <= layer < end)

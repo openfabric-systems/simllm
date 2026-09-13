@@ -38,8 +38,8 @@ data-parallel major with `rank_in_group = dp * TP + tp`, the `linear` and
 behind the framework's divisibility gate, and the pipeline partition that
 hands the layer remainder to the stages indexed `-2, -3, ...` in order. The
 freeze was checked against that source before the implementation started;
-the check corrected one wrong stage interval in the freeze itself
-(61 layers on four stages give `[15, 30)` then `[30, 46)`, not `[15, 31)`),
+the check corrected one wrong stage interval in the draft before the freeze
+commit `821969ae` (61 layers on four stages give `[15, 30)` then `[30, 46)`, not `[15, 31)`),
 which is why the frozen C3 and C4 rows carry those values.
 
 ## Evidence

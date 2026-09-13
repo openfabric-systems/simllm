@@ -528,6 +528,12 @@ def test_c8_snapshot_carries_720_owner_entries(strategy):
 def test_remainder_rule_partitions_every_small_expert_count_and_ep_size(strategy):
     for ep_size in range(1, 10):
         for num_experts in range(1, 41):
+            if strategy == "round_robin" and num_experts < ep_size - 1:
+                # the framework's round-robin map fails for ranks above the expert count
+                for ep_rank in range(ep_size):
+                    with pytest.raises(ValueError, match="num_experts"):
+                        declared_local_expert_ids(num_experts, ep_size, ep_rank, strategy)
+                continue
             base, remainder = divmod(num_experts, ep_size)
             owned = [
                 declared_local_expert_ids(num_experts, ep_size, ep_rank, strategy)
@@ -540,6 +546,33 @@ def test_remainder_rule_partitions_every_small_expert_count_and_ep_size(strategy
                 range(num_experts)
             )
             assert all(list(ids) == sorted(ids) for ids in owned)
+
+
+def test_round_robin_refuses_one_expert_over_three_ranks_and_linear_leaves_rank_2_empty():
+    layout = {"num_layers": 2, "moe_layers": (0, 1), "num_experts": 1}
+    with pytest.raises(ValueError, match="num_experts"):
+        declared_local_expert_ids(1, 3, 0, "round_robin")
+    with pytest.raises(ValueError, match="num_experts"):
+        declared_manifest(
+            tp=1,
+            dp=3,
+            experts=DeclaredExpertLayout(**layout, placement_strategy="round_robin"),
+        )
+
+    manifest = declared_manifest(tp=1, dp=3, experts=DeclaredExpertLayout(**layout))
+
+    assert declared_local_expert_ids(1, 3, 0) == (0,)
+    assert declared_local_expert_ids(1, 3, 2) == ()
+    assert manifest.by_rank(2).local_expert_ids == {0: [], 1: []}
+    snapshot = ExpertPlacementSnapshot.from_manifest(manifest, manifest.group_ranks(0, "ep"))
+    assert snapshot.owner_map() == {(0, 0): 0, (1, 0): 0}
+
+
+def test_round_robin_accepts_a_rank_at_the_expert_count_owning_nothing():
+    # vLLM builds arange(2, 2, 3) as an empty map for rank 2, so this layout runs
+    owned = [declared_local_expert_ids(2, 3, rank, "round_robin") for rank in range(3)]
+
+    assert owned == [(0,), (1,), ()]
 
 
 # The frozen registration itself

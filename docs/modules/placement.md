@@ -182,6 +182,22 @@ pre-change placement records byte for byte. See the
   the lowest EP ranks, but its consumers assume uniform per-rank expert
   geometry: the vLLM step schedule refuses it
   (`local_num_experts * len(ep_ranks) == num_experts`), and `HtsimStepSink`
-  carries one `ModelDims.local_num_experts` for every EP rank. Add an explicit
-  uneven-ownership path; its absence must keep every current artifact byte
-  identical.
+  carries one `ModelDims.local_num_experts` for every EP rank. The
+  calibration side shares the assumption: `simllm/calibration/extraction.py`
+  refuses a MoE communication case whose participant count does not divide
+  the expert count before floor-dividing it, and the memory estimate in
+  `simllm/calibration/external_db.py` floor-divides `num_experts` by
+  `moe_ep_size`, dropping remainder experts silently, so both belong to the
+  same path. Add an explicit uneven-ownership path; its absence must keep
+  every current artifact byte identical.
+
+- PLACE-11 (Completeness; P2; S): framework-side expert map exceptions the
+  declared layout does not model. vLLM 0.27.1 falls back from `round_robin`
+  to `linear` when the model has at most one expert group, has redundant
+  experts, runs EPLB, or uses an all-to-all backend without round-robin
+  routing tables, and some model implementations refuse expert counts their
+  expert-parallel size does not divide. `DeclaredExpertLayout` emits the
+  caller's declared strategy and the remainder rule as stated; add an explicit
+  model-scoped selection that applies those exceptions, whose absence keeps
+  every current manifest byte identical. An extracted manifest records the map
+  that really ran.
