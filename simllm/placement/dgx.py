@@ -29,6 +29,14 @@ DGX_NVLINK_LINK_RATE_BPS = {
     "h100": 200_000_000_000,
     "b200": 400_000_000_000,
 }
+#: PCI device ids and NCCL ``sm`` value (compute capability as one number) that
+#: each generation's GPUs report: A100 40 and 80 GB; H100, H100 NVL and H200;
+#: B200.
+DGX_GPU_SILICON = {
+    "a100": (("0x20b0", "0x20b2"), 80),
+    "h100": (("0x2330", "0x2335", "0x2339"), 90),
+    "b200": (("0x2901",), 100),
+}
 DGX_NVLINK_SOURCE = "https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/"
 
 

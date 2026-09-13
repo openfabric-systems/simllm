@@ -9,7 +9,9 @@ generation, and every accepted A100 and H100 artifact unchanged?
 The input is the rented board fixture under `tests/fixtures/nccl_topology/`.
 The frozen expectations are commit `acf0e5e4`, amended before this harness by
 the expectations-only commit recorded in `AMENDMENT_COMMIT` (GPU module ids
-bind the preset slots). Cells G1, G2, G3 and G6 are structural exact guards,
+bind the preset slots) and, after an independent review, by the one recorded in
+`AMENDMENT_2_COMMIT` (the join checks each generation's GPU silicon before
+binding). Cells G1, G2, G3 and G6 are structural exact guards,
 G5 is a rejection control family, and the A100 and H100 preset digests, the
 DGX study's tracked results digest and its `--check` run are fatal
 by-construction identities.
@@ -55,11 +57,15 @@ AMENDMENT_COMMIT = "bc1e5c8f9412a723a16865aba4b821894b8e8362"
 RESULT_SCHEMA = "simllm-hgx-b200-capture-result-v1"
 EXPECTATIONS_PATH = STUDY_DIR / "expectations.json"
 AMENDMENT_PATH = STUDY_DIR / "expectations-amendment-2026-09-13.json"
+AMENDMENT_2_COMMIT = "989482e2ed523922f40392928493d0eb6eab0d7e"
+AMENDMENT_2_PATH = STUDY_DIR / "expectations-amendment-2-2026-09-13.json"
 RESULTS_PATH = STUDY_DIR / "results.json"
 FROZEN_FILES = {
     EXPECTATIONS_COMMIT: ("expectations.md", "expectations.json"),
     AMENDMENT_COMMIT: ("expectations-amendment-2026-09-13.md",
                        "expectations-amendment-2026-09-13.json"),
+    AMENDMENT_2_COMMIT: ("expectations-amendment-2-2026-09-13.md",
+                         "expectations-amendment-2-2026-09-13.json"),
 }
 FIXTURE_DIR = REPOSITORY_ROOT / "tests" / "fixtures" / "nccl_topology" / "vastai_hgx_b200_8x"
 DGX_STUDY = REPOSITORY_ROOT / "examples" / "dgx_nvlink_v1"
@@ -251,6 +257,7 @@ def run_g2() -> dict[str, Any]:
     """Cell G2: the declared b200 preset."""
 
     from simllm.placement import FabricNodePlacement, FabricTopologyManifest, GpuFabricPlacement
+    from simllm.placement.dgx import DGX_GPU_SILICON
 
     fabric = _preset("b200")
     chips = sorted({port.switch_id for port in fabric.ports if port.switch_id is not None})
@@ -271,6 +278,8 @@ def run_g2() -> dict[str, Any]:
     payload = _canonical_fabric(fabric)
     return {
         "chips": len(chips),
+        "silicon": {generation: {"devices": list(devices), "sm": sm}
+                    for generation, (devices, sm) in DGX_GPU_SILICON.items()},
         "digest": {"bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()},
         "link_rates_bps": sorted({link.link_rate_bps for link in fabric.links}),
         "links": len(fabric.links),
@@ -425,6 +434,10 @@ def _g5_mutations():
         "generation a100 against eighteen lanes": (
             None, {"generation": "a100"},
             "has 18 switch-attached NVLink lanes; generation a100 requires 12"),
+        "generation h100 against b200 silicon": (
+            None, {"generation": "h100"},
+            ("GPU dev 0 at 0000:51:00.0 reports device 0x10de:0x2901 with sm 100; "
+             "generation h100 requires device 0x2330 or 0x2335 or 0x2339 with sm 90")),
         "module id map not a bijection onto 1..8": (
             None, {"module_id_by_gpu_dev": {**_module_ids(), 7: 4}},
             "module id map not a bijection onto 1..8"),
@@ -437,12 +450,6 @@ def run_g5(dump) -> dict[str, Any]:
     from simllm.placement import NcclTopologyDump, nccl_topology
 
     rows: dict[str, Any] = {}
-    node, mesh = _join(dump, generation="h100")
-    rows["generation h100 accepts eighteen lanes"] = {
-        "accepted": mesh.domain_id == f"{NODE_ID}:hgx-h100-8"
-        and all(len(mesh.paths_between(a, b)) == 18 for a, b in permutations(range(8), 2))
-        and len(node.gpus) == 8,
-    }
     built: list[str] = []
     names = ("FabricNodePlacement", "GpuFabricPlacement", "dgx_peer_fabric")
     originals = {name: getattr(nccl_topology, name) for name in names}
@@ -655,7 +662,7 @@ def run_g6(dump, output: Path, library: str) -> dict[str, Any]:
 
 
 def analyze(cells: dict[str, Any], frozen: dict[str, Any], amendment: dict[str, Any],
-            fixture_sha256: dict[str, str]) -> dict[str, Any]:
+            amendment_2: dict[str, Any], fixture_sha256: dict[str, str]) -> dict[str, Any]:
     """Apply every frozen guard, then score the G4 oracle and relations."""
 
     fatal: list[str] = []
@@ -711,6 +718,8 @@ def analyze(cells: dict[str, Any], frozen: dict[str, Any], amendment: dict[str, 
         structural.append("g2: preset structure")
     if preset["link_payload_rate_bps"] > 8 * B200_LANE_PAYLOAD_BYTES_PER_SECOND:
         structural.append("g2: declared lane rate above the NVLink 5 payload bound")
+    if g2["silicon"] != amendment_2["silicon"]:
+        structural.append("g2: silicon table disagrees with the second amendment")
 
     g3 = cells["g3_gpu_side"]
     for check in frozen["cells"]["g3_gpu_side"]:
@@ -748,10 +757,12 @@ def analyze(cells: dict[str, Any], frozen: dict[str, Any], amendment: dict[str, 
             scored.append(f"g4: relation {relation}")
 
     g5 = cells["g5_refusals"]
-    for label in [*frozen["cells"]["g5_refusals"], amendment["added"]["g5_refusal"]]:
-        if label == "generation a100 against eighteen lanes" and g5[
-                "generation h100 accepts eighteen lanes"]["accepted"] is not True:
-            rejection.append("g5: generation h100 was not accepted")
+    g5_labels = [*frozen["cells"]["g5_refusals"], amendment["added"]["g5_refusal"]]
+    for label in g5_labels:
+        # The second amendment turns this control's h100 clause into a silicon refusal.
+        if label == "generation a100 against eighteen lanes" and g5.get(
+                "generation h100 against b200 silicon", {}).get("refused") is not True:
+            rejection.append("g5: generation h100 was not refused on silicon")
         if g5.get(label, {}).get("refused") is not True:
             rejection.append(f"g5: {label} was not refused before any schema object")
 
@@ -786,7 +797,7 @@ def analyze(cells: dict[str, Any], frozen: dict[str, Any], amendment: dict[str, 
             "fatal_compatibility_digests": 3,
             "rejection_control_family": {
                 "controls": len(frozen["cells"]["g5_refusals"]) + 1,
-                "refused": sum(value.get("refused") is True for value in g5.values()),
+                "refused": sum(g5.get(label, {}).get("refused") is True for label in g5_labels),
             },
             "structural_guard_cells": len(frozen["evidence"]["structural_guard_cells"]),
         },
@@ -811,6 +822,7 @@ def _build_library(output: Path) -> str:
 def run_study(output: Path, library: str) -> dict[str, Any]:
     frozen = json.loads(EXPECTATIONS_PATH.read_text(encoding="utf-8"))
     amendment = json.loads(AMENDMENT_PATH.read_text(encoding="utf-8"))
+    amendment_2 = json.loads(AMENDMENT_2_PATH.read_text(encoding="utf-8"))
     dump = _load_dump()
     cells = {
         "g1_parse": run_g1(dump),
@@ -823,8 +835,9 @@ def run_study(output: Path, library: str) -> dict[str, Any]:
     cells = json.loads(_json_bytes(cells))
     fixture_sha256 = {name: hashlib.sha256(_fixture_bytes(name)).hexdigest()
                       for name in sorted(frozen["baseline"]["fixture"]) if name != "directory"}
-    analysis = analyze(cells, frozen, amendment, fixture_sha256)
+    analysis = analyze(cells, frozen, amendment, amendment_2, fixture_sha256)
     summary = {
+        "amendment_2_commit": AMENDMENT_2_COMMIT,
         "amendment_commit": AMENDMENT_COMMIT,
         "cells": cells,
         "evidence": analysis["evidence"],

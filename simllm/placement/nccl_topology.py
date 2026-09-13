@@ -66,7 +66,7 @@ from itertools import combinations, permutations
 from pathlib import Path
 from xml.etree import ElementTree
 
-from .dgx import DGX_NVLINK_BUNDLES, dgx_peer_fabric
+from .dgx import DGX_GPU_SILICON, DGX_NVLINK_BUNDLES, dgx_peer_fabric
 from .manifest import FabricLink, FabricNodePlacement, GpuFabricPlacement, NicFabricPlacement
 from .peer_topology import PeerFabric, PeerPortPlacement, PeerRoute
 
@@ -781,7 +781,10 @@ def captured_switched_node(
     placed at their PCIe path, switches included. A board without a GPU Direct RDMA NIC
     gets declared-absent NICs ``<node_id>:nic-absent-<dev>`` and ``nics=()``;
     a board that carries one is refused, because its NIC selection is not
-    modeled here. Every refusal is raised before any schema object is built.
+    modeled here. Every GPU must report the generation's silicon (an accepted
+    NVIDIA PCI device id and ``sm`` value) and sit directly under one PCIe
+    switch that is itself not nested in another. Every refusal is raised before
+    any schema object is built.
     """
 
     if not isinstance(dump, NcclTopologyDump):
@@ -827,6 +830,25 @@ def captured_switched_node(
             f"NIC {rdma[0].name} supports GPU Direct RDMA; NIC selection on a captured "
             "switched board is not modeled"
         )
+    devices = {device.busid: device for device in dump.pci}
+    accepted_devices, accepted_sm = DGX_GPU_SILICON[generation]
+    for gpu in gpus:
+        device = devices[gpu.busid]
+        if (device.vendor != "0x10de" or device.device not in accepted_devices
+                or gpu.sm != accepted_sm):
+            raise ValueError(
+                f"GPU dev {gpu.dev} at {gpu.busid} reports device {device.vendor}:{device.device} "
+                f"with sm {gpu.sm}; generation {generation} requires device "
+                f"{' or '.join(accepted_devices)} with sm {accepted_sm}"
+            )
+        path = dump.pcie_path(gpu.busid)
+        if len(path) < 2:
+            raise ValueError(f"GPU dev {gpu.dev} at {gpu.busid} is not under a PCIe switch")
+        if len(path) > 2:
+            raise ValueError(
+                f"PCIe switch {path[-2]} above GPU dev {gpu.dev} is nested under PCIe switch "
+                f"{path[-3]}"
+            )
 
     node = FabricNodePlacement(
         node_id=node_id,
