@@ -1,4 +1,5 @@
 {
+  "amendment_2_commit": "989482e2ed523922f40392928493d0eb6eab0d7e",
   "amendment_commit": "bc1e5c8f9412a723a16865aba4b821894b8e8362",
   "cells": {
     "g1_parse": {
@@ -128,6 +129,29 @@
       ],
       "ports": 288,
       "routes": 56,
+      "silicon": {
+        "a100": {
+          "devices": [
+            "0x20b0",
+            "0x20b2"
+          ],
+          "sm": 80
+        },
+        "b200": {
+          "devices": [
+            "0x2901"
+          ],
+          "sm": 100
+        },
+        "h100": {
+          "devices": [
+            "0x2330",
+            "0x2335",
+            "0x2339"
+          ],
+          "sm": 90
+        }
+      },
       "validates": true
     },
     "g3_gpu_side": {
@@ -1803,8 +1827,10 @@
         "message": "GPU dev 0 at 0000:51:00.0 has 18 switch-attached NVLink lanes; generation a100 requires 12",
         "refused": true
       },
-      "generation h100 accepts eighteen lanes": {
-        "accepted": true
+      "generation h100 against b200 silicon": {
+        "expected_message": "GPU dev 0 at 0000:51:00.0 reports device 0x10de:0x2901 with sm 100; generation h100 requires device 0x2330 or 0x2335 or 0x2339 with sm 90",
+        "message": "GPU dev 0 at 0000:51:00.0 reports device 0x10de:0x2901 with sm 100; generation h100 requires device 0x2330 or 0x2335 or 0x2339 with sm 90",
+        "refused": true
       },
       "mixed switch and peer rows": {
         "expected_message": "gpu 0000:51:00.0 mixes switch-attached and peer-attached nvlink rows",
@@ -1878,7 +1904,7 @@
     "nccl_topo.xml": "52206219b633ab5abf9e100172205cc4274a03cafb31b23c0868abb7527d5ebf",
     "node_inventory.txt": "c29f3e2893a79764b3a95d636e2147ced3dad665d79111585f8d122b85732ae0"
   },
-  "implementation_commit": "59cbb4cea87f79f13cc775d85f8c911fb26ce5b7",
+  "implementation_commit": "989482e2ed523922f40392928493d0eb6eab0d7e",
   "schema": "simllm-hgx-b200-capture-result-v1",
   "status": "PASS"
 }

@@ -1,8 +1,9 @@
 """HGX B200 preset and the switched NCCL topology shape (PLACE-6, first slice).
 
 Cells G1, G2, G3, G5 and G6 of examples/hgx_b200_capture_v1/expectations.md,
-as amended by expectations-amendment-2026-09-13.md, plus freeze pins on both
-JSON registries. Cell G4 and the DGX study's check run in the study harness.
+as amended by expectations-amendment-2026-09-13.md and
+expectations-amendment-2-2026-09-13.md, plus freeze pins on the JSON
+registries. Cell G4 and the DGX study's check run in the study harness.
 
 The b200 preset digest pinned below (125,741 bytes, SHA-256
 ef920aa9abc7b61222880d97b60d2e016b37ed1df46b5c628488054553f5163f) was computed
@@ -33,13 +34,14 @@ from simllm.placement import (
     dgx_peer_fabric,
     nccl_topology,
 )
-from simllm.placement.dgx import DGX_NVLINK_BUNDLES
+from simllm.placement.dgx import DGX_GPU_SILICON, DGX_NVLINK_BUNDLES
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "tests" / "fixtures" / "nccl_topology" / "vastai_hgx_b200_8x"
 STUDY = ROOT / "examples" / "hgx_b200_capture_v1"
 EXPECTATIONS = STUDY / "expectations.json"
 AMENDMENT = STUDY / "expectations-amendment-2026-09-13.json"
+AMENDMENT_2 = STUDY / "expectations-amendment-2-2026-09-13.json"
 NODE = "hgx-b200"
 BUS_IDS = tuple(f"0000:{bus}:00.0" for bus in ("51", "52", "62", "63", "75", "76", "86", "87"))
 SWITCHES = tuple(f"0000:{bus}:00.0" for bus in ("45", "45", "56", "56", "67", "67", "7a", "7a"))
@@ -383,12 +385,12 @@ def test_g5_refusal_precedes_every_schema_object(label, no_schema_objects):
         join(dump, **overrides)
 
 
-def test_g5_h100_generation_accepts_the_eighteen_lane_board():
-    node, mesh = join(generation="h100")
-    assert mesh.domain_id == f"{NODE}:hgx-h100-8"
-    assert len({port.switch_id for port in mesh.ports if port.switch_id}) == 4
-    assert all(len(mesh.paths_between(a, b)) == 18 for a, b in permutations(range(8), 2))
-    assert tuple(gpu.gpu_id for gpu in node.gpus) == BUS_IDS
+def test_g5_h100_generation_is_refused_on_silicon(no_schema_objects):
+    with pytest.raises(ValueError, match=(
+        r"GPU dev 0 at 0000:51:00\.0 reports device 0x10de:0x2901 with sm 100; "
+        r"generation h100 requires device 0x2330 or 0x2335 or 0x2339 with sm 90"
+    )):
+        join(generation="h100")
 
 
 @pytest.mark.parametrize(
@@ -487,3 +489,93 @@ def test_freeze_pins_the_expectations_and_the_amendment():
     for name, digest in frozen["baseline"]["fixture"].items():
         if name != "directory":
             assert hashlib.sha256(fixture_bytes(name)).hexdigest() == digest, name
+
+
+def _silicon(device: str, sm: int, lanes: int | None = None):
+    def change(root):
+        for pci in root.iter("pci"):
+            if pci.get("class") == "0x030200":
+                pci.set("device", device)
+        for gpu in root.iter("gpu"):
+            gpu.set("sm", str(sm))
+            if lanes is not None:
+                gpu.find("nvlink").set("count", str(lanes))
+    return change
+
+
+@pytest.mark.parametrize(
+    ("generation", "device", "sm", "lanes"),
+    [
+        ("a100", "0x20b0", 80, 12),
+        ("a100", "0x20b2", 80, 12),
+        ("h100", "0x2330", 90, 18),
+        ("h100", "0x2335", 90, 18),
+        ("h100", "0x2339", 90, 18),
+        ("b200", "0x2901", 100, 18),
+    ],
+)
+def test_switched_join_accepts_each_generations_silicon(generation, device, sm, lanes):
+    _, mesh = join(NcclTopologyDump.parse(mutate(_silicon(device, sm, lanes))),
+                   generation=generation)
+    assert mesh.domain_id == f"{NODE}:hgx-{generation}-8"
+
+
+def test_switched_join_refuses_h200_silicon_against_b200(no_schema_objects):
+    with pytest.raises(ValueError, match=(
+        r"GPU dev 0 at 0000:51:00\.0 reports device 0x10de:0x2335 with sm 90; "
+        r"generation b200 requires device 0x2901 with sm 100"
+    )):
+        join(NcclTopologyDump.parse(mutate(_silicon("0x2335", 90))))
+
+
+def _gpu_outside_switch(root):
+    cpu = root.find("cpu[@numaid='0']")
+    switch = cpu.find("pci[@busid='0000:45:00.0']")
+    gpu = switch.find("pci[@busid='0000:51:00.0']")
+    switch.remove(gpu)
+    cpu.insert(0, gpu)
+
+
+def _nested_switch(root):
+    cpu = root.find("cpu[@numaid='0']")
+    switch = cpu.find("pci[@busid='0000:45:00.0']")
+    outer = ElementTree.Element("pci", {
+        "busid": "0000:44:00.0", "class": "0x060400", "vendor": "0x1000", "device": "0x0001",
+        "link_speed": "32.0 GT/s PCIe", "link_width": "16",
+    })
+    cpu.remove(switch)
+    outer.append(switch)
+    cpu.insert(0, outer)
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        (_gpu_outside_switch, r"GPU dev 0 at 0000:51:00\.0 is not under a PCIe switch"),
+        (_nested_switch,
+         r"PCIe switch 0000:45:00\.0 above GPU dev 0 is nested under PCIe switch 0000:44:00\.0"),
+    ],
+)
+def test_switched_join_refuses_irregular_pcie_nesting(change, message, no_schema_objects):
+    with pytest.raises(ValueError, match=message):
+        join(NcclTopologyDump.parse(mutate(change)))
+
+
+def test_second_amendment_pins_the_silicon_table():
+    amendment = json.loads(AMENDMENT_2.read_text(encoding="utf-8"))
+    assert amendment == {
+        "schema": "simllm-hgx-b200-capture-amendment-2-v1",
+        "date": "2026-09-13",
+        "chronology": ("post-specified to an independent review finding, frozen before the "
+                       "corrected join and its rerun"),
+        "withdrawn": ["g5 h100 accepts eighteen lanes"],
+        "silicon": {
+            "a100": {"devices": ["0x20b0", "0x20b2"], "sm": 80},
+            "h100": {"devices": ["0x2330", "0x2335", "0x2339"], "sm": 90},
+            "b200": {"devices": ["0x2901"], "sm": 100},
+        },
+        "added_refusals": ["gpu outside a pcie switch", "pcie switch nested in a pcie switch",
+                           "h100 against b200 silicon"],
+    }
+    assert {generation: {"devices": list(devices), "sm": sm}
+            for generation, (devices, sm) in DGX_GPU_SILICON.items()} == amendment["silicon"]
