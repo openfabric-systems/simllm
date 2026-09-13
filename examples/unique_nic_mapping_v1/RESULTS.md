@@ -91,6 +91,18 @@ completion tables. This is post-specified to the implementation and is
 registered in PLACE-10 together with the full-population expert-parallel
 traffic the amendment set aside.
 
+The default path does run the new projection code: under `gpu-rank` the
+sink builds the step projection table (the identity) and hands it to the
+renderer, and only the join is skipped. Two consequences are recorded here
+rather than hidden. First, a cross-phase duplicate of `(source, destination,
+tag)` is now fatal under `gpu-rank`; the per-operation tag blocks make that
+unreachable today. Second, byte identity of the default path against the
+pre-change tree is proven by the six m5 makespans, by an independent review
+probe that found rendered GOAL text and sink GOAL files byte identical to
+commit `26704c1c` in 24 configurations (m5 worlds 2, 4 and 8, a 16-rank MoE
+and a 16-rank ring on two nodes, and an 8-rank tensor group), and by the
+pre-change GOAL digest guard added to the tests after that review.
+
 ## Reproduction
 
 ```bash
