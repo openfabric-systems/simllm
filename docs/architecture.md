@@ -116,8 +116,11 @@ local discovery is not a description of the routed network.
 The **mapper** resolves every rank in a communication event to a physical
 endpoint (rank to node to GPU to NIC) and assigns GOAL ranks. GOAL rank
 assignment mirrors the htsim RNIC drivers' `-goal_rank_mapping` option:
-`gpu-rank` (one GOAL rank per GPU) or `unique-nic` (one per NIC; intra-node
-transfers stay off the fabric).
+`gpu-rank` (one GOAL rank per GPU) or `unique-nic` (one per NIC from the
+fabric manifest's GPU-to-NIC affinity; GPUs behind one NIC share one fabric
+endpoint and intra-node transfers stay off the fabric). `unique-nic` runs on
+the null-network profiles today; its physical, session and peer seams are
+PLACE-10.
 
 General fabric discovery is not on the critical path for the first execution
 runtime. That profile fixes each node at eight GPUs and one GPU-affine 400G
