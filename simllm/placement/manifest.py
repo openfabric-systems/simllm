@@ -256,8 +256,8 @@ class FabricTopologyManifest:
 
         if self.schema != FABRIC_SCHEMA:
             raise ValueError(f"unsupported schema: {self.schema!r}")
-        if self.goal_rank_mapping != "gpu-rank":
-            raise ValueError("fixed fabric topology requires gpu-rank mapping")
+        if self.goal_rank_mapping not in ("gpu-rank", "unique-nic"):
+            raise ValueError("fabric goal_rank_mapping must be gpu-rank or unique-nic")
         if type(self.physical_rendering_enabled) is not bool:
             raise TypeError("physical_rendering_enabled must be a boolean")
         self._validate_peer_fabrics()

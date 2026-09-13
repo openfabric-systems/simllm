@@ -50,8 +50,8 @@ structures are exactly the patterns validated by the M1/M4/M5 studies.
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Sequence
-from dataclasses import dataclass, replace
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from functools import cache
 
@@ -2440,11 +2440,220 @@ def plan_step_locality(
     )
 
 
+@dataclass(frozen=True)
+class FabricSegmentProjection:
+    """One rendered fabric message joined to the semantic segment it carries."""
+
+    phase_index: int
+    phase_id: str
+    goal_source_rank: int
+    goal_destination_rank: int
+    rendered_tag: int
+    segment: DirectedCollectiveSegment
+
+    @property
+    def key(self) -> tuple[int, int, int]:
+        """The backend-visible identity ``(goal source, goal destination, tag)``."""
+
+        return (self.goal_source_rank, self.goal_destination_rank, self.rendered_tag)
+
+
+@dataclass(frozen=True)
+class FabricGoalProjection:
+    """Step table from ``(goal source, goal destination, rendered tag)`` to segments.
+
+    Segments of one phase share one tag and differ only by their semantic
+    ``(source_rank, destination_rank)``. When a GOAL rank mapping lands two or
+    more of them on one endpoint pair, the tag alone no longer tells their
+    completion rows apart. ``tag_multiplier`` is ``M``, the largest number of
+    one phase's fabric segments sharing one GOAL endpoint pair, maximized over
+    the step's phases. Every rendered tag is ``tag * M + j``, with ``j`` the
+    segment's index among its endpoint pair's segments ordered by
+    ``(source_rank, destination_rank)``. Tags already differ between phases,
+    so keys stay unique across the step, and ``M = 1`` renders every tag
+    unchanged. A duplicate key is fatal.
+    """
+
+    tag_multiplier: int
+    rows: tuple[FabricSegmentProjection, ...]
+    _rows_by_phase: dict = field(
+        init=False, repr=False, compare=False, default_factory=dict
+    )
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "rows", tuple(self.rows))
+        if (
+            isinstance(self.tag_multiplier, bool)
+            or type(self.tag_multiplier) is not int
+            or self.tag_multiplier < 1
+        ):
+            raise ValueError("tag_multiplier must be a positive integer")
+        keys: set[tuple[int, int, int]] = set()
+        by_phase: dict[str, dict[int, list[FabricSegmentProjection]]] = {}
+        for row in self.rows:
+            if not isinstance(row, FabricSegmentProjection):
+                raise TypeError("projection rows must be FabricSegmentProjection values")
+            if not isinstance(row.segment, DirectedCollectiveSegment):
+                raise TypeError("projection row segment must be a DirectedCollectiveSegment")
+            if row.goal_source_rank == row.goal_destination_rank:
+                raise ValueError("GOAL mapping collapsed a cross-node segment")
+            index = row.rendered_tag - row.segment.tag * self.tag_multiplier
+            if not 0 <= index < self.tag_multiplier:
+                raise ValueError("rendered tag disagrees with the collapsed-pair tag rule")
+            if row.key in keys:
+                raise ValueError(f"fabric GOAL projection contains duplicate key {row.key}")
+            keys.add(row.key)
+            by_phase.setdefault(row.phase_id, {}).setdefault(row.phase_index, []).append(row)
+        object.__setattr__(
+            self,
+            "_rows_by_phase",
+            {
+                phase_id: {index: tuple(rows) for index, rows in groups.items()}
+                for phase_id, groups in by_phase.items()
+            },
+        )
+
+    def phase_rows(
+        self,
+        phase: ClassifiedCommunicationPhase,
+    ) -> tuple[FabricSegmentProjection, ...]:
+        """Rows of the one step phase whose fabric segments equal ``phase``'s."""
+
+        if not isinstance(phase, ClassifiedCommunicationPhase):
+            raise TypeError("phase must be a ClassifiedCommunicationPhase")
+        matches = tuple(
+            rows
+            for rows in self._rows_by_phase.get(phase.phase.phase_id, {}).values()
+            if tuple(row.segment for row in rows) == phase.fabric_segments
+        )
+        if len(matches) != 1:
+            raise ValueError(
+                "fabric GOAL projection does not cover exactly one matching phase"
+            )
+        return matches[0]
+
+    def join_completions(
+        self,
+        completions: Iterable[object],
+        *,
+        row_indices: Sequence[int] | None = None,
+    ) -> tuple[tuple[object, FabricSegmentProjection], ...]:
+        """Join backend completion rows to semantic segments exactly once.
+
+        Each completion exposes ``source``, ``destination``, ``tag`` and
+        ``payload_bytes``. ``row_indices`` scopes the join to one artifact's
+        rows. Every completion must join one scoped segment with an equal
+        payload, no key may be joined twice, and every scoped segment must
+        receive a completion; any violation is fatal.
+        """
+
+        scope = (
+            self.rows
+            if row_indices is None
+            else tuple(self.rows[index] for index in row_indices)
+        )
+        by_key = {row.key: row for row in scope}
+        if len(by_key) != len(scope):
+            raise ValueError("fabric GOAL projection scope contains a duplicate key")
+        joined: list[tuple[object, FabricSegmentProjection]] = []
+        seen: set[tuple[int, int, int]] = set()
+        for completion in completions:
+            key = (completion.source, completion.destination, completion.tag)
+            row = by_key.get(key)
+            if row is None:
+                raise ValueError(f"completion row {key} joins no fabric segment")
+            if key in seen:
+                raise ValueError(f"completion rows duplicate projection key {key}")
+            if completion.payload_bytes != row.segment.payload_bytes:
+                raise ValueError(f"completion row {key} disagrees with its segment payload")
+            seen.add(key)
+            joined.append((completion, row))
+        if len(seen) != len(by_key):
+            raise ValueError("fabric segments are missing completion rows")
+        return tuple(joined)
+
+
+def plan_fabric_goal_projection(
+    phases: Sequence[ClassifiedCommunicationPhase],
+    *,
+    rank_mapper: RankMapper | None,
+) -> FabricGoalProjection:
+    """Assign rendered tags and build the projection table for one step.
+
+    The mapper supplies GOAL endpoints (semantic ranks when it is absent).
+    The collapsed-pair tag rule of :class:`FabricGoalProjection` then gives
+    every fabric segment of every phase a backend-distinguishable key.
+    """
+
+    if rank_mapper is not None and not isinstance(rank_mapper, RankMapper):
+        raise TypeError("rank_mapper must be RankMapper or None")
+    phases = tuple(phases)
+    endpoint_pairs: list[tuple[tuple[int, int], ...]] = []
+    multiplier = 1
+    for phase in phases:
+        if not isinstance(phase, ClassifiedCommunicationPhase):
+            raise TypeError("phases must contain ClassifiedCommunicationPhase values")
+        pairs = tuple(
+            (
+                (
+                    segment.source_rank
+                    if rank_mapper is None
+                    else rank_mapper.goal_rank(segment.source_rank)
+                ),
+                (
+                    segment.destination_rank
+                    if rank_mapper is None
+                    else rank_mapper.goal_rank(segment.destination_rank)
+                ),
+            )
+            for segment in phase.fabric_segments
+        )
+        counts: dict[tuple[int, int], int] = {}
+        for source, destination in pairs:
+            if source == destination:
+                raise ValueError("GOAL mapping collapsed a cross-node segment")
+            counts[(source, destination)] = counts.get((source, destination), 0) + 1
+        multiplier = max(multiplier, max(counts.values(), default=1))
+        endpoint_pairs.append(pairs)
+
+    rows: list[FabricSegmentProjection] = []
+    for phase_index, (phase, pairs) in enumerate(zip(phases, endpoint_pairs, strict=True)):
+        segments = phase.fabric_segments
+        members: dict[tuple[int, int], list[int]] = {}
+        for position, pair in enumerate(pairs):
+            members.setdefault(pair, []).append(position)
+        index_in_pair: dict[int, int] = {}
+        for positions in members.values():
+            ordered = sorted(
+                positions,
+                key=lambda position: (
+                    segments[position].source_rank,
+                    segments[position].destination_rank,
+                    position,
+                ),
+            )
+            for index, position in enumerate(ordered):
+                index_in_pair[position] = index
+        rows.extend(
+            FabricSegmentProjection(
+                phase_index=phase_index,
+                phase_id=phase.phase.phase_id,
+                goal_source_rank=pair[0],
+                goal_destination_rank=pair[1],
+                rendered_tag=segment.tag * multiplier + index_in_pair[position],
+                segment=segment,
+            )
+            for position, (pair, segment) in enumerate(zip(pairs, segments, strict=True))
+        )
+    return FabricGoalProjection(tag_multiplier=multiplier, rows=tuple(rows))
+
+
 def render_fabric_phase_goal(
     phase: ClassifiedCommunicationPhase,
     *,
     rank_mapper: RankMapper | None,
     num_goal_ranks: int | None = None,
+    projection: FabricGoalProjection | None = None,
 ) -> GoalTrace:
     """Render one isolated phase's cross-node segments to the fabric.
 
@@ -2453,6 +2662,8 @@ def render_fabric_phase_goal(
     caller must use the plan's effective dependency boundaries when composing
     several phase results. With no placement mapper, semantic ranks are GOAL
     ranks and every segment in the classified phase stays on the fabric.
+    ``projection`` is the step's :class:`FabricGoalProjection`, which fixes the
+    rendered tags; its absence projects this phase alone.
     """
 
     if not isinstance(phase, ClassifiedCommunicationPhase):
@@ -2461,28 +2672,30 @@ def render_fabric_phase_goal(
         raise ValueError("a fabric phase needs at least one cross-node segment")
     if rank_mapper is not None and not isinstance(rank_mapper, RankMapper):
         raise TypeError("rank_mapper must be RankMapper or None")
+    if projection is None:
+        projection = plan_fabric_goal_projection((phase,), rank_mapper=rank_mapper)
+    elif not isinstance(projection, FabricGoalProjection):
+        raise TypeError("projection must be FabricGoalProjection or None")
     endpoint_pairs = tuple(
-        (
-            (
-                segment.source_rank
-                if rank_mapper is None
-                else rank_mapper.goal_rank(segment.source_rank)
-            ),
-            (
-                segment.destination_rank
-                if rank_mapper is None
-                else rank_mapper.goal_rank(segment.destination_rank)
-            ),
-            segment,
-        )
-        for segment in phase.fabric_segments
+        (row.goal_source_rank, row.goal_destination_rank, row.segment, row.rendered_tag)
+        for row in projection.phase_rows(phase)
     )
-    for source, destination, _ in endpoint_pairs:
+    for source, destination, segment, _ in endpoint_pairs:
+        expected = (
+            (segment.source_rank, segment.destination_rank)
+            if rank_mapper is None
+            else (
+                rank_mapper.goal_rank(segment.source_rank),
+                rank_mapper.goal_rank(segment.destination_rank),
+            )
+        )
+        if (source, destination) != expected:
+            raise ValueError("fabric GOAL projection disagrees with the rank mapper")
         if source == destination:
             raise ValueError("GOAL mapping collapsed a cross-node segment")
     used_goal_ranks = {
         rank
-        for source, destination, _ in endpoint_pairs
+        for source, destination, _, _ in endpoint_pairs
         for rank in (source, destination)
     }
     minimum_ranks = max(used_goal_ranks) + 1
@@ -2494,17 +2707,17 @@ def render_fabric_phase_goal(
             f"num_goal_ranks={num_goal_ranks} cannot contain rank {minimum_ranks - 1}"
         )
     trace = GoalTrace(num_goal_ranks)
-    for source, destination, segment in endpoint_pairs:
+    for source, destination, segment, rendered_tag in endpoint_pairs:
         send = trace.rank(source).send(
             segment.payload_bytes,
             to=destination,
-            tag=segment.tag,
+            tag=rendered_tag,
             operation_id=phase.phase.operation_id,
         )
         receive = trace.rank(destination).recv(
             segment.payload_bytes,
             source=source,
-            tag=segment.tag,
+            tag=rendered_tag,
             operation_id=phase.phase.operation_id,
         )
         trace.record_message(
@@ -2513,7 +2726,7 @@ def render_fabric_phase_goal(
                 source_rank=source,
                 destination_rank=destination,
                 payload_bytes=segment.payload_bytes,
-                tag=segment.tag,
+                tag=rendered_tag,
                 send_label=send,
                 receive_label=receive,
                 request_payload_bytes=segment.request_payload_bytes,

@@ -67,6 +67,7 @@ from simllm.placement.sglang_disaggregated import (
     SglangPoolArrangement,
     sglang_disaggregated_manifests,
 )
+from simllm.placement.shared_nic import declared_shared_nic_fabric
 
 __all__ = [
     "DECLARED_CLOS_ENDPOINTS_PER_LEAF",
@@ -98,6 +99,7 @@ __all__ = [
     "declared_manifest",
     "declared_pipeline_placement",
     "declared_rail_fabric",
+    "declared_shared_nic_fabric",
     "dgx_peer_fabric",
     "disaggregated_manifests",
     "sglang_disaggregated_manifests",

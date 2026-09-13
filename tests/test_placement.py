@@ -47,8 +47,8 @@ def test_mapper_gpu_rank():
         mapper.goal_rank(99)
 
 
-def test_mapper_rejects_unfinished_mode():
-    with pytest.raises(NotImplementedError):
+def test_mapper_unique_nic_requires_a_fabric():
+    with pytest.raises(ValueError, match="requires a fabric"):
         RankMapper(two_node_manifest(), mode="unique-nic")
 
 
