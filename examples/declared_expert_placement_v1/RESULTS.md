@@ -48,7 +48,7 @@ which is why the frozen C3 and C4 rows carry those values.
 |---|---|
 | Scored exact-oracle rows (C2 makespans) | 6 of 6 exact, GOAL text byte identical in every row |
 | Structural exact guards (C1, C3, C4, C6) | 4 of 4 cells exact |
-| Rejection controls (C5) | 8 of 8 refused before any rank is built |
+| Rejection controls (C5) | 8 of 8 refused, each a `ValueError` raised by construction |
 | Fatal compatibility digests | 5 of 5 reference manifests byte identical to the pre-change record |
 
 Counts in different evidence classes are not added. The tracked
@@ -89,6 +89,51 @@ layers 3 through 60, 256 experts): four EP groups of 16, stage ranges
 C4 reproduces the five frozen partitions, C5 refuses all eight malformed
 layouts, and C6 round-trips the C1 and C3 manifests through save and load
 with `ep` following `dp` in every rank's groups.
+
+## Amendment
+
+What ran: the [2026-09-13 amendment](expectations-amendment-2026-09-13.md),
+frozen at `121098c3` after a review finding and before the correction, and
+the whole qualification rerun from implementation commit `bd93569c`.
+
+What was refuted: the freeze's statement that the pinned vLLM 0.27.1 fused
+MoE layer refuses an expert count that `DP * TP` does not divide. That
+refusal exists only when expert-parallel load balancing is enabled; without
+it `determine_expert_map` gives each EP rank below the remainder one extra
+expert. The builder now follows that rule, the refusal is withdrawn from the
+builder and from `declared_local_expert_ids`, and the C5 control
+`num_experts 30 at ep_size 8` is withdrawn with it. The statement above that
+places the expert maps behind the framework's divisibility gate is
+superseded.
+
+What came out: the result is `PASS` with no finding. Cell C8 (`tp=1, dp=8`,
+24 MoE layers, 30 experts) gives per-rank counts `4, 4, 4, 4, 4, 4, 3, 3`
+under both strategies, reproduces every owner list the amendment names,
+owns every `(layer, expert)` pair exactly once, and projects 720 snapshot
+owner entries in each strategy. C1 through C6 and the five compatibility
+digests keep their frozen literals, and all six C2 makespans still match
+exactly.
+
+| Evidence class | Amended result |
+|---|---|
+| Scored exact-oracle rows (C2 makespans) | 6 of 6 exact, GOAL text byte identical in every row |
+| Structural exact guards (C1, C3, C4, C6, C8) | 5 of 5 cells exact |
+| Rejection controls (C5) | 7 of 7 refused, each a `ValueError` raised by construction |
+| Fatal compatibility digests | 5 of 5 reference manifests byte identical to the pre-change record |
+
+What it changes: PLACE-3 closes on the corrected builder, which passes the
+original cells plus C8, and a remainder layout is representable in a
+declared manifest. The refusals for an expert count below one and a negative
+MoE layer index gain tests, and a field-level test shows that a manifest
+built with experts differs from its expert-free twin only in the `ep` group,
+the layer range, the expert ownership and the epoch. The PLACE-7 text now
+shards experts across the flattened DP x TP group.
+
+What it does not change: no step metric, GOAL text or reference manifest
+moved, and the m5 record is untouched because its 32 experts divide every
+world. The step-sink consumers still assume uniform per-rank expert
+geometry, so a remainder layout cannot yet drive a timed run; that gap is
+registered as PLACE-8.
 
 ## Reproduction
 
