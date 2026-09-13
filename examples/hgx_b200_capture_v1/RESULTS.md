@@ -47,7 +47,8 @@ link rates with the swept lane rate.
 | Evidence class | Result |
 |---|---|
 | Exact-oracle family (G4 Python versus native) | equal on 96 component and 18 live cells |
-| Behavioral relations (G4 rate pair, G4 B200 versus H100) | rate change moved completion in 9 of 9 live pairs with compute identical; B200 equals H100 on all 16 isolated pair cells; at-or-above holds on 48 fan-in and 18 live cells, with equality in every cell |
+| Behavioral relations (G4 rate pair, G4 B200 equals H100 on isolated pairs) | rate change moved completion in 9 of 9 live pairs with compute identical; B200 equals H100 on all 16 isolated pair cells |
+| Structural observation, unscored (G4 B200 at or above H100 on fan-in and live cells) | equal in all 66 cells, strict in none; vacuous because the crossbar model has no per-chip term, so it is recorded and not counted |
 | Structural exact guards (G1, G2, G3, G6) | 4 of 4 cells exact |
 | Rejection controls (G5) | 7 of 7 refused, including a module-id map that is not a bijection |
 | Fatal compatibility digests | 3 of 3 identical; the DGX study check reproduces |
