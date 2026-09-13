@@ -744,7 +744,8 @@ Reproduce with
   The fabric manifest carries the fixed eight-GPU profile with one 400G
   RNIC per GPU, the declared rail variants and a captured node read from an
   NCCL topology dump; general NIC selection and the `unique-nic` mapping are
-  PLACE-1 and PLACE-2.
+  PLACE-1 and PLACE-2, and the coarse runtime's fixed eight-RNIC profile is
+  CORE-14.
 - **M5 (in progress).** All-to-all traffic studies (MoE expert
   parallelism) landed ([m5](../examples/m5/RESULTS.md)). The trace-driven
   isolated-kernel and copy-service mechanisms plus A100/H100 bootstrap

@@ -144,17 +144,19 @@ every step, with the eight reference artifacts byte identical.
   join for one NIC per NUMA node
   ([capture study](../../examples/nccl_topology_capture_v1/RESULTS.md)).
   Remaining: the mapper's NIC selection for a fabric whose NICs are not one
-  per GPU (frozen with PLACE-2), rendering a captured NIC inventory into a
-  physical fabric with its own link rates, and topology discovery for nodes
-  the fixed eight-GPU rail profile does not describe. CORE-4's fixed profile
+  per GPU (frozen with PLACE-2) and topology discovery for nodes the fixed
+  eight-GPU rail profile does not describe; PLACE-9 owns the captured shapes
+  the reader refuses and the rendering of a captured NIC inventory. CORE-4's fixed profile
   (eight GPUs, one WQE queue per GPU, eight GPU-affine 400G RNICs, intra-node
   transfers on an NVLink-class path) needs none of this and stays the
   default.
 - PLACE-9 (Completeness; P2; M): captured-node shapes the NCCL topology
   reader refuses. `captured_fabric_node` accepts one NIC under each GPU's
   NUMA node and a complete NVLink mesh; a NUMA node with several NICs or
-  none, a NIC shared by several GPUs, a partial mesh and an NVSwitch-class
-  dump (`<nvlink>` targets of bridge class) are refused fail closed, and the
+  none, a NIC shared by several GPUs, a partial mesh, a PCIe-switched node
+  (`<pci>` nested under `<pci>`), a NIC attached directly under a `<cpu>`
+  element and an NVSwitch-class dump (`<nvlink>` targets of bridge class)
+  are refused fail closed, and the
   peer domain is named `<node_id>:nv4` for any lane count. Add explicit
   selections for those shapes and a lane-count-derived domain name, and
   render the captured NIC inventory (200 Gbit/s Slingshot ports on the
