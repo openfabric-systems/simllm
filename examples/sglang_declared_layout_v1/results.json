@@ -1,0 +1,1079 @@
+{
+  "cells": {
+    "compatibility_digests": {
+      "m4_tp8": {
+        "bytes": 5698,
+        "sha256": "3812aef241d93f2af8d86da0f6bbb606dae9c43c768ceb3efb8d649dc3bacfd6"
+      },
+      "m5_tp1_dp8": {
+        "bytes": 5698,
+        "sha256": "0894fae1687217d88466b5692034a8d1863fb8c658afdfde2c317d1c412f60a5"
+      },
+      "rail_pp8": {
+        "bytes": 52310,
+        "sha256": "8d38cf4b6990bfd75fc90dcfe994180c3c1150adce297b6f71983fd8c9c877db"
+      },
+      "width_tp64": {
+        "bytes": 102050,
+        "sha256": "bed8d26c72feaf117f48b651ec18b4fb0caf39df2e47866a550f74252972aecd"
+      },
+      "worked_example_tp4_pp2_dp2": {
+        "bytes": 10832,
+        "sha256": "2e46eadcaccd83de1778ea98c368585b452b83067489b9a2df064e25a14d857e"
+      }
+    },
+    "place3_study_check": {
+      "reproduces": true,
+      "study": "examples/declared_expert_placement_v1/run_study.py"
+    },
+    "s10_m5_identity": [
+      {
+        "ep_ranks_from_manifest": [
+          0,
+          1
+        ],
+        "ep_ranks_hand_typed": [
+          0,
+          1
+        ],
+        "expected_makespan_ps": 563362560,
+        "goal_artifact_count": 48,
+        "goal_text_byte_identical": true,
+        "hand_typed_makespan_ps": 563362560,
+        "makespan_matches_frozen": true,
+        "makespan_ps": 563362560,
+        "shape": "decode8x2048",
+        "snapshot_owner_entries": 768,
+        "snapshot_owner_rule_holds": true,
+        "world": 2
+      },
+      {
+        "ep_ranks_from_manifest": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "ep_ranks_hand_typed": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "expected_makespan_ps": 486963888,
+        "goal_artifact_count": 48,
+        "goal_text_byte_identical": true,
+        "hand_typed_makespan_ps": 486963888,
+        "makespan_matches_frozen": true,
+        "makespan_ps": 486963888,
+        "shape": "decode8x2048",
+        "snapshot_owner_entries": 768,
+        "snapshot_owner_rule_holds": true,
+        "world": 4
+      },
+      {
+        "ep_ranks_from_manifest": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "ep_ranks_hand_typed": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "expected_makespan_ps": 448764528,
+        "goal_artifact_count": 48,
+        "goal_text_byte_identical": true,
+        "hand_typed_makespan_ps": 448764528,
+        "makespan_matches_frozen": true,
+        "makespan_ps": 448764528,
+        "shape": "decode8x2048",
+        "snapshot_owner_entries": 768,
+        "snapshot_owner_rule_holds": true,
+        "world": 8
+      },
+      {
+        "ep_ranks_from_manifest": [
+          0,
+          1
+        ],
+        "ep_ranks_hand_typed": [
+          0,
+          1
+        ],
+        "expected_makespan_ps": 17592951360,
+        "goal_artifact_count": 48,
+        "goal_text_byte_identical": true,
+        "hand_typed_makespan_ps": 17592951360,
+        "makespan_matches_frozen": true,
+        "makespan_ps": 17592951360,
+        "shape": "prefill2048",
+        "snapshot_owner_entries": 768,
+        "snapshot_owner_rule_holds": true,
+        "world": 2
+      },
+      {
+        "ep_ranks_from_manifest": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "ep_ranks_hand_typed": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "expected_makespan_ps": 25646015088,
+        "goal_artifact_count": 48,
+        "goal_text_byte_identical": true,
+        "hand_typed_makespan_ps": 25646015088,
+        "makespan_matches_frozen": true,
+        "makespan_ps": 25646015088,
+        "shape": "prefill2048",
+        "snapshot_owner_entries": 768,
+        "snapshot_owner_rule_holds": true,
+        "world": 4
+      },
+      {
+        "ep_ranks_from_manifest": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "ep_ranks_hand_typed": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "expected_makespan_ps": 29672546928,
+        "goal_artifact_count": 48,
+        "goal_text_byte_identical": true,
+        "hand_typed_makespan_ps": 29672546928,
+        "makespan_matches_frozen": true,
+        "makespan_ps": 29672546928,
+        "shape": "prefill2048",
+        "snapshot_owner_entries": 768,
+        "snapshot_owner_rule_holds": true,
+        "world": 8
+      }
+    ],
+    "s1_coincidence": {
+      "dp_is_a_singleton": true,
+      "ep_group": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "ep_rank_equals_tp_rank": true,
+      "extra_groups_over_the_twin": [
+        "moe_dp",
+        "moe_tp"
+      ],
+      "framework": "sglang",
+      "group_key_order": [
+        "tp",
+        "pp",
+        "dp",
+        "ep",
+        "moe_tp",
+        "moe_dp"
+      ],
+      "rank_5": {
+        "ep_group": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "expert_ids": [
+          20,
+          21,
+          22,
+          23
+        ],
+        "layer_range": [
+          0,
+          48
+        ],
+        "moe_dp_group": [
+          5
+        ],
+        "moe_dp_rank": 0,
+        "moe_tp_group": [
+          5
+        ],
+        "moe_tp_rank": 0,
+        "one_expert_row_per_layer": true,
+        "rank_in_group": 5
+      },
+      "rank_count": 8,
+      "twin_framework": null,
+      "vllm_twin_fields_equal": true
+    },
+    "s2_expert_sharding": {
+      "ep_groups": [
+        [
+          0,
+          4
+        ],
+        [
+          1,
+          5
+        ],
+        [
+          2,
+          6
+        ],
+        [
+          3,
+          7
+        ]
+      ],
+      "moe_tp_members_own_identical_sets": true,
+      "owners_partition_every_ep_group": true,
+      "rank_0": {
+        "ep_group": [
+          0,
+          4
+        ],
+        "expert_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        "layer_range": [
+          0,
+          48
+        ],
+        "moe_dp_group": [
+          0
+        ],
+        "moe_dp_rank": 0,
+        "moe_tp_group": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "moe_tp_rank": 0,
+        "one_expert_row_per_layer": true,
+        "rank_in_group": 0
+      },
+      "rank_5": {
+        "ep_group": [
+          1,
+          5
+        ],
+        "expert_ids": [
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31
+        ],
+        "layer_range": [
+          0,
+          48
+        ],
+        "moe_dp_group": [
+          5
+        ],
+        "moe_dp_rank": 0,
+        "moe_tp_group": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "moe_tp_rank": 1,
+        "one_expert_row_per_layer": true,
+        "rank_in_group": 1
+      }
+    },
+    "s3_moe_data_parallel": {
+      "ep_groups": [
+        [
+          0,
+          1
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          6,
+          7
+        ]
+      ],
+      "rank_5": {
+        "ep_group": [
+          4,
+          5
+        ],
+        "expert_ids": [
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31
+        ],
+        "layer_range": [
+          0,
+          48
+        ],
+        "moe_dp_group": [
+          1,
+          3,
+          5,
+          7
+        ],
+        "moe_dp_rank": 2,
+        "moe_tp_group": [
+          5
+        ],
+        "moe_tp_rank": 0,
+        "one_expert_row_per_layer": true,
+        "rank_in_group": 1
+      },
+      "rank_6": {
+        "ep_group": [
+          6,
+          7
+        ],
+        "expert_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        "layer_range": [
+          0,
+          48
+        ],
+        "moe_dp_group": [
+          0,
+          2,
+          4,
+          6
+        ],
+        "moe_dp_rank": 3,
+        "moe_tp_group": [
+          6
+        ],
+        "moe_tp_rank": 0,
+        "one_expert_row_per_layer": true,
+        "rank_in_group": 0
+      }
+    },
+    "s4_pipeline": {
+      "every_pair_owned_once": true,
+      "moe_layers_per_stage": [
+        12,
+        15,
+        15,
+        16
+      ],
+      "owner_entries_total": 3712,
+      "rank_13": {
+        "ep_group": [
+          12,
+          13,
+          14,
+          15
+        ],
+        "expert_ids": [
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31
+        ],
+        "layer_range": [
+          45,
+          61
+        ],
+        "moe_dp_group": [
+          13
+        ],
+        "moe_dp_rank": 0,
+        "moe_tp_group": [
+          13
+        ],
+        "moe_tp_rank": 0,
+        "one_expert_row_per_layer": true,
+        "rank_in_group": 1
+      },
+      "rank_count": 16,
+      "stage_ranges": [
+        [
+          0,
+          15
+        ],
+        [
+          15,
+          30
+        ],
+        [
+          30,
+          45
+        ],
+        [
+          45,
+          61
+        ]
+      ]
+    },
+    "s5_partitions": {
+      "oracle": {
+        "agrees": true,
+        "ran": true,
+        "rows": {
+          "24/3": [
+            [
+              0,
+              8
+            ],
+            [
+              8,
+              16
+            ],
+            [
+              16,
+              24
+            ]
+          ],
+          "30/4": [
+            [
+              0,
+              7
+            ],
+            [
+              7,
+              14
+            ],
+            [
+              14,
+              22
+            ],
+            [
+              22,
+              30
+            ]
+          ],
+          "48/2": [
+            [
+              0,
+              24
+            ],
+            [
+              24,
+              48
+            ]
+          ],
+          "5/2": [
+            [
+              0,
+              2
+            ],
+            [
+              2,
+              5
+            ]
+          ],
+          "61/4": [
+            [
+              0,
+              15
+            ],
+            [
+              15,
+              30
+            ],
+            [
+              30,
+              45
+            ],
+            [
+              45,
+              61
+            ]
+          ],
+          "61/8": [
+            [
+              0,
+              7
+            ],
+            [
+              7,
+              14
+            ],
+            [
+              14,
+              21
+            ],
+            [
+              21,
+              29
+            ],
+            [
+              29,
+              37
+            ],
+            [
+              37,
+              45
+            ],
+            [
+              45,
+              53
+            ],
+            [
+              53,
+              61
+            ]
+          ]
+        },
+        "version": "0.5.6.post3.dev9406+gbfeae4e79",
+        "version_suffix_matches": true
+      },
+      "rows": {
+        "24/3": [
+          [
+            0,
+            8
+          ],
+          [
+            8,
+            16
+          ],
+          [
+            16,
+            24
+          ]
+        ],
+        "30/4": [
+          [
+            0,
+            7
+          ],
+          [
+            7,
+            14
+          ],
+          [
+            14,
+            22
+          ],
+          [
+            22,
+            30
+          ]
+        ],
+        "48/2": [
+          [
+            0,
+            24
+          ],
+          [
+            24,
+            48
+          ]
+        ],
+        "5/2": [
+          [
+            0,
+            2
+          ],
+          [
+            2,
+            5
+          ]
+        ],
+        "61/4": [
+          [
+            0,
+            15
+          ],
+          [
+            15,
+            30
+          ],
+          [
+            30,
+            45
+          ],
+          [
+            45,
+            61
+          ]
+        ],
+        "61/8": [
+          [
+            0,
+            7
+          ],
+          [
+            7,
+            14
+          ],
+          [
+            14,
+            21
+          ],
+          [
+            21,
+            29
+          ],
+          [
+            29,
+            37
+          ],
+          [
+            37,
+            45
+          ],
+          [
+            45,
+            53
+          ],
+          [
+            53,
+            61
+          ]
+        ]
+      }
+    },
+    "s6_refusals": {
+      "ep_size 0": true,
+      "moe_dp_size 0": true,
+      "num_experts 30 at ep_size 8": true,
+      "num_layers 1 at pp 2": true,
+      "round_robin under the sglang builder": true,
+      "tp 2 pp 1 nodes 1 gpus_per_node 1": true,
+      "tp 4 pp 1 nodes 3": true,
+      "tp 4 pp 3 nodes 2": true,
+      "tp 8 ep_size 16": true,
+      "tp 8 ep_size 2 moe_dp_size 2": true,
+      "tp 8 ep_size 3": true,
+      "tp 8 moe_dp_size 2 pp 2": true
+    },
+    "s7_round_trip": {
+      "framework_version_passthrough": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
+      "s2_expert_sharding": {
+        "ascending_expert_layer_keys": true,
+        "byte_identical": true,
+        "framework": "sglang",
+        "framework_version": null,
+        "group_key_order": [
+          "tp",
+          "pp",
+          "dp",
+          "ep",
+          "moe_tp",
+          "moe_dp"
+        ],
+        "loaded_equals_built": true,
+        "one_group_key_order": true
+      },
+      "s4_pipeline": {
+        "ascending_expert_layer_keys": true,
+        "byte_identical": true,
+        "framework": "sglang",
+        "framework_version": null,
+        "group_key_order": [
+          "tp",
+          "pp",
+          "dp",
+          "ep",
+          "moe_tp",
+          "moe_dp"
+        ],
+        "loaded_equals_built": true,
+        "one_group_key_order": true
+      }
+    },
+    "s8_node_placement": {
+      "tp16_pp1_nodes2": [
+        [
+          "node-0",
+          0
+        ],
+        [
+          "node-0",
+          1
+        ],
+        [
+          "node-0",
+          2
+        ],
+        [
+          "node-0",
+          3
+        ],
+        [
+          "node-0",
+          4
+        ],
+        [
+          "node-0",
+          5
+        ],
+        [
+          "node-0",
+          6
+        ],
+        [
+          "node-0",
+          7
+        ],
+        [
+          "node-1",
+          0
+        ],
+        [
+          "node-1",
+          1
+        ],
+        [
+          "node-1",
+          2
+        ],
+        [
+          "node-1",
+          3
+        ],
+        [
+          "node-1",
+          4
+        ],
+        [
+          "node-1",
+          5
+        ],
+        [
+          "node-1",
+          6
+        ],
+        [
+          "node-1",
+          7
+        ]
+      ],
+      "tp4_pp1_nodes2": [
+        [
+          "node-0",
+          0
+        ],
+        [
+          "node-0",
+          1
+        ],
+        [
+          "node-1",
+          0
+        ],
+        [
+          "node-1",
+          1
+        ]
+      ],
+      "tp8_pp2_default_nodes": 2,
+      "tp8_pp2_default_rows": [
+        [
+          "node-0",
+          0
+        ],
+        [
+          "node-0",
+          1
+        ],
+        [
+          "node-0",
+          2
+        ],
+        [
+          "node-0",
+          3
+        ],
+        [
+          "node-0",
+          4
+        ],
+        [
+          "node-0",
+          5
+        ],
+        [
+          "node-0",
+          6
+        ],
+        [
+          "node-0",
+          7
+        ],
+        [
+          "node-1",
+          0
+        ],
+        [
+          "node-1",
+          1
+        ],
+        [
+          "node-1",
+          2
+        ],
+        [
+          "node-1",
+          3
+        ],
+        [
+          "node-1",
+          4
+        ],
+        [
+          "node-1",
+          5
+        ],
+        [
+          "node-1",
+          6
+        ],
+        [
+          "node-1",
+          7
+        ]
+      ],
+      "tp8_pp2_nodes2": [
+        [
+          "node-0",
+          0
+        ],
+        [
+          "node-0",
+          1
+        ],
+        [
+          "node-0",
+          2
+        ],
+        [
+          "node-0",
+          3
+        ],
+        [
+          "node-0",
+          4
+        ],
+        [
+          "node-0",
+          5
+        ],
+        [
+          "node-0",
+          6
+        ],
+        [
+          "node-0",
+          7
+        ],
+        [
+          "node-1",
+          0
+        ],
+        [
+          "node-1",
+          1
+        ],
+        [
+          "node-1",
+          2
+        ],
+        [
+          "node-1",
+          3
+        ],
+        [
+          "node-1",
+          4
+        ],
+        [
+          "node-1",
+          5
+        ],
+        [
+          "node-1",
+          6
+        ],
+        [
+          "node-1",
+          7
+        ]
+      ]
+    },
+    "s9_divergence": {
+      "differing_stages": [
+        2,
+        3
+      ],
+      "ep_group_rank_5_sglang": [
+        1,
+        5
+      ],
+      "ep_group_rank_5_vllm": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "partition_61_4_sglang": [
+        [
+          0,
+          15
+        ],
+        [
+          15,
+          30
+        ],
+        [
+          30,
+          45
+        ],
+        [
+          45,
+          61
+        ]
+      ],
+      "partition_61_4_vllm": [
+        [
+          0,
+          15
+        ],
+        [
+          15,
+          30
+        ],
+        [
+          30,
+          46
+        ],
+        [
+          46,
+          61
+        ]
+      ]
+    }
+  },
+  "evidence": {
+    "fatal_compatibility_digests": 5,
+    "fatal_place3_study_check": 1,
+    "rejection_controls": 12,
+    "s5_oracle_arm_ran": true,
+    "scored_exact_oracle_rows": 6,
+    "scored_exact_oracle_rows_matched": 6,
+    "structural_guard_cells": 8
+  },
+  "expectations_commit": "1eef03f5823c00703a78119773fd805bfa3e64f1",
+  "findings": [],
+  "implementation_commit": "2b3787fffd87fe87ef088d1631f1cc33c7ab1e95",
+  "schema": "simllm-sglang-declared-layout-result-v1",
+  "status": "PASS"
+}
