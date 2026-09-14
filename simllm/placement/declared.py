@@ -78,6 +78,78 @@ modeled here, and an extracted manifest records the map that really ran.
 Omitting ``experts`` is the explicit off path. It adds no group, no layer
 range and no expert ownership, and every manifest built without it is byte
 identical to the pre-expert output.
+
+**Declared SGLang layout.** :func:`declared_sglang_manifest` is the second
+declared builder. It answers the same what-if question for a deployment that
+runs SGLang instead of vLLM, and it is a separate entry point rather than an
+option because the two frameworks disagree about the rank space itself. The
+rules below are read from the installed SGLang package at the pinned commit
+``bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3``, whose distribution reports
+``0.5.6.post3.dev9406+gbfeae4e79``. File names are given relative to the
+installed ``sglang/srt`` package. Attention data parallelism, attention and
+decode context parallelism, and the elastic expert-parallel joiner offset are
+one or zero throughout.
+
+- Rank formula. ``distributed/bootstrap.py`` computes
+  ``world_size = tp_size * pp_size`` and ``rank = tp_size * pp_rank + tp_rank``,
+  and ``distributed/parallel_state.py`` (``initialize_model_parallel``) refuses
+  any other world size. A tensor group is a contiguous block of ``tp`` ranks
+  and a pipeline group strides by ``tp``. There is no data-parallel axis in the
+  rank space: ``layers/dp_attention.py`` places attention data parallelism
+  inside the tensor group, and ``managers/data_parallel_controller.py`` launches
+  router-style replicas as separate worlds with their own GPU offset. The
+  declared manifest describes one replica, so every rank carries a singleton
+  ``dp`` membership.
+- MoE sizes. ``initialize_model_parallel`` sets ``moe_ep_size`` from
+  ``--ep-size``, ``moe_dp_size`` from ``--moe-dp-size``, and
+  ``moe_tp_size = tp // moe_ep_size // moe_dp_size``. ``server_args.py``
+  asserts, only when ``moe_dp_size > 1``, that ``tp % moe_dp_size == 0``,
+  ``ep_size * moe_dp_size <= tp``, ``pp == 1``, and, when also ``ep_size > 1``,
+  ``ep_size * moe_dp_size == tp``. The general divisibility of ``tp`` by
+  ``ep_size * moe_dp_size`` is asserted by the framework only for quantized
+  models; the declared builder refuses it for every layout, because the group
+  formulas cover the tensor group exactly once only when it holds.
+- EP group. For the tensor group with base ``b = pp_rank * tp``, each
+  ``moe_dp_idx`` and each ``moe_tp_idx``, the group is
+  ``range(s, s + ep * moe_tp, moe_tp)`` with
+  ``s = b + moe_dp_idx * ep * moe_tp + moe_tp_idx``. A rank's index inside it
+  is ``tp_rank % (tp // moe_dp) // moe_tp``, the formula the scheduler launcher
+  prints. At ``ep_size == tp`` the group is the tensor group itself.
+- MoE tensor group. For each combined ``ep_dp_idx`` in ``range(ep * moe_dp)``,
+  the contiguous block ``range(b + ep_dp_idx * moe_tp, b + (ep_dp_idx + 1) *
+  moe_tp)``; a rank's index inside it is ``tp_rank % moe_tp``.
+- MoE data-parallel group. For each ``idx`` in ``range(moe_tp * ep)``, the
+  strided set ``range(b + idx, b + tp + idx, moe_tp * ep)``; a rank's index
+  inside it is ``tp_rank // (tp // moe_dp)``.
+- Expert map. With the default ``--init-expert-location trivial``,
+  ``eplb/expert_location.py`` maps physical expert ``i`` to logical expert
+  ``i`` and asserts ``num_experts % ep_size == 0``, and
+  ``layers/moe/fused_moe_triton/layer.py`` gives EP rank ``r`` the contiguous
+  experts ``[r * L, (r + 1) * L)`` with ``L = num_experts // ep_size``. There
+  is no round-robin placement, so the SGLang builder refuses that strategy and
+  refuses an expert count the EP size does not divide. Under ``moe_tp > 1``
+  every rank of one MoE tensor group owns the same expert ids and holds one
+  shard of each; the shard is not represented, which is the gap PLACE-7
+  already records for vLLM.
+- Pipeline partition. ``distributed/utils.py`` (``get_pp_indices``) gives every
+  stage ``base = L // PP`` layers and one extra layer to each of the *last*
+  ``L mod PP`` stages, where vLLM hands the remainder to the stages indexed
+  ``-2, -3, ...``. This is why a 61-layer model on four stages is partitioned
+  differently by the two frameworks. The environment override
+  ``SGLANG_PP_LAYER_PARTITION`` is deliberately not modeled, for the same
+  reason its vLLM counterpart is not.
+- GPU and node placement. ``managers/data_parallel_controller.py`` hosts
+  ``pp // nnodes`` pipeline stages per node when ``nnodes <= pp``, and
+  otherwise spreads one stage over ``nnodes // pp`` nodes carrying
+  ``tp // (nnodes // pp)`` tensor ranks each. In both cases ranks fill nodes in
+  global-rank order, ``world // nnodes`` at a time, so the declared builder
+  uses that fill and refuses a node count that neither divides nor is divided
+  by ``pp``, or that leaves ``tp`` indivisible by ``nnodes // pp``.
+
+The two builders never share an output. :func:`declared_manifest` keeps its
+vLLM rank space, its ``ep`` group and its partition exactly as they are, and
+:func:`declared_sglang_manifest` writes ``framework="sglang"`` on everything it
+emits, so a consumer can always tell which layout rules it is holding.
 """
 
 from __future__ import annotations
@@ -356,5 +428,243 @@ def declared_manifest(
         ranks=ranks,
         source="declared",
         framework=framework,
+        framework_version=framework_version,
+    )
+
+
+def declared_sglang_pipeline_partition(
+    num_layers: int, pp: int
+) -> tuple[tuple[int, int], ...]:
+    """Return one ``[start, end)`` layer interval per SGLang pipeline stage.
+
+    This is the pinned ``get_pp_indices`` rule of SGLang at commit
+    ``bfeae4e7`` with no environment override: every stage takes
+    ``num_layers // pp`` layers and each of the last ``num_layers mod pp``
+    stages takes one extra layer, so stage ``p`` starts at
+    ``p * (base + 1) - (pp - remainder)`` when it is one of those and at
+    ``p * base`` otherwise. vLLM hands the same remainder to the stages
+    indexed ``-2, -3, ...``, which is why :func:`declared_pipeline_partition`
+    returns different intervals for the same ``(num_layers, pp)``. A stage
+    with zero layers is refused rather than emitted, because a pipeline stage
+    that owns no layer has no work and no meaningful expert ownership.
+    """
+
+    _positive_int("num_layers", num_layers, minimum=1)
+    _positive_int("pp", pp, minimum=1)
+    if num_layers < pp:
+        raise ValueError(
+            f"num_layers must be >= pp {pp} so every stage owns a layer, "
+            f"got {num_layers}"
+        )
+    base, remainder = divmod(num_layers, pp)
+    without_extra = pp - remainder
+    intervals: list[tuple[int, int]] = []
+    for stage in range(pp):
+        if stage >= without_extra:
+            start = stage * (base + 1) - without_extra
+            intervals.append((start, start + base + 1))
+        else:
+            start = stage * base
+            intervals.append((start, start + base))
+    return tuple(intervals)
+
+
+def _sglang_node_fill(
+    tp: int, pp: int, nodes: int | None, gpus_per_node: int
+) -> tuple[int, int]:
+    """Resolve the node count and the ranks each node holds, or refuse.
+
+    Ranks fill nodes in global-rank order, ``world // nodes`` at a time, which
+    is what the SGLang launcher does in both of its arrangements. ``nodes``
+    defaults to the fewest that fit the world at ``gpus_per_node``; the
+    launcher's own constraints are then checked against whatever count is in
+    force, so an explicit and a defaulted count are refused on the same terms.
+    """
+
+    world = tp * pp
+    if nodes is None:
+        nodes = -(-world // gpus_per_node)
+    else:
+        _positive_int("nodes", nodes, minimum=1)
+    if world % nodes:
+        raise ValueError(f"nodes {nodes} must divide the world size {world}")
+    ranks_per_node = world // nodes
+    if ranks_per_node > gpus_per_node:
+        raise ValueError(
+            f"nodes {nodes} leaves {ranks_per_node} ranks on a node of "
+            f"{gpus_per_node} GPUs"
+        )
+    if pp % nodes and nodes % pp:
+        raise ValueError(f"nodes {nodes} must divide or be divided by pp {pp}")
+    if nodes > pp and tp % (nodes // pp):
+        raise ValueError(
+            f"nodes {nodes} spreads one pipeline stage over {nodes // pp} nodes, "
+            f"which must divide tp {tp}"
+        )
+    return nodes, ranks_per_node
+
+
+def declared_sglang_manifest(
+    *,
+    tp: int = 1,
+    pp: int = 1,
+    ep_size: int = 1,
+    moe_dp_size: int = 1,
+    nodes: int | None = None,
+    gpus_per_node: int = 8,
+    hostname_pattern: str = "node-{}",
+    framework_version: str | None = None,
+    experts: DeclaredExpertLayout | None = None,
+) -> PlacementManifest:
+    """Build a ``source="declared"``, ``framework="sglang"`` manifest.
+
+    The world is ``tp * pp`` with no data-parallel term, so every rank carries
+    a ``tp`` membership, a ``pp`` membership and a singleton ``dp`` membership,
+    in that order. ``ep_size`` is SGLang's ``--ep-size`` and ``moe_dp_size``
+    its ``--moe-dp-size``; the MoE tensor width follows as
+    ``tp // ep_size // moe_dp_size``. ``nodes`` is ``--nnodes`` and defaults to
+    the fewest that fit the world at ``gpus_per_node``.
+
+    ``experts`` is the optional declared MoE layout, the same
+    :class:`DeclaredExpertLayout` the vLLM builder takes. With it present every
+    rank additionally carries the ``ep``, ``moe_tp`` and ``moe_dp``
+    memberships, in that order after ``dp``, the ``[start, end)`` hidden-layer
+    interval of its SGLang pipeline stage, the contiguous block of global
+    expert ids its EP rank owns in each MoE layer of that interval, and the
+    declared placement epoch. With it absent the manifest carries the three
+    base memberships and nothing else.
+
+    Every refusal is a :class:`ValueError` naming the field at fault, raised
+    before the first rank is built so a refusal never leaves a half-populated
+    manifest behind.
+    """
+
+    _positive_int("tp", tp, minimum=1)
+    _positive_int("pp", pp, minimum=1)
+    _positive_int("ep_size", ep_size, minimum=1)
+    _positive_int("moe_dp_size", moe_dp_size, minimum=1)
+    _positive_int("gpus_per_node", gpus_per_node, minimum=1)
+    if tp % (ep_size * moe_dp_size):
+        raise ValueError(
+            f"tp {tp} must be divisible by ep_size * moe_dp_size "
+            f"({ep_size * moe_dp_size})"
+        )
+    if moe_dp_size > 1:
+        if pp > 1:
+            raise ValueError(f"moe_dp_size {moe_dp_size} requires pp 1, got pp {pp}")
+        if ep_size > 1 and ep_size * moe_dp_size != tp:
+            raise ValueError(
+                f"moe_dp_size {moe_dp_size} with ep_size {ep_size} requires "
+                f"ep_size * moe_dp_size == tp {tp}"
+            )
+    nodes, ranks_per_node = _sglang_node_fill(tp, pp, nodes, gpus_per_node)
+    moe_tp_size = tp // ep_size // moe_dp_size
+    moe_dp_stride = tp // moe_dp_size
+
+    # Resolve everything the expert layout implies before the first rank is
+    # built, so a refusal never leaves a half-populated manifest behind.
+    stage_intervals: tuple[tuple[int, int], ...] = ()
+    stage_moe_layers: tuple[tuple[int, ...], ...] = ()
+    if experts is not None:
+        if not isinstance(experts, DeclaredExpertLayout):
+            raise TypeError("experts must be a DeclaredExpertLayout or None")
+        if experts.placement_strategy != "linear":
+            raise ValueError(
+                "placement_strategy must be 'linear' under the SGLang expert "
+                f"map, got {experts.placement_strategy!r}"
+            )
+        if experts.num_experts % ep_size:
+            raise ValueError(
+                f"num_experts {experts.num_experts} must be divisible by "
+                f"ep_size {ep_size}"
+            )
+        if experts.num_layers < pp:
+            raise ValueError(
+                f"num_layers must be >= pp {pp} so every stage owns a layer, "
+                f"got {experts.num_layers}"
+            )
+        stage_intervals = declared_sglang_pipeline_partition(experts.num_layers, pp)
+        stage_moe_layers = tuple(
+            tuple(layer for layer in experts.moe_layers if start <= layer < end)
+            for start, end in stage_intervals
+        )
+
+    ranks: list[RankPlacement] = []
+    for pp_index in range(pp):
+        base = pp_index * tp
+        for tp_index in range(tp):
+            global_rank = base + tp_index
+            groups = {
+                "tp": GroupMembership(tp_index, [base + t for t in range(tp)]),
+                "pp": GroupMembership(pp_index, [p * tp + tp_index for p in range(pp)]),
+                # One replica: SGLang's router-style data parallelism launches
+                # a separate world, so this rank is its own dp group.
+                "dp": GroupMembership(0, [global_rank]),
+            }
+            layer_range: tuple[int, int] | None = None
+            local_expert_ids: dict[int, list[int]] = {}
+            placement_epoch = 0
+            if experts is not None:
+                moe_dp_index = tp_index // moe_dp_stride
+                moe_tp_index = tp_index % moe_tp_size
+                ep_rank = tp_index % moe_dp_stride // moe_tp_size
+                ep_start = base + moe_dp_index * ep_size * moe_tp_size + moe_tp_index
+                groups["ep"] = GroupMembership(
+                    ep_rank,
+                    list(
+                        range(
+                            ep_start,
+                            ep_start + ep_size * moe_tp_size,
+                            moe_tp_size,
+                        )
+                    ),
+                )
+                moe_tp_block = tp_index // moe_tp_size
+                groups["moe_tp"] = GroupMembership(
+                    moe_tp_index,
+                    list(
+                        range(
+                            base + moe_tp_block * moe_tp_size,
+                            base + (moe_tp_block + 1) * moe_tp_size,
+                        )
+                    ),
+                )
+                moe_dp_offset = tp_index % moe_dp_stride
+                groups["moe_dp"] = GroupMembership(
+                    moe_dp_index,
+                    list(
+                        range(
+                            base + moe_dp_offset,
+                            base + tp + moe_dp_offset,
+                            moe_dp_stride,
+                        )
+                    ),
+                )
+                layer_range = stage_intervals[pp_index]
+                owned = list(
+                    declared_local_expert_ids(
+                        experts.num_experts, ep_size, ep_rank, "linear"
+                    )
+                )
+                local_expert_ids = {
+                    layer: list(owned) for layer in stage_moe_layers[pp_index]
+                }
+                placement_epoch = experts.placement_epoch
+            ranks.append(
+                RankPlacement(
+                    global_rank=global_rank,
+                    hostname=hostname_pattern.format(global_rank // ranks_per_node),
+                    local_rank=global_rank % ranks_per_node,
+                    groups=groups,
+                    pipeline_layer_range=layer_range,
+                    local_expert_ids=local_expert_ids,
+                    placement_epoch=placement_epoch,
+                )
+            )
+    ranks.sort(key=lambda placement: placement.global_rank)
+    return PlacementManifest(
+        ranks=ranks,
+        source="declared",
+        framework="sglang",
         framework_version=framework_version,
     )
