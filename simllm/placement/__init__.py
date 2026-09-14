@@ -29,7 +29,13 @@ collective to a physical endpoint and assigns GOAL ranks for the network
 backend.
 """
 
-from simllm.placement.declared import declared_manifest
+from simllm.placement.declared import (
+    DECLARED_EXPERT_PLACEMENT_STRATEGIES,
+    DeclaredExpertLayout,
+    declared_local_expert_ids,
+    declared_manifest,
+    declared_pipeline_partition,
+)
 from simllm.placement.dgx import dgx_peer_fabric
 from simllm.placement.disaggregated import (
     DECLARED_CLOS_ENDPOINTS_PER_LEAF,
@@ -93,9 +99,11 @@ __all__ = [
     "DECLARED_CLOS_SPINE_SWITCHES",
     "DECLARED_CLOS_SWITCH_LATENCY_PS",
     "DECLARED_CLOS_TOPOLOGY_NAME",
+    "DECLARED_EXPERT_PLACEMENT_STRATEGIES",
     "FABRIC_SCHEMA",
     "PLACEMENT_SCHEMA",
     "RAIL_FABRIC_VARIANTS",
+    "DeclaredExpertLayout",
     "DisaggregatedDeploymentManifests",
     "FabricLink",
     "FabricNodePlacement",
@@ -118,7 +126,9 @@ __all__ = [
     "captured_fabric_node",
     "captured_switch_ports",
     "captured_switched_node",
+    "declared_local_expert_ids",
     "declared_manifest",
+    "declared_pipeline_partition",
     "declared_pipeline_placement",
     "declared_rail_fabric",
     "dgx_peer_fabric",

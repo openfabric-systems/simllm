@@ -23,6 +23,22 @@ both.
   manifest records what really happened, while a declared deployment has
   no live groups to ask and the formula is its specification. The
   `source` field keeps the two kinds distinguishable forever.
+- `DeclaredExpertLayout(num_layers=..., moe_layers=..., num_experts=...,
+  placement_strategy="linear" | "round_robin", placement_epoch=...)`, passed
+  as `declared_manifest(..., experts=...)`: the mixture-of-experts (MoE) half
+  of the same what-if statement, following the pinned vLLM 0.27.1 rules.
+  Every rank gains the expert-parallel `ep` group of its pipeline stage (the
+  DP x TP ranks, data-parallel major, `rank_in_group = dp * TP + tp`), the
+  `[start, end)` layer range of the pinned pipeline partition, and the global
+  expert ids it owns in each MoE layer of that range under the selected
+  expert map; `declared_pipeline_partition` and `declared_local_expert_ids`
+  expose the two rules on their own. When `DP x TP` does not divide the
+  expert count, each EP rank below the remainder owns one extra expert, as in
+  the framework's own expert map. `round_robin` is the caller's declaration;
+  vLLM's own fallback to `linear` is not modeled, and an extracted manifest
+  records the map that really ran. Omitting `experts`
+  is the explicit off path and keeps every expert-free manifest byte
+  identical.
 - Fabric topology manifest (`simllm-fabric-topology-v1`): GPU to PCIe/NVLink
   to NIC to switch to link graph. `FabricTopologyManifest` round-trips node
   inventory, switch ports and physical links, validates one termination per
@@ -109,6 +125,18 @@ projection, and no locality field is copied into the execution graph. The
 captured locality study covers one-node, two-node and all-remote placements;
 see [the results](../../examples/nvlink_locality_v1/RESULTS.md). This required
 no manifest schema change. General `unique-nic` projection remains PLACE-2.
+
+The declared EP layout is landed and validated by the
+[declared expert placement study](../../examples/declared_expert_placement_v1/RESULTS.md):
+the EP group read from `declared_manifest(tp=1, dp=W, experts=...)`
+reproduces all six frozen m5 check-B makespans exactly with byte-identical
+GOAL text against the hand-typed rank list, the worked example's round-robin
+ownership matches the manifest tests' original hand-written row, a 64-rank
+DeepSeek-class pipeline partitions 256 experts over four 16-rank EP groups
+with every `(layer, expert)` pair owned exactly once, and the five reference
+expert-free manifests stay byte identical. Expert-parallel studies can
+read `manifest.group_ranks(rank, "ep")` and build
+`ExpertPlacementSnapshot.from_manifest` from declared ownership.
 
 The disaggregated builder supplies the one-prefill plus one-decode placement
 used by the live CORE-51 session and the same fixed structure at 16 prefill
@@ -238,12 +266,40 @@ slots, and reproduces every live DGX cell identically with the bound fabric.
   happen to have the same cardinality there, but the general mapper must not
   assume that affinity.
 
-- PLACE-3 (Completeness; P1; M): expert-parallel group memberships and
-  declared expert ownership in `declared_manifest`. The builder emits tp/pp/dp
-  groups only, so the M5 MoE studies pass an explicit `ep_ranks` list to
-  `HtsimStepSink` instead of reading an EP group from a manifest; a declared
-  EP layout (group lists plus per-layer `local_num_experts` ownership) would
-  close the gap, and the extracted manifest's per-MoE-layer expert IDs already
-  model the live half.
-  P1 since 2026-09-07: the expert-parallel tail studies read the EP group from
-  the manifest.
+- PLACE-7 (Completeness; P2; S): declared MoE ownership with expert
+  parallelism disabled. vLLM 0.27.1 still creates the `ep` group for a MoE
+  model when expert parallelism is off, but then tensor-shards every expert
+  across the flattened DP x TP group so each rank owns every expert of its
+  stage's MoE layers. Today that deployment is declared by omitting `experts`, which is
+  the accepted all-experts-local geometry but records no `ep` group, so an
+  extracted manifest from such a run and its declared counterpart differ in
+  group inventory. Add an explicit selection that emits the group with
+  all-expert ownership; omitting it must keep every current manifest byte
+  identical, and the enabled variant must not change any step metric of an
+  expert-free run.
+
+- PLACE-8 (Completeness; P2; S): uneven per-rank expert ownership in the
+  step-sink consumers. A declared layout whose expert count `DP x TP` does
+  not divide is representable in the manifest, with the remainder experts on
+  the lowest EP ranks, but its consumers assume uniform per-rank expert
+  geometry: the vLLM step schedule refuses it
+  (`local_num_experts * len(ep_ranks) == num_experts`), and `HtsimStepSink`
+  carries one `ModelDims.local_num_experts` for every EP rank. The
+  calibration side shares the assumption: `simllm/calibration/extraction.py`
+  refuses a MoE communication case whose participant count does not divide
+  the expert count before floor-dividing it, and the memory estimate in
+  `simllm/calibration/external_db.py` floor-divides `num_experts` by
+  `moe_ep_size`, dropping remainder experts silently, so both belong to the
+  same path. Add an explicit uneven-ownership path; its absence must keep
+  every current artifact byte identical.
+
+- PLACE-11 (Completeness; P2; S): framework-side expert map exceptions the
+  declared layout does not model. vLLM 0.27.1 falls back from `round_robin`
+  to `linear` when the model has at most one expert group, has redundant
+  experts, runs EPLB, or uses an all-to-all backend without round-robin
+  routing tables, and some model implementations refuse expert counts their
+  expert-parallel size does not divide. `DeclaredExpertLayout` emits the
+  caller's declared strategy and the remainder rule as stated; add an explicit
+  model-scoped selection that applies those exceptions, whose absence keeps
+  every current manifest byte identical. An extracted manifest records the map
+  that really ran.
