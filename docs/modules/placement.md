@@ -39,6 +39,26 @@ both.
   records the map that really ran. Omitting `experts`
   is the explicit off path and keeps every expert-free manifest byte
   identical.
+- `declared_sglang_manifest(tp=..., pp=..., ep_size=..., moe_dp_size=...,
+  nodes=..., gpus_per_node=..., hostname_pattern=..., framework_version=...,
+  experts=...)` and `declared_sglang_pipeline_partition(num_layers, pp)`: the
+  same declared statement under the pinned SGLang layout rules, emitting
+  `source="declared"` and `framework="sglang"`. The world is `tp x pp` with no
+  data-parallel term in the rank space (`global_rank = tp * pp_rank + tp_rank`,
+  attention data parallelism living inside the tensor group and router-style
+  replicas being separate worlds), so every rank carries `tp`, `pp` and a
+  singleton `dp` membership. With `experts` present it also carries the `ep`
+  group carved out of one tensor group per pipeline stage, with the MoE tensor
+  index innermost and the MoE data-parallel index outermost, and the `moe_tp`
+  and `moe_dp` groups that go with it at `moe_tp_size = tp // ep_size //
+  moe_dp_size`. Ownership is the contiguous block of `num_experts // ep_size`
+  experts, the only expert map the pinned framework builds, and the partition
+  hands the layer remainder to the *last* stages where the vLLM rule hands it
+  to the stages indexed `-2, -3, ...`. `DeclaredExpertLayout` is shared with
+  the vLLM builder, and `round_robin`, an expert count `ep_size` does not
+  divide, and a node count the launcher could not produce are refused. The two
+  builders are separate entry points and never share an output: every manifest
+  the vLLM builder emits is byte identical to its pre-change bytes.
 - Fabric topology manifest (`simllm-fabric-topology-v1`): GPU to PCIe/NVLink
   to NIC to switch to link graph. `FabricTopologyManifest` round-trips node
   inventory, switch ports and physical links, validates one termination per
@@ -163,6 +183,19 @@ with every `(layer, expert)` pair owned exactly once, and the five reference
 expert-free manifests stay byte identical. Expert-parallel studies can
 read `manifest.group_ranks(rank, "ep")` and build
 `ExpertPlacementSnapshot.from_manifest` from declared ownership.
+
+A declared manifest can follow either pinned framework. The
+[SGLang declared layout study](../../examples/sglang_declared_layout_v1/RESULTS.md)
+validates the second builder: the installed package's own `get_pp_indices`
+agrees with `declared_sglang_pipeline_partition` on all six frozen rows, the
+`tp=8, ep_size=8` manifest equals its vLLM twin field for field outside the
+framework name and the two MoE side groups, expert sharding and MoE data
+parallelism place every EP, `moe_tp` and `moe_dp` group on its frozen ranks, a
+16-rank four-stage pipeline conserves all 3,712 ownership entries, and the EP
+group read from `declared_sglang_manifest(tp=W, pp=1, ep_size=W, experts=...)`
+reproduces all six frozen m5 check-B makespans exactly with byte-identical
+GOAL text. The five vLLM reference manifests stay byte identical and the
+PLACE-3 study still reproduces its tracked results.
 
 The disaggregated builder supplies the one-prefill plus one-decode placement
 used by the live CORE-51 session and the same fixed structure at 16 prefill
@@ -346,25 +379,20 @@ slots, and reproduces every live DGX cell identically with the bound fabric.
   every current manifest byte identical. An extracted manifest records the map
   that really ran.
 
-- PLACE-13 (Completeness; P2; M): a declared builder for the pinned SGLang
-  layout. The accepted declared builder follows vLLM 0.27.1, and SGLang's
-  layout at the pinned commit `bfeae4e7` differs where no option can reach:
-  its world is `tp x pp` with no data-parallel term in the rank space, its
-  expert-parallel group is carved out of one tensor group per pipeline stage
-  with the MoE tensor index innermost and the MoE data-parallel index
-  outermost, its expert map is the contiguous block only with a divisibility
-  assertion and no round-robin placement, and its pipeline partition hands
-  the remainder layers to the last stages rather than to the stages indexed
-  `-2, -3, ...`. A consumer reading a vLLM-declared manifest for an SGLang
-  deployment therefore misplaces layers on two of four stages of a 61-layer
-  model and misnames every EP group whenever `ep_size < tp`. Add
-  `declared_sglang_manifest(tp=..., pp=..., ep_size=..., moe_dp_size=...,
-  nodes=..., experts=...)` emitting `framework="sglang"`, the `ep`, `moe_tp`
-  and `moe_dp` memberships, the SGLang partition and block ownership, with
-  the framework's own `get_pp_indices` as an executable oracle; the vLLM
-  builder and every existing manifest stay byte identical. The
-  [freeze](../../examples/sglang_declared_layout_v1/expectations.md) records
-  the cells. Attention and context parallelism inside the tensor group,
-  shared and redundant experts, EPLB maps and the elastic joiner offset are
-  out of scope and are registered at closure. SGL-18 owns the extracted
-  counterpart.
+- PLACE-14 (Completeness; P2; M): the SGLang layout variants the declared
+  builder leaves out. `declared_sglang_manifest` states one replica of a
+  `tp x pp` world with `--ep-size` and `--moe-dp-size`, and everything else
+  the pinned framework can do is fixed at one, zero, trivial or absent:
+  attention data parallelism and attention context parallelism inside the
+  tensor group, decode context parallelism, the `SGLANG_PP_LAYER_PARTITION`
+  environment override, fused shared experts and redundant physical expert
+  copies, expert-parallel load balancing (EPLB) maps other than the trivial
+  identity, and the elastic expert-parallel joiner offset. The unrepresented
+  tensor shard under `moe_tp > 1`, where every rank of one MoE tensor group
+  owns the same expert ids and holds one shard of each, is the same gap
+  PLACE-7 records for vLLM and is settled with it. Add an explicit selection
+  for each, so the layout that opts in says so; the absence of any new
+  selection must keep every current manifest byte identical, which the five
+  vLLM reference digests and the
+  [SGLang study](../../examples/sglang_declared_layout_v1/RESULTS.md) rows
+  both lock. SGL-18 owns the extracted counterpart of these same mechanisms.

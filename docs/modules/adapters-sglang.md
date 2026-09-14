@@ -798,7 +798,12 @@ closed id.
   unsupported sentinel combination must keep failing before it can be priced
   as dense. Acceptance requires exact per-rank active FLOPs and resident
   bytes, a supported end-to-end TTFT/TPOT change, and byte-identical dense and
-  single-GPU baselines.
+  single-GPU baselines. The declared what-if counterpart of this extracted
+  ownership already exists: PLACE-13 closed with `declared_sglang_manifest`,
+  whose `ep`, `moe_tp` and `moe_dp` groups and contiguous expert blocks follow
+  the same pinned commit
+  ([study](../../examples/sglang_declared_layout_v1/RESULTS.md)), so a declared
+  geometry can be stated for a family this reader still refuses.
 - SGL-26 (Completeness; P1; M): select a nonideal host profile in a live
   in-process SGLang run and carry it to TTFT and TPOT. `configure` already
   accepts a host model and `_validate_host_model_selection` already requires
