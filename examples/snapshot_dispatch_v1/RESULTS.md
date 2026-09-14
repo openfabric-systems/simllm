@@ -64,3 +64,30 @@ software checks, not new behavioral points. The actual Windows lookup is also
 part of the hosted gate. This changes runtime provenance capture only. All
 reported model jobs, profile relations and prior VOID receipts above retain
 their original executed source and verdict.
+
+## POSIX runtime identity
+
+The same reader assumption fails on a Linux interpreter whose built-in `math`
+module has no source file, observed on a python-build-standalone CPython 3.12
+and on a Debian system Python. The
+[POSIX amendment](portability-expectations.md), frozen at `d0598888`, responds
+to that software failure before the correction and the new fixture runs.
+File-backed identities and the Windows handle lookup stay byte identical to
+the accepted record. A built-in module now resolves the loaded image that
+holds the interpreter core: the address of the exported core symbol
+`Py_Initialize` is located inside the kernel's memory map of the running
+process, and on other POSIX platforms inside the dynamic loader's own record
+of that address. No filename is guessed from the executable, a launcher or the
+build configuration. A missing core symbol, an address in no mapping, an
+anonymous or pseudo mapping, a relative or missing image path and a loader
+lookup failure reject.
+
+The focused runtime-identity gate passes 36 checks with one Windows-only check
+skipped, up from 19 checks with the same single skip. The study gate passes
+its 31 checks, of which the built-in `math` module previously stopped 27 from
+running on this interpreter. The kernel memory map and the dynamic loader name
+the same image, and two consecutive runtime records are equal. These are
+unscored software checks, not new behavioral points. This changes runtime
+provenance capture only. No snapshot semantics, engine behavior, model job,
+profile relation, price, timing sweep or resource limit changes, and every
+accepted record keeps its executed source identifiers and verdict.

@@ -1,0 +1,60 @@
+<system version="1">
+  <cpu host_hash="0x78ad2c674a35a902" numaid="0" affinity="00000000,0000ffff,ffffffff,00000000,0000ffff,ffffffff" arch="x86_64" vendor="GenuineIntel" familyid="6" modelid="207">
+    <pci busid="0000:45:00.0" class="0x060400" vendor="0x1000" device="0x0001" subsystem_vendor="0x1000" subsystem_device="0x0001" link_speed="32.0 GT/s PCIe" link_width="16">
+      <pci busid="0000:51:00.0" class="0x030200" vendor="0x10de" device="0x2901" subsystem_vendor="0x10de" subsystem_device="0x1999" link_speed="32.0 GT/s PCIe" link_width="16">
+        <gpu dev="0" sm="100" rank="0" gdr="1">
+          <nvlink target="fffffff:ff:ff.0" count="18" tclass="0x068000"/>
+        </gpu>
+      </pci>
+      <pci busid="0000:52:00.0" class="0x030200" vendor="0x10de" device="0x2901" subsystem_vendor="0x10de" subsystem_device="0x1999" link_speed="32.0 GT/s PCIe" link_width="16">
+        <gpu dev="1" sm="100" rank="1" gdr="1">
+          <nvlink target="fffffff:ff:ff.0" count="18" tclass="0x068000"/>
+        </gpu>
+      </pci>
+    </pci>
+    <nic>
+      <net name="eth0" dev="0" latency="0" speed="10000" port="0" guid="0x0" maxconn="65536" gdr="0"/>
+    </nic>
+    <pci busid="0000:56:00.0" class="0x060400" vendor="0x1000" device="0x0001" subsystem_vendor="0x1000" subsystem_device="0x0001" link_speed="32.0 GT/s PCIe" link_width="16">
+      <pci busid="0000:62:00.0" class="0x030200" vendor="0x10de" device="0x2901" subsystem_vendor="0x10de" subsystem_device="0x1999" link_speed="32.0 GT/s PCIe" link_width="16">
+        <gpu dev="2" sm="100" rank="2" gdr="1">
+          <nvlink target="fffffff:ff:ff.0" count="18" tclass="0x068000"/>
+        </gpu>
+      </pci>
+      <pci busid="0000:63:00.0" class="0x030200" vendor="0x10de" device="0x2901" subsystem_vendor="0x10de" subsystem_device="0x1999" link_speed="32.0 GT/s PCIe" link_width="16">
+        <gpu dev="3" sm="100" rank="3" gdr="1">
+          <nvlink target="fffffff:ff:ff.0" count="18" tclass="0x068000"/>
+        </gpu>
+      </pci>
+    </pci>
+  </cpu>
+  <cpu host_hash="0x78ad2c674a35a902" numaid="1" affinity="ffffffff,ffff0000,00000000,ffffffff,ffff0000,00000000" arch="x86_64" vendor="GenuineIntel" familyid="6" modelid="207">
+    <pci busid="0000:67:00.0" class="0x060400" vendor="0x1000" device="0x0001" subsystem_vendor="0x1000" subsystem_device="0x0001" link_speed="32.0 GT/s PCIe" link_width="16">
+      <pci busid="0000:75:00.0" class="0x030200" vendor="0x10de" device="0x2901" subsystem_vendor="0x10de" subsystem_device="0x1999" link_speed="32.0 GT/s PCIe" link_width="16">
+        <gpu dev="4" sm="100" rank="4" gdr="1">
+          <nvlink target="fffffff:ff:ff.0" count="18" tclass="0x068000"/>
+        </gpu>
+      </pci>
+      <pci busid="0000:76:00.0" class="0x030200" vendor="0x10de" device="0x2901" subsystem_vendor="0x10de" subsystem_device="0x1999" link_speed="32.0 GT/s PCIe" link_width="16">
+        <gpu dev="5" sm="100" rank="5" gdr="1">
+          <nvlink target="fffffff:ff:ff.0" count="18" tclass="0x068000"/>
+        </gpu>
+      </pci>
+    </pci>
+    <nic>
+      <net name="eth0" dev="0" latency="0" speed="10000" port="0" guid="0x0" maxconn="65536" gdr="0"/>
+    </nic>
+    <pci busid="0000:7a:00.0" class="0x060400" vendor="0x1000" device="0x0001" subsystem_vendor="0x1000" subsystem_device="0x0001" link_speed="32.0 GT/s PCIe" link_width="16">
+      <pci busid="0000:86:00.0" class="0x030200" vendor="0x10de" device="0x2901" subsystem_vendor="0x10de" subsystem_device="0x1999" link_speed="32.0 GT/s PCIe" link_width="16">
+        <gpu dev="6" sm="100" rank="6" gdr="1">
+          <nvlink target="fffffff:ff:ff.0" count="18" tclass="0x068000"/>
+        </gpu>
+      </pci>
+      <pci busid="0000:87:00.0" class="0x030200" vendor="0x10de" device="0x2901" subsystem_vendor="0x10de" subsystem_device="0x1999" link_speed="32.0 GT/s PCIe" link_width="16">
+        <gpu dev="7" sm="100" rank="7" gdr="1">
+          <nvlink target="fffffff:ff:ff.0" count="18" tclass="0x068000"/>
+        </gpu>
+      </pci>
+    </pci>
+  </cpu>
+</system>

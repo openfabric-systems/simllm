@@ -1,0 +1,106 @@
+{
+  "schema": "simllm-nccl-topology-capture-expectations-v1",
+  "task": "PLACE-1",
+  "slice": "captured node inventory from an NCCL topology dump",
+  "date": "2026-09-13",
+  "baseline": {
+    "commit": "26704c1c18e3c5503cb717cdd31391b82d3983a0",
+    "files": {
+      "simllm/backends/peer_step.py": "34f062b7a1b28260a09271082d9947ea5370a52851a8a27bc4c31ed5ea385789",
+      "simllm/backends/step_sink.py": "13a758691abbb61b95c2399cf3b1a06310d817cedbdf72c662e471c99ae70f42",
+      "simllm/placement/__init__.py": "665ecf44ccb371daa54de00856565df5d27759d9383ef63e3583c7bd45695706",
+      "simllm/placement/dgx.py": "e7a2e951b84f254074fc3a6af65da91c0fabc1090387ee7266b7894019cd65c9",
+      "simllm/placement/manifest.py": "f82f05b7277501bdc2c6993e2638a16f9a5631a08c7a13f5f24a34ecad8936c2",
+      "simllm/placement/mapper.py": "b1a5d2d62d2fe0924ec0971ca23218581d387db0e38ee8333ed426814f195716",
+      "simllm/placement/peer_topology.py": "8259321fc7102434b73af7f7d9d33f6184a0c000e175c54df7de667a06092fb3",
+      "simllm/traffic/locality.py": "879c803fe1b664267429778acfb47144f53c7736ab55fc9c4354e592f4c6ec38",
+      "simllm/traffic/step_comm.py": "967fef3e0aaf9665b88127cbd9efe27aa7dce6773a05878d771c6aabbf8ec4f4"
+    },
+    "fixture": {
+      "directory": "tests/fixtures/nccl_topology/perlmutter_a100_nid001056",
+      "nccl_topo.xml": "af3996ac37ffedec0053c574da1cc59aa22df034fb20bc043d844dbf4a921c49",
+      "nccl_graph.xml": "939b46a3cb0da5e263cae0b5fd0c26132d10a565dafabbd45b52d046475a33d8",
+      "node_inventory.txt": "a0e72c8c66eef9c9317f00ebdf683cb461f62e6d0951a41265f44752b3462f81",
+      "nccl_env.txt": "aa548d4bea8546b9a4ae42cca46311105a7decb7510d3b09662abd65444b67f3",
+      "nccl_run_excerpt.log": "251dd065e98559a2d98dbd4ca939024af0c8e0ca0a54576dd945d9548bac9dd7"
+    },
+    "artifacts": {
+      "worked_example_tp4_pp2_dp2": {"bytes": 10832, "sha256": "2e46eadcaccd83de1778ea98c368585b452b83067489b9a2df064e25a14d857e"},
+      "m4_tp8": {"bytes": 5698, "sha256": "3812aef241d93f2af8d86da0f6bbb606dae9c43c768ceb3efb8d649dc3bacfd6"},
+      "rail_pp8": {"bytes": 52310, "sha256": "8d38cf4b6990bfd75fc90dcfe994180c3c1150adce297b6f71983fd8c9c877db"},
+      "m5_tp1_dp8": {"bytes": 5698, "sha256": "0894fae1687217d88466b5692034a8d1863fb8c658afdfde2c317d1c412f60a5"},
+      "width_tp64": {"bytes": 102050, "sha256": "bed8d26c72feaf117f48b651ec18b4fb0caf39df2e47866a550f74252972aecd"},
+      "fabric_one_plus_one": {"bytes": 21379, "sha256": "36527abf437eb875ce8db097b301bd1c25789f98fd38271378d65f6416361367"},
+      "fabric_one_plus_one_disabled": {"bytes": 8204, "sha256": "f3950a9593817adbba344fa1d91a752b5d44a0d066b0f29163a5add448b84841"},
+      "dgx_a100_peer_fabric_json": {"bytes": 84797, "sha256": "47d66b66acd5a477f757ee30400256d39569df5a5fef5aea1655a937fc9fa219"}
+    }
+  },
+  "capture": {
+    "site": "NERSC Perlmutter GPU node",
+    "node": "nid001056",
+    "slurm_job": 58271200,
+    "date": "2026-09-13",
+    "nccl_version": "2.29.7",
+    "framework": "torch 2.13.0+cu130",
+    "cpu": {"model": "AMD EPYC 7763", "numa_nodes": 4, "numaid_file_order": [3, 0, 1, 2]},
+    "pci_devices": 8,
+    "pcie": {"link_speed": "16.0 GT/s PCIe", "link_width": 16},
+    "gpus": {
+      "count": 4, "vendor": "0x10de", "device": "0x20b0", "sm": 80,
+      "busid_by_dev": {"0": "0000:03:00.0", "1": "0000:41:00.0", "2": "0000:82:00.0", "3": "0000:c1:00.0"},
+      "numa_by_dev": {"0": 3, "1": 2, "2": 1, "3": 0},
+      "nvlink_rows": 12, "nvlink_count_per_pair": 4, "links_per_gpu": 12, "link_rate_gb_per_s": 25
+    },
+    "nics": {
+      "count": 4, "vendor": "0x17db", "device": "0x0501", "speed_mbit": 200000, "speed_bps": 200000000000,
+      "busid_by_name": {"cxi0": "0000:c2:00.0", "cxi1": "0000:81:00.0", "cxi2": "0000:42:00.0", "cxi3": "0000:01:00.0"},
+      "numa_by_name": {"cxi0": 0, "cxi1": 1, "cxi2": 2, "cxi3": 3},
+      "gdr": 1, "maxconn": 128, "port": 1
+    },
+    "affinity_gpu_dev_to_nic": {"0": "cxi3", "1": "cxi2", "2": "cxi1", "3": "cxi0"}
+  },
+  "interface": {
+    "module": "simllm.placement.nccl_topology",
+    "reader": "NcclTopologyDump.load",
+    "join": "captured_fabric_node",
+    "peer_domain_id": "<node_id>:nv4",
+    "nvlink_link_rate_bps_default": 200000000000,
+    "fabric_source": "extracted",
+    "peer_evidence_class": "declared"
+  },
+  "cells": {
+    "n1_parse": {"cpus": 4, "pci": 8, "gpus": 4, "nics": 4, "nvlink_rows": 12},
+    "n2_join": {
+      "node_id": "nid001056", "pool_role": "serving",
+      "gpu_nic_by_rank": {"0": "nid001056:cxi3", "1": "nid001056:cxi2", "2": "nid001056:cxi1", "3": "nid001056:cxi0"},
+      "nic_order": ["cxi0", "cxi1", "cxi2", "cxi3"], "affine_gpu_rank_in_nic_order": [3, 2, 1, 0]
+    },
+    "n3_mesh": {"links": 24, "gpu_ports": 48, "routes": 12, "paths": 48, "paths_per_route": 4, "link_rate_bps": 200000000000},
+    "n4_cross_check": ["nv4_all_pairs", "numa_affinity_column", "lspci_vendor_device", "nvlink_s_twelve_links_25gb"],
+    "n5_live": {
+      "profile": "rnic-nn-fluid", "tp_ranks": [0, 1, 2, 3], "compute_ps": 37000,
+      "twin_identity": ["StepResult", "outcomes", "fabric_to_dict"],
+      "fabric_bytes": 0, "nvlink_bytes_positive": true,
+      "pair_floor_bytes_per_second": 100000000000,
+      "rate_doubling_never_slower": true
+    },
+    "n6_refusals": [
+      "version 2", "gpu without rank", "asymmetric nvlink count 2 vs 4", "two nics under one cpu",
+      "no nic under a cpu", "duplicate busid", "nvlink target unknown busid", "net without speed", "non-integer link_width"
+    ],
+    "n7_round_trip": true
+  },
+  "evidence": {
+    "scored_identity_family": 1,
+    "scored_relation_instances": 2,
+    "structural_guard_cells": ["n1_parse", "n2_join", "n3_mesh", "n4_cross_check", "n7_round_trip"],
+    "rejection_control_family": "n6_refusals",
+    "fatal_compatibility_digests": 8
+  },
+  "closure": {
+    "closes": [],
+    "narrows": ["PLACE-1"],
+    "registers": ["residual affinity shapes and captured NIC rendering"],
+    "untouched": ["PLACE-2", "PLACE-6", "PLACE-7"]
+  }
+}

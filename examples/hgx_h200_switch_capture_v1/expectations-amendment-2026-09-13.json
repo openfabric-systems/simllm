@@ -1,0 +1,18 @@
+{
+  "schema": "simllm-hgx-h200-switch-capture-amendment-v1",
+  "date": "2026-09-13",
+  "chronology": "post-specified to an independent review and the second B200 amendment, frozen before the corrected implementation and its rerun",
+  "moved_identity": "hgx_b200_capture_v1 results at the stacked base after regeneration",
+  "added_controls": [
+    "swapped gpus",
+    "rotated gpus",
+    "swapped uuids",
+    "switch list class or vendor",
+    "unused listed switch",
+    "dump switch absent from list"
+  ],
+  "h2_nic_facts": [
+    "eight connectx virtual functions",
+    "pix gpu i to nic i"
+  ]
+}
