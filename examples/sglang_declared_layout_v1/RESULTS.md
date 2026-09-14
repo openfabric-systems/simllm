@@ -150,10 +150,10 @@ the check is exact rather than bounded. The floor stated before the run still
 holds: one decode step at `W=8` cannot complete faster than the 24 per-layer
 compute gates the m5 record froze, `24 * 10,111 ns = 242,664,000 ps`, and the
 measured 448,764,528 ps sits a factor of 1.85 above it. The directions are the
-ones m5 recorded, and they are the ones the physics requires: the decode
-makespan falls with `W` because the per-rank expert weight traffic falls,
-while the prefill makespan rises with `W` because the all-to-all payload grows
-faster than the added links absorb it. A manifest-driven run landing on any
+ones m5 recorded: the decode makespan falls with `W` because the per-rank
+expert compute shrinks faster than the all-to-all grows, while the prefill
+makespan rises with `W` because the all-to-all payload grows faster than the
+added endpoints absorb it. A manifest-driven run landing on any
 other value than the m5 literal would be a defect in the builder, the sink or
 the harness, never a calibration finding, and none did.
 
