@@ -87,6 +87,77 @@ def _windows_runtime_path():
     raise ValueError("loaded runtime path remains truncated")
 
 
+def _core_symbol_address():
+    """Take the address of the interpreter core symbol the loaded image must contain."""
+    import ctypes
+
+    api = getattr(ctypes, "pythonapi", None)
+    symbol = getattr(api, "Py_Initialize", None) if api is not None else None
+    if symbol is None:
+        raise ValueError("built-in module provenance requires the loaded interpreter core symbol")
+    address = ctypes.cast(symbol, ctypes.c_void_p).value
+    if type(address) is not int or address <= 0:
+        raise ValueError("loaded interpreter core symbol has no usable address")
+    return address
+
+
+def _process_maps():
+    """Read the kernel's own record of the regions mapped into this process."""
+    return pathlib.Path("/proc/self/maps").read_text(encoding="utf-8", errors="surrogateescape")
+
+
+def _mapped_image_path(address, maps):
+    """Return the file the kernel maps over one address, never a guessed name."""
+    for line in maps.splitlines():
+        fields = line.split(maxsplit=5)
+        if len(fields) < 5:
+            continue
+        low, separator, high = fields[0].partition("-")
+        if not separator:
+            continue
+        try:
+            start, end = int(low, 16), int(high, 16)
+        except ValueError:
+            continue
+        if not start <= address < end:
+            continue
+        name = fields[5] if len(fields) == 6 else ""
+        if not name or name.startswith("["):
+            raise ValueError("loaded runtime address sits in an anonymous or pseudo mapping")
+        if not name.startswith("/"):
+            raise ValueError("loaded runtime image path is not absolute")
+        return pathlib.Path(name).resolve(strict=True)
+    raise ValueError("no process mapping contains the loaded runtime address")
+
+
+def _loader_image_path(address):
+    """Ask the dynamic loader which image it placed at one address."""
+    import ctypes
+
+    class DlInfo(ctypes.Structure):
+        _fields_ = [("dli_fname", ctypes.c_char_p), ("dli_fbase", ctypes.c_void_p),
+                    ("dli_sname", ctypes.c_char_p), ("dli_saddr", ctypes.c_void_p)]
+
+    info = DlInfo()
+    lookup = ctypes.CDLL(None).dladdr
+    lookup.argtypes = [ctypes.c_void_p, ctypes.POINTER(DlInfo)]
+    lookup.restype = ctypes.c_int
+    if lookup(ctypes.c_void_p(address), ctypes.byref(info)) == 0 or not info.dli_fname:
+        raise OSError("dladdr failed for the loaded Python runtime")
+    name = info.dli_fname.decode("utf-8", "surrogateescape")
+    if not name.startswith("/"):
+        raise ValueError("loaded runtime image path is not absolute")
+    return pathlib.Path(name).resolve(strict=True)
+
+
+def _posix_runtime_path():
+    """Resolve the loaded image holding the interpreter core, never a guessed file."""
+    address = _core_symbol_address()
+    if sys.platform.startswith("linux"):
+        return _mapped_image_path(address, _process_maps())
+    return _loader_image_path(address)
+
+
 def library_identity(module):
     """Keep file-backed receipts exact and identify real built-in module bytes."""
     filename = getattr(module, "__file__", None)
@@ -96,7 +167,7 @@ def library_identity(module):
     if (module.__name__ not in sys.builtin_module_names or sys.modules.get(module.__name__) is not module
             or spec is None or spec.origin != "built-in" or spec.loader is not importlib.machinery.BuiltinImporter):
         raise ValueError("module has neither a source file nor verified built-in provenance")
-    path = _windows_runtime_path()
+    path = _windows_runtime_path() if sys.platform == "win32" else _posix_runtime_path()
     return {"path": str(path), "sha256": sha(path), "origin": "built-in"}
 
 
