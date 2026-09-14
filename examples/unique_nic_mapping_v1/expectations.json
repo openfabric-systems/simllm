@@ -1,0 +1,72 @@
+{
+  "schema": "simllm-unique-nic-mapping-expectations-v1",
+  "task": "PLACE-2",
+  "date": "2026-09-13",
+  "baseline": {
+    "commit": "26704c1c18e3c5503cb717cdd31391b82d3983a0",
+    "files": {
+      "simllm/backends/step_sink.py": "13a758691abbb61b95c2399cf3b1a06310d817cedbdf72c662e471c99ae70f42",
+      "simllm/placement/__init__.py": "665ecf44ccb371daa54de00856565df5d27759d9383ef63e3583c7bd45695706",
+      "simllm/placement/manifest.py": "f82f05b7277501bdc2c6993e2638a16f9a5631a08c7a13f5f24a34ecad8936c2",
+      "simllm/placement/mapper.py": "b1a5d2d62d2fe0924ec0971ca23218581d387db0e38ee8333ed426814f195716",
+      "simllm/placement/peer_topology.py": "8259321fc7102434b73af7f7d9d33f6184a0c000e175c54df7de667a06092fb3",
+      "simllm/traffic/locality.py": "879c803fe1b664267429778acfb47144f53c7736ab55fc9c4354e592f4c6ec38",
+      "simllm/traffic/step_comm.py": "967fef3e0aaf9665b88127cbd9efe27aa7dce6773a05878d771c6aabbf8ec4f4"
+    },
+    "artifacts": {
+      "worked_example_tp4_pp2_dp2": {"bytes": 10832, "sha256": "2e46eadcaccd83de1778ea98c368585b452b83067489b9a2df064e25a14d857e"},
+      "m4_tp8": {"bytes": 5698, "sha256": "3812aef241d93f2af8d86da0f6bbb606dae9c43c768ceb3efb8d649dc3bacfd6"},
+      "rail_pp8": {"bytes": 52310, "sha256": "8d38cf4b6990bfd75fc90dcfe994180c3c1150adce297b6f71983fd8c9c877db"},
+      "m5_tp1_dp8": {"bytes": 5698, "sha256": "0894fae1687217d88466b5692034a8d1863fb8c658afdfde2c317d1c412f60a5"},
+      "width_tp64": {"bytes": 102050, "sha256": "bed8d26c72feaf117f48b651ec18b4fb0caf39df2e47866a550f74252972aecd"},
+      "fabric_one_plus_one": {"bytes": 21379, "sha256": "36527abf437eb875ce8db097b301bd1c25789f98fd38271378d65f6416361367"},
+      "fabric_one_plus_one_disabled": {"bytes": 8204, "sha256": "f3950a9593817adbba344fa1d91a752b5d44a0d066b0f29163a5add448b84841"}
+    },
+    "m5_makespans_ps": {
+      "decode8x2048": {"2": 563362560, "4": 486963888, "8": 448764528},
+      "prefill2048": {"2": 17592951360, "4": 25646015088, "8": 29672546928}
+    }
+  },
+  "interface": {
+    "mapper_modes": ["gpu-rank", "unique-nic"],
+    "mapper_new_methods": ["nic_of"],
+    "fabric_goal_rank_mapping_values": ["gpu-rank", "unique-nic"],
+    "shared_nic_builder": "declared_shared_nic_fabric",
+    "sink_fields": ["goal_rank_mapping", "fabric_manifest"],
+    "collapsed_tag_rule": "tag * M + j, M = max segments per endpoint pair in the step, j = index within pair ordered by (source_rank, destination_rank); M = 1 is the identity",
+    "refused_with_unique_nic": ["peer_packet", "flow_session", "dependency_cross_check", "topology", "num_goal_ranks below NIC count"]
+  },
+  "cells": {
+    "u1_identity": {"deployment": "disaggregated 1+1", "ranks": 16, "nics": 16, "profile": "rnic-nn-fluid", "goal_text_identical": true, "step_result_identical": true},
+    "u2_permutation": {"placement": "tp=1, dp=8, gpus_per_node=4", "goal_rank": "4 * node + (3 - local)", "step_result_identical": true, "goal_text_differs_only_in_rank_numbers": true},
+    "u3_shared": {
+      "placement": "tp=1, dp=16", "gpus_per_nic": [1, 2, 4], "payload_bytes": [65536, 1048576],
+      "linkspeed_bps": 400000000000, "ps_per_byte": 20, "propagation_ps": 2000000,
+      "flows_per_endpoint": {"1": 8, "2": 16, "4": 32}, "goal_ranks": {"1": 16, "2": 8, "4": 4},
+      "fct_minus_propagation_ps": "flows_per_endpoint * S * 20",
+      "ratio_to_g1": {"1": 1, "2": 2, "4": 4},
+      "fabric_bytes_invariant_across_g": true, "nvlink_bytes_invariant": true, "g1_identical_to_gpu_rank": true
+    },
+    "u4_refusals": [
+      "unique-nic without fabric", "fabric missing a NIC for one GPU", "fabric GPU set differs from placement",
+      "gpus_per_nic does not divide node width", "unique-nic with peer_packet", "unique-nic with topology file",
+      "unique-nic with flow_session", "unique-nic with dependency_cross_check", "num_goal_ranks below NIC count",
+      "duplicate projection key"
+    ],
+    "u5_round_trip": true
+  },
+  "evidence": {
+    "scored_relation_instances": 12,
+    "scored_identity_families": 2,
+    "structural_guard_cells": ["u5_round_trip", "projection_joins"],
+    "rejection_control_family": "u4_refusals",
+    "fatal_compatibility_digests": 7,
+    "fatal_makespan_literals": 6
+  },
+  "closure": {
+    "closes_if_literal": ["PLACE-2"],
+    "narrows": ["PLACE-1"],
+    "registers": ["unique-nic with the peer packet, flow session, cross-check and physical topology seams"],
+    "untouched": ["PLACE-6", "PLACE-7"]
+  }
+}

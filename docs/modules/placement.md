@@ -85,12 +85,29 @@ both.
   chips and switch ports to the captured switches and ports (`dgx_peer_fabric`
   takes `switch_ids` and `switch_port_ids` for that), refusing a board whose
   per-switch lane counts differ from the generation's bundle.
-- `RankMapper`: rank to GOAL-rank assignment mirroring the htsim drivers'
-  `-goal_rank_mapping` (`gpu-rank` implemented; `unique-nic` is refused by
-  the mapper and by the fabric validator, PLACE-2), plus `is_intra_node`. Construction validates and snapshots
-  a unique global-rank-to-host projection with nonblank hostnames and unique
-  local GPU endpoints, so an active traffic run cannot silently change its
-  locality authority.
+- `RankMapper(placement, mode="gpu-rank" | "unique-nic", fabric=...)`: rank
+  to GOAL-rank assignment mirroring the htsim drivers' `-goal_rank_mapping`.
+  `gpu-rank` is the identity; `unique-nic` reads each GPU's affine NIC from
+  the fabric manifest and assigns one GOAL rank per NIC in fabric order (node
+  order, then NIC order within a node), so GPUs behind one NIC share one
+  fabric endpoint while `is_intra_node` keeps their local traffic off the
+  fabric. `nic_of(rank)` answers the affinity in either mode. Construction
+  validates and snapshots a unique global-rank-to-host projection with
+  nonblank hostnames and unique local GPU endpoints, joins the fabric (every
+  GPU names one NIC on its own node, the GPU set equals the rank set), so an
+  active traffic run cannot silently change its locality or endpoint
+  authority.
+- `declared_shared_nic_fabric(placement, gpus_per_nic=...)`: a fabric for a
+  declared placement with `gpus_per_node // gpus_per_nic` NICs per node and
+  GPU `local_rank` `l` affine to NIC `l // gpus_per_nic`; one GPU per NIC is
+  the identity mapping. The fabric renderer gives segments that collapse onto
+  one GOAL endpoint pair distinct tags by `tag * M + j` (`M` the largest
+  collapse in the step, the identity at `M = 1`) and carries a projection
+  table that joins every backend completion row to its semantic segment.
+  `HtsimStepSinkConfig(goal_rank_mapping="unique-nic", fabric_manifest=...)`
+  selects the mode on the null-network profiles; the
+  [unique-NIC study](../../examples/unique_nic_mapping_v1/RESULTS.md) shows
+  the fluid closed form scaling exactly with the GPUs per NIC.
 - `disaggregated_manifests(prefill_nodes=..., decode_nodes=...,
   gpus_per_node=..., render_physical_topology=...)`: builds the paired
   placement and fabric projections for the fixed prefill/decode deployment.
@@ -124,7 +141,16 @@ segments are classified by semantic global rank before fabric GOAL-rank
 projection, and no locality field is copied into the execution graph. The
 captured locality study covers one-node, two-node and all-remote placements;
 see [the results](../../examples/nvlink_locality_v1/RESULTS.md). This required
-no manifest schema change. General `unique-nic` projection remains PLACE-2.
+no manifest schema change.
+
+The `unique-nic` projection is landed and validated by the
+[unique-NIC study](../../examples/unique_nic_mapping_v1/RESULTS.md): with
+one NIC per GPU the mode is byte identical to `gpu-rank`, a reversed NIC
+order permutes GOAL ranks with identical results, and two or four GPUs behind
+one NIC give per-flow serialization times exactly two or four times the
+one-per-NIC value after subtracting fixed propagation, with every completion row joined
+to its semantic segment through the projection table. The seven reference
+manifests and the six m5 makespans stay exact under the default mapping.
 
 The declared EP layout is landed and validated by the
 [declared expert placement study](../../examples/declared_expert_placement_v1/RESULTS.md):
@@ -239,11 +265,13 @@ slots, and reproduces every live DGX cell identically with the bound fabric.
   node-local leaf variants of the reference Clos (`declared_rail_fabric`,
   TRAF-88's opt-in) and the NCCL topology dump reader with the captured-node
   join for one NIC per NUMA node
-  ([capture study](../../examples/nccl_topology_capture_v1/RESULTS.md)).
-  Remaining: the mapper's NIC selection for a fabric whose NICs are not one
-  per GPU (frozen with PLACE-2) and topology discovery for nodes the fixed
-  eight-GPU rail profile does not describe; PLACE-9 owns the captured shapes
-  the reader refuses and the rendering of a captured NIC inventory. CORE-4's fixed profile
+  ([capture study](../../examples/nccl_topology_capture_v1/RESULTS.md)), plus
+  fabric-backed NIC selection and `unique-nic` mapping for declared shared-NIC
+  nodes ([unique-NIC study](../../examples/unique_nic_mapping_v1/RESULTS.md)).
+  Remaining: topology discovery for nodes the fixed eight-GPU rail profile
+  does not describe; PLACE-9 owns the captured shapes the reader refuses and
+  the rendering of a captured NIC inventory, and PLACE-10 owns the remaining
+  shared-NIC execution paths. CORE-4's fixed profile
   (eight GPUs, one WQE queue per GPU, eight GPU-affine 400G RNICs, intra-node
   transfers on an NVLink-class path) needs none of this and stays the
   default.
@@ -259,12 +287,26 @@ slots, and reproduces every live DGX cell identically with the bound fabric.
   inventory (200 Gbit/s Slingshot ports on the Perlmutter fixture) into a
   physical fabric graph. Absent selection must keep every current manifest
   and study artifact byte identical. PLACE-6 owns the GPU-side capture of
-  switched boards, PLACE-12 their switch side; PLACE-2 owns `unique-nic`.
-- PLACE-2 (Completeness; P2; M): `unique-nic` GOAL-rank mapping (depends on
-  PLACE-1). Also deferred behind the fixed eight-GPU, eight-RNIC profile;
-  `gpu-rank` and `unique-nic`
-  happen to have the same cardinality there, but the general mapper must not
-  assume that affinity.
+  switched boards, PLACE-12 their switch side; PLACE-10 owns the remaining
+  `unique-nic` execution paths.
+- PLACE-10 (Completeness; P2; M): the `unique-nic` seams the first slice
+  refuses. `HtsimStepSinkConfig` refuses `goal_rank_mapping="unique-nic"`
+  together with `peer_packet`, `flow_session`, `dependency_cross_check`, a
+  physical `topology` file or `num_goal_ranks` below the NIC count, because
+  the physical Clos projection assumes 64 GPU-affine endpoints and the
+  session, peer and cross-check paths key their rows by GPU rank. The
+  completion join through the projection table is enforced under
+  `unique-nic` only: typed backend doubles and the LogGOPSim sink return
+  rows that are not one per GOAL message, so `gpu-rank` publishes no join
+  outcome. The step sink's expert-parallel traffic is one-engine (uniform
+  routing dispatches from the first EP rank), so a full-population all-pairs
+  phase can be rendered only through the traffic layer today. Add explicit
+  selections for each: the projection carried through the flow session and
+  cross-check joins, a physical projection for non-64 endpoint counts, the
+  join enforced under `gpu-rank` once every backend double returns one row
+  per message, and a full-population expert-parallel option threaded through
+  the lowerer and the sink. Absent selection must keep every current artifact
+  byte identical. CORE-14 owns the coarse runtime's affinity.
 
 - PLACE-7 (Completeness; P2; S): declared MoE ownership with expert
   parallelism disabled. vLLM 0.27.1 still creates the `ep` group for a MoE

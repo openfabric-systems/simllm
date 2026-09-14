@@ -1,0 +1,22 @@
+{
+  "schema": "simllm-unique-nic-mapping-amendment-v1",
+  "date": "2026-09-13",
+  "chronology": "post-specified to a harness-feasibility finding, frozen before the U3 implementation and run",
+  "u3_path": [
+    "classify_step_locality",
+    "render_fabric_phase_goal",
+    "to_binary",
+    "run_htsim_rnic",
+    "projection join"
+  ],
+  "m_rule": "per phase, maximized over the step",
+  "u2_workload": [
+    "decode8x2048",
+    "prefill2048"
+  ],
+  "unchanged": [
+    "u3 table",
+    "digests",
+    "makespans"
+  ]
+}

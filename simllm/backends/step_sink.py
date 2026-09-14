@@ -154,7 +154,8 @@ from simllm.core import (
     network_level_for_profile,
 )
 from simllm.goal import to_binary
-from simllm.placement import PlacementManifest, RankMapper
+from simllm.placement import FabricTopologyManifest, PlacementManifest, RankMapper
+from simllm.placement.mapper import GOAL_RANK_MAPPINGS
 from simllm.traffic import (
     COLLECTIVE_FIXED_COST_ARMS,
     COLLECTIVE_FLOOR_TRANSFERRED,
@@ -169,11 +170,13 @@ from simllm.traffic import (
     CollectiveRegistrationEvent,
     CollectiveRegistrationLedger,
     CollectiveRegistrationModel,
+    FabricGoalProjection,
     RoutedMoeSupply,
     StepLocalityPlan,
     critical_collective_endpoint_bytes,
     distribute_collective_serialization_ps,
     plan_execution_graph_locality,
+    plan_fabric_goal_projection,
     project_execution_graph_goal,
     render_fabric_phase_goal,
     render_step_goal,
@@ -193,6 +196,7 @@ if TYPE_CHECKING:
 
 _STATEFUL_MULTI_ARTIFACT_PROFILES = frozenset({"rnic-cn"})
 DEPENDENCY_CROSS_CHECK_MODES = ("atlahs-goal",)
+_UNIQUE_NIC_PROFILES = ("rnic-nn", "rnic-nn-fluid")
 
 
 class CollectiveFloorTransferError(ValueError):
@@ -203,6 +207,38 @@ def _require_nonnegative_timing(name: str, value: object) -> int:
     if type(value) is not int or value < 0:
         raise ValueError(f"{name} must be a nonnegative integer")
     return value
+
+
+@dataclass(frozen=True)
+class FabricSegmentCompletion:
+    """One backend completion row joined to the semantic segment it carried.
+
+    Start and completion times are relative to the artifact's own backend run,
+    exactly as the completion CSV reports them.
+    """
+
+    artifact_id: str
+    phase_id: str
+    source_rank: int
+    destination_rank: int
+    tag: int
+    goal_source_rank: int
+    goal_destination_rank: int
+    rendered_tag: int
+    payload_bytes: int
+    start_time_ps: int
+    completion_time_ps: int
+    fct_ps: int
+
+
+@dataclass(frozen=True)
+class StepFabricJoinOutcome:
+    """Every fabric completion row of one unique-nic step, joined through its table."""
+
+    step_index: int
+    goal_rank_mapping: str
+    tag_multiplier: int
+    segments: tuple[FabricSegmentCompletion, ...]
 
 
 @dataclass
@@ -226,6 +262,9 @@ class HtsimStepSinkConfig:
     ``dependency_cross_check="atlahs-goal"`` runs the independently rendered
     direct schedule after the authoritative graph projection and publishes a
     diagnostic report. It never selects the scheduler-visible result.
+    ``goal_rank_mapping="unique-nic"`` with ``fabric_manifest`` gives every NIC
+    one GOAL rank on the null-network profiles; the peer packet, flow session,
+    dependency cross-check and physical topology seams refuse it.
     """
 
     profile: str
@@ -256,6 +295,10 @@ class HtsimStepSinkConfig:
     unsafe_disable_child_lifetime_binding: bool = False
     #: optional physical-placement authority; None is exact all-remote compatibility
     placement_manifest: PlacementManifest | None = None
+    #: GOAL endpoint projection; ``gpu-rank`` is the exact default path
+    goal_rank_mapping: str = field(default="gpu-rank", kw_only=True)
+    #: NIC authority ``unique-nic`` requires; None keeps the default path
+    fabric_manifest: FabricTopologyManifest | None = field(default=None, kw_only=True)
     #: declared one-direction flat per-source NVLink rate; analytic, uncalibrated
     nvlink_bandwidth_bytes_per_second: int = (
         DEFAULT_NVLINK_BANDWIDTH_BYTES_PER_SECOND
@@ -318,7 +361,60 @@ class HtsimStepSinkConfig:
         default_factory=dict,
     )
 
+    def _validate_goal_rank_mapping(self) -> None:
+        """Refuse unmodeled ``unique-nic`` seams before any workdir exists."""
+
+        if self.goal_rank_mapping not in GOAL_RANK_MAPPINGS:
+            raise ValueError(f"goal_rank_mapping must be one of {GOAL_RANK_MAPPINGS}")
+        if self.fabric_manifest is not None and not isinstance(
+            self.fabric_manifest, FabricTopologyManifest
+        ):
+            raise TypeError("fabric_manifest must be FabricTopologyManifest or None")
+        if self.goal_rank_mapping == "gpu-rank":
+            if self.fabric_manifest is None:
+                return
+            if self.fabric_manifest.goal_rank_mapping != "gpu-rank":
+                raise ValueError(
+                    "fabric_manifest declares unique-nic mapping; select "
+                    "goal_rank_mapping='unique-nic'"
+                )
+            if self.placement_manifest is None:
+                raise ValueError("fabric_manifest requires placement_manifest")
+            RankMapper(self.placement_manifest, fabric=self.fabric_manifest)
+            return
+        if self.fabric_manifest is None:
+            raise ValueError("goal_rank_mapping='unique-nic' requires fabric_manifest")
+        if self.placement_manifest is None:
+            raise ValueError("goal_rank_mapping='unique-nic' requires placement_manifest")
+        for name, selected in (
+            ("peer_packet", self.peer_packet is not None),
+            ("flow_session", self.flow_session is not None),
+            ("dependency_cross_check", self.dependency_cross_check is not None),
+            ("topology", self.topology is not None),
+        ):
+            if selected:
+                raise ValueError(
+                    f"goal_rank_mapping='unique-nic' with {name} is not modeled; "
+                    f"a shared NIC endpoint through the {name} seam remains PLACE-10"
+                )
+        if self.profile not in _UNIQUE_NIC_PROFILES:
+            raise ValueError(
+                "goal_rank_mapping='unique-nic' runs on the null-network profiles "
+                f"{_UNIQUE_NIC_PROFILES}"
+            )
+        mapper = RankMapper(
+            self.placement_manifest,
+            mode="unique-nic",
+            fabric=self.fabric_manifest,
+        )
+        if self.num_goal_ranks is not None and self.num_goal_ranks < mapper.num_goal_ranks():
+            raise ValueError(
+                f"num_goal_ranks={self.num_goal_ranks} is below the fabric NIC count "
+                f"{mapper.num_goal_ranks()}"
+            )
+
     def __post_init__(self) -> None:
+        self._validate_goal_rank_mapping()
         if self.peer_packet is not None:
             from simllm.backends.peer_step import PeerPacketConfig
             if not isinstance(self.peer_packet, PeerPacketConfig):
@@ -1028,6 +1124,8 @@ class _PlannedExecutionArtifact:
     registration_cost_ps: int = 0
     goal_snapshot: GoalTraceSnapshot | None = None
     peer_phase: ClassifiedCommunicationPhase | None = None
+    #: indexes into the step projection table this artifact's rows must join
+    fabric_projection_rows: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -1170,6 +1268,8 @@ class _PlannedStep:
     flow_session: FlowSessionConfig | None = None
     session_graph: ExecutionGraph | None = None
     peer_graph: ExecutionGraph | None = None
+    fabric_projection: FabricGoalProjection | None = None
+    goal_rank_mapping: str = "gpu-rank"
 
 
 @dataclass(frozen=True)
@@ -1187,6 +1287,16 @@ class _SimulatedStep:
     bottleneck_report: object = None
     session_evidence: SessionStepEvidence | None = None
     peer_evidence: PeerStepEvidence | None = None
+
+
+@dataclass(frozen=True)
+class _UniqueNicSimulatedStep(_SimulatedStep):
+    """A unique-nic step result that also carries its joined completion rows.
+
+    A separate type keeps the default step result's fields exactly as before.
+    """
+
+    fabric_join_outcome: StepFabricJoinOutcome | None = None
 
 
 @dataclass(frozen=True)
@@ -1244,6 +1354,54 @@ class DeferredStepPrice:
             raise RuntimeError("deferred sink published or changed outcomes before completion")
 
 
+def _join_fabric_completions(
+    plan: _PlannedStep,
+    artifact: _PlannedExecutionArtifact,
+    run: object,
+) -> tuple[FabricSegmentCompletion, ...]:
+    """Join one artifact's backend rows to its semantic segments exactly once.
+
+    Under ``gpu-rank`` the projection is the identity and backend rows keep
+    their historical consumption, so the default path adds no row-identity
+    requirement to existing backends or their doubles. Under ``unique-nic``
+    several GPUs share one GOAL endpoint, and every typed row must join.
+    """
+
+    if plan.goal_rank_mapping == "gpu-rank":
+        return ()
+    projection = plan.fabric_projection
+    flows = tuple(run.flows)
+    if (
+        projection is None
+        or not artifact.fabric_projection_rows
+        or not all(isinstance(flow, FlowCompletion) for flow in flows)
+    ):
+        raise ValueError(
+            "unique-nic requires typed completion rows joined through the "
+            "step projection table"
+        )
+    return tuple(
+        FabricSegmentCompletion(
+            artifact_id=artifact.artifact_id,
+            phase_id=row.phase_id,
+            source_rank=row.segment.source_rank,
+            destination_rank=row.segment.destination_rank,
+            tag=row.segment.tag,
+            goal_source_rank=row.goal_source_rank,
+            goal_destination_rank=row.goal_destination_rank,
+            rendered_tag=row.rendered_tag,
+            payload_bytes=row.segment.payload_bytes,
+            start_time_ps=flow.start_time_ps,
+            completion_time_ps=flow.completion_time_ps,
+            fct_ps=flow.fct_ps,
+        )
+        for flow, row in projection.join_completions(
+            flows,
+            row_indices=artifact.fabric_projection_rows,
+        )
+    )
+
+
 class HtsimStepSink:
     """Step sink that simulates each step's TP traffic on ``htsim_rnic``."""
 
@@ -1256,7 +1414,15 @@ class HtsimStepSink:
         self.config = config
         self._request_metric_reducer = request_metric_reducer
         placement = copy.deepcopy(config.placement_manifest)
-        self._rank_mapper = RankMapper(placement) if placement is not None else None
+        self._rank_mapper = (
+            RankMapper(
+                placement,
+                mode=config.goal_rank_mapping,
+                fabric=copy.deepcopy(config.fabric_manifest),
+            )
+            if placement is not None
+            else None
+        )
         self._peer_runtime = None
         if config.peer_packet is not None:
             from simllm.backends.peer_step import PeerPacketRuntime
@@ -1283,6 +1449,8 @@ class HtsimStepSink:
         self.outcomes: list[StepNetworkOutcome] = []
         #: locality projection for the same simulated steps, in call order
         self.locality_outcomes: list[StepLocalityOutcome] = []
+        #: unique-nic completion rows joined to semantic segments, in call order
+        self.fabric_join_outcomes: list[StepFabricJoinOutcome] = []
         #: selected visits, events and runtime reports; published only on consumption
         self.packet_breakdowns: list[PacketStepBreakdown] = []
         self.bottleneck_reports = []
@@ -1431,6 +1599,10 @@ class HtsimStepSink:
             ),
             base_tag=cfg.base_tag,
         )
+        fabric_projection = plan_fabric_goal_projection(
+            locality.phases,
+            rank_mapper=self._rank_mapper,
+        )
         protocol_phase_service: dict[str, int] = {}
         if collective_profile is not None and collective_profile.protocol_models:
             for operation in collectives:
@@ -1448,7 +1620,11 @@ class HtsimStepSink:
             self._peer_runtime.validate_graph(graph, locality)
         projection = project_execution_graph_goal(
             graph,
-            num_goal_ranks=cfg.num_goal_ranks,
+            # Semantic whole-operation artifacts execute only on the gpu-rank
+            # fast path; a NIC-count GOAL width cannot contain semantic ranks.
+            num_goal_ranks=(
+                cfg.num_goal_ranks if cfg.goal_rank_mapping == "gpu-rank" else None
+            ),
             base_tag=cfg.base_tag,
         )
         session_snapshots = ()
@@ -1529,6 +1705,14 @@ class HtsimStepSink:
             if operation_id is None:
                 raise AssertionError("graph locality phase has no operation identity")
             phases_by_operation.setdefault(operation_id, []).append(phase)
+        step_phase_index = {id(phase): index for index, phase in enumerate(locality.phases)}
+        projection_rows_by_phase: dict[int, list[int]] = {}
+        projection_rows_by_operation: dict[str, list[int]] = {}
+        for row_index, row in enumerate(fabric_projection.rows):
+            projection_rows_by_phase.setdefault(row.phase_index, []).append(row_index)
+            projection_rows_by_operation.setdefault(
+                locality.phases[row.phase_index].phase.operation_id, []
+            ).append(row_index)
         planned_artifacts = []
         for artifact_index, artifact in enumerate(projection.artifacts):
             operations = tuple(
@@ -1655,6 +1839,9 @@ class HtsimStepSink:
                             operation_id, 0
                         ),
                         goal_snapshot=session_snapshots[artifact_index] if session_snapshots else None,
+                        fabric_projection_rows=tuple(
+                            projection_rows_by_operation.get(operation_id, ())
+                        ),
                     )
                 )
                 continue
@@ -1688,11 +1875,15 @@ class HtsimStepSink:
                 collective_floor_term = collective_floor_terms.get(
                     phase.phase.phase_id
                 )
+                phase_step_index = step_phase_index.get(id(phase))
                 trace = (
                     render_fabric_phase_goal(
                         phase,
                         rank_mapper=self._rank_mapper,
                         num_goal_ranks=cfg.num_goal_ranks,
+                        projection=(
+                            fabric_projection if phase_step_index is not None else None
+                        ),
                     )
                     if phase.fabric_segments
                     else None
@@ -1760,6 +1951,11 @@ class HtsimStepSink:
                         goal_snapshot=(GoalTraceSnapshot.from_trace(trace)
                                        if self._peer_runtime is not None and trace is not None else None),
                         peer_phase=(phase if self._peer_runtime is not None else None),
+                        fabric_projection_rows=(
+                            ()
+                            if phase_step_index is None
+                            else tuple(projection_rows_by_phase.get(phase_step_index, ()))
+                        ),
                     )
                 )
             after_compute = operations[collective_index + 1 :]
@@ -1894,6 +2090,8 @@ class HtsimStepSink:
             flow_session=cfg.flow_session,
             session_graph=graph if cfg.flow_session is not None else None,
             peer_graph=graph if self._peer_runtime is not None else None,
+            fabric_projection=fabric_projection,
+            goal_rank_mapping=cfg.goal_rank_mapping,
         )
 
     def _run_goal(
@@ -1955,6 +2153,7 @@ class HtsimStepSink:
         local_services = []
         peer_boundaries = []
         num_flows = 0
+        joined_segments: list[FabricSegmentCompletion] = []
         quiescent = True
         backend_runs = 0
         authority_timing_rows: list[tuple[int, int, int]] = []
@@ -1993,6 +2192,7 @@ class HtsimStepSink:
                     authority_artifact_bytes.append(len(payload))
                 run = (session_runs[artifact.artifact_id] if session_evidence is not None else
                        self._run_goal(plan, artifact.goal_path, artifact.completion_csv))
+                joined_segments.extend(_join_fabric_completions(plan, artifact, run))
                 if self._peer_runtime is not None:
                     from simllm.backends.peer_step import validate_peer_fabric_result
                     if artifact.goal_snapshot is None or artifact.goal_path.read_bytes() != artifact.goal_snapshot.rendered_bytes:
@@ -2307,7 +2507,7 @@ class HtsimStepSink:
                 ))
             bottleneck_report = BottleneckReport(plan.step_index, combine(*rankings))
             bottleneck_report.validate_result(result)
-        return _SimulatedStep(
+        simulated = _SimulatedStep(
             result=result,
             outcome=outcome,
             locality_outcome=locality_outcome,
@@ -2319,6 +2519,20 @@ class HtsimStepSink:
             bottleneck_report=bottleneck_report,
             session_evidence=session_evidence,
             peer_evidence=peer_evidence,
+        )
+        if plan.goal_rank_mapping == "gpu-rank":
+            return simulated
+        return _UniqueNicSimulatedStep(
+            **{item.name: getattr(simulated, item.name) for item in fields(_SimulatedStep)},
+            fabric_join_outcome=StepFabricJoinOutcome(
+                step_index=plan.step_index,
+                goal_rank_mapping=plan.goal_rank_mapping,
+                tag_multiplier=(
+                    1 if plan.fabric_projection is None
+                    else plan.fabric_projection.tag_multiplier
+                ),
+                segments=tuple(joined_segments),
+            ),
         )
 
     def _run_session_artifacts(self, plan: _PlannedStep):
@@ -2440,6 +2654,9 @@ class HtsimStepSink:
             self.outcomes.append(simulation.outcome)
         if simulation.locality_outcome is not None:
             self.locality_outcomes.append(simulation.locality_outcome)
+        fabric_join_outcome = getattr(simulation, "fabric_join_outcome", None)
+        if fabric_join_outcome is not None:
+            self.fabric_join_outcomes.append(fabric_join_outcome)
         if simulation.collective_timing_outcome is not None:
             self.collective_timing_outcomes.append(
                 simulation.collective_timing_outcome
@@ -2468,6 +2685,7 @@ class HtsimStepSink:
                 or cfg.placement_manifest is None or self._rank_mapper is None
                 or len(set(self._rank_mapper._host_by_rank.values())) != 1
                 or cfg.flow_session is not None or cfg.peer_packet is not None
+                or cfg.goal_rank_mapping != "gpu-rank"
                 or self._peer_runtime is not None or self._request_metric_reducer is not None
                 or cfg.resolved_collective_registration is not None
                 or cfg.collective_floor_calibration is not None or cfg.dependency_cross_check is not None
