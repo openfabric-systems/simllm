@@ -387,7 +387,12 @@ slots, and reproduces every live DGX cell identically with the bound fabric.
   tensor group, decode context parallelism, the `SGLANG_PP_LAYER_PARTITION`
   environment override, fused shared experts and redundant physical expert
   copies, expert-parallel load balancing (EPLB) maps other than the trivial
-  identity, and the elastic expert-parallel joiner offset. The unrepresented
+  identity, the elastic expert-parallel joiner offset, and the `--base-gpu-id`
+  and `--gpu-id-step` launcher options (the GPU a rank lands on is
+  `base_gpu_id + (pp_rank % pp_per_node) * tp_per_node +
+  (tp_rank % tp_per_node) * gpu_id_step`, so the emitted `local_rank` equals
+  the launcher's `gpu_id` only at the defaults 0 and 1 the builder
+  states). The unrepresented
   tensor shard under `moe_tp > 1`, where every rank of one MoE tensor group
   owns the same expert ids and holds one shard of each, is the same gap
   PLACE-7 records for vLLM and is settled with it. Add an explicit selection

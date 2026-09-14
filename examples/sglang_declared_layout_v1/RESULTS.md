@@ -41,23 +41,34 @@ PLACE-11 stay open exactly as they were.
 
 ## Pinned semantics that the builder reproduces
 
-The freeze read seven rules from the installed SGLang package at the pinned
-commit and the implementation reproduces them: the rank formula
+The freeze read eight rules from the installed SGLang package at the pinned
+commit and the implementation reproduces them, with the one gating caveat
+recorded below: the rank formula
 `tp * pp_rank + tp_rank` over a world of `tp * pp` with no data-parallel term
 in the rank space; `moe_tp_size = tp // ep_size // moe_dp_size` with the
 launcher's own assertions; the EP group carved out of one tensor group per
 pipeline stage as `range(s, s + ep * moe_tp, moe_tp)` with the MoE tensor
 index innermost and the MoE data-parallel index outermost; the contiguous MoE
-tensor group and the strided MoE data-parallel group that go with it; the
-trivial expert map giving EP rank `r` the block
-`[r * L, (r + 1) * L)` with `L = num_experts // ep_size` and no round-robin
-alternative; the pipeline partition that hands the layer remainder to the
-*last* stages; and the node fill in global-rank order with `world // nodes`
-ranks per node. Attention data parallelism, attention and decode context
-parallelism, and the elastic EP joiner offset are one or zero throughout, and
-the `SGLANG_PP_LAYER_PARTITION` override is deliberately not modeled, so the
-harness removes that variable from the oracle interpreter's environment before
-asking the framework for its rows.
+tensor group; the strided MoE data-parallel group; the trivial expert map
+giving EP rank `r` the block `[r * L, (r + 1) * L)` with
+`L = num_experts // ep_size` and no round-robin alternative; the pipeline
+partition that hands the layer remainder to the *last* stages; and the node
+fill in global-rank order with `world // nodes` ranks per node. Attention data
+parallelism, attention and decode context parallelism, and the elastic EP
+joiner offset are one or zero throughout, and the `SGLANG_PP_LAYER_PARTITION`
+override is deliberately not modeled, so the harness removes that variable
+from the oracle interpreter's environment before asking the framework for its
+rows.
+
+The caveat is when the three MoE memberships appear.
+`initialize_model_parallel` builds the expert-parallel group and both MoE side
+groups for every world it initializes, MoE model or not, while this builder
+emits `ep`, `moe_tp` and `moe_dp` only when an expert layout is declared. The
+memberships the builder does emit follow the framework's formulas exactly;
+what is gated is whether they are emitted at all, and that gate is a
+declared-manifest convention (it keeps the expert-free manifest to the
+memberships a consumer can act on) rather than a claim about the framework's
+process groups.
 
 ## Evidence
 
@@ -66,7 +77,7 @@ asking the framework for its rows.
 | Scored exact-oracle rows (S10 makespans) | 6 of 6 exact, GOAL text byte identical in every row |
 | Structural exact guards (S1, S2, S3, S4, S5, S7, S8, S9) | 8 of 8 cells exact |
 | Executable framework oracle (S5) | ran, agreed on 6 of 6 partition rows, interpreter version suffix `gbfeae4e79` |
-| Rejection controls (S6) | 12 of 12 refused, each a `ValueError` raised before any rank is built |
+| Rejection controls (S6) | 12 of 12 refused, each a `ValueError`, and each with no rank built: every control carries a hostname pattern whose `format` raises, and the same pattern fires on an accepted layout |
 | Fatal compatibility digests | 5 of 5 vLLM reference manifests byte identical to the pre-change record |
 | Fatal PLACE-3 study check | reproduced its tracked results |
 
@@ -149,19 +160,62 @@ The only timed quantity is S10 and its oracle is the accepted m5 record, so
 the check is exact rather than bounded. The floor stated before the run still
 holds: one decode step at `W=8` cannot complete faster than the 24 per-layer
 compute gates the m5 record froze, `24 * 10,111 ns = 242,664,000 ps`, and the
-measured 448,764,528 ps sits a factor of 1.85 above it. The directions are the
-ones m5 recorded: the decode makespan falls with `W` because the per-rank
-expert compute shrinks faster than the all-to-all grows, while the prefill
-makespan rises with `W` because the all-to-all payload grows faster than the
-added endpoints absorb it. A manifest-driven run landing on any
-other value than the m5 literal would be a defect in the builder, the sink or
-the harness, never a calibration finding, and none did.
+measured 448,764,528 ps sits a factor of 1.85 above it. The harness compares
+that bound against the value this run measured, not against the frozen
+literal, so it is a guard a defect can trip; the observed makespan and the
+floor are both written into the tracked results.
+
+The directions are the ones m5 recorded, and the reason is the one m5 gave.
+Its check C-q1 measured the all-to-allv network component growing with `W` at
+fixed total payload: 158,914,560 then 190,371,888 then 206,100,528 ps for
+decode and 16,202,127,360 then 24,255,191,088 then 28,281,722,928 ps for
+prefill at `W` of 2, 4 and 8. Prefill is compute-bound with its per-rank
+expert work invariant in `W`, so nothing offsets that growth and the makespan
+rises. Decode is memory-bound with the resident expert weights per rank
+shrinking as `W` grows, and that saving outruns the same network growth, so
+the makespan falls. A manifest-driven run landing on any other value than the
+m5 literal would be a defect in the builder, the sink or the harness, never a
+calibration finding, and none did.
 
 ## Choices the freeze left open
 
-Three points were not settled by the freeze and are recorded here rather than
-left implicit in the code.
+These points were not settled by the freeze, or are narrower than the freeze
+reads, and are recorded here rather than left implicit in the code.
 
+- **The GPU number a rank lands on.** The launcher numbers a rank's GPU
+  `base_gpu_id + (pp_rank % pp_per_node) * tp_per_node +
+  (tp_rank % tp_per_node) * gpu_id_step`
+  (`managers/data_parallel_controller.py`), where the base term is the
+  `--base-gpu-id` option plus the replica's own offset. The builder states the
+  default deployment of one replica with `--base-gpu-id 0` and
+  `--gpu-id-step 1`, under which that expression collapses to the
+  global-rank-order fill the freeze describes. The emitted `local_rank`
+  therefore equals the launcher's `gpu_id` only under those defaults; a
+  deployment that offsets or strides its GPU ids is placed differently on the
+  device axis while its rank space is unchanged. Both options are added to
+  PLACE-14.
+- **When the three MoE memberships appear.** `initialize_model_parallel`
+  creates the expert-parallel group and both MoE side groups unconditionally,
+  while the builder emits them only when `experts` is given. The gate is a
+  declared-manifest convention, not a framework rule, and it is what keeps the
+  expert-free SGLang manifest to the three base memberships the freeze's S7
+  and the `group_key_order_without_experts` row name.
+- **What the singleton `dp` membership means.** SGLang builds no
+  data-parallel process group over these ranks: attention data parallelism
+  lives inside the tensor group and router-style replicas are separate worlds.
+  The singleton entry is a manifest-schema convention recording that this
+  manifest describes one replica, in the vocabulary every other declared
+  manifest already uses. It is not a projection of a framework group, and a
+  consumer must not read it as one.
+- **The node refusal that needs no branch.** The freeze lists four node
+  refusals; the interface refuses all four with three tests. Above `pp` the
+  only node count surviving the "divides or is divided by `pp`" refusal is
+  `nodes = pp * k`, and a world of `tp * pp` divisible by `pp * k` forces `k`
+  to divide `tp`, so "tp indivisible by `nodes // pp`" is implied by the
+  world-divisibility refusal rather than tested separately. A brute force over
+  `tp` to 64, `pp` to 32 and `nodes` to 128 finds no input reaching it. The
+  earlier draft carried the branch anyway, which was code no caller could
+  execute; it is removed and the implication is stated in the builder.
 - **The default node count.** The freeze says `nodes` defaults to "the fewest
   that fit", and separately refuses a node count that neither divides nor is
   divided by `pp`. The implementation reads "fit" literally as the world at
@@ -174,7 +228,11 @@ left implicit in the code.
 - **Where the refusals sit.** The freeze names the refusals but not their
   order. Width and divisibility are checked first, then the node fill, then
   the expert layout, all before the first rank is built. Every frozen S6 row
-  raises a `ValueError` naming its own field under this order.
+  raises a `ValueError` naming its own field under this order, and the run
+  observes the "before any rank" half rather than asserting it: each control
+  is built with a hostname pattern whose `format` raises, so a refusal that
+  fired late would surface as a failed control, and the same pattern is run
+  against an accepted layout to prove it is not inert.
 - **How the harness reaches its own tree.** The study inserts the repository
   root at the front of `sys.path` and passes it to the PLACE-3 subprocess,
   because an installed editable distribution otherwise resolves `simllm` to a
