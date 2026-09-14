@@ -1,0 +1,821 @@
+{
+  "cells": {
+    "compatibility_digests": {
+      "dgx_a100_peer_fabric_json": {
+        "bytes": 84797,
+        "sha256": "47d66b66acd5a477f757ee30400256d39569df5a5fef5aea1655a937fc9fa219"
+      },
+      "fabric_one_plus_one": {
+        "bytes": 21379,
+        "sha256": "36527abf437eb875ce8db097b301bd1c25789f98fd38271378d65f6416361367"
+      },
+      "fabric_one_plus_one_disabled": {
+        "bytes": 8204,
+        "sha256": "f3950a9593817adbba344fa1d91a752b5d44a0d066b0f29163a5add448b84841"
+      },
+      "m4_tp8": {
+        "bytes": 5698,
+        "sha256": "3812aef241d93f2af8d86da0f6bbb606dae9c43c768ceb3efb8d649dc3bacfd6"
+      },
+      "m5_tp1_dp8": {
+        "bytes": 5698,
+        "sha256": "0894fae1687217d88466b5692034a8d1863fb8c658afdfde2c317d1c412f60a5"
+      },
+      "rail_pp8": {
+        "bytes": 52310,
+        "sha256": "8d38cf4b6990bfd75fc90dcfe994180c3c1150adce297b6f71983fd8c9c877db"
+      },
+      "width_tp64": {
+        "bytes": 102050,
+        "sha256": "bed8d26c72feaf117f48b651ec18b4fb0caf39df2e47866a550f74252972aecd"
+      },
+      "worked_example_tp4_pp2_dp2": {
+        "bytes": 10832,
+        "sha256": "2e46eadcaccd83de1778ea98c368585b452b83067489b9a2df064e25a14d857e"
+      }
+    },
+    "n1_parse": {
+      "affinity_gpu_dev_to_nic": {
+        "0": "cxi3",
+        "1": "cxi2",
+        "2": "cxi1",
+        "3": "cxi0"
+      },
+      "counts": {
+        "cpus": 4,
+        "gpus": 4,
+        "nics": 4,
+        "nvlink_rows": 12,
+        "pci": 8
+      },
+      "cpu": {
+        "arch": [
+          "x86_64"
+        ],
+        "host_hash": [
+          "0x94ecb6d613fd2af1"
+        ],
+        "numaid_file_order": [
+          3,
+          0,
+          1,
+          2
+        ],
+        "vendor": [
+          "AuthenticAMD"
+        ]
+      },
+      "gpus": {
+        "busid_by_dev": {
+          "0": "0000:03:00.0",
+          "1": "0000:41:00.0",
+          "2": "0000:82:00.0",
+          "3": "0000:c1:00.0"
+        },
+        "class": [
+          "0x030200"
+        ],
+        "device": [
+          "0x20b0"
+        ],
+        "gdr": [
+          1
+        ],
+        "numa_by_dev": {
+          "0": 3,
+          "1": 2,
+          "2": 1,
+          "3": 0
+        },
+        "nvlink_count_per_pair": [
+          4
+        ],
+        "nvlink_rows_per_gpu": [
+          3
+        ],
+        "nvlink_targets_are_the_other_gpus": true,
+        "nvlink_tclass": [
+          "0x030200"
+        ],
+        "rank_equals_dev": true,
+        "sm": [
+          80
+        ],
+        "vendor": [
+          "0x10de"
+        ]
+      },
+      "nics": {
+        "busid_by_name": {
+          "cxi0": "0000:c2:00.0",
+          "cxi1": "0000:81:00.0",
+          "cxi2": "0000:42:00.0",
+          "cxi3": "0000:01:00.0"
+        },
+        "class": [
+          "0x020000"
+        ],
+        "device": [
+          "0x0501"
+        ],
+        "file_order": [
+          "cxi3",
+          "cxi0",
+          "cxi1",
+          "cxi2"
+        ],
+        "gdr": [
+          1
+        ],
+        "maxconn": [
+          128
+        ],
+        "numa_by_name": {
+          "cxi0": 0,
+          "cxi1": 1,
+          "cxi2": 2,
+          "cxi3": 3
+        },
+        "port": [
+          1
+        ],
+        "speed_bps": [
+          200000000000
+        ],
+        "speed_mbit": [
+          200000
+        ],
+        "vendor": [
+          "0x17db"
+        ]
+      },
+      "pcie": {
+        "link_speed": [
+          "16.0 GT/s PCIe"
+        ],
+        "link_width": [
+          16
+        ]
+      }
+    },
+    "n2_join": {
+      "gpus": [
+        {
+          "global_rank": 0,
+          "gpu_id": "0000:03:00.0",
+          "nic_id": "nid001056:cxi3",
+          "node_id": "nid001056",
+          "pcie_location": "numa-3/pci-0000:03:00.0"
+        },
+        {
+          "global_rank": 1,
+          "gpu_id": "0000:41:00.0",
+          "nic_id": "nid001056:cxi2",
+          "node_id": "nid001056",
+          "pcie_location": "numa-2/pci-0000:41:00.0"
+        },
+        {
+          "global_rank": 2,
+          "gpu_id": "0000:82:00.0",
+          "nic_id": "nid001056:cxi1",
+          "node_id": "nid001056",
+          "pcie_location": "numa-1/pci-0000:82:00.0"
+        },
+        {
+          "global_rank": 3,
+          "gpu_id": "0000:c1:00.0",
+          "nic_id": "nid001056:cxi0",
+          "node_id": "nid001056",
+          "pcie_location": "numa-0/pci-0000:c1:00.0"
+        }
+      ],
+      "nics": [
+        {
+          "affine_gpu_rank": 3,
+          "fabric_location": "numa-0/pci-0000:c2:00.0",
+          "link_id": null,
+          "nic_id": "nid001056:cxi0",
+          "node_id": "nid001056",
+          "switch_id": null,
+          "switch_port_id": null
+        },
+        {
+          "affine_gpu_rank": 2,
+          "fabric_location": "numa-1/pci-0000:81:00.0",
+          "link_id": null,
+          "nic_id": "nid001056:cxi1",
+          "node_id": "nid001056",
+          "switch_id": null,
+          "switch_port_id": null
+        },
+        {
+          "affine_gpu_rank": 1,
+          "fabric_location": "numa-2/pci-0000:42:00.0",
+          "link_id": null,
+          "nic_id": "nid001056:cxi2",
+          "node_id": "nid001056",
+          "switch_id": null,
+          "switch_port_id": null
+        },
+        {
+          "affine_gpu_rank": 0,
+          "fabric_location": "numa-3/pci-0000:01:00.0",
+          "link_id": null,
+          "nic_id": "nid001056:cxi3",
+          "node_id": "nid001056",
+          "switch_id": null,
+          "switch_port_id": null
+        }
+      ],
+      "node_id": "nid001056",
+      "pool_role": "serving"
+    },
+    "n3_mesh": {
+      "domain_id": "nid001056:nv4",
+      "evidence_class": "declared",
+      "gpu_ports": 48,
+      "link_propagation_delays_ps": [
+        1000
+      ],
+      "link_rates_bps": [
+        200000000000
+      ],
+      "links": 24,
+      "manifest_validates": true,
+      "pairs": {
+        "0-1": {
+          "direct": true,
+          "distinct_input_resources": 4,
+          "paths": 4
+        },
+        "0-2": {
+          "direct": true,
+          "distinct_input_resources": 4,
+          "paths": 4
+        },
+        "0-3": {
+          "direct": true,
+          "distinct_input_resources": 4,
+          "paths": 4
+        },
+        "1-0": {
+          "direct": true,
+          "distinct_input_resources": 4,
+          "paths": 4
+        },
+        "1-2": {
+          "direct": true,
+          "distinct_input_resources": 4,
+          "paths": 4
+        },
+        "1-3": {
+          "direct": true,
+          "distinct_input_resources": 4,
+          "paths": 4
+        },
+        "2-0": {
+          "direct": true,
+          "distinct_input_resources": 4,
+          "paths": 4
+        },
+        "2-1": {
+          "direct": true,
+          "distinct_input_resources": 4,
+          "paths": 4
+        },
+        "2-3": {
+          "direct": true,
+          "distinct_input_resources": 4,
+          "paths": 4
+        },
+        "3-0": {
+          "direct": true,
+          "distinct_input_resources": 4,
+          "paths": 4
+        },
+        "3-1": {
+          "direct": true,
+          "distinct_input_resources": 4,
+          "paths": 4
+        },
+        "3-2": {
+          "direct": true,
+          "distinct_input_resources": 4,
+          "paths": 4
+        }
+      },
+      "paths": 48,
+      "protocol": "nvlink",
+      "routes": 12,
+      "source": "extracted",
+      "switched": false
+    },
+    "n4_cross_check": {
+      "lspci_vendor_device": true,
+      "numa_affinity_column": true,
+      "nv4_all_pairs": true,
+      "nvlink_s_twelve_links_25gb": true
+    },
+    "n5_live": {
+      "compute_ps": 37000,
+      "dims": {
+        "dtype_bytes": 2,
+        "head_size": 64,
+        "hidden_size": 512,
+        "intermediate_size": 512,
+        "num_heads": 8,
+        "num_kv_heads": 4,
+        "num_layers": 1,
+        "vocab_size": 49152
+      },
+      "link_bytes_per_second": 25000000000,
+      "pair_floor": {
+        "bytes_per_second": 100000000000,
+        "held": true,
+        "instances": 36,
+        "minimum_slack_ps": 20200
+      },
+      "profile": "rnic-nn-fluid",
+      "propagation_delay_ps": 1000,
+      "quiescent_after_close": true,
+      "rate_doubling": {
+        "doubled_link_bytes_per_second": 50000000000,
+        "never_slower": true,
+        "phase_services_ps": [
+          [
+            22294120,
+            22294120,
+            22294120,
+            22294120,
+            22294120,
+            22294120,
+            22294120,
+            22294120,
+            22294120,
+            22294120,
+            22294120,
+            22294120
+          ],
+          [
+            22760,
+            22760,
+            22760,
+            22760,
+            22760,
+            22760,
+            22760,
+            22760,
+            22760,
+            22760,
+            22760,
+            22760
+          ],
+          [
+            22760,
+            22760,
+            22760,
+            22760,
+            22760,
+            22760,
+            22760,
+            22760,
+            22760,
+            22760,
+            22760,
+            22760
+          ]
+        ],
+        "step_latency_ps": [
+          267566440,
+          310120,
+          310120
+        ]
+      },
+      "steps": [
+        {
+          "backend_runs": 0,
+          "fabric_directed_bytes": 0,
+          "nvlink_directed_bytes": 25165824,
+          "phases": [
+            {
+              "floor_ps": 5242880,
+              "nvlink_bytes": 2097152,
+              "operation_id": "step-0:layer-0:tp-attention",
+              "peak_endpoint_bytes": 524288,
+              "service_ps": 22294120
+            },
+            {
+              "floor_ps": 5242880,
+              "nvlink_bytes": 2097152,
+              "operation_id": "step-0:layer-0:tp-attention",
+              "peak_endpoint_bytes": 524288,
+              "service_ps": 22294120
+            },
+            {
+              "floor_ps": 5242880,
+              "nvlink_bytes": 2097152,
+              "operation_id": "step-0:layer-0:tp-attention",
+              "peak_endpoint_bytes": 524288,
+              "service_ps": 22294120
+            },
+            {
+              "floor_ps": 5242880,
+              "nvlink_bytes": 2097152,
+              "operation_id": "step-0:layer-0:tp-attention",
+              "peak_endpoint_bytes": 524288,
+              "service_ps": 22294120
+            },
+            {
+              "floor_ps": 5242880,
+              "nvlink_bytes": 2097152,
+              "operation_id": "step-0:layer-0:tp-attention",
+              "peak_endpoint_bytes": 524288,
+              "service_ps": 22294120
+            },
+            {
+              "floor_ps": 5242880,
+              "nvlink_bytes": 2097152,
+              "operation_id": "step-0:layer-0:tp-attention",
+              "peak_endpoint_bytes": 524288,
+              "service_ps": 22294120
+            },
+            {
+              "floor_ps": 5242880,
+              "nvlink_bytes": 2097152,
+              "operation_id": "step-0:layer-0:tp-mlp",
+              "peak_endpoint_bytes": 524288,
+              "service_ps": 22294120
+            },
+            {
+              "floor_ps": 5242880,
+              "nvlink_bytes": 2097152,
+              "operation_id": "step-0:layer-0:tp-mlp",
+              "peak_endpoint_bytes": 524288,
+              "service_ps": 22294120
+            },
+            {
+              "floor_ps": 5242880,
+              "nvlink_bytes": 2097152,
+              "operation_id": "step-0:layer-0:tp-mlp",
+              "peak_endpoint_bytes": 524288,
+              "service_ps": 22294120
+            },
+            {
+              "floor_ps": 5242880,
+              "nvlink_bytes": 2097152,
+              "operation_id": "step-0:layer-0:tp-mlp",
+              "peak_endpoint_bytes": 524288,
+              "service_ps": 22294120
+            },
+            {
+              "floor_ps": 5242880,
+              "nvlink_bytes": 2097152,
+              "operation_id": "step-0:layer-0:tp-mlp",
+              "peak_endpoint_bytes": 524288,
+              "service_ps": 22294120
+            },
+            {
+              "floor_ps": 5242880,
+              "nvlink_bytes": 2097152,
+              "operation_id": "step-0:layer-0:tp-mlp",
+              "peak_endpoint_bytes": 524288,
+              "service_ps": 22294120
+            }
+          ],
+          "result": {
+            "additive_visit_totals": null,
+            "completed_at_ps": 267566440,
+            "request_metrics": [],
+            "schema": "simllm-step-result-v2",
+            "step_index": 0,
+            "step_latency_ps": 267566440
+          },
+          "scheduled": [
+            {
+              "context_length": 2048,
+              "num_cached_tokens": 0,
+              "num_new_tokens": 2048,
+              "phase": "prefill",
+              "request_id": "r"
+            }
+          ],
+          "step_index": 0
+        },
+        {
+          "backend_runs": 0,
+          "fabric_directed_bytes": 0,
+          "nvlink_directed_bytes": 12288,
+          "phases": [
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-1:layer-0:tp-attention",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-1:layer-0:tp-attention",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-1:layer-0:tp-attention",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-1:layer-0:tp-attention",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-1:layer-0:tp-attention",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-1:layer-0:tp-attention",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-1:layer-0:tp-mlp",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-1:layer-0:tp-mlp",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-1:layer-0:tp-mlp",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-1:layer-0:tp-mlp",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-1:layer-0:tp-mlp",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-1:layer-0:tp-mlp",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            }
+          ],
+          "result": {
+            "additive_visit_totals": null,
+            "completed_at_ps": 267876560,
+            "request_metrics": [],
+            "schema": "simllm-step-result-v2",
+            "step_index": 1,
+            "step_latency_ps": 310120
+          },
+          "scheduled": [
+            {
+              "context_length": 2049,
+              "num_cached_tokens": 0,
+              "num_new_tokens": 1,
+              "phase": "decode",
+              "request_id": "r"
+            }
+          ],
+          "step_index": 1
+        },
+        {
+          "backend_runs": 0,
+          "fabric_directed_bytes": 0,
+          "nvlink_directed_bytes": 12288,
+          "phases": [
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-2:layer-0:tp-attention",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-2:layer-0:tp-attention",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-2:layer-0:tp-attention",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-2:layer-0:tp-attention",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-2:layer-0:tp-attention",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-2:layer-0:tp-attention",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-2:layer-0:tp-mlp",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-2:layer-0:tp-mlp",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-2:layer-0:tp-mlp",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-2:layer-0:tp-mlp",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-2:layer-0:tp-mlp",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            },
+            {
+              "floor_ps": 2560,
+              "nvlink_bytes": 1024,
+              "operation_id": "step-2:layer-0:tp-mlp",
+              "peak_endpoint_bytes": 256,
+              "service_ps": 22760
+            }
+          ],
+          "result": {
+            "additive_visit_totals": null,
+            "completed_at_ps": 268186680,
+            "request_metrics": [],
+            "schema": "simllm-step-result-v2",
+            "step_index": 2,
+            "step_latency_ps": 310120
+          },
+          "scheduled": [
+            {
+              "context_length": 2050,
+              "num_cached_tokens": 0,
+              "num_new_tokens": 1,
+              "phase": "decode",
+              "request_id": "r"
+            }
+          ],
+          "step_index": 2
+        }
+      ],
+      "tp_ranks": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "twin_identity": {
+        "fabric_to_dict": true,
+        "locality_outcomes": true,
+        "outcomes": true,
+        "phase_services": true,
+        "step_results": true
+      }
+    },
+    "n6_refusals": {
+      "asymmetric nvlink count 2 vs 4": {
+        "expected_message": "nvlink count 2 from 0000:03:00.0 to 0000:41:00.0 disagrees with 4",
+        "message": "NCCL topology dump refused: nvlink count 2 from 0000:03:00.0 to 0000:41:00.0 disagrees with 4 in the other direction",
+        "refused": true
+      },
+      "control_serialization_joins_identically": true,
+      "duplicate busid": {
+        "expected_message": "duplicate pci busid 0000:03:00.0",
+        "message": "NCCL topology dump refused: duplicate pci busid 0000:03:00.0",
+        "refused": true
+      },
+      "gpu without rank": {
+        "expected_message": "<gpu> lacks required attribute rank",
+        "message": "NCCL topology dump refused: <gpu> lacks required attribute rank",
+        "refused": true
+      },
+      "net without speed": {
+        "expected_message": "<net> lacks required attribute speed",
+        "message": "NCCL topology dump refused: <net> lacks required attribute speed",
+        "refused": true
+      },
+      "no nic under a cpu": {
+        "expected_message": "GPU dev 0 at 0000:03:00.0 has 0 NICs",
+        "message": "GPU dev 0 at 0000:03:00.0 has 0 NICs under NUMA node 3; the captured-node affinity rule requires exactly one",
+        "refused": true
+      },
+      "non-integer link_width": {
+        "expected_message": "link_width='16.0' is not a nonnegative integer",
+        "message": "NCCL topology dump refused: pci 0000:03:00.0 attribute link_width='16.0' is not a nonnegative integer",
+        "refused": true
+      },
+      "nvlink target unknown busid": {
+        "expected_message": "nvlink target 0000:99:00.0 is not a known gpu bus id",
+        "message": "NCCL topology dump refused: gpu 0000:03:00.0 nvlink target 0000:99:00.0 is not a known gpu bus id",
+        "refused": true
+      },
+      "two nics under one cpu": {
+        "expected_message": "GPU dev 0 at 0000:03:00.0 has 2 NICs",
+        "message": "GPU dev 0 at 0000:03:00.0 has 2 NICs under NUMA node 3; the captured-node affinity rule requires exactly one",
+        "refused": true
+      },
+      "version 2": {
+        "expected_message": "system version '2' is not '1'",
+        "message": "NCCL topology dump refused: system version '2' is not '1'",
+        "refused": true
+      }
+    },
+    "n7_round_trip": {
+      "byte_identical_resave": true,
+      "bytes": 20357,
+      "loaded_equals_built": true,
+      "peer_inventory_in_to_dict": true,
+      "sha256": "25986b3edab2ea0bd66f80c859e955eed39163a5f1994fd733580ec63dea4e40"
+    }
+  },
+  "evidence": {
+    "fatal_compatibility_digests": 8,
+    "rejection_control_family": {
+      "controls": 9,
+      "refused": 9
+    },
+    "scored_identity_family": {
+      "families": 1,
+      "held": 1
+    },
+    "scored_relation_instances": {
+      "held": 2,
+      "instances": 2
+    },
+    "structural_guard_cells": 5
+  },
+  "expectations_commit": "718e4566f44f99b11dfcb3183de00f66dadfba10",
+  "findings": [],
+  "fixture_sha256": {
+    "nccl_env.txt": "aa548d4bea8546b9a4ae42cca46311105a7decb7510d3b09662abd65444b67f3",
+    "nccl_graph.xml": "939b46a3cb0da5e263cae0b5fd0c26132d10a565dafabbd45b52d046475a33d8",
+    "nccl_run_excerpt.log": "251dd065e98559a2d98dbd4ca939024af0c8e0ca0a54576dd945d9548bac9dd7",
+    "nccl_topo.xml": "af3996ac37ffedec0053c574da1cc59aa22df034fb20bc043d844dbf4a921c49",
+    "node_inventory.txt": "a0e72c8c66eef9c9317f00ebdf683cb461f62e6d0951a41265f44752b3462f81"
+  },
+  "implementation_commit": "4bf481a851c8aad1842c90cfa79318e68d84013a",
+  "schema": "simllm-nccl-topology-capture-result-v1",
+  "status": "PASS"
+}
