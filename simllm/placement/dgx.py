@@ -17,6 +17,7 @@ reported by nvidia-smi are higher and are recorded by capture studies, not used.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from itertools import permutations
 
 from .manifest import FabricLink
@@ -44,6 +45,8 @@ def dgx_peer_fabric(
     generation: str, *, node_id: str, ranks: tuple[int, ...],
     propagation_delay_ps: int, switch_input_buffer_bytes: int,
     domain_id: str | None = None,
+    switch_ids: tuple[str, ...] | None = None,
+    switch_port_ids: Mapping[tuple[int, int, int], str] | None = None,
 ) -> PeerFabric:
     """Build one eight-GPU board through the existing peer manifest contract.
 
@@ -51,6 +54,12 @@ def dgx_peer_fabric(
     calibration is inferred. Lane-matched routes within each
     switch cover every attachment; this is a declared striping policy.
     Endpoint and output arbitration still conserve each link's capacity.
+
+    ``switch_ids`` (one per chip, in bundle order) and ``switch_port_ids``
+    (keyed by ``(slot, chip, lane)`` with chips counted from 1) rename the
+    switch side to captured identities. They are given together or not at
+    all; GPU-side identities, routes, element order and every capacity stay
+    as the declared preset has them.
     """
     if generation not in DGX_NVLINK_BUNDLES:
         raise ValueError(f"DGX generation must be one of {', '.join(DGX_NVLINK_BUNDLES)}")
@@ -63,14 +72,31 @@ def dgx_peer_fabric(
         if type(value) is not int or value < minimum:
             raise ValueError(f"DGX {name} must be an integer >= {minimum}")
     domain_id = domain_id or f"{node_id}:hgx-{generation}-8"
+    bundle = DGX_NVLINK_BUNDLES[generation]
+    if (switch_ids is None) != (switch_port_ids is None):
+        raise ValueError("captured switch and switch-port identities are given together")
+    if switch_ids is not None:
+        expected = {(slot, switch, lane) for switch, width in enumerate(bundle, 1)
+                    for slot in range(8) for lane in range(width)}
+        if (not isinstance(switch_ids, tuple) or len(switch_ids) != len(bundle)
+                or any(not isinstance(name, str) or not name.strip() for name in switch_ids)
+                or len(set(switch_ids)) != len(switch_ids)):
+            raise ValueError(f"captured switch identities must name {len(bundle)} distinct chips")
+        if (not isinstance(switch_port_ids, Mapping) or set(switch_port_ids) != expected
+                or any(not isinstance(name, str) or not name.strip()
+                       for name in switch_port_ids.values())
+                or len(set(switch_port_ids.values())) != len(expected)):
+            raise ValueError("captured switch-port identities must name every lane exactly once")
     ports, links, attached = [], [], {}
-    for switch, width in enumerate(DGX_NVLINK_BUNDLES[generation], 1):
-        switch_id = f"{domain_id}:switch-{switch}"
+    for switch, width in enumerate(bundle, 1):
+        switch_id = (f"{domain_id}:switch-{switch}" if switch_ids is None
+                     else switch_ids[switch - 1])
         for slot, rank in enumerate(ranks):
             attached[rank, switch] = []
             for lane in range(width):
                 gpu_port = f"{domain_id}:gpu-{slot}:switch-{switch}:lane-{lane}"
-                switch_port = f"{switch_id}:gpu-{slot}:lane-{lane}"
+                switch_port = (f"{switch_id}:gpu-{slot}:lane-{lane}" if switch_port_ids is None
+                               else switch_port_ids[slot, switch, lane])
                 link_id = f"{domain_id}:link-{slot}-{switch}-{lane}"
                 ports.extend((PeerPortPlacement(gpu_port, gpu_rank=rank),
                               PeerPortPlacement(switch_port, switch_id=switch_id)))

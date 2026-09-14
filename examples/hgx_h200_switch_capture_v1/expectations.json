@@ -1,0 +1,79 @@
+{
+  "schema": "simllm-hgx-h200-switch-capture-expectations-v1",
+  "tasks": ["PLACE-12", "PLACE-6"],
+  "slice": "switch-side and H100-generation GPU-side binding of a captured HGX H200 board",
+  "date": "2026-09-13",
+  "baseline": {
+    "commit": "af5c0110ae74f69afa69cfec0b42281e123b3170",
+    "branch_base": "claude/place6_b200_gpu_side",
+    "files": {
+      "simllm/backends/nvlink_runtime.py": "071f9ed0d4a81f7a7c6a84e519a78052e821ce9d7257740ee6117d4b724063ab",
+      "simllm/placement/__init__.py": "c7235f9c5e44dbaf1e0c5ca8b35dbc11fbb03e0fffc8f161fee18c5076ca1098",
+      "simllm/placement/dgx.py": "7fefdf038d99596d736b59c0cf916f35cacf04e10343af50ef6ee372f5453456",
+      "simllm/placement/nccl_topology.py": "a2bad2ae8265b30f705575f897af575edd7bb7fd86ebde7bd6ca64bbba6f9d92",
+      "simllm/placement/peer_topology.py": "8259321fc7102434b73af7f7d9d33f6184a0c000e175c54df7de667a06092fb3",
+      "tests/test_nccl_topology.py": "84b2fcc8552f92e5f4b181c6f811dfd1d54a05cd3e9817fca29ab8e6c1b3abf7"
+    },
+    "fixture": {
+      "directory": "tests/fixtures/nccl_topology/vastai_hgx_h200_8x",
+      "nccl_topo.xml": "6fd8e122c54349102bf86320018d9cf616d776e1ddbb0223e0183801877e6c5c",
+      "nccl_graph.xml": "c803984b331e800bdd77941c2430203d320111f7d0f78e17f2e72e2861b8cbf0",
+      "node_inventory.txt": "b4f9f5b28d276ddfeb08f09afc664ac86f1b71622f70c4e9ba228163a8a36e7a",
+      "nccl_env.txt": "fa598d30173c5cce7456b19d764c1d1c8139a8ca9d0ed50f1f94d6bbb1a80606",
+      "nccl_run_excerpt.log": "f9b8e7a276589d6413c30c0c0bb73d069aaf84a347b962e8ac7223cd97e5835a"
+    },
+    "artifacts": {
+      "dgx_a100_peer_fabric_json": "47d66b66acd5a477f757ee30400256d39569df5a5fef5aea1655a937fc9fa219",
+      "dgx_h100_peer_fabric_json": "4429ed2ada4ee4e7dc7180dbade0b0be5b60b0fc234918f7e307b5c0214d7278",
+      "dgx_b200_peer_fabric_json": "pinned by tests/test_hgx_b200_capture.py",
+      "dgx_nvlink_v1_results": "00d935fc4b26cfc50aa4c5f6b46ba20e3db856d091215c2e616b095fb577fdba",
+      "hgx_b200_capture_v1_results": "the tracked file at the base commit"
+    }
+  },
+  "capture": {
+    "site": "vast.ai rented container", "offer": 50936499, "machine": 149962, "date": "2026-09-13",
+    "gpu": {"count": 8, "vendor": "0x10de", "device": "0x2335", "sm": 90, "board_part_number": "695-2G520-0280-001",
+            "board_ids": ["0x8300", "0x8b00", "0x9300", "0x9b00", "0xa300", "0xab00", "0xb300", "0xbb00"],
+            "busid_by_dev": {"0": "0000:83:00.0", "1": "0000:8b:00.0", "2": "0000:93:00.0", "3": "0000:9b:00.0", "4": "0000:a3:00.0", "5": "0000:ab:00.0", "6": "0000:b3:00.0", "7": "0000:bb:00.0"},
+            "pcie_switch_by_dev": {"0": "0000:81:00.0", "1": "0000:89:00.0", "2": "0000:91:00.0", "3": "0000:99:00.0", "4": "0000:a1:00.0", "5": "0000:a9:00.0", "6": "0000:b1:00.0", "7": "0000:b9:00.0"},
+            "numa_by_dev": {"0": 0, "1": 0, "2": 0, "3": 0, "4": 1, "5": 1, "6": 1, "7": 1},
+            "module_id_by_dev": {"0": 2, "1": 4, "2": 1, "3": 3, "4": 7, "5": 5, "6": 6, "7": 8},
+            "slot_by_dev": {"0": 1, "1": 3, "2": 0, "3": 2, "4": 6, "5": 4, "6": 5, "7": 7}},
+    "nvswitch": {"count": 4, "vendor": "0x10de", "device": "0x22a3", "class": "0x068000", "busids": ["0000:c3:00.0", "0000:c4:00.0", "0000:c5:00.0", "0000:c6:00.0"], "numa": 1},
+    "nvlink": {"links_per_gpu": 18, "signalling_gb_per_s": 26.562, "pair_matrix": "NV18 on all 56 ordered pairs",
+               "lanes_per_switch_per_gpu": {"c3": 4, "c4": 5, "c5": 5, "c6": 4},
+               "captured_switch_port_pairs": 144, "ports_per_switch": {"c3": 32, "c4": 40, "c5": 40, "c6": 32},
+               "nccl_rows_per_gpu": 4},
+    "nic": {"socket": "eth0", "socket_speed_mbit": 10000, "connectx_virtual_functions": 8, "one_per_pcie_switch": true, "nccl_visible_rdma": 0},
+    "nccl": {"version": "2.27.3", "framework": "torch 2.8.0+cu128", "ring_channels": 12, "tree_channels": 12, "nvls_channels": 8}
+  },
+  "interface": {
+    "reader": "several real-switch nvlink rows per gpu; virtual mixed with real refused",
+    "inventory_parsers": ["nvlink -R table", "class 0x0680 device list", "Module Id lines"],
+    "join_keyword": "switch_ports_by_gpu_dev",
+    "chip_binding": "preset chips in bundle order to captured switches in ascending bus-id order; lane k on chip s to the k-th captured link on that switch in link-index order",
+    "switch_port_identity": "<domain>:switch-<busid>:port-<n>",
+    "switch_identity": "<domain>:switch-<busid>"
+  },
+  "cells": {
+    "h1_parse": {"cpus": 2, "pcie_switches": 8, "gpus": 8, "switch_attached_rows": 32, "counts_in_busid_order": [4, 5, 5, 4], "distinct_socket_nics": 1, "nic_repetitions": 2},
+    "h2_inventory": {"remote_rows": 144, "per_gpu": 18, "per_switch_counts": [4, 5, 5, 4], "distinct_pairs": 144, "ports_per_switch": [32, 40, 40, 32], "switch_devices": 4, "slots": [1, 3, 0, 2, 6, 4, 5, 7]},
+    "h3_switch_side": ["bundle_equals_captured_counts", "switch_ports_bijective", "every_path_two_ports_one_switch", "chip_index_equals_switch", "port_totals_conserve", "h100_bundle_confirmed"],
+    "h4_gpu_side": ["lanes_equal_links", "nv18_equals_paths_and_dump_total", "order_busids_pcie_numa", "distinct_board_ids_one_part_number", "module_id_slots"],
+    "h5_live_identity": {"generation": "h100", "bound_equals_declared": ["request metrics", "packet observations", "python versus native"]},
+    "h6_refusals": ["5 lanes on c3", "switch port used twice", "virtual row beside real rows", "three switches", "b200 against four switches", "17 links for one gpu"],
+    "h7_off_path": ["round trip", "three preset digests", "dgx results", "b200 results", "both study checks"]
+  },
+  "evidence": {
+    "exact_oracle_family": "h5 bound versus declared",
+    "structural_guard_cells": ["h1_parse", "h2_inventory", "h3_switch_side", "h4_gpu_side", "h7_off_path"],
+    "rejection_control_family": "h6_refusals",
+    "fatal_compatibility_identities": 5
+  },
+  "closure": {
+    "closes_for_generation": {"PLACE-12": "h100"},
+    "narrows": ["PLACE-12", "PLACE-6"],
+    "registers": [],
+    "untouched": ["TRAF-92", "BACK-74", "PLACE-9", "PLACE-10"]
+  }
+}
