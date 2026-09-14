@@ -1,0 +1,1915 @@
+{
+  "amendment_2_commit": "989482e2ed523922f40392928493d0eb6eab0d7e",
+  "amendment_commit": "bc1e5c8f9412a723a16865aba4b821894b8e8362",
+  "cells": {
+    "g1_parse": {
+      "counts": {
+        "cpus": 2,
+        "distinct_socket_nics": 1,
+        "gpus": 8,
+        "lanes": [
+          18
+        ],
+        "nic_repetitions": 2,
+        "pcie_switches": 4,
+        "switch_attached_rows": 8
+      },
+      "gpu": {
+        "busid_by_dev": {
+          "0": "0000:51:00.0",
+          "1": "0000:52:00.0",
+          "2": "0000:62:00.0",
+          "3": "0000:63:00.0",
+          "4": "0000:75:00.0",
+          "5": "0000:76:00.0",
+          "6": "0000:86:00.0",
+          "7": "0000:87:00.0"
+        },
+        "class": [
+          "0x030200"
+        ],
+        "device": [
+          "0x2901"
+        ],
+        "numa_by_dev": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 1,
+          "5": 1,
+          "6": 1,
+          "7": 1
+        },
+        "pcie_switch_by_dev": {
+          "0": "0000:45:00.0",
+          "1": "0000:45:00.0",
+          "2": "0000:56:00.0",
+          "3": "0000:56:00.0",
+          "4": "0000:67:00.0",
+          "5": "0000:67:00.0",
+          "6": "0000:7a:00.0",
+          "7": "0000:7a:00.0"
+        },
+        "sm": [
+          100
+        ],
+        "vendor": [
+          "0x10de"
+        ]
+      },
+      "nccl": {
+        "env": "torch 2.8.0+cu128 cuda 12.8 nccl (2, 27, 3)",
+        "nvls_channels": 8,
+        "ring_channels": 16,
+        "tree_channels": 16,
+        "typeintra": [
+          "NVL"
+        ]
+      },
+      "nccl_row": [
+        [
+          "fffffff:ff:ff.0",
+          18,
+          "0x068000"
+        ]
+      ],
+      "nic": {
+        "gdr": [
+          0
+        ],
+        "guid": [
+          "0x0"
+        ],
+        "name": [
+          "eth0"
+        ],
+        "numaids": [
+          0,
+          1
+        ],
+        "pci_attached": [
+          false,
+          false
+        ],
+        "port": [
+          0
+        ],
+        "speed_mbit": [
+          10000
+        ]
+      },
+      "pcie_switch": {
+        "busids": [
+          "0000:45:00.0",
+          "0000:56:00.0",
+          "0000:67:00.0",
+          "0000:7a:00.0"
+        ],
+        "vendor": [
+          "0x1000"
+        ]
+      }
+    },
+    "g2_preset": {
+      "chips": 2,
+      "digest": {
+        "bytes": 125741,
+        "sha256": "ef920aa9abc7b61222880d97b60d2e016b37ed1df46b5c628488054553f5163f"
+      },
+      "link_rates_bps": [
+        400000000000
+      ],
+      "links": 144,
+      "paths_per_chip": [
+        9
+      ],
+      "paths_per_route": [
+        18
+      ],
+      "ports": 288,
+      "routes": 56,
+      "silicon": {
+        "a100": {
+          "devices": [
+            "0x20b0",
+            "0x20b2"
+          ],
+          "sm": 80
+        },
+        "b200": {
+          "devices": [
+            "0x2901"
+          ],
+          "sm": 100
+        },
+        "h100": {
+          "devices": [
+            "0x2330",
+            "0x2335",
+            "0x2339"
+          ],
+          "sm": 90
+        }
+      },
+      "validates": true
+    },
+    "g3_gpu_side": {
+      "device_order_and_busids": {
+        "held": true,
+        "join_bus_ids": [
+          "0000:51:00.0",
+          "0000:52:00.0",
+          "0000:62:00.0",
+          "0000:63:00.0",
+          "0000:75:00.0",
+          "0000:76:00.0",
+          "0000:86:00.0",
+          "0000:87:00.0"
+        ]
+      },
+      "distinct_board_ids_one_part_number": {
+        "board_ids": [
+          "0x5100",
+          "0x5200",
+          "0x6200",
+          "0x6300",
+          "0x7500",
+          "0x7600",
+          "0x8600",
+          "0x8700"
+        ],
+        "held": true,
+        "part_numbers": [
+          "692-2G525-0220-500"
+        ]
+      },
+      "lanes_per_gpu_equals_active_links": {
+        "active_links_by_dev": {
+          "0": 18,
+          "1": 18,
+          "2": 18,
+          "3": 18,
+          "4": 18,
+          "5": 18,
+          "6": 18,
+          "7": 18
+        },
+        "held": true,
+        "preset_lanes_per_gpu": 18,
+        "signalling_rates": [
+          "53.125 GB/s"
+        ]
+      },
+      "module_id_slot_binding": {
+        "held": true,
+        "links_carry_slots": true,
+        "module_id_by_dev": {
+          "0": 4,
+          "1": 2,
+          "2": 1,
+          "3": 3,
+          "4": 8,
+          "5": 6,
+          "6": 5,
+          "7": 7
+        },
+        "slot_by_dev": {
+          "0": 3,
+          "1": 1,
+          "2": 0,
+          "3": 2,
+          "4": 7,
+          "5": 5,
+          "6": 4,
+          "7": 6
+        }
+      },
+      "paths_per_pair_equals_nv18_and_nccl_count": {
+        "held": true,
+        "matrix_cells": [
+          "NV18"
+        ],
+        "nccl_counts": [
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18
+        ],
+        "ordered_pairs": 56
+      },
+      "pcie_pairs_and_numa_split": {
+        "held": true,
+        "pcie_locations": [
+          "numa-0/pci-0000:45:00.0/pci-0000:51:00.0",
+          "numa-0/pci-0000:45:00.0/pci-0000:52:00.0",
+          "numa-0/pci-0000:56:00.0/pci-0000:62:00.0",
+          "numa-0/pci-0000:56:00.0/pci-0000:63:00.0",
+          "numa-1/pci-0000:67:00.0/pci-0000:75:00.0",
+          "numa-1/pci-0000:67:00.0/pci-0000:76:00.0",
+          "numa-1/pci-0000:7a:00.0/pci-0000:86:00.0",
+          "numa-1/pci-0000:7a:00.0/pci-0000:87:00.0"
+        ]
+      },
+      "switch_side_not_observable_recorded": {
+        "class_0680_devices": 0,
+        "held": true,
+        "nvswitch_devices": 0,
+        "rdma_devices_in_container": [
+          "mlx5_0",
+          "mlx5_1"
+        ],
+        "remote_device_rows": 144,
+        "remote_devices": [
+          "FFFFFFFF:FF:FF.0"
+        ]
+      }
+    },
+    "g4_live": {
+      "components": [
+        {
+          "capacity": 272,
+          "completion_ps": 46125,
+          "h100_completion_ps": 46125,
+          "h100_identical_timing": true,
+          "pattern": "pair",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "single_packet_equation": true
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 46125,
+          "pattern": "bidirectional",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 46125,
+          "pattern": "disjoint",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 46125,
+          "h100_completion_ps": 46125,
+          "pattern": "fanin-1",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 94855,
+          "h100_completion_ps": 94855,
+          "pattern": "fanin-3",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 192315,
+          "h100_completion_ps": 192315,
+          "pattern": "fanin-7",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 46125,
+          "h100_completion_ps": 46125,
+          "h100_identical_timing": true,
+          "pattern": "pair",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "single_packet_equation": true
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 46125,
+          "pattern": "bidirectional",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 46125,
+          "pattern": "disjoint",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 46125,
+          "h100_completion_ps": 46125,
+          "pattern": "fanin-1",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 94855,
+          "h100_completion_ps": 94855,
+          "pattern": "fanin-3",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 192315,
+          "h100_completion_ps": 192315,
+          "pattern": "fanin-7",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 46125,
+          "h100_completion_ps": 46125,
+          "h100_identical_timing": true,
+          "pattern": "pair",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "single_packet_equation": true
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 46125,
+          "pattern": "bidirectional",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 46125,
+          "pattern": "disjoint",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 46125,
+          "h100_completion_ps": 46125,
+          "pattern": "fanin-1",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 89645,
+          "h100_completion_ps": 89645,
+          "pattern": "fanin-3",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 176685,
+          "h100_completion_ps": 176685,
+          "pattern": "fanin-7",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 46125,
+          "h100_completion_ps": 46125,
+          "h100_identical_timing": true,
+          "pattern": "pair",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "single_packet_equation": true
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 46125,
+          "pattern": "bidirectional",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 46125,
+          "pattern": "disjoint",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 46125,
+          "h100_completion_ps": 46125,
+          "pattern": "fanin-1",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 89645,
+          "h100_completion_ps": 89645,
+          "pattern": "fanin-3",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 176685,
+          "h100_completion_ps": 176685,
+          "pattern": "fanin-7",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 411600,
+          "h100_completion_ps": 411600,
+          "h100_identical_timing": true,
+          "pattern": "pair",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 411600,
+          "pattern": "bidirectional",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 411600,
+          "pattern": "disjoint",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 411600,
+          "h100_completion_ps": 411600,
+          "pattern": "fanin-1",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 1191280,
+          "h100_completion_ps": 1191280,
+          "pattern": "fanin-3",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 2750640,
+          "h100_completion_ps": 2750640,
+          "pattern": "fanin-7",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 411600,
+          "h100_completion_ps": 411600,
+          "h100_identical_timing": true,
+          "pattern": "pair",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 411600,
+          "pattern": "bidirectional",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 411600,
+          "pattern": "disjoint",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 411600,
+          "h100_completion_ps": 411600,
+          "pattern": "fanin-1",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 1191280,
+          "h100_completion_ps": 1191280,
+          "pattern": "fanin-3",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 2750640,
+          "h100_completion_ps": 2750640,
+          "pattern": "fanin-7",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 55200,
+          "h100_completion_ps": 55200,
+          "h100_identical_timing": true,
+          "pattern": "pair",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 55200,
+          "pattern": "bidirectional",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 55200,
+          "pattern": "disjoint",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 55200,
+          "h100_completion_ps": 55200,
+          "pattern": "fanin-1",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 98720,
+          "h100_completion_ps": 98720,
+          "pattern": "fanin-3",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 185760,
+          "h100_completion_ps": 185760,
+          "pattern": "fanin-7",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 55200,
+          "h100_completion_ps": 55200,
+          "h100_identical_timing": true,
+          "pattern": "pair",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 55200,
+          "pattern": "bidirectional",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 55200,
+          "pattern": "disjoint",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 55200,
+          "h100_completion_ps": 55200,
+          "pattern": "fanin-1",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 98720,
+          "h100_completion_ps": 98720,
+          "pattern": "fanin-3",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 185760,
+          "h100_completion_ps": 185760,
+          "pattern": "fanin-7",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 12500000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 24365,
+          "h100_completion_ps": 24365,
+          "h100_identical_timing": true,
+          "pattern": "pair",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "single_packet_equation": true
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 24365,
+          "pattern": "bidirectional",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 24365,
+          "pattern": "disjoint",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 24365,
+          "h100_completion_ps": 24365,
+          "pattern": "fanin-1",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 51335,
+          "h100_completion_ps": 51335,
+          "pattern": "fanin-3",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 105275,
+          "h100_completion_ps": 105275,
+          "pattern": "fanin-7",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 24365,
+          "h100_completion_ps": 24365,
+          "h100_identical_timing": true,
+          "pattern": "pair",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "single_packet_equation": true
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 24365,
+          "pattern": "bidirectional",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 24365,
+          "pattern": "disjoint",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 24365,
+          "h100_completion_ps": 24365,
+          "pattern": "fanin-1",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 51335,
+          "h100_completion_ps": 51335,
+          "pattern": "fanin-3",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 105275,
+          "h100_completion_ps": 105275,
+          "pattern": "fanin-7",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 24365,
+          "h100_completion_ps": 24365,
+          "h100_identical_timing": true,
+          "pattern": "pair",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "single_packet_equation": true
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 24365,
+          "pattern": "bidirectional",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 24365,
+          "pattern": "disjoint",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 24365,
+          "h100_completion_ps": 24365,
+          "pattern": "fanin-1",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 46125,
+          "h100_completion_ps": 46125,
+          "pattern": "fanin-3",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 89645,
+          "h100_completion_ps": 89645,
+          "pattern": "fanin-7",
+          "payload": 256,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 24365,
+          "h100_completion_ps": 24365,
+          "h100_identical_timing": true,
+          "pattern": "pair",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "single_packet_equation": true
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 24365,
+          "pattern": "bidirectional",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 24365,
+          "pattern": "disjoint",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 24365,
+          "h100_completion_ps": 24365,
+          "pattern": "fanin-1",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 46125,
+          "h100_completion_ps": 46125,
+          "pattern": "fanin-3",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 89645,
+          "h100_completion_ps": 89645,
+          "pattern": "fanin-7",
+          "payload": 256,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 226640,
+          "h100_completion_ps": 226640,
+          "h100_identical_timing": true,
+          "pattern": "pair",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 226640,
+          "pattern": "bidirectional",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 226640,
+          "pattern": "disjoint",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 226640,
+          "h100_completion_ps": 226640,
+          "pattern": "fanin-1",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 658160,
+          "h100_completion_ps": 658160,
+          "pattern": "fanin-3",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 1521200,
+          "h100_completion_ps": 1521200,
+          "pattern": "fanin-7",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 226640,
+          "h100_completion_ps": 226640,
+          "h100_identical_timing": true,
+          "pattern": "pair",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 226640,
+          "pattern": "bidirectional",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 226640,
+          "pattern": "disjoint",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 226640,
+          "h100_completion_ps": 226640,
+          "pattern": "fanin-1",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 658160,
+          "h100_completion_ps": 658160,
+          "pattern": "fanin-3",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 272,
+          "completion_ps": 1521200,
+          "h100_completion_ps": 1521200,
+          "pattern": "fanin-7",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 33440,
+          "h100_completion_ps": 33440,
+          "h100_identical_timing": true,
+          "pattern": "pair",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 33440,
+          "pattern": "bidirectional",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 33440,
+          "pattern": "disjoint",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 33440,
+          "h100_completion_ps": 33440,
+          "pattern": "fanin-1",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 55200,
+          "h100_completion_ps": 55200,
+          "pattern": "fanin-3",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 98720,
+          "h100_completion_ps": 98720,
+          "pattern": "fanin-7",
+          "payload": 4096,
+          "policy": "identity",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 33440,
+          "h100_completion_ps": 33440,
+          "h100_identical_timing": true,
+          "pattern": "pair",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 33440,
+          "pattern": "bidirectional",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 33440,
+          "pattern": "disjoint",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 33440,
+          "h100_completion_ps": 33440,
+          "pattern": "fanin-1",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 55200,
+          "h100_completion_ps": 55200,
+          "pattern": "fanin-3",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        },
+        {
+          "capacity": 65536,
+          "completion_ps": 98720,
+          "h100_completion_ps": 98720,
+          "pattern": "fanin-7",
+          "payload": 4096,
+          "policy": "round_robin_candidate",
+          "python_native_exact": true,
+          "rate": 25000000000
+        }
+      ],
+      "credit_backpressure": true,
+      "endpoint_ceiling_bytes_per_second": 450000000000,
+      "isolated_rate_direction": {
+        "held": true,
+        "instances": 16
+      },
+      "live": [
+        {
+          "compute_ps": [
+            37000,
+            37000,
+            37000
+          ],
+          "h100_jct_ps": 671760,
+          "h100_step_latency_ps": [
+            223920,
+            223920,
+            223920
+          ],
+          "jct_ps": 671760,
+          "kind": "tp",
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "step_latency_ps": [
+            223920,
+            223920,
+            223920
+          ],
+          "tpot_ps": {
+            "denominator": 1,
+            "numerator": 223920
+          },
+          "ttft_ps": 223920,
+          "width": 2
+        },
+        {
+          "compute_ps": [
+            37000,
+            37000,
+            37000
+          ],
+          "h100_jct_ps": 398640,
+          "h100_step_latency_ps": [
+            132880,
+            132880,
+            132880
+          ],
+          "jct_ps": 398640,
+          "kind": "ep-balanced",
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "step_latency_ps": [
+            132880,
+            132880,
+            132880
+          ],
+          "tpot_ps": {
+            "denominator": 1,
+            "numerator": 132880
+          },
+          "ttft_ps": 132880,
+          "width": 2
+        },
+        {
+          "compute_ps": [
+            37000,
+            37000,
+            37000
+          ],
+          "h100_jct_ps": 398640,
+          "h100_step_latency_ps": [
+            132880,
+            132880,
+            132880
+          ],
+          "jct_ps": 398640,
+          "kind": "ep-skewed",
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "step_latency_ps": [
+            132880,
+            132880,
+            132880
+          ],
+          "tpot_ps": {
+            "denominator": 1,
+            "numerator": 132880
+          },
+          "ttft_ps": 132880,
+          "width": 2
+        },
+        {
+          "compute_ps": [
+            37000,
+            37000,
+            37000
+          ],
+          "h100_jct_ps": 1771500,
+          "h100_step_latency_ps": [
+            590500,
+            590500,
+            590500
+          ],
+          "jct_ps": 1771500,
+          "kind": "tp",
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "step_latency_ps": [
+            590500,
+            590500,
+            590500
+          ],
+          "tpot_ps": {
+            "denominator": 1,
+            "numerator": 590500
+          },
+          "ttft_ps": 590500,
+          "width": 4
+        },
+        {
+          "compute_ps": [
+            37000,
+            37000,
+            37000
+          ],
+          "h100_jct_ps": 543720,
+          "h100_step_latency_ps": [
+            181240,
+            181240,
+            181240
+          ],
+          "jct_ps": 543720,
+          "kind": "ep-balanced",
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "step_latency_ps": [
+            181240,
+            181240,
+            181240
+          ],
+          "tpot_ps": {
+            "denominator": 1,
+            "numerator": 181240
+          },
+          "ttft_ps": 181240,
+          "width": 4
+        },
+        {
+          "compute_ps": [
+            37000,
+            37000,
+            37000
+          ],
+          "h100_jct_ps": 398640,
+          "h100_step_latency_ps": [
+            132880,
+            132880,
+            132880
+          ],
+          "jct_ps": 398640,
+          "kind": "ep-skewed",
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "step_latency_ps": [
+            132880,
+            132880,
+            132880
+          ],
+          "tpot_ps": {
+            "denominator": 1,
+            "numerator": 132880
+          },
+          "ttft_ps": 132880,
+          "width": 4
+        },
+        {
+          "compute_ps": [
+            37000,
+            37000,
+            37000
+          ],
+          "h100_jct_ps": 2241240,
+          "h100_step_latency_ps": [
+            747080,
+            747080,
+            747080
+          ],
+          "jct_ps": 2241240,
+          "kind": "tp",
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "step_latency_ps": [
+            747080,
+            747080,
+            747080
+          ],
+          "tpot_ps": {
+            "denominator": 1,
+            "numerator": 747080
+          },
+          "ttft_ps": 747080,
+          "width": 8
+        },
+        {
+          "compute_ps": [
+            37000,
+            37000,
+            37000
+          ],
+          "h100_jct_ps": 866490,
+          "h100_step_latency_ps": [
+            288830,
+            288830,
+            288830
+          ],
+          "jct_ps": 866490,
+          "kind": "ep-balanced",
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "step_latency_ps": [
+            288830,
+            288830,
+            288830
+          ],
+          "tpot_ps": {
+            "denominator": 1,
+            "numerator": 288830
+          },
+          "ttft_ps": 288830,
+          "width": 8
+        },
+        {
+          "compute_ps": [
+            37000,
+            37000,
+            37000
+          ],
+          "h100_jct_ps": 398640,
+          "h100_step_latency_ps": [
+            132880,
+            132880,
+            132880
+          ],
+          "jct_ps": 398640,
+          "kind": "ep-skewed",
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "step_latency_ps": [
+            132880,
+            132880,
+            132880
+          ],
+          "tpot_ps": {
+            "denominator": 1,
+            "numerator": 132880
+          },
+          "ttft_ps": 132880,
+          "width": 8
+        },
+        {
+          "compute_ps": [
+            37000,
+            37000,
+            37000
+          ],
+          "h100_jct_ps": 410640,
+          "h100_step_latency_ps": [
+            136880,
+            136880,
+            136880
+          ],
+          "jct_ps": 410640,
+          "kind": "tp",
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "step_latency_ps": [
+            136880,
+            136880,
+            136880
+          ],
+          "tpot_ps": {
+            "denominator": 1,
+            "numerator": 136880
+          },
+          "ttft_ps": 136880,
+          "width": 2
+        },
+        {
+          "compute_ps": [
+            37000,
+            37000,
+            37000
+          ],
+          "h100_jct_ps": 268080,
+          "h100_step_latency_ps": [
+            89360,
+            89360,
+            89360
+          ],
+          "jct_ps": 268080,
+          "kind": "ep-balanced",
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "step_latency_ps": [
+            89360,
+            89360,
+            89360
+          ],
+          "tpot_ps": {
+            "denominator": 1,
+            "numerator": 89360
+          },
+          "ttft_ps": 89360,
+          "width": 2
+        },
+        {
+          "compute_ps": [
+            37000,
+            37000,
+            37000
+          ],
+          "h100_jct_ps": 268080,
+          "h100_step_latency_ps": [
+            89360,
+            89360,
+            89360
+          ],
+          "jct_ps": 268080,
+          "kind": "ep-skewed",
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "step_latency_ps": [
+            89360,
+            89360,
+            89360
+          ],
+          "tpot_ps": {
+            "denominator": 1,
+            "numerator": 89360
+          },
+          "ttft_ps": 89360,
+          "width": 2
+        },
+        {
+          "compute_ps": [
+            37000,
+            37000,
+            37000
+          ],
+          "h100_jct_ps": 988140,
+          "h100_step_latency_ps": [
+            329380,
+            329380,
+            329380
+          ],
+          "jct_ps": 988140,
+          "kind": "tp",
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "step_latency_ps": [
+            329380,
+            329380,
+            329380
+          ],
+          "tpot_ps": {
+            "denominator": 1,
+            "numerator": 329380
+          },
+          "ttft_ps": 329380,
+          "width": 4
+        },
+        {
+          "compute_ps": [
+            37000,
+            37000,
+            37000
+          ],
+          "h100_jct_ps": 347880,
+          "h100_step_latency_ps": [
+            115960,
+            115960,
+            115960
+          ],
+          "jct_ps": 347880,
+          "kind": "ep-balanced",
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "step_latency_ps": [
+            115960,
+            115960,
+            115960
+          ],
+          "tpot_ps": {
+            "denominator": 1,
+            "numerator": 115960
+          },
+          "ttft_ps": 115960,
+          "width": 4
+        },
+        {
+          "compute_ps": [
+            37000,
+            37000,
+            37000
+          ],
+          "h100_jct_ps": 268080,
+          "h100_step_latency_ps": [
+            89360,
+            89360,
+            89360
+          ],
+          "jct_ps": 268080,
+          "kind": "ep-skewed",
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "step_latency_ps": [
+            89360,
+            89360,
+            89360
+          ],
+          "tpot_ps": {
+            "denominator": 1,
+            "numerator": 89360
+          },
+          "ttft_ps": 89360,
+          "width": 4
+        },
+        {
+          "compute_ps": [
+            37000,
+            37000,
+            37000
+          ],
+          "h100_jct_ps": 1273560,
+          "h100_step_latency_ps": [
+            424520,
+            424520,
+            424520
+          ],
+          "jct_ps": 1273560,
+          "kind": "tp",
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "step_latency_ps": [
+            424520,
+            424520,
+            424520
+          ],
+          "tpot_ps": {
+            "denominator": 1,
+            "numerator": 424520
+          },
+          "ttft_ps": 424520,
+          "width": 8
+        },
+        {
+          "compute_ps": [
+            37000,
+            37000,
+            37000
+          ],
+          "h100_jct_ps": 507480,
+          "h100_step_latency_ps": [
+            169160,
+            169160,
+            169160
+          ],
+          "jct_ps": 507480,
+          "kind": "ep-balanced",
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "step_latency_ps": [
+            169160,
+            169160,
+            169160
+          ],
+          "tpot_ps": {
+            "denominator": 1,
+            "numerator": 169160
+          },
+          "ttft_ps": 169160,
+          "width": 8
+        },
+        {
+          "compute_ps": [
+            37000,
+            37000,
+            37000
+          ],
+          "h100_jct_ps": 268080,
+          "h100_step_latency_ps": [
+            89360,
+            89360,
+            89360
+          ],
+          "jct_ps": 268080,
+          "kind": "ep-skewed",
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "step_latency_ps": [
+            89360,
+            89360,
+            89360
+          ],
+          "tpot_ps": {
+            "denominator": 1,
+            "numerator": 89360
+          },
+          "ttft_ps": 89360,
+          "width": 8
+        }
+      ],
+      "physics_checked_runs": 256,
+      "relations": {
+        "b200_at_or_above_h100_fan_in_and_live": {
+          "fan_in_cells": 48,
+          "held": true,
+          "live_cells": 18,
+          "strict_cells": []
+        },
+        "b200_equals_h100_isolated_pair": {
+          "cells": 16,
+          "held": true
+        },
+        "python_native_exact": {
+          "component_cells": 96,
+          "held": true,
+          "live_cells": 18
+        },
+        "rate_pair_changes_completion": {
+          "changed_pairs": 9,
+          "held": true,
+          "pairs": [
+            {
+              "compute_identical": true,
+              "jct_changed": true,
+              "kind": "tp",
+              "width": 2
+            },
+            {
+              "compute_identical": true,
+              "jct_changed": true,
+              "kind": "ep-balanced",
+              "width": 2
+            },
+            {
+              "compute_identical": true,
+              "jct_changed": true,
+              "kind": "ep-skewed",
+              "width": 2
+            },
+            {
+              "compute_identical": true,
+              "jct_changed": true,
+              "kind": "tp",
+              "width": 4
+            },
+            {
+              "compute_identical": true,
+              "jct_changed": true,
+              "kind": "ep-balanced",
+              "width": 4
+            },
+            {
+              "compute_identical": true,
+              "jct_changed": true,
+              "kind": "ep-skewed",
+              "width": 4
+            },
+            {
+              "compute_identical": true,
+              "jct_changed": true,
+              "kind": "tp",
+              "width": 8
+            },
+            {
+              "compute_identical": true,
+              "jct_changed": true,
+              "kind": "ep-balanced",
+              "width": 8
+            },
+            {
+              "compute_identical": true,
+              "jct_changed": true,
+              "kind": "ep-skewed",
+              "width": 8
+            }
+          ]
+        }
+      },
+      "single_packet_equation": true
+    },
+    "g5_refusals": {
+      "17 lanes on one gpu": {
+        "expected_message": "GPU dev 3 at 0000:63:00.0 has 17 switch-attached NVLink lanes; generation b200 requires 18",
+        "message": "GPU dev 3 at 0000:63:00.0 has 17 switch-attached NVLink lanes; generation b200 requires 18",
+        "refused": true
+      },
+      "generation a100 against eighteen lanes": {
+        "expected_message": "has 18 switch-attached NVLink lanes; generation a100 requires 12",
+        "message": "GPU dev 0 at 0000:51:00.0 has 18 switch-attached NVLink lanes; generation a100 requires 12",
+        "refused": true
+      },
+      "generation h100 against b200 silicon": {
+        "expected_message": "GPU dev 0 at 0000:51:00.0 reports device 0x10de:0x2901 with sm 100; generation h100 requires device 0x2330 or 0x2335 or 0x2339 with sm 90",
+        "message": "GPU dev 0 at 0000:51:00.0 reports device 0x10de:0x2901 with sm 100; generation h100 requires device 0x2330 or 0x2335 or 0x2339 with sm 90",
+        "refused": true
+      },
+      "mixed switch and peer rows": {
+        "expected_message": "gpu 0000:51:00.0 mixes switch-attached and peer-attached nvlink rows",
+        "message": "NCCL topology dump refused: gpu 0000:51:00.0 mixes switch-attached and peer-attached nvlink rows",
+        "refused": true
+      },
+      "module id map not a bijection onto 1..8": {
+        "expected_message": "module id map not a bijection onto 1..8",
+        "message": "module id map not a bijection onto 1..8 over GPU devs [0, 1, 2, 3, 4, 5, 6, 7]: {0: 4, 1: 2, 2: 1, 3: 3, 4: 8, 5: 6, 6: 5, 7: 4}",
+        "refused": true
+      },
+      "nested pci under non-switch": {
+        "expected_message": "pci 0000:45:00.0 of class 0x030200 holds a nested pci; only a PCIe switch (class 0x060400) may",
+        "message": "NCCL topology dump refused: pci 0000:45:00.0 of class 0x030200 holds a nested pci; only a PCIe switch (class 0x060400) may",
+        "refused": true
+      },
+      "seven gpus": {
+        "expected_message": "requires eight GPUs; the dump holds 7",
+        "message": "a captured switched board requires eight GPUs; the dump holds 7",
+        "refused": true
+      },
+      "socket nic repeated with differing attributes": {
+        "expected_message": "socket net eth0 repeats under several cpus with differing attributes",
+        "message": "NCCL topology dump refused: socket net eth0 repeats under several cpus with differing attributes",
+        "refused": true
+      }
+    },
+    "g6_off_path": {
+      "a100 digest": {
+        "bytes": 84797,
+        "sha256": "47d66b66acd5a477f757ee30400256d39569df5a5fef5aea1655a937fc9fa219"
+      },
+      "dgx study check reproduces": true,
+      "dgx_results_sha256": "00d935fc4b26cfc50aa4c5f6b46ba20e3db856d091215c2e616b095fb577fdba",
+      "fabric round trip": true,
+      "h100 digest": {
+        "bytes": 125741,
+        "sha256": "4429ed2ada4ee4e7dc7180dbade0b0be5b60b0fc234918f7e307b5c0214d7278"
+      }
+    }
+  },
+  "evidence": {
+    "behavioral_relation_families": {
+      "b200_equals_h100_isolated_pair": {
+        "held": true
+      },
+      "rate_pair_changes_completion": {
+        "held": true
+      }
+    },
+    "exact_oracle_family": {
+      "held": true,
+      "instances": 114
+    },
+    "fatal_compatibility_digests": 3,
+    "rejection_control_family": {
+      "controls": 7,
+      "refused": 7
+    },
+    "structural_guard_cells": 4,
+    "structural_observations": {
+      "b200_at_or_above_h100_fan_in_and_live": {
+        "equal_cells": 66,
+        "held": true,
+        "scored": false,
+        "strict_cells": 0
+      }
+    }
+  },
+  "expectations_commit": "acf0e5e4430da97eaf8d5d8f805087f33c942233",
+  "findings": [],
+  "fixture_sha256": {
+    "nccl_env.txt": "fa598d30173c5cce7456b19d764c1d1c8139a8ca9d0ed50f1f94d6bbb1a80606",
+    "nccl_graph.xml": "d07117f7c0e098094932d45b10f4b4ffd33b1411ef41d950d0f722f90f4661fa",
+    "nccl_run_excerpt.log": "a6ec2199f87fe6e3134ac5cc4b18f6d66c3387fce4ce9ffea0ff72dfd431243f",
+    "nccl_topo.xml": "52206219b633ab5abf9e100172205cc4274a03cafb31b23c0868abb7527d5ebf",
+    "node_inventory.txt": "c29f3e2893a79764b3a95d636e2147ced3dad665d79111585f8d122b85732ae0"
+  },
+  "implementation_commit": "8e419ebbdf5383ff5cabc313b1d84261ae16094c",
+  "schema": "simllm-hgx-b200-capture-result-v1",
+  "status": "PASS"
+}

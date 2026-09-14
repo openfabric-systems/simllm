@@ -1,0 +1,36 @@
+{
+  "schema": "simllm-hgx-b200-capture-amendment-2-v1",
+  "date": "2026-09-13",
+  "chronology": "post-specified to an independent review finding, frozen before the corrected join and its rerun",
+  "withdrawn": [
+    "g5 h100 accepts eighteen lanes"
+  ],
+  "silicon": {
+    "a100": {
+      "devices": [
+        "0x20b0",
+        "0x20b2"
+      ],
+      "sm": 80
+    },
+    "h100": {
+      "devices": [
+        "0x2330",
+        "0x2335",
+        "0x2339"
+      ],
+      "sm": 90
+    },
+    "b200": {
+      "devices": [
+        "0x2901"
+      ],
+      "sm": 100
+    }
+  },
+  "added_refusals": [
+    "gpu outside a pcie switch",
+    "pcie switch nested in a pcie switch",
+    "h100 against b200 silicon"
+  ]
+}
