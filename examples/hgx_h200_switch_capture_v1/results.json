@@ -1,0 +1,699 @@
+{
+  "amendment_commit": "e3a94f3490377f26f7ce397a32881d620055b0e2",
+  "cells": {
+    "h1_parse": {
+      "counts": {
+        "counts_in_busid_order": [
+          [
+            4,
+            5,
+            5,
+            4
+          ]
+        ],
+        "cpus": 2,
+        "distinct_socket_nics": 1,
+        "gpus": 8,
+        "nic_repetitions": 2,
+        "pcie_switches": 8,
+        "switch_attached_rows": 32
+      },
+      "gpu": {
+        "busid_by_dev": {
+          "0": "0000:83:00.0",
+          "1": "0000:8b:00.0",
+          "2": "0000:93:00.0",
+          "3": "0000:9b:00.0",
+          "4": "0000:a3:00.0",
+          "5": "0000:ab:00.0",
+          "6": "0000:b3:00.0",
+          "7": "0000:bb:00.0"
+        },
+        "device": [
+          "0x2335"
+        ],
+        "gdr": [
+          1
+        ],
+        "numa_by_dev": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 1,
+          "5": 1,
+          "6": 1,
+          "7": 1
+        },
+        "pcie_switch_by_dev": {
+          "0": "0000:81:00.0",
+          "1": "0000:89:00.0",
+          "2": "0000:91:00.0",
+          "3": "0000:99:00.0",
+          "4": "0000:a1:00.0",
+          "5": "0000:a9:00.0",
+          "6": "0000:b1:00.0",
+          "7": "0000:b9:00.0"
+        },
+        "sm": [
+          90
+        ],
+        "vendor": [
+          "0x10de"
+        ]
+      },
+      "nccl": {
+        "env": "torch 2.8.0+cu128 cuda 12.8 nccl (2, 27, 3)",
+        "nvls_channels": 8,
+        "ring_channels": 12,
+        "tree_channels": 12
+      },
+      "pcie_switch": {
+        "device": [
+          "0x8232"
+        ],
+        "vendor": [
+          "0x104c"
+        ]
+      },
+      "socket_nic": [
+        {
+          "gdr": 0,
+          "name": "eth0",
+          "speed_mbit": 10000
+        }
+      ],
+      "switch_rows": {
+        "dev0_dump_order": [
+          "0000:c5:00.0",
+          "0000:c4:00.0",
+          "0000:c3:00.0",
+          "0000:c6:00.0"
+        ],
+        "targets": [
+          "0000:c3:00.0",
+          "0000:c4:00.0",
+          "0000:c5:00.0",
+          "0000:c6:00.0"
+        ],
+        "tclass": [
+          "0x068000"
+        ]
+      }
+    },
+    "h2_inventory": {
+      "connectx_virtual_functions": [
+        "84:00.0",
+        "8c:00.0",
+        "94:00.0",
+        "9c:00.0",
+        "a4:00.0",
+        "ac:00.0",
+        "b4:00.0",
+        "bc:00.0"
+      ],
+      "distinct_pairs": 144,
+      "module_id_by_dev": {
+        "0": 2,
+        "1": 4,
+        "2": 1,
+        "3": 3,
+        "4": 7,
+        "5": 5,
+        "6": 6,
+        "7": 8
+      },
+      "per_gpu": [
+        18
+      ],
+      "per_switch_counts": [
+        [
+          4,
+          5,
+          5,
+          4
+        ]
+      ],
+      "pix_nics_by_gpu": [
+        [
+          "NIC0"
+        ],
+        [
+          "NIC1"
+        ],
+        [
+          "NIC2"
+        ],
+        [
+          "NIC3"
+        ],
+        [
+          "NIC4"
+        ],
+        [
+          "NIC5"
+        ],
+        [
+          "NIC6"
+        ],
+        [
+          "NIC7"
+        ]
+      ],
+      "ports_per_switch": [
+        32,
+        40,
+        40,
+        32
+      ],
+      "remote_blocks_head_dump_devices": true,
+      "remote_rows": 144,
+      "slots": [
+        1,
+        3,
+        0,
+        2,
+        6,
+        4,
+        5,
+        7
+      ],
+      "switch_devices": [
+        {
+          "busid": "0000:c3:00.0",
+          "device": "0x22a3",
+          "numa": 1,
+          "pci_class": "0x068000",
+          "vendor": "0x10de"
+        },
+        {
+          "busid": "0000:c4:00.0",
+          "device": "0x22a3",
+          "numa": 1,
+          "pci_class": "0x068000",
+          "vendor": "0x10de"
+        },
+        {
+          "busid": "0000:c5:00.0",
+          "device": "0x22a3",
+          "numa": 1,
+          "pci_class": "0x068000",
+          "vendor": "0x10de"
+        },
+        {
+          "busid": "0000:c6:00.0",
+          "device": "0x22a3",
+          "numa": 1,
+          "pci_class": "0x068000",
+          "vendor": "0x10de"
+        }
+      ]
+    },
+    "h3_switch_side": {
+      "bundle_equals_captured_counts": {
+        "bundle": [
+          4,
+          5,
+          5,
+          4
+        ],
+        "captured_counts": [
+          true
+        ],
+        "held": true
+      },
+      "chip_index_equals_switch": {
+        "held": true,
+        "switches_in_chip_order": [
+          "0000:c3:00.0",
+          "0000:c4:00.0",
+          "0000:c5:00.0",
+          "0000:c6:00.0"
+        ]
+      },
+      "every_path_two_ports_one_switch": {
+        "held": true,
+        "ordered_pairs": 56,
+        "paths_per_pair": 18
+      },
+      "h100_bundle_confirmed": {
+        "held": true,
+        "switches": 4
+      },
+      "port_totals_conserve": {
+        "held": true,
+        "links_per_switch": [
+          32,
+          40,
+          40,
+          32
+        ]
+      },
+      "switch_ports_bijective": {
+        "bound_switch_ports": 144,
+        "captured_pairs": 144,
+        "held": true
+      }
+    },
+    "h4_gpu_side": {
+      "distinct_board_ids_one_part_number": {
+        "board_ids": [
+          "0x8300",
+          "0x8b00",
+          "0x9300",
+          "0x9b00",
+          "0xa300",
+          "0xab00",
+          "0xb300",
+          "0xbb00"
+        ],
+        "held": true,
+        "part_numbers": [
+          "695-2G520-0280-001"
+        ]
+      },
+      "lanes_equal_links": {
+        "held": true,
+        "signalling_rates": [
+          "26.562 GB/s"
+        ]
+      },
+      "module_id_slots": {
+        "held": true,
+        "slot_by_dev": {
+          "0": 1,
+          "1": 3,
+          "2": 0,
+          "3": 2,
+          "4": 6,
+          "5": 4,
+          "6": 5,
+          "7": 7
+        }
+      },
+      "nv18_equals_paths_and_dump_total": {
+        "held": true
+      },
+      "order_busids_pcie_numa": {
+        "held": true,
+        "pcie_locations": [
+          "numa-0/pci-0000:81:00.0/pci-0000:83:00.0",
+          "numa-0/pci-0000:89:00.0/pci-0000:8b:00.0",
+          "numa-0/pci-0000:91:00.0/pci-0000:93:00.0",
+          "numa-0/pci-0000:99:00.0/pci-0000:9b:00.0",
+          "numa-1/pci-0000:a1:00.0/pci-0000:a3:00.0",
+          "numa-1/pci-0000:a9:00.0/pci-0000:ab:00.0",
+          "numa-1/pci-0000:b1:00.0/pci-0000:b3:00.0",
+          "numa-1/pci-0000:b9:00.0/pci-0000:bb:00.0"
+        ]
+      }
+    },
+    "h5_live_identity": {
+      "cells": [
+        {
+          "jct_ps": 671760,
+          "kind": "tp",
+          "packet_observations_equal": true,
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "request_metrics_equal": true,
+          "step_latency_ps": [
+            223920,
+            223920,
+            223920
+          ],
+          "switch_only_observations_equal": true,
+          "width": 2
+        },
+        {
+          "jct_ps": 398640,
+          "kind": "ep-balanced",
+          "packet_observations_equal": true,
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "request_metrics_equal": true,
+          "step_latency_ps": [
+            132880,
+            132880,
+            132880
+          ],
+          "switch_only_observations_equal": true,
+          "width": 2
+        },
+        {
+          "jct_ps": 398640,
+          "kind": "ep-skewed",
+          "packet_observations_equal": true,
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "request_metrics_equal": true,
+          "step_latency_ps": [
+            132880,
+            132880,
+            132880
+          ],
+          "switch_only_observations_equal": true,
+          "width": 2
+        },
+        {
+          "jct_ps": 1771500,
+          "kind": "tp",
+          "packet_observations_equal": true,
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "request_metrics_equal": true,
+          "step_latency_ps": [
+            590500,
+            590500,
+            590500
+          ],
+          "switch_only_observations_equal": true,
+          "width": 4
+        },
+        {
+          "jct_ps": 543720,
+          "kind": "ep-balanced",
+          "packet_observations_equal": true,
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "request_metrics_equal": true,
+          "step_latency_ps": [
+            181240,
+            181240,
+            181240
+          ],
+          "switch_only_observations_equal": true,
+          "width": 4
+        },
+        {
+          "jct_ps": 398640,
+          "kind": "ep-skewed",
+          "packet_observations_equal": true,
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "request_metrics_equal": true,
+          "step_latency_ps": [
+            132880,
+            132880,
+            132880
+          ],
+          "switch_only_observations_equal": true,
+          "width": 4
+        },
+        {
+          "jct_ps": 2241240,
+          "kind": "tp",
+          "packet_observations_equal": true,
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "request_metrics_equal": true,
+          "step_latency_ps": [
+            747080,
+            747080,
+            747080
+          ],
+          "switch_only_observations_equal": true,
+          "width": 8
+        },
+        {
+          "jct_ps": 866490,
+          "kind": "ep-balanced",
+          "packet_observations_equal": true,
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "request_metrics_equal": true,
+          "step_latency_ps": [
+            288830,
+            288830,
+            288830
+          ],
+          "switch_only_observations_equal": true,
+          "width": 8
+        },
+        {
+          "jct_ps": 398640,
+          "kind": "ep-skewed",
+          "packet_observations_equal": true,
+          "python_native_exact": true,
+          "rate": 12500000000,
+          "request_metrics_equal": true,
+          "step_latency_ps": [
+            132880,
+            132880,
+            132880
+          ],
+          "switch_only_observations_equal": true,
+          "width": 8
+        },
+        {
+          "jct_ps": 410640,
+          "kind": "tp",
+          "packet_observations_equal": true,
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "request_metrics_equal": true,
+          "step_latency_ps": [
+            136880,
+            136880,
+            136880
+          ],
+          "switch_only_observations_equal": true,
+          "width": 2
+        },
+        {
+          "jct_ps": 268080,
+          "kind": "ep-balanced",
+          "packet_observations_equal": true,
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "request_metrics_equal": true,
+          "step_latency_ps": [
+            89360,
+            89360,
+            89360
+          ],
+          "switch_only_observations_equal": true,
+          "width": 2
+        },
+        {
+          "jct_ps": 268080,
+          "kind": "ep-skewed",
+          "packet_observations_equal": true,
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "request_metrics_equal": true,
+          "step_latency_ps": [
+            89360,
+            89360,
+            89360
+          ],
+          "switch_only_observations_equal": true,
+          "width": 2
+        },
+        {
+          "jct_ps": 988140,
+          "kind": "tp",
+          "packet_observations_equal": true,
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "request_metrics_equal": true,
+          "step_latency_ps": [
+            329380,
+            329380,
+            329380
+          ],
+          "switch_only_observations_equal": true,
+          "width": 4
+        },
+        {
+          "jct_ps": 347880,
+          "kind": "ep-balanced",
+          "packet_observations_equal": true,
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "request_metrics_equal": true,
+          "step_latency_ps": [
+            115960,
+            115960,
+            115960
+          ],
+          "switch_only_observations_equal": true,
+          "width": 4
+        },
+        {
+          "jct_ps": 268080,
+          "kind": "ep-skewed",
+          "packet_observations_equal": true,
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "request_metrics_equal": true,
+          "step_latency_ps": [
+            89360,
+            89360,
+            89360
+          ],
+          "switch_only_observations_equal": true,
+          "width": 4
+        },
+        {
+          "jct_ps": 1273560,
+          "kind": "tp",
+          "packet_observations_equal": true,
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "request_metrics_equal": true,
+          "step_latency_ps": [
+            424520,
+            424520,
+            424520
+          ],
+          "switch_only_observations_equal": true,
+          "width": 8
+        },
+        {
+          "jct_ps": 507480,
+          "kind": "ep-balanced",
+          "packet_observations_equal": true,
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "request_metrics_equal": true,
+          "step_latency_ps": [
+            169160,
+            169160,
+            169160
+          ],
+          "switch_only_observations_equal": true,
+          "width": 8
+        },
+        {
+          "jct_ps": 268080,
+          "kind": "ep-skewed",
+          "packet_observations_equal": true,
+          "python_native_exact": true,
+          "rate": 25000000000,
+          "request_metrics_equal": true,
+          "step_latency_ps": [
+            89360,
+            89360,
+            89360
+          ],
+          "switch_only_observations_equal": true,
+          "width": 8
+        }
+      ],
+      "endpoint_ceiling_bytes_per_second": 450000000000,
+      "held": true,
+      "live_cells": 18
+    },
+    "h6_refusals": {
+      "17 links for one gpu": {
+        "expected_message": "GPU dev 3 has 17 captured NVLink links; generation h100 requires 18",
+        "message": "GPU dev 3 has 17 captured NVLink links; generation h100 requires 18",
+        "refused": true
+      },
+      "5 lanes on c3": {
+        "expected_message": "GPU dev 0 has 5 captured lanes on switch 0000:c3:00.0; chip 1 of generation h100 requires 4",
+        "message": "GPU dev 0 has 5 captured lanes on switch 0000:c3:00.0; chip 1 of generation h100 requires 4",
+        "refused": true
+      },
+      "b200 against four switches": {
+        "expected_message": "generation b200 binds 2 NVSwitch chips; the captured links name 4 switches",
+        "message": "generation b200 binds 2 NVSwitch chips; the captured links name 4 switches",
+        "refused": true
+      },
+      "dump switch absent from list": {
+        "expected_message": "NCCL switch row of GPU dev 0 names 0000:c7:00.0, which is absent from the captured switch list",
+        "message": "NCCL switch row of GPU dev 0 names 0000:c7:00.0, which is absent from the captured switch list",
+        "refused": true
+      },
+      "rotated gpus": {
+        "expected_message": "but the NCCL dump places dev 0 at 0000:83:00.0",
+        "message": "nvidia-smi inventory refused: nvlink -R GPU 0 is GPU-ecccb5a4-cf8b-55c1-d811-31ab6da3878c at 0000:8b:00.0, but the NCCL dump places dev 0 at 0000:83:00.0",
+        "refused": true
+      },
+      "swapped gpus": {
+        "expected_message": "but the NCCL dump places dev 0 at 0000:83:00.0",
+        "message": "nvidia-smi inventory refused: nvlink -R GPU 0 is GPU-ecccb5a4-cf8b-55c1-d811-31ab6da3878c at 0000:8b:00.0, but the NCCL dump places dev 0 at 0000:83:00.0",
+        "refused": true
+      },
+      "swapped uuids": {
+        "expected_message": "but the NCCL dump places dev 0 at 0000:83:00.0",
+        "message": "nvidia-smi inventory refused: nvlink -R GPU 0 is GPU-ecccb5a4-cf8b-55c1-d811-31ab6da3878c at 0000:8b:00.0, but the NCCL dump places dev 0 at 0000:83:00.0",
+        "refused": true
+      },
+      "switch list class or vendor": {
+        "expected_message": "listed switch 0000:c7:00.0 has vendor 0x1000, not 0x10de",
+        "message": "nvidia-smi inventory refused: listed switch 0000:c7:00.0 has vendor 0x1000, not 0x10de",
+        "refused": true
+      },
+      "switch port used twice": {
+        "expected_message": "is used by two links",
+        "message": "captured switch 0000:c3:00.0 port 46 is used by two links",
+        "refused": true
+      },
+      "three switches": {
+        "expected_message": "GPU 0 link 12 reaches 0000:c6:00.0, which is not a listed NVSwitch",
+        "message": "nvidia-smi inventory refused: GPU 0 link 12 reaches 0000:c6:00.0, which is not a listed NVSwitch",
+        "refused": true
+      },
+      "unused listed switch": {
+        "expected_message": "listed NVSwitch 0000:c7:00.0 receives no lane",
+        "message": "nvidia-smi inventory refused: listed NVSwitch 0000:c7:00.0 receives no lane",
+        "refused": true
+      },
+      "virtual row beside real rows": {
+        "expected_message": "gpu 0000:83:00.0 mixes the virtual NVSwitch row with real switch rows",
+        "message": "NCCL topology dump refused: gpu 0000:83:00.0 mixes the virtual NVSwitch row with real switch rows",
+        "refused": true
+      }
+    },
+    "h7_off_path": {
+      "b200_results_sha256": "865884637f4189b2a6fb82e84bf572d11f5a187cc27626a8fbf7b84795abab67",
+      "b200_results_sha256_at_stacked_base": "865884637f4189b2a6fb82e84bf572d11f5a187cc27626a8fbf7b84795abab67",
+      "dgx_results_sha256": "00d935fc4b26cfc50aa4c5f6b46ba20e3db856d091215c2e616b095fb577fdba",
+      "preset_digests": {
+        "a100": {
+          "bytes": 84797,
+          "sha256": "47d66b66acd5a477f757ee30400256d39569df5a5fef5aea1655a937fc9fa219"
+        },
+        "b200": {
+          "bytes": 125741,
+          "sha256": "ef920aa9abc7b61222880d97b60d2e016b37ed1df46b5c628488054553f5163f"
+        },
+        "h100": {
+          "bytes": 125741,
+          "sha256": "4429ed2ada4ee4e7dc7180dbade0b0be5b60b0fc234918f7e307b5c0214d7278"
+        }
+      },
+      "round_trip": true,
+      "study_checks": {
+        "b200": true,
+        "dgx": true
+      }
+    }
+  },
+  "evidence": {
+    "exact_oracle_family": {
+      "held": true,
+      "instances": 18
+    },
+    "fatal_compatibility_identities": 5,
+    "rejection_control_family": {
+      "controls": 12,
+      "refused": 12
+    },
+    "structural_guard_cells": 5
+  },
+  "expectations_commit": "3d24b2b1d5a1300e9b7fdb2000acc5167eab94a9",
+  "findings": [],
+  "fixture_sha256": {
+    "nccl_env.txt": "fa598d30173c5cce7456b19d764c1d1c8139a8ca9d0ed50f1f94d6bbb1a80606",
+    "nccl_graph.xml": "c803984b331e800bdd77941c2430203d320111f7d0f78e17f2e72e2861b8cbf0",
+    "nccl_run_excerpt.log": "f9b8e7a276589d6413c30c0c0bb73d069aaf84a347b962e8ac7223cd97e5835a",
+    "nccl_topo.xml": "6fd8e122c54349102bf86320018d9cf616d776e1ddbb0223e0183801877e6c5c",
+    "node_inventory.txt": "b4f9f5b28d276ddfeb08f09afc664ac86f1b71622f70c4e9ba228163a8a36e7a"
+  },
+  "implementation_commit": "137d99206243f734fcc80f21950c687bfb6b4039",
+  "schema": "simllm-hgx-h200-switch-capture-result-v1",
+  "status": "PASS"
+}

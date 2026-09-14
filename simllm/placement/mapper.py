@@ -4,7 +4,11 @@ Every communication event carries global ranks; the network backend wants
 endpoints. Resolution is a join across the two manifests::
 
     endpoint = placement.by_rank(global_rank)        # node, GPU
-    nic      = select_nic(endpoint, fabric)          # GPU→NIC affinity
+    nic      = fabric.by_rank(global_rank).nic_id    # GPU-to-NIC affinity
+
+The fabric manifest states each GPU's affine NIC directly, whether declared by
+a builder or read from an NCCL topology dump by
+:func:`simllm.placement.nccl_topology.captured_fabric_node`.
 
 GOAL rank assignment mirrors the htsim RNIC drivers'
 ``-goal_rank_mapping`` option:
@@ -12,8 +16,8 @@ GOAL rank assignment mirrors the htsim RNIC drivers'
 - ``gpu-rank``: one GOAL rank per global rank (GPU). Intra-node traffic is
   visible to the simulator as ranks sharing a node.
 - ``unique-nic``: one GOAL rank per (node, NIC); multiple GPUs behind one NIC
-  share a GOAL rank and intra-node transfers stay off the fabric. Requires
-  the fabric manifest (M4).
+  share a GOAL rank and intra-node transfers stay off the fabric; the mapper
+  mode is PLACE-2.
 """
 
 from __future__ import annotations

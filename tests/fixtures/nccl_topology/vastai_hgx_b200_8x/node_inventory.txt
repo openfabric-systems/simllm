@@ -1,0 +1,1056 @@
+hostname: 733179575ba5
+date: 2026-09-13T20:45:39Z
+kernel: 7.0.0-1010-aws
+--- nvidia-smi -L ---
+GPU 0: NVIDIA B200 (UUID: GPU-7a60931d-6980-e5f3-cae1-ab76693070ef)
+GPU 1: NVIDIA B200 (UUID: GPU-d1b05bd4-7534-9faf-9851-361ceefca814)
+GPU 2: NVIDIA B200 (UUID: GPU-f8f93eb0-ba70-1b3a-fba1-3ac9456dc4d9)
+GPU 3: NVIDIA B200 (UUID: GPU-cb0c96d5-0e64-b518-0808-fd0f99edafba)
+GPU 4: NVIDIA B200 (UUID: GPU-bec70d9b-383d-3161-92f7-906d61d39ad6)
+GPU 5: NVIDIA B200 (UUID: GPU-e0447692-90f8-d7b9-af5c-5742636f5d1a)
+GPU 6: NVIDIA B200 (UUID: GPU-7d8caae1-d463-6a1e-e936-eb062ea8380a)
+GPU 7: NVIDIA B200 (UUID: GPU-c2f46995-1b60-06cb-f173-b3dfc59a0824)
+--- nvidia-smi ---
+Sun Sep 13 20:45:40 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 595.91.07              Driver Version: 595.91.07      CUDA Version: 13.2     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA B200                    On  |   00000000:51:00.0 Off |                    0 |
+| N/A   41C    P0            193W / 1000W |       0MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA B200                    On  |   00000000:52:00.0 Off |                    0 |
+| N/A   36C    P0            188W / 1000W |       0MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   2  NVIDIA B200                    On  |   00000000:62:00.0 Off |                    0 |
+| N/A   41C    P0            196W / 1000W |       0MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   3  NVIDIA B200                    On  |   00000000:63:00.0 Off |                    0 |
+| N/A   35C    P0            190W / 1000W |       0MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   4  NVIDIA B200                    On  |   00000000:75:00.0 Off |                    0 |
+| N/A   40C    P0            188W / 1000W |       0MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   5  NVIDIA B200                    On  |   00000000:76:00.0 Off |                    0 |
+| N/A   36C    P0            188W / 1000W |       0MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   6  NVIDIA B200                    On  |   00000000:86:00.0 Off |                    0 |
+| N/A   41C    P0            194W / 1000W |       0MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   7  NVIDIA B200                    On  |   00000000:87:00.0 Off |                    0 |
+| N/A   36C    P0            188W / 1000W |       0MiB / 183359MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+--- nvidia-smi topo -m ---
+	[4mGPU0	GPU1	GPU2	GPU3	GPU4	GPU5	GPU6	GPU7	CPU Affinity	NUMA Affinity	GPU NUMA ID[0m
+GPU0	 X 	NV18	NV18	NV18	NV18	NV18	NV18	NV18	0-47,96-143	0		N/A
+GPU1	NV18	 X 	NV18	NV18	NV18	NV18	NV18	NV18	0-47,96-143	0		N/A
+GPU2	NV18	NV18	 X 	NV18	NV18	NV18	NV18	NV18	0-47,96-143	0		N/A
+GPU3	NV18	NV18	NV18	 X 	NV18	NV18	NV18	NV18	0-47,96-143	0		N/A
+GPU4	NV18	NV18	NV18	NV18	 X 	NV18	NV18	NV18	48-95,144-191	1		N/A
+GPU5	NV18	NV18	NV18	NV18	NV18	 X 	NV18	NV18	48-95,144-191	1		N/A
+GPU6	NV18	NV18	NV18	NV18	NV18	NV18	 X 	NV18	48-95,144-191	1		N/A
+GPU7	NV18	NV18	NV18	NV18	NV18	NV18	NV18	 X 	48-95,144-191	1		N/A
+
+Legend:
+
+  X    = Self
+  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)
+  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node
+  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)
+  PXB  = Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)
+  PIX  = Connection traversing at most a single PCIe bridge
+  NV#  = Connection traversing a bonded set of # NVLinks
+--- nvidia-smi topo -p2p n ---
+ 	[4mGPU0	GPU1	GPU2	GPU3	GPU4	GPU5	GPU6	GPU7	[0m
+ GPU0	X	OK	OK	OK	OK	OK	OK	OK	
+ GPU1	OK	X	OK	OK	OK	OK	OK	OK	
+ GPU2	OK	OK	X	OK	OK	OK	OK	OK	
+ GPU3	OK	OK	OK	X	OK	OK	OK	OK	
+ GPU4	OK	OK	OK	OK	X	OK	OK	OK	
+ GPU5	OK	OK	OK	OK	OK	X	OK	OK	
+ GPU6	OK	OK	OK	OK	OK	OK	X	OK	
+ GPU7	OK	OK	OK	OK	OK	OK	OK	X	
+
+Legend:
+
+  X    = Self
+  OK   = Status Ok
+  CNS  = Chipset not supported
+  GNS  = GPU not supported
+  TNS  = Topology not supported
+  NS   = Not supported
+  U    = Unknown
+--- nvidia-smi nvlink -s ---
+GPU 0: NVIDIA B200 (UUID: GPU-7a60931d-6980-e5f3-cae1-ab76693070ef)
+	 Link 0: 53.125 GB/s
+	 Link 1: 53.125 GB/s
+	 Link 2: 53.125 GB/s
+	 Link 3: 53.125 GB/s
+	 Link 4: 53.125 GB/s
+	 Link 5: 53.125 GB/s
+	 Link 6: 53.125 GB/s
+	 Link 7: 53.125 GB/s
+	 Link 8: 53.125 GB/s
+	 Link 9: 53.125 GB/s
+	 Link 10: 53.125 GB/s
+	 Link 11: 53.125 GB/s
+	 Link 12: 53.125 GB/s
+	 Link 13: 53.125 GB/s
+	 Link 14: 53.125 GB/s
+	 Link 15: 53.125 GB/s
+	 Link 16: 53.125 GB/s
+	 Link 17: 53.125 GB/s
+GPU 1: NVIDIA B200 (UUID: GPU-d1b05bd4-7534-9faf-9851-361ceefca814)
+	 Link 0: 53.125 GB/s
+	 Link 1: 53.125 GB/s
+	 Link 2: 53.125 GB/s
+	 Link 3: 53.125 GB/s
+	 Link 4: 53.125 GB/s
+	 Link 5: 53.125 GB/s
+	 Link 6: 53.125 GB/s
+	 Link 7: 53.125 GB/s
+	 Link 8: 53.125 GB/s
+	 Link 9: 53.125 GB/s
+	 Link 10: 53.125 GB/s
+	 Link 11: 53.125 GB/s
+	 Link 12: 53.125 GB/s
+	 Link 13: 53.125 GB/s
+	 Link 14: 53.125 GB/s
+	 Link 15: 53.125 GB/s
+	 Link 16: 53.125 GB/s
+	 Link 17: 53.125 GB/s
+GPU 2: NVIDIA B200 (UUID: GPU-f8f93eb0-ba70-1b3a-fba1-3ac9456dc4d9)
+	 Link 0: 53.125 GB/s
+	 Link 1: 53.125 GB/s
+	 Link 2: 53.125 GB/s
+	 Link 3: 53.125 GB/s
+	 Link 4: 53.125 GB/s
+	 Link 5: 53.125 GB/s
+	 Link 6: 53.125 GB/s
+	 Link 7: 53.125 GB/s
+	 Link 8: 53.125 GB/s
+	 Link 9: 53.125 GB/s
+	 Link 10: 53.125 GB/s
+	 Link 11: 53.125 GB/s
+	 Link 12: 53.125 GB/s
+	 Link 13: 53.125 GB/s
+	 Link 14: 53.125 GB/s
+	 Link 15: 53.125 GB/s
+	 Link 16: 53.125 GB/s
+	 Link 17: 53.125 GB/s
+GPU 3: NVIDIA B200 (UUID: GPU-cb0c96d5-0e64-b518-0808-fd0f99edafba)
+	 Link 0: 53.125 GB/s
+	 Link 1: 53.125 GB/s
+	 Link 2: 53.125 GB/s
+	 Link 3: 53.125 GB/s
+	 Link 4: 53.125 GB/s
+	 Link 5: 53.125 GB/s
+	 Link 6: 53.125 GB/s
+	 Link 7: 53.125 GB/s
+	 Link 8: 53.125 GB/s
+	 Link 9: 53.125 GB/s
+	 Link 10: 53.125 GB/s
+	 Link 11: 53.125 GB/s
+	 Link 12: 53.125 GB/s
+	 Link 13: 53.125 GB/s
+	 Link 14: 53.125 GB/s
+	 Link 15: 53.125 GB/s
+	 Link 16: 53.125 GB/s
+	 Link 17: 53.125 GB/s
+GPU 4: NVIDIA B200 (UUID: GPU-bec70d9b-383d-3161-92f7-906d61d39ad6)
+	 Link 0: 53.125 GB/s
+	 Link 1: 53.125 GB/s
+	 Link 2: 53.125 GB/s
+	 Link 3: 53.125 GB/s
+	 Link 4: 53.125 GB/s
+	 Link 5: 53.125 GB/s
+	 Link 6: 53.125 GB/s
+	 Link 7: 53.125 GB/s
+	 Link 8: 53.125 GB/s
+	 Link 9: 53.125 GB/s
+	 Link 10: 53.125 GB/s
+	 Link 11: 53.125 GB/s
+	 Link 12: 53.125 GB/s
+	 Link 13: 53.125 GB/s
+	 Link 14: 53.125 GB/s
+	 Link 15: 53.125 GB/s
+	 Link 16: 53.125 GB/s
+	 Link 17: 53.125 GB/s
+GPU 5: NVIDIA B200 (UUID: GPU-e0447692-90f8-d7b9-af5c-5742636f5d1a)
+	 Link 0: 53.125 GB/s
+	 Link 1: 53.125 GB/s
+	 Link 2: 53.125 GB/s
+	 Link 3: 53.125 GB/s
+	 Link 4: 53.125 GB/s
+	 Link 5: 53.125 GB/s
+	 Link 6: 53.125 GB/s
+	 Link 7: 53.125 GB/s
+	 Link 8: 53.125 GB/s
+	 Link 9: 53.125 GB/s
+	 Link 10: 53.125 GB/s
+	 Link 11: 53.125 GB/s
+	 Link 12: 53.125 GB/s
+	 Link 13: 53.125 GB/s
+	 Link 14: 53.125 GB/s
+	 Link 15: 53.125 GB/s
+	 Link 16: 53.125 GB/s
+	 Link 17: 53.125 GB/s
+GPU 6: NVIDIA B200 (UUID: GPU-7d8caae1-d463-6a1e-e936-eb062ea8380a)
+	 Link 0: 53.125 GB/s
+	 Link 1: 53.125 GB/s
+	 Link 2: 53.125 GB/s
+	 Link 3: 53.125 GB/s
+	 Link 4: 53.125 GB/s
+	 Link 5: 53.125 GB/s
+	 Link 6: 53.125 GB/s
+	 Link 7: 53.125 GB/s
+	 Link 8: 53.125 GB/s
+	 Link 9: 53.125 GB/s
+	 Link 10: 53.125 GB/s
+	 Link 11: 53.125 GB/s
+	 Link 12: 53.125 GB/s
+	 Link 13: 53.125 GB/s
+	 Link 14: 53.125 GB/s
+	 Link 15: 53.125 GB/s
+	 Link 16: 53.125 GB/s
+	 Link 17: 53.125 GB/s
+GPU 7: NVIDIA B200 (UUID: GPU-c2f46995-1b60-06cb-f173-b3dfc59a0824)
+	 Link 0: 53.125 GB/s
+	 Link 1: 53.125 GB/s
+	 Link 2: 53.125 GB/s
+	 Link 3: 53.125 GB/s
+	 Link 4: 53.125 GB/s
+	 Link 5: 53.125 GB/s
+	 Link 6: 53.125 GB/s
+	 Link 7: 53.125 GB/s
+	 Link 8: 53.125 GB/s
+	 Link 9: 53.125 GB/s
+	 Link 10: 53.125 GB/s
+	 Link 11: 53.125 GB/s
+	 Link 12: 53.125 GB/s
+	 Link 13: 53.125 GB/s
+	 Link 14: 53.125 GB/s
+	 Link 15: 53.125 GB/s
+	 Link 16: 53.125 GB/s
+	 Link 17: 53.125 GB/s
+--- nvidia-smi nvlink -c ---
+GPU 0: NVIDIA B200 (UUID: GPU-7a60931d-6980-e5f3-cae1-ab76693070ef)
+	 Link 0, P2P is supported: true
+	 Link 0, Access to system memory supported: true
+	 Link 0, P2P atomics supported: true
+	 Link 0, System memory atomics supported: true
+	 Link 0, SLI is supported: true
+	 Link 0, Link is supported: true
+	 Link 1, P2P is supported: true
+	 Link 1, Access to system memory supported: true
+	 Link 1, P2P atomics supported: true
+	 Link 1, System memory atomics supported: true
+	 Link 1, SLI is supported: true
+	 Link 1, Link is supported: true
+	 Link 2, P2P is supported: true
+	 Link 2, Access to system memory supported: true
+	 Link 2, P2P atomics supported: true
+	 Link 2, System memory atomics supported: true
+	 Link 2, SLI is supported: true
+	 Link 2, Link is supported: true
+	 Link 3, P2P is supported: true
+	 Link 3, Access to system memory supported: true
+	 Link 3, P2P atomics supported: true
+	 Link 3, System memory atomics supported: true
+	 Link 3, SLI is supported: true
+	 Link 3, Link is supported: true
+	 Link 4, P2P is supported: true
+	 Link 4, Access to system memory supported: true
+	 Link 4, P2P atomics supported: true
+	 Link 4, System memory atomics supported: true
+	 Link 4, SLI is supported: true
+	 Link 4, Link is supported: true
+	 Link 5, P2P is supported: true
+	 Link 5, Access to system memory supported: true
+	 Link 5, P2P atomics supported: true
+	 Link 5, System memory atomics supported: true
+	 Link 5, SLI is supported: true
+	 Link 5, Link is supported: true
+	 Link 6, P2P is supported: true
+	 Link 6, Access to system memory supported: true
+	 Link 6, P2P atomics supported: true
+	 Link 6, System memory atomics supported: true
+	 Link 6, SLI is supported: true
+	 Link 6, Link is supported: true
+	 Link 7, P2P is supported: true
+	 Link 7, Access to system memory supported: true
+	 Link 7, P2P atomics supported: true
+	 Link 7, System memory atomics supported: true
+	 Link 7, SLI is supported: true
+	 Link 7, Link is supported: true
+	 Link 8, P2P is supported: true
+	 Link 8, Access to system memory supported: true
+	 Link 8, P2P atomics supported: true
+	 Link 8, System memory atomics supported: true
+	 Link 8, SLI is supported: true
+	 Link 8, Link is supported: true
+	 Link 9, P2P is supported: true
+	 Link 9, Access to system memory supported: true
+	 Link 9, P2P atomics supported: true
+	 Link 9, System memory atomics supported: true
+	 Link 9, SLI is supported: true
+	 Link 9, Link is supported: true
+	 Link 10, P2P is supported: true
+	 Link 10, Access to system memory supported: true
+	 Link 10, P2P atomics supported: true
+	 Link 10, System memory atomics supported: true
+	 Link 10, SLI is supported: true
+	 Link 10, Link is supported: true
+	 Link 11, P2P is supported: true
+	 Link 11, Access to system memory supported: true
+	 Link 11, P2P atomics supported: true
+	 Link 11, System memory atomics supported: true
+	 Link 11, SLI is supported: true
+	 Link 11, Link is supported: true
+	 Link 12, P2P is supported: true
+	 Link 12, Access to system memory supported: true
+	 Link 12, P2P atomics supported: true
+	 Link 12, System memory atomics supported: true
+	 Link 12, SLI is supported: true
+	 Link 12, Link is supported: true
+	 Link 13, P2P is supported: true
+--- nvidia-smi nvlink -R (remote pci bus id per link) ---
+GPU 0: NVIDIA B200 (UUID: GPU-7a60931d-6980-e5f3-cae1-ab76693070ef)
+	 Link 0: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 1: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 2: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 3: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 4: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 5: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 6: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 7: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 8: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 9: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 10: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 11: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 12: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 13: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 14: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 15: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 16: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 17: Remote Device FFFFFFFF:FF:FF.0: Link 0
+GPU 1: NVIDIA B200 (UUID: GPU-d1b05bd4-7534-9faf-9851-361ceefca814)
+	 Link 0: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 1: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 2: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 3: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 4: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 5: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 6: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 7: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 8: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 9: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 10: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 11: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 12: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 13: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 14: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 15: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 16: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 17: Remote Device FFFFFFFF:FF:FF.0: Link 0
+GPU 2: NVIDIA B200 (UUID: GPU-f8f93eb0-ba70-1b3a-fba1-3ac9456dc4d9)
+	 Link 0: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 1: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 2: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 3: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 4: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 5: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 6: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 7: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 8: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 9: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 10: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 11: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 12: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 13: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 14: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 15: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 16: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 17: Remote Device FFFFFFFF:FF:FF.0: Link 0
+GPU 3: NVIDIA B200 (UUID: GPU-cb0c96d5-0e64-b518-0808-fd0f99edafba)
+	 Link 0: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 1: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 2: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 3: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 4: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 5: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 6: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 7: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 8: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 9: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 10: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 11: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 12: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 13: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 14: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 15: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 16: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 17: Remote Device FFFFFFFF:FF:FF.0: Link 0
+GPU 4: NVIDIA B200 (UUID: GPU-bec70d9b-383d-3161-92f7-906d61d39ad6)
+	 Link 0: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 1: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 2: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 3: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 4: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 5: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 6: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 7: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 8: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 9: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 10: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 11: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 12: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 13: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 14: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 15: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 16: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 17: Remote Device FFFFFFFF:FF:FF.0: Link 0
+GPU 5: NVIDIA B200 (UUID: GPU-e0447692-90f8-d7b9-af5c-5742636f5d1a)
+	 Link 0: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 1: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 2: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 3: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 4: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 5: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 6: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 7: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 8: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 9: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 10: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 11: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 12: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 13: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 14: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 15: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 16: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 17: Remote Device FFFFFFFF:FF:FF.0: Link 0
+GPU 6: NVIDIA B200 (UUID: GPU-7d8caae1-d463-6a1e-e936-eb062ea8380a)
+	 Link 0: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 1: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 2: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 3: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 4: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 5: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 6: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 7: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 8: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 9: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 10: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 11: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 12: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 13: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 14: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 15: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 16: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 17: Remote Device FFFFFFFF:FF:FF.0: Link 0
+GPU 7: NVIDIA B200 (UUID: GPU-c2f46995-1b60-06cb-f173-b3dfc59a0824)
+	 Link 0: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 1: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 2: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 3: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 4: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 5: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 6: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 7: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 8: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 9: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 10: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 11: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 12: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 13: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 14: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 15: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 16: Remote Device FFFFFFFF:FF:FF.0: Link 0
+	 Link 17: Remote Device FFFFFFFF:FF:FF.0: Link 0
+--- nvidia-smi nvlink -p (link pci info) ---
+GPU 0: NVIDIA B200 (UUID: GPU-7a60931d-6980-e5f3-cae1-ab76693070ef)
+	 Link 0: FFFFFFFF:FF:FF.0
+	 Link 1: FFFFFFFF:FF:FF.0
+	 Link 2: FFFFFFFF:FF:FF.0
+	 Link 3: FFFFFFFF:FF:FF.0
+	 Link 4: FFFFFFFF:FF:FF.0
+	 Link 5: FFFFFFFF:FF:FF.0
+	 Link 6: FFFFFFFF:FF:FF.0
+	 Link 7: FFFFFFFF:FF:FF.0
+	 Link 8: FFFFFFFF:FF:FF.0
+	 Link 9: FFFFFFFF:FF:FF.0
+	 Link 10: FFFFFFFF:FF:FF.0
+	 Link 11: FFFFFFFF:FF:FF.0
+	 Link 12: FFFFFFFF:FF:FF.0
+	 Link 13: FFFFFFFF:FF:FF.0
+	 Link 14: FFFFFFFF:FF:FF.0
+	 Link 15: FFFFFFFF:FF:FF.0
+	 Link 16: FFFFFFFF:FF:FF.0
+	 Link 17: FFFFFFFF:FF:FF.0
+GPU 1: NVIDIA B200 (UUID: GPU-d1b05bd4-7534-9faf-9851-361ceefca814)
+	 Link 0: FFFFFFFF:FF:FF.0
+	 Link 1: FFFFFFFF:FF:FF.0
+	 Link 2: FFFFFFFF:FF:FF.0
+	 Link 3: FFFFFFFF:FF:FF.0
+	 Link 4: FFFFFFFF:FF:FF.0
+	 Link 5: FFFFFFFF:FF:FF.0
+	 Link 6: FFFFFFFF:FF:FF.0
+	 Link 7: FFFFFFFF:FF:FF.0
+	 Link 8: FFFFFFFF:FF:FF.0
+	 Link 9: FFFFFFFF:FF:FF.0
+	 Link 10: FFFFFFFF:FF:FF.0
+	 Link 11: FFFFFFFF:FF:FF.0
+	 Link 12: FFFFFFFF:FF:FF.0
+	 Link 13: FFFFFFFF:FF:FF.0
+	 Link 14: FFFFFFFF:FF:FF.0
+	 Link 15: FFFFFFFF:FF:FF.0
+	 Link 16: FFFFFFFF:FF:FF.0
+	 Link 17: FFFFFFFF:FF:FF.0
+GPU 2: NVIDIA B200 (UUID: GPU-f8f93eb0-ba70-1b3a-fba1-3ac9456dc4d9)
+	 Link 0: FFFFFFFF:FF:FF.0
+	 Link 1: FFFFFFFF:FF:FF.0
+	 Link 2: FFFFFFFF:FF:FF.0
+	 Link 3: FFFFFFFF:FF:FF.0
+	 Link 4: FFFFFFFF:FF:FF.0
+	 Link 5: FFFFFFFF:FF:FF.0
+	 Link 6: FFFFFFFF:FF:FF.0
+	 Link 7: FFFFFFFF:FF:FF.0
+	 Link 8: FFFFFFFF:FF:FF.0
+	 Link 9: FFFFFFFF:FF:FF.0
+	 Link 10: FFFFFFFF:FF:FF.0
+	 Link 11: FFFFFFFF:FF:FF.0
+	 Link 12: FFFFFFFF:FF:FF.0
+	 Link 13: FFFFFFFF:FF:FF.0
+	 Link 14: FFFFFFFF:FF:FF.0
+	 Link 15: FFFFFFFF:FF:FF.0
+	 Link 16: FFFFFFFF:FF:FF.0
+	 Link 17: FFFFFFFF:FF:FF.0
+GPU 3: NVIDIA B200 (UUID: GPU-cb0c96d5-0e64-b518-0808-fd0f99edafba)
+	 Link 0: FFFFFFFF:FF:FF.0
+	 Link 1: FFFFFFFF:FF:FF.0
+	 Link 2: FFFFFFFF:FF:FF.0
+	 Link 3: FFFFFFFF:FF:FF.0
+	 Link 4: FFFFFFFF:FF:FF.0
+	 Link 5: FFFFFFFF:FF:FF.0
+	 Link 6: FFFFFFFF:FF:FF.0
+	 Link 7: FFFFFFFF:FF:FF.0
+	 Link 8: FFFFFFFF:FF:FF.0
+	 Link 9: FFFFFFFF:FF:FF.0
+	 Link 10: FFFFFFFF:FF:FF.0
+	 Link 11: FFFFFFFF:FF:FF.0
+	 Link 12: FFFFFFFF:FF:FF.0
+	 Link 13: FFFFFFFF:FF:FF.0
+	 Link 14: FFFFFFFF:FF:FF.0
+	 Link 15: FFFFFFFF:FF:FF.0
+	 Link 16: FFFFFFFF:FF:FF.0
+	 Link 17: FFFFFFFF:FF:FF.0
+GPU 4: NVIDIA B200 (UUID: GPU-bec70d9b-383d-3161-92f7-906d61d39ad6)
+	 Link 0: FFFFFFFF:FF:FF.0
+	 Link 1: FFFFFFFF:FF:FF.0
+	 Link 2: FFFFFFFF:FF:FF.0
+	 Link 3: FFFFFFFF:FF:FF.0
+	 Link 4: FFFFFFFF:FF:FF.0
+	 Link 5: FFFFFFFF:FF:FF.0
+	 Link 6: FFFFFFFF:FF:FF.0
+	 Link 7: FFFFFFFF:FF:FF.0
+	 Link 8: FFFFFFFF:FF:FF.0
+	 Link 9: FFFFFFFF:FF:FF.0
+	 Link 10: FFFFFFFF:FF:FF.0
+	 Link 11: FFFFFFFF:FF:FF.0
+	 Link 12: FFFFFFFF:FF:FF.0
+	 Link 13: FFFFFFFF:FF:FF.0
+	 Link 14: FFFFFFFF:FF:FF.0
+	 Link 15: FFFFFFFF:FF:FF.0
+	 Link 16: FFFFFFFF:FF:FF.0
+	 Link 17: FFFFFFFF:FF:FF.0
+GPU 5: NVIDIA B200 (UUID: GPU-e0447692-90f8-d7b9-af5c-5742636f5d1a)
+	 Link 0: FFFFFFFF:FF:FF.0
+	 Link 1: FFFFFFFF:FF:FF.0
+	 Link 2: FFFFFFFF:FF:FF.0
+	 Link 3: FFFFFFFF:FF:FF.0
+	 Link 4: FFFFFFFF:FF:FF.0
+	 Link 5: FFFFFFFF:FF:FF.0
+	 Link 6: FFFFFFFF:FF:FF.0
+	 Link 7: FFFFFFFF:FF:FF.0
+	 Link 8: FFFFFFFF:FF:FF.0
+	 Link 9: FFFFFFFF:FF:FF.0
+	 Link 10: FFFFFFFF:FF:FF.0
+	 Link 11: FFFFFFFF:FF:FF.0
+	 Link 12: FFFFFFFF:FF:FF.0
+	 Link 13: FFFFFFFF:FF:FF.0
+	 Link 14: FFFFFFFF:FF:FF.0
+	 Link 15: FFFFFFFF:FF:FF.0
+	 Link 16: FFFFFFFF:FF:FF.0
+	 Link 17: FFFFFFFF:FF:FF.0
+GPU 6: NVIDIA B200 (UUID: GPU-7d8caae1-d463-6a1e-e936-eb062ea8380a)
+	 Link 0: FFFFFFFF:FF:FF.0
+	 Link 1: FFFFFFFF:FF:FF.0
+	 Link 2: FFFFFFFF:FF:FF.0
+	 Link 3: FFFFFFFF:FF:FF.0
+	 Link 4: FFFFFFFF:FF:FF.0
+	 Link 5: FFFFFFFF:FF:FF.0
+	 Link 6: FFFFFFFF:FF:FF.0
+	 Link 7: FFFFFFFF:FF:FF.0
+	 Link 8: FFFFFFFF:FF:FF.0
+	 Link 9: FFFFFFFF:FF:FF.0
+	 Link 10: FFFFFFFF:FF:FF.0
+	 Link 11: FFFFFFFF:FF:FF.0
+	 Link 12: FFFFFFFF:FF:FF.0
+	 Link 13: FFFFFFFF:FF:FF.0
+	 Link 14: FFFFFFFF:FF:FF.0
+	 Link 15: FFFFFFFF:FF:FF.0
+	 Link 16: FFFFFFFF:FF:FF.0
+	 Link 17: FFFFFFFF:FF:FF.0
+GPU 7: NVIDIA B200 (UUID: GPU-c2f46995-1b60-06cb-f173-b3dfc59a0824)
+	 Link 0: FFFFFFFF:FF:FF.0
+	 Link 1: FFFFFFFF:FF:FF.0
+	 Link 2: FFFFFFFF:FF:FF.0
+	 Link 3: FFFFFFFF:FF:FF.0
+	 Link 4: FFFFFFFF:FF:FF.0
+	 Link 5: FFFFFFFF:FF:FF.0
+	 Link 6: FFFFFFFF:FF:FF.0
+	 Link 7: FFFFFFFF:FF:FF.0
+	 Link 8: FFFFFFFF:FF:FF.0
+	 Link 9: FFFFFFFF:FF:FF.0
+	 Link 10: FFFFFFFF:FF:FF.0
+	 Link 11: FFFFFFFF:FF:FF.0
+	 Link 12: FFFFFFFF:FF:FF.0
+	 Link 13: FFFFFFFF:FF:FF.0
+	 Link 14: FFFFFFFF:FF:FF.0
+	 Link 15: FFFFFFFF:FF:FF.0
+	 Link 16: FFFFFFFF:FF:FF.0
+	 Link 17: FFFFFFFF:FF:FF.0
+--- nvidia-smi -q full ---
+Driver Version                                         : 595.91.07
+    Product Name                                       : NVIDIA B200
+    Serial Number                                      : 1655225085665
+    GPU UUID                                           : GPU-7a60931d-6980-e5f3-cae1-ab76693070ef
+    Minor Number                                       : 0
+    VBIOS Version                                      : 97.00.E4.00.1E
+    Board ID                                           : 0x5100
+    Board Part Number                                  : 692-2G525-0220-500
+        Chassis Serial Number                          : 
+        Module Id                                      : 4
+        Bus Id                                         : 00000000:51:00.0
+    Product Name                                       : NVIDIA B200
+    Serial Number                                      : 1655225082783
+    GPU UUID                                           : GPU-d1b05bd4-7534-9faf-9851-361ceefca814
+    Minor Number                                       : 1
+    VBIOS Version                                      : 97.00.E4.00.1E
+    Board ID                                           : 0x5200
+    Board Part Number                                  : 692-2G525-0220-500
+        Chassis Serial Number                          : 
+        Module Id                                      : 2
+        Bus Id                                         : 00000000:52:00.0
+    Product Name                                       : NVIDIA B200
+    Serial Number                                      : 1655225090113
+    GPU UUID                                           : GPU-f8f93eb0-ba70-1b3a-fba1-3ac9456dc4d9
+    Minor Number                                       : 2
+    VBIOS Version                                      : 97.00.E4.00.1E
+    Board ID                                           : 0x6200
+    Board Part Number                                  : 692-2G525-0220-500
+        Chassis Serial Number                          : 
+        Module Id                                      : 1
+        Bus Id                                         : 00000000:62:00.0
+    Product Name                                       : NVIDIA B200
+    Serial Number                                      : 1655225086815
+    GPU UUID                                           : GPU-cb0c96d5-0e64-b518-0808-fd0f99edafba
+    Minor Number                                       : 3
+    VBIOS Version                                      : 97.00.E4.00.1E
+    Board ID                                           : 0x6300
+    Board Part Number                                  : 692-2G525-0220-500
+        Chassis Serial Number                          : 
+        Module Id                                      : 3
+        Bus Id                                         : 00000000:63:00.0
+    Product Name                                       : NVIDIA B200
+    Serial Number                                      : 1655225088908
+    GPU UUID                                           : GPU-bec70d9b-383d-3161-92f7-906d61d39ad6
+    Minor Number                                       : 4
+    VBIOS Version                                      : 97.00.E4.00.1E
+    Board ID                                           : 0x7500
+    Board Part Number                                  : 692-2G525-0220-500
+        Chassis Serial Number                          : 
+        Module Id                                      : 8
+        Bus Id                                         : 00000000:75:00.0
+    Product Name                                       : NVIDIA B200
+    Serial Number                                      : 1655225089124
+    GPU UUID                                           : GPU-e0447692-90f8-d7b9-af5c-5742636f5d1a
+    Minor Number                                       : 5
+    VBIOS Version                                      : 97.00.E4.00.1E
+    Board ID                                           : 0x7600
+    Board Part Number                                  : 692-2G525-0220-500
+        Chassis Serial Number                          : 
+        Module Id                                      : 6
+        Bus Id                                         : 00000000:76:00.0
+    Product Name                                       : NVIDIA B200
+    Serial Number                                      : 1655225090249
+    GPU UUID                                           : GPU-7d8caae1-d463-6a1e-e936-eb062ea8380a
+    Minor Number                                       : 6
+    VBIOS Version                                      : 97.00.E4.00.1E
+    Board ID                                           : 0x8600
+    Board Part Number                                  : 692-2G525-0220-500
+        Chassis Serial Number                          : 
+        Module Id                                      : 5
+        Bus Id                                         : 00000000:86:00.0
+    Product Name                                       : NVIDIA B200
+    Serial Number                                      : 1655225086790
+    GPU UUID                                           : GPU-c2f46995-1b60-06cb-f173-b3dfc59a0824
+    Minor Number                                       : 7
+    VBIOS Version                                      : 97.00.E4.00.1E
+    Board ID                                           : 0x8700
+    Board Part Number                                  : 692-2G525-0220-500
+        Chassis Serial Number                          : 
+        Module Id                                      : 7
+        Bus Id                                         : 00000000:87:00.0
+--- pci devices class 0x0680 (nvswitch/bridge) ---
+--- pci devices class 0x0604 (pcie switches) ---
+0000:01:00.0 vendor=0x1000 device=0x0001
+0000:02:00.0 vendor=0x1000 device=0x0001
+0000:03:00.0 vendor=0x1000 device=0x0001
+0000:03:00.1 vendor=0x1000 device=0x0001
+0000:03:00.2 vendor=0x1000 device=0x0001
+0000:03:00.3 vendor=0x1000 device=0x0001
+0000:03:00.4 vendor=0x1000 device=0x0001
+0000:03:00.5 vendor=0x1000 device=0x0001
+0000:03:00.6 vendor=0x1000 device=0x0001
+0000:03:00.7 vendor=0x1000 device=0x0001
+0000:03:01.0 vendor=0x1000 device=0x0001
+0000:03:01.1 vendor=0x1000 device=0x0001
+0000:03:01.2 vendor=0x1000 device=0x0001
+0000:03:01.3 vendor=0x1000 device=0x0001
+0000:03:01.4 vendor=0x1000 device=0x0001
+0000:03:01.5 vendor=0x1000 device=0x0001
+0000:03:01.6 vendor=0x1000 device=0x0001
+0000:03:01.7 vendor=0x1000 device=0x0001
+0000:03:02.0 vendor=0x1000 device=0x0001
+0000:03:02.1 vendor=0x1000 device=0x0001
+0000:03:02.2 vendor=0x1000 device=0x0001
+0000:03:02.3 vendor=0x1000 device=0x0001
+0000:03:02.4 vendor=0x1000 device=0x0001
+0000:03:02.5 vendor=0x1000 device=0x0001
+0000:03:02.6 vendor=0x1000 device=0x0001
+0000:03:02.7 vendor=0x1000 device=0x0001
+0000:03:03.0 vendor=0x1000 device=0x0001
+0000:03:03.1 vendor=0x1000 device=0x0001
+0000:03:03.2 vendor=0x1000 device=0x0001
+0000:03:03.3 vendor=0x1000 device=0x0001
+0000:03:03.4 vendor=0x1000 device=0x0001
+0000:03:03.5 vendor=0x1000 device=0x0001
+0000:03:03.6 vendor=0x1000 device=0x0001
+0000:03:03.7 vendor=0x1000 device=0x0001
+0000:03:04.0 vendor=0x1000 device=0x0001
+0000:03:04.1 vendor=0x1000 device=0x0001
+0000:03:04.2 vendor=0x1000 device=0x0001
+0000:03:04.3 vendor=0x1000 device=0x0001
+0000:03:04.4 vendor=0x1000 device=0x0001
+0000:03:04.5 vendor=0x1000 device=0x0001
+--- nvidia-smi -q -d PCI ---
+Failed to parse --display/-d flags
+--- nvidia-smi -q (GPU board/module ids) ---
+    Product Name                                       : NVIDIA B200
+    Serial Number                                      : 1655225085665
+    Minor Number                                       : 0
+    Board ID                                           : 0x5100
+        Chassis Serial Number                          : 
+        Module Id                                      : 4
+        Bus Id                                         : 00000000:51:00.0
+    Product Name                                       : NVIDIA B200
+    Serial Number                                      : 1655225082783
+    Minor Number                                       : 1
+    Board ID                                           : 0x5200
+        Chassis Serial Number                          : 
+        Module Id                                      : 2
+        Bus Id                                         : 00000000:52:00.0
+    Product Name                                       : NVIDIA B200
+    Serial Number                                      : 1655225090113
+    Minor Number                                       : 2
+    Board ID                                           : 0x6200
+        Chassis Serial Number                          : 
+        Module Id                                      : 1
+        Bus Id                                         : 00000000:62:00.0
+    Product Name                                       : NVIDIA B200
+    Serial Number                                      : 1655225086815
+    Minor Number                                       : 3
+    Board ID                                           : 0x6300
+        Chassis Serial Number                          : 
+        Module Id                                      : 3
+        Bus Id                                         : 00000000:63:00.0
+    Product Name                                       : NVIDIA B200
+    Serial Number                                      : 1655225088908
+    Minor Number                                       : 4
+    Board ID                                           : 0x7500
+        Chassis Serial Number                          : 
+        Module Id                                      : 8
+        Bus Id                                         : 00000000:75:00.0
+    Product Name                                       : NVIDIA B200
+    Serial Number                                      : 1655225089124
+    Minor Number                                       : 5
+    Board ID                                           : 0x7600
+        Chassis Serial Number                          : 
+        Module Id                                      : 6
+        Bus Id                                         : 00000000:76:00.0
+    Product Name                                       : NVIDIA B200
+    Serial Number                                      : 1655225090249
+    Minor Number                                       : 6
+    Board ID                                           : 0x8600
+        Chassis Serial Number                          : 
+        Module Id                                      : 5
+        Bus Id                                         : 00000000:86:00.0
+    Product Name                                       : NVIDIA B200
+    Serial Number                                      : 1655225086790
+    Minor Number                                       : 7
+    Board ID                                           : 0x8700
+        Chassis Serial Number                          : 
+        Module Id                                      : 7
+        Bus Id                                         : 00000000:87:00.0
+--- lspci nvidia/bridges/nic ---
+00:00.0 Host bridge: Intel Corporation 440FX - 82441FX PMC [Natoma]
+00:01.0 ISA bridge: Intel Corporation 82371SB PIIX3 ISA [Natoma/Triton II]
+01:00.0 PCI bridge: Broadcom / LSI 53c810
+02:00.0 PCI bridge: Broadcom / LSI 53c810
+03:00.0 PCI bridge: Broadcom / LSI 53c810
+03:00.1 PCI bridge: Broadcom / LSI 53c810
+03:00.2 PCI bridge: Broadcom / LSI 53c810
+03:00.3 PCI bridge: Broadcom / LSI 53c810
+03:00.4 PCI bridge: Broadcom / LSI 53c810
+03:00.5 PCI bridge: Broadcom / LSI 53c810
+03:00.6 PCI bridge: Broadcom / LSI 53c810
+03:00.7 PCI bridge: Broadcom / LSI 53c810
+03:01.0 PCI bridge: Broadcom / LSI 53c810
+03:01.1 PCI bridge: Broadcom / LSI 53c810
+03:01.2 PCI bridge: Broadcom / LSI 53c810
+03:01.3 PCI bridge: Broadcom / LSI 53c810
+03:01.4 PCI bridge: Broadcom / LSI 53c810
+03:01.5 PCI bridge: Broadcom / LSI 53c810
+03:01.6 PCI bridge: Broadcom / LSI 53c810
+03:01.7 PCI bridge: Broadcom / LSI 53c810
+03:02.0 PCI bridge: Broadcom / LSI 53c810
+03:02.1 PCI bridge: Broadcom / LSI 53c810
+03:02.2 PCI bridge: Broadcom / LSI 53c810
+03:02.3 PCI bridge: Broadcom / LSI 53c810
+03:02.4 PCI bridge: Broadcom / LSI 53c810
+03:02.5 PCI bridge: Broadcom / LSI 53c810
+03:02.6 PCI bridge: Broadcom / LSI 53c810
+03:02.7 PCI bridge: Broadcom / LSI 53c810
+03:03.0 PCI bridge: Broadcom / LSI 53c810
+03:03.1 PCI bridge: Broadcom / LSI 53c810
+03:03.2 PCI bridge: Broadcom / LSI 53c810
+03:03.3 PCI bridge: Broadcom / LSI 53c810
+03:03.4 PCI bridge: Broadcom / LSI 53c810
+03:03.5 PCI bridge: Broadcom / LSI 53c810
+03:03.6 PCI bridge: Broadcom / LSI 53c810
+03:03.7 PCI bridge: Broadcom / LSI 53c810
+03:04.0 PCI bridge: Broadcom / LSI 53c810
+03:04.1 PCI bridge: Broadcom / LSI 53c810
+03:04.2 PCI bridge: Broadcom / LSI 53c810
+03:04.3 PCI bridge: Broadcom / LSI 53c810
+03:04.4 PCI bridge: Broadcom / LSI 53c810
+03:04.5 PCI bridge: Broadcom / LSI 53c810
+03:04.6 PCI bridge: Broadcom / LSI 53c810
+03:04.7 PCI bridge: Broadcom / LSI 53c810
+03:05.0 PCI bridge: Broadcom / LSI 53c810
+03:05.1 PCI bridge: Broadcom / LSI 53c810
+03:05.2 PCI bridge: Broadcom / LSI 53c810
+03:05.3 PCI bridge: Broadcom / LSI 53c810
+03:05.4 PCI bridge: Broadcom / LSI 53c810
+03:05.5 PCI bridge: Broadcom / LSI 53c810
+03:05.6 PCI bridge: Broadcom / LSI 53c810
+03:05.7 PCI bridge: Broadcom / LSI 53c810
+03:06.0 PCI bridge: Broadcom / LSI 53c810
+03:06.1 PCI bridge: Broadcom / LSI 53c810
+03:06.2 PCI bridge: Broadcom / LSI 53c810
+03:06.3 PCI bridge: Broadcom / LSI 53c810
+03:06.4 PCI bridge: Broadcom / LSI 53c810
+03:06.5 PCI bridge: Broadcom / LSI 53c810
+03:06.6 PCI bridge: Broadcom / LSI 53c810
+03:06.7 PCI bridge: Broadcom / LSI 53c810
+03:07.0 PCI bridge: Broadcom / LSI 53c810
+03:07.1 PCI bridge: Broadcom / LSI 53c810
+03:07.2 PCI bridge: Broadcom / LSI 53c810
+03:07.3 PCI bridge: Broadcom / LSI 53c810
+03:07.4 PCI bridge: Broadcom / LSI 53c810
+03:07.5 PCI bridge: Broadcom / LSI 53c810
+03:07.6 PCI bridge: Broadcom / LSI 53c810
+03:07.7 PCI bridge: Broadcom / LSI 53c810
+44:00.0 PCI bridge: Broadcom / LSI 53c810
+45:00.0 PCI bridge: Broadcom / LSI 53c810
+46:00.0 PCI bridge: Broadcom / LSI 53c810
+46:00.1 PCI bridge: Broadcom / LSI 53c810
+46:00.2 PCI bridge: Broadcom / LSI 53c810
+46:00.3 PCI bridge: Broadcom / LSI 53c810
+46:00.4 PCI bridge: Broadcom / LSI 53c810
+46:00.5 PCI bridge: Broadcom / LSI 53c810
+46:00.6 PCI bridge: Broadcom / LSI 53c810
+46:00.7 PCI bridge: Broadcom / LSI 53c810
+46:01.0 PCI bridge: Broadcom / LSI 53c810
+46:01.1 PCI bridge: Broadcom / LSI 53c810
+--- lspci -tv ---
+-+-[0000:79]---00.0-[7a-89]----00.0-[7b-89]--+-00.0-[7c]--
+ |                                           +-00.1-[7d]--
+ |                                           +-00.2-[7e]--
+ |                                           +-00.3-[7f]--
+ |                                           +-00.4-[80]--
+ |                                           +-00.5-[81]--
+ |                                           +-00.6-[82]--
+ |                                           +-00.7-[83]--
+ |                                           +-01.0-[84]--
+ |                                           +-01.1-[85]--
+ |                                           +-01.2-[86]----00.0  NVIDIA Corporation Device 2901
+ |                                           +-01.3-[87]----00.0  NVIDIA Corporation Device 2901
+ |                                           +-01.4-[88]----00.0  Samsung Electronics Co Ltd NVMe SSD Controller PM173X
+ |                                           \-01.5-[89]----00.0  Samsung Electronics Co Ltd NVMe SSD Controller PM173X
+ +-[0000:66]---00.0-[67-78]----00.0-[68-78]--+-00.0-[69]--
+ |                                           +-00.1-[6a]--
+ |                                           +-00.2-[6b]--
+ |                                           +-00.3-[6c]--
+ |                                           +-00.4-[6d]--
+ |                                           +-00.5-[6e]--
+ |                                           +-00.6-[6f]--
+ |                                           +-00.7-[70]--
+ |                                           +-01.0-[71]--
+ |                                           +-01.1-[72]--
+ |                                           +-01.2-[73]----00.0  Mellanox Technologies MT2910 Family [ConnectX-7]
+ |                                           +-01.3-[74]----00.0  Mellanox Technologies MT2910 Family [ConnectX-7]
+ |                                           +-01.4-[75]----00.0  NVIDIA Corporation Device 2901
+ |                                           +-01.5-[76]----00.0  NVIDIA Corporation Device 2901
+ |                                           +-01.6-[77]----00.0  Samsung Electronics Co Ltd NVMe SSD Controller PM173X
+ |                                           \-01.7-[78]----00.0  Samsung Electronics Co Ltd NVMe SSD Controller PM173X
+ +-[0000:55]---00.0-[56-65]----00.0-[57-65]--+-00.0-[58]--
+ |                                           +-00.1-[59]--
+ |                                           +-00.2-[5a]--
+ |                                           +-00.3-[5b]--
+ |                                           +-00.4-[5c]--
+ |                                           +-00.5-[5d]--
+ |                                           +-00.6-[5e]--
+ |                                           +-00.7-[5f]--
+ |                                           +-01.0-[60]--
+ |                                           +-01.1-[61]--
+ |                                           +-01.2-[62]----00.0  NVIDIA Corporation Device 2901
+ |                                           +-01.3-[63]----00.0  NVIDIA Corporation Device 2901
+ |                                           +-01.4-[64]----00.0  Samsung Electronics Co Ltd NVMe SSD Controller PM173X
+ |                                           \-01.5-[65]----00.0  Samsung Electronics Co Ltd NVMe SSD Controller PM173X
+ +-[0000:44]---00.0-[45-54]----00.0-[46-54]--+-00.0-[47]----00.0  Intel Corporation Ethernet Controller X710 for 10GbE SFP+
+ |                                           +-00.1-[48]--
+ |                                           +-00.2-[49]--
+ |                                           +-00.3-[4a]--
+ |                                           +-00.4-[4b]--
+ |                                           +-00.5-[4c]--
+ |                                           +-00.6-[4d]--
+ |                                           +-00.7-[4e]--
+ |                                           +-01.0-[4f]--
+ |                                           +-01.1-[50]--
+ |                                           +-01.2-[51]----00.0  NVIDIA Corporation Device 2901
+ |                                           +-01.3-[52]----00.0  NVIDIA Corporation Device 2901
+ |                                           +-01.4-[53]----00.0  Samsung Electronics Co Ltd NVMe SSD Controller PM173X
+ |                                           \-01.5-[54]----00.0  Samsung Electronics Co Ltd NVMe SSD Controller PM173X
+ +-[0000:01]---00.0-[02-43]----00.0-[03-43]--+-00.0-[04]--
+ |                                           +-00.1-[05]--
+ |                                           +-00.2-[06]--
+ |                                           +-00.3-[07]--
+ |                                           +-00.4-[08]--
+ |                                           +-00.5-[09]--
+ |                                           +-00.6-[0a]--
+ |                                           +-00.7-[0b]--
+ |                                           +-01.0-[0c]--
+ |                                           +-01.1-[0d]--
+ |                                           +-01.2-[0e]--
+ |                                           +-01.3-[0f]--
+ |                                           +-01.4-[10]--
+ |                                           +-01.5-[11]--
+ |                                           +-01.6-[12]--
+ |                                           +-01.7-[13]--
+ |                                           +-02.0-[14]--
+ |                                           +-02.1-[15]--
+ |                                           +-02.2-[16]--
+ |                                           +-02.3-[17]--
+ |                                           +-02.4-[18]--
+ |                                           +-02.5-[19]--
+ |                                           +-02.6-[1a]--
+ |                                           +-02.7-[1b]--
+ |                                           +-03.0-[1c]--
+ |                                           +-03.1-[1d]--
+ |                                           +-03.2-[1e]--
+ |                                           +-03.3-[1f]--
+ |                                           +-03.4-[20]--
+ |                                           +-03.5-[21]--
+ |                                           +-03.6-[22]--
+ |                                           +-03.7-[23]--
+ |                                           +-04.0-[24]--
+ |                                           +-04.1-[25]--
+ |                                           +-04.2-[26]--
+ |                                           +-04.3-[27]--
+ |                                           +-04.4-[28]--
+ |                                           +-04.5-[29]--
+ |                                           +-04.6-[2a]--
+ |                                           +-04.7-[2b]--
+ |                                           +-05.0-[2c]--
+ |                                           +-05.1-[2d]--
+ |                                           +-05.2-[2e]--
+ |                                           +-05.3-[2f]--
+ |                                           +-05.4-[30]--
+ |                                           +-05.5-[31]--
+ |                                           +-05.6-[32]--
+ |                                           +-05.7-[33]--
+ |                                           +-06.0-[34]--
+ |                                           +-06.1-[35]--
+ |                                           +-06.2-[36]--
+ |                                           +-06.3-[37]--
+ |                                           +-06.4-[38]--
+ |                                           +-06.5-[39]--
+ |                                           +-06.6-[3a]--
+ |                                           +-06.7-[3b]--
+ |                                           +-07.0-[3c]--
+ |                                           +-07.1-[3d]--
+ |                                           +-07.2-[3e]--
+ |                                           +-07.3-[3f]--
+ |                                           +-07.4-[40]--
+ |                                           +-07.5-[41]--
+ |                                           +-07.6-[42]--
+ |                                           \-07.7-[43]--
+ \-[0000:00]-+-00.0  Intel Corporation 440FX - 82441FX PMC [Natoma]
+             +-01.0  Intel Corporation 82371SB PIIX3 ISA [Natoma/Triton II]
+             +-01.3  Intel Corporation 82371AB/EB/MB PIIX4 ACPI
+             +-03.0  ASPEED Technology, Inc. ASPEED Graphics Family
+             \-04.0  Samsung Electronics Co Ltd NVMe SSD Controller PM173X
+--- net devices ---
+eth0
+lo
+mlx5_0
+mlx5_1
+--- numa ---
+Model name:                              Intel(R) Xeon(R) Platinum 8559C
+Thread(s) per core:                      2
+Core(s) per socket:                      48
+Socket(s):                               2
+NUMA node(s):                            2
+NUMA node0 CPU(s):                       0-47,96-143
+NUMA node1 CPU(s):                       48-95,144-191
+--- nvidia pci devices with class and numa ---
+0000:51:00.0 class=0x030200 numa=0
+0000:52:00.0 class=0x030200 numa=0
+0000:62:00.0 class=0x030200 numa=0
+0000:63:00.0 class=0x030200 numa=0
+0000:75:00.0 class=0x030200 numa=1
+0000:76:00.0 class=0x030200 numa=1
+0000:86:00.0 class=0x030200 numa=1
+0000:87:00.0 class=0x030200 numa=1
+--- nvswitch devices ---

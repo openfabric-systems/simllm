@@ -1,0 +1,2 @@
+torch 2.13.0+cu130 cuda 13.0 nccl (2, 29, 7)
+devices 4

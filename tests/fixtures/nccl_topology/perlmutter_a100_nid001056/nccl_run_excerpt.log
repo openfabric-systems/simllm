@@ -1,0 +1,190 @@
+nid001056:1367609:1367609 [0] NCCL INFO NCCL version 2.29.7+cuda13.2
+nid001056:1367612:1367612 [3] NCCL INFO NCCL version 2.29.7+cuda13.2
+nid001056:1367611:1367611 [2] NCCL INFO NCCL version 2.29.7+cuda13.2
+nid001056:1367610:1367610 [1] NCCL INFO NCCL version 2.29.7+cuda13.2
+nid001056:1367609:1367609 [0] NCCL INFO Using network AWS Libfabric
+nid001056:1367611:1367611 [2] NCCL INFO Using network AWS Libfabric
+nid001056:1367610:1367610 [1] NCCL INFO Using network AWS Libfabric
+nid001056:1367612:1367612 [3] NCCL INFO Using network AWS Libfabric
+nid001056:1367611:1367611 [2] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 0 'cxi0'
+nid001056:1367609:1367609 [0] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 0 'cxi0'
+nid001056:1367612:1367612 [3] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 0 'cxi0'
+nid001056:1367611:1367611 [2] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 1 'cxi1'
+nid001056:1367609:1367609 [0] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 1 'cxi1'
+nid001056:1367610:1367610 [1] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 0 'cxi0'
+nid001056:1367612:1367612 [3] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 1 'cxi1'
+nid001056:1367611:1367611 [2] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 2 'cxi2'
+nid001056:1367610:1367610 [1] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 1 'cxi1'
+nid001056:1367609:1367609 [0] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 2 'cxi2'
+nid001056:1367612:1367612 [3] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 2 'cxi2'
+nid001056:1367611:1367611 [2] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 3 'cxi3'
+nid001056:1367610:1367610 [1] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 2 'cxi2'
+nid001056:1367609:1367609 [0] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 3 'cxi3'
+nid001056:1367612:1367612 [3] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 3 'cxi3'
+nid001056:1367610:1367610 [1] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 3 'cxi3'
+nid001056:1367611:1367611 [2] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 0 'cxi0'
+nid001056:1367612:1367612 [3] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 0 'cxi0'
+nid001056:1367610:1367610 [1] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 0 'cxi0'
+nid001056:1367611:1367611 [2] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 1 'cxi1'
+nid001056:1367612:1367612 [3] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 1 'cxi1'
+nid001056:1367610:1367610 [1] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 1 'cxi1'
+nid001056:1367611:1367611 [2] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 2 'cxi2'
+nid001056:1367612:1367612 [3] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 2 'cxi2'
+nid001056:1367609:1367609 [0] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 0 'cxi0'
+nid001056:1367610:1367610 [1] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 2 'cxi2'
+nid001056:1367611:1367611 [2] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 3 'cxi3'
+nid001056:1367612:1367612 [3] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 3 'cxi3'
+nid001056:1367609:1367609 [0] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 1 'cxi1'
+nid001056:1367610:1367610 [1] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 3 'cxi3'
+nid001056:1367609:1367609 [0] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 2 'cxi2'
+nid001056:1367609:1367609 [0] NCCL INFO NET/AWS Libfabric : GPU Direct RDMA Enabled for HCA 3 'cxi3'
+nid001056:1367611:1367611 [2] NCCL INFO NVLS multicast support is not available on dev 2 (NVLS_NCHANNELS 0)
+nid001056:1367612:1367612 [3] NCCL INFO NET/0-2 :GPU/0-3000 (4/16.0/SYS) GPU/0-c1000 (4/16.0/SYS) GPU/0-82000 (4/16.0/SYS) GPU/0-41000 (3/24.0/PHB) CPU/0-3 (3/16.0/SYS) CPU/0-0 (3/16.0/SYS) CPU/0-1 (3/16.0/SYS) CPU/0-2 (2/24.0/PHB) NET/0-3 (5/16.0/SYS) NETnid001056:1367609:1367609 [0] NCCL INFO NVLS multicast support is not available on dev 0 (NVLS_NCHANNELS 0)
+nid001056:1367612:1367612 [3] NCCL INFO NVLS multicast support is not available on dev 3 (NVLS_NCHANNELS 0)
+nid001056:1367610:1367610 [1] NCCL INFO NVLS multicast support is not available on dev 1 (NVLS_NCHANNELS 0)
+nid001056:1367611:1367611 [2] NCCL INFO Pattern 4, crossNic 0, nChannels 12, bw 20.000000/20.000000, type NVL/PIX, sameChannels 0
+nid001056:1367609:1367609 [0] NCCL INFO Pattern 4, crossNic 0, nChannels 12, bw 20.000000/20.000000, type NVL/PIX, sameChannels 0
+nid001056:1367612:1367612 [3] NCCL INFO Pattern 4, crossNic 0, nChannels 12, bw 20.000000/20.000000, type NVL/PIX, sameChannels 0
+nid001056:1367611:1367611 [2] NCCL INFO Pattern 1, crossNic 0, nChannels 12, bw 20.000000/20.000000, type NVL/PIX, sameChannels 0
+nid001056:1367610:1367610 [1] NCCL INFO Pattern 4, crossNic 0, nChannels 12, bw 20.000000/20.000000, type NVL/PIX, sameChannels 0
+nid001056:1367609:1367609 [0] NCCL INFO Pattern 1, crossNic 0, nChannels 12, bw 20.000000/20.000000, type NVL/PIX, sameChannels 0
+nid001056:1367612:1367612 [3] NCCL INFO Pattern 1, crossNic 0, nChannels 12, bw 20.000000/20.000000, type NVL/PIX, sameChannels 0
+nid001056:1367610:1367610 [1] NCCL INFO Pattern 1, crossNic 0, nChannels 12, bw 20.000000/20.000000, type NVL/PIX, sameChannels 0
+nid001056:1367610:1367610 [1] NCCL INFO comm 0x55857ae17e80 rank 1 nRanks 4 nNodes 1 localRanks 4 localRank 1 MNNVL 0
+nid001056:1367609:1367609 [0] NCCL INFO comm 0x5603b64c9930 rank 0 nRanks 4 nNodes 1 localRanks 4 localRank 0 MNNVL 0
+nid001056:1367612:1367612 [3] NCCL INFO comm 0x55866f807d40 rank 3 nRanks 4 nNodes 1 localRanks 4 localRank 3 MNNVL 0
+nid001056:1367611:1367611 [2] NCCL INFO comm 0x55d3bccb32d0 rank 2 nRanks 4 nNodes 1 localRanks 4 localRank 2 MNNVL 0
+nid001056:1367610:1367610 [1] NCCL INFO Trees [0] -1/-1/-1->1->2 [1] -1/-1/-1->1->2 [2] -1/-1/-1->1->2 [3] -1/-1/-1->1->2 [4] -1nid001056:1367611:1367611 [2] NCCL INFO Ring 14 : 0 -> 2 -> 1
+nid001056:1367609:1367609 [0] NCCL INFO Channel 00/24 : 0 3 2 1
+nid001056:1367609:1367609 [0] NCCL INFO Channel 01/24 : 0 3 1 2
+nid001056:1367609:1367609 [0] NCCL INFO Channel 02/24 : 0 2 1 3
+nid001056:1367609:1367609 [0] NCCL INFO Channel 03/24 : 0 2 3 1
+nid001056:1367609:1367609 [0] NCCL INFO Channel 04/24 : 0 1 3 2
+nid001056:1367610:1367610 [1] NCCL INFO P2P Chunksize set to 524288
+nid001056:1367609:1367609 [0] NCCL INFO Channel 05/24 : 0 1 2 3
+nid001056:1367609:1367609 [0] NCCL INFO Channel 06/24 : 0 3 2 1
+nid001056:1367609:1367609 [0] NCCL INFO Channel 07/24 : 0 3 1 2
+nid001056:1367609:1367609 [0] NCCL INFO Channel 08/24 : 0 2 1 3
+nid001056:1367609:1367609 [0] NCCL INFO Channel 09/24 : 0 2 3 1
+nid001056:1367609:1367609 [0] NCCL INFO Channel 10/24 : 0 1 3 2
+nid001056:1367611:1367611 [2] NCCL INFO Trees [0] 1/-1/-1->2->3 [1] 1/-1/-1->2->3 [2] 1/-1/-1->2->3 [3] 1/-1/-1->2->3 [4] 3/-1/-nid001056:1367609:1367609 [0] NCCL INFO Channel 11/24 : 0 1 2 3
+1->2->0 [5] 3/-1/-1->2->0 [6] 3/-1/-1->2->0 [7] 3/-1/-1->2->0 [8] -1/-1/-1->2->1 [9] -1/-1/-1->2->1 [10] -1/-1/-1->2->1 [11] -1/nid001056:1367609:1367609 [0] NCCL INFO Channel 12/24 : 0 3 2 1
+-1/-1->2->1 [12] 1/-1/-1->2->3 [13] 1/-1/-1->2->3 [14] 1/-1/-1->2->3 [15] 1/-1/-1->2->3 [16] 3/-1/-1->2->0 [17] 3/-1/-1->2->0 [1nid001056:1367609:1367609 [0] NCCL INFO Channel 13/24 : 0 3 1 2
+nid001056:1367609:1367609 [0] NCCL INFO Channel 14/24 : 0 2 1 3
+nid001056:1367611:1367611 [2] NCCL INFO P2P Chunksize set to 524288
+nid001056:1367609:1367609 [0] NCCL INFO Channel 15/24 : 0 2 3 1
+nid001056:1367609:1367609 [0] NCCL INFO Channel 16/24 : 0 1 3 2
+nid001056:1367609:1367609 [0] NCCL INFO Channel 17/24 : 0 1 2 3
+nid001056:1367612:1367612 [3] NCCL INFO Trees [0] 2/-1/-1->3->0 [1] 2/-1/-1->3->0 [2] 2/-1/-1->3->0 [3] 2/-1/-1->3->0 [4] 1/-1/-nid001056:1367609:1367609 [0] NCCL INFO Channel 18/24 : 0 3 2 1
+1->3->2 [5] 1/-1/-1->3->2 [6] 1/-1/-1->3->2 [7] 1/-1/-1->3->2 [8] 0/-1/-1->3->-1 [9] 0/-1/-1->3->-1 [10] 0/-1/-1->3->-1 [11] 0/-nid001056:1367609:1367609 [0] NCCL INFO Channel 19/24 : 0 3 1 2
+1/-1->3->-1 [12] 2/-1/-1->3->0 [13] 2/-1/-1->3->0 [14] 2/-1/-1->3->0 [15] 2/-1/-1->3->0 [16] 1/-1/-1->3->2 [17] 1/-1/-1->3->2 [1nid001056:1367609:1367609 [0] NCCL INFO Channel 20/24 : 0 2 1 3
+nid001056:1367609:1367609 [0] NCCL INFO Channel 21/24 : 0 2 3 1
+nid001056:1367612:1367612 [3] NCCL INFO P2P Chunksize set to 524288
+nid001056:1367609:1367609 [0] NCCL INFO Channel 22/24 : 0 1 3 2
+nid001056:1367609:1367609 [0] NCCL INFO Channel 23/24 : 0 1 2 3
+nid001056:1367609:1367609 [0] NCCL INFO Trees [0] 3/-1/-1->0->-1 [1] 3/-1/-1->0->-1 [2] 3/-1/-1->0->-1 [3] 3/-1/-1->0->-1 [4] 2/-1/-1->0->-1 [5] 2/-1/-1->0->-1 [6] 2/-1/-1->0->-1 [7] 2/-1/-1->0->-1 [8] 1/-1/-1->0->3 [9] 1/-1/-1->0->3 [10] 1/-1/-1->0->3 [11] 1/-1/-1->0->3 [12] 3/-1/-1->0->-1 [13] 3/-1/-1->0->-1 [14] 3/-1/-1->0->-1 [15] 3/-1/-1->0->-1 [16] 2/-1/-1->0->-1 [17] 2/-1/-1->0->-1 [18] 2/-1/-1->0->-1 [19] 2/-1/-1->0->-1 [20] 1/-1/-1->0->3 [21] 1/-1/-1->0->3 [22] 1/-1/-1->0->3 [23] 1/-1/-1->0->3
+nid001056:1367609:1367609 [0] NCCL INFO P2P Chunksize set to 524288
+nid001056:1367612:1367612 [3] NCCL INFO ncclCommInitRankConfig comm 0x55866f807d40 rank 3 nranks 4 cudaDev 3 nvmlDev 3 busId c1000 commId 0x7505a3de43b66932 - Init COMPLETE
+nid001056:1367610:1367610 [1] NCCL INFO ncclCommInitRankConfig comm 0x55857ae17e80 rank 1 nranks 4 cudaDev 1 nvmlDev 1 busId 410nid001056:1367612:1367612 [3] NCCL INFO Init timings - ncclCommInitRankConfig: rank 3 nranks 4 total 0.44 (kernels 0.15, alloc 000 commId 0x7505a3de43b66932 - Init COMPLETE
+nid001056:1367611:1367611 [2] NCCL INFO ncclCommInitRankConfig comm 0x55d3bccb32d0 rank 2 nranks 4 cudaDev 2 nvmlDev 2 busId 820nid001056:1367609:1367609 [0] NCCL INFO ncclCommInitRankConfig comm 0x5603b64c9930 rank 0 nranks 4 cudaDev 0 nvmlDev 0 busId 30000 commId 0x7505a3de43b66932 - Init COMPLETE
+0 commId 0x7505a3de43b66932 - Init COMPLETE
+nid001056:1367611:1367611 [2] NCCL INFO Channel 03/0 : 2[2] -> 3[3] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 02/0 : 3[3] -> 0[0] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 01/0 : 1[1] -> 2[2] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 04/0 : 0[0] -> 1[1] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 05/0 : 2[2] -> 3[3] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 05/0 : 3[3] -> 0[0] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 05/0 : 1[1] -> 2[2] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 05/0 : 0[0] -> 1[1] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 09/0 : 2[2] -> 3[3] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 08/0 : 3[3] -> 0[0] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 07/0 : 1[1] -> 2[2] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 11/0 : 2[2] -> 3[3] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 10/0 : 0[0] -> 1[1] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 11/0 : 3[3] -> 0[0] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 11/0 : 1[1] -> 2[2] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 15/0 : 2[2] -> 3[3] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 11/0 : 0[0] -> 1[1] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 14/0 : 3[3] -> 0[0] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 13/0 : 1[1] -> 2[2] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 17/0 : 2[2] -> 3[3] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 16/0 : 0[0] -> 1[1] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 17/0 : 3[3] -> 0[0] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 17/0 : 1[1] -> 2[2] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 21/0 : 2[2] -> 3[3] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 17/0 : 0[0] -> 1[1] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 20/0 : 3[3] -> 0[0] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 19/0 : 1[1] -> 2[2] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 23/0 : 2[2] -> 3[3] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 22/0 : 0[0] -> 1[1] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 23/0 : 3[3] -> 0[0] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 23/0 : 1[1] -> 2[2] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 23/0 : 0[0] -> 1[1] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 01/0 : 2[2] -> 0[0] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 01/0 : 3[3] -> 1[1] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 02/0 : 0[0] -> 2[2] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 03/0 : 3[3] -> 1[1] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 04/0 : 2[2] -> 0[0] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 02/0 : 1[1] -> 3[3] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 07/0 : 2[2] -> 0[0] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 03/0 : 0[0] -> 2[2] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 07/0 : 3[3] -> 1[1] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 04/0 : 1[1] -> 3[3] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 10/0 : 2[2] -> 0[0] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 08/0 : 0[0] -> 2[2] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 09/0 : 3[3] -> 1[1] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 08/0 : 1[1] -> 3[3] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 13/0 : 2[2] -> 0[0] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 09/0 : 0[0] -> 2[2] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 13/0 : 3[3] -> 1[1] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 10/0 : 1[1] -> 3[3] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 16/0 : 2[2] -> 0[0] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 14/0 : 0[0] -> 2[2] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 14/0 : 1[1] -> 3[3] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 15/0 : 3[3] -> 1[1] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 15/0 : 0[0] -> 2[2] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 19/0 : 2[2] -> 0[0] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 19/0 : 3[3] -> 1[1] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 16/0 : 1[1] -> 3[3] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 20/0 : 0[0] -> 2[2] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 22/0 : 2[2] -> 0[0] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 21/0 : 3[3] -> 1[1] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 20/0 : 1[1] -> 3[3] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 21/0 : 0[0] -> 2[2] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 22/0 : 1[1] -> 3[3] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 00/0 : 0[0] -> 3[3] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 00/0 : 2[2] -> 1[1] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 00/0 : 3[3] -> 2[2] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 00/0 : 1[1] -> 0[0] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 01/0 : 0[0] -> 3[3] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 02/0 : 2[2] -> 1[1] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 04/0 : 3[3] -> 2[2] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 03/0 : 1[1] -> 0[0] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 06/0 : 0[0] -> 3[3] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 06/0 : 2[2] -> 1[1] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 06/0 : 3[3] -> 2[2] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 08/0 : 2[2] -> 1[1] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 06/0 : 1[1] -> 0[0] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 07/0 : 0[0] -> 3[3] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 12/0 : 0[0] -> 3[3] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 12/0 : 2[2] -> 1[1] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 10/0 : 3[3] -> 2[2] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 09/0 : 1[1] -> 0[0] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 13/0 : 0[0] -> 3[3] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 12/0 : 1[1] -> 0[0] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 14/0 : 2[2] -> 1[1] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 12/0 : 3[3] -> 2[2] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 18/0 : 0[0] -> 3[3] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 18/0 : 2[2] -> 1[1] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 15/0 : 1[1] -> 0[0] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 16/0 : 3[3] -> 2[2] via P2P/CUMEM/read
+nid001056:1367609:1367609 [0] NCCL INFO Channel 19/0 : 0[0] -> 3[3] via P2P/CUMEM/read
+nid001056:1367611:1367611 [2] NCCL INFO Channel 20/0 : 2[2] -> 1[1] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 18/0 : 1[1] -> 0[0] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 18/0 : 3[3] -> 2[2] via P2P/CUMEM/read
+nid001056:1367610:1367610 [1] NCCL INFO Channel 21/0 : 1[1] -> 0[0] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Channel 22/0 : 3[3] -> 2[2] via P2P/CUMEM/read
+nid001056:1367612:1367612 [3] NCCL INFO Connected all rings, use ring PXN 0 GDR 1
+nid001056:1367610:1367610 [1] NCCL INFO Connected all rings, use ring PXN 0 GDR 1
+nid001056:1367611:1367611 [2] NCCL INFO Connected all rings, use ring PXN 0 GDR 1
+nid001056:1367609:1367609 [0] NCCL INFO Connected all rings, use ring PXN 0 GDR 1

@@ -1,0 +1,81 @@
+{
+  "schema": "simllm-hgx-b200-capture-expectations-v1",
+  "task": "PLACE-6",
+  "slice": "GPU-side binding of a captured HGX B200 board",
+  "date": "2026-09-13",
+  "baseline": {
+    "commit": "64c7f5923fc0fe0142d537a3bd4a054ee43ca02c",
+    "branch_base": "claude/place1_nccl_topology",
+    "files": {
+      "examples/dgx_nvlink_v1/results.json": "00d935fc4b26cfc50aa4c5f6b46ba20e3db856d091215c2e616b095fb577fdba",
+      "examples/dgx_nvlink_v1/run_study.py": "d8a16460665a5dd3d3ec39cf6f99390d04ba7cea772f533db4016228d4ee19a6",
+      "simllm/backends/nvlink_runtime.py": "071f9ed0d4a81f7a7c6a84e519a78052e821ce9d7257740ee6117d4b724063ab",
+      "simllm/placement/__init__.py": "3cf597b0d789f84e67d8d038e88d1db6f6f08c0838ccafe557385f1d17e658c5",
+      "simllm/placement/dgx.py": "e7a2e951b84f254074fc3a6af65da91c0fabc1090387ee7266b7894019cd65c9",
+      "simllm/placement/nccl_topology.py": "bc5c2c7c52788793ce30fc767c4e1774f35371242e013354179d8adde22e83e5",
+      "simllm/placement/peer_topology.py": "8259321fc7102434b73af7f7d9d33f6184a0c000e175c54df7de667a06092fb3",
+      "tests/test_dgx_nvlink.py": "b8f345150f3946449ca2ef8549e2e8e993bfd8453fb9ec847153311722cd8014",
+      "tests/test_nccl_topology.py": "84b2fcc8552f92e5f4b181c6f811dfd1d54a05cd3e9817fca29ab8e6c1b3abf7"
+    },
+    "fixture": {
+      "directory": "tests/fixtures/nccl_topology/vastai_hgx_b200_8x",
+      "nccl_topo.xml": "52206219b633ab5abf9e100172205cc4274a03cafb31b23c0868abb7527d5ebf",
+      "nccl_graph.xml": "d07117f7c0e098094932d45b10f4b4ffd33b1411ef41d950d0f722f90f4661fa",
+      "node_inventory.txt": "c29f3e2893a79764b3a95d636e2147ced3dad665d79111585f8d122b85732ae0",
+      "nccl_env.txt": "fa598d30173c5cce7456b19d764c1d1c8139a8ca9d0ed50f1f94d6bbb1a80606",
+      "nccl_run_excerpt.log": "a6ec2199f87fe6e3134ac5cc4b18f6d66c3387fce4ce9ffea0ff72dfd431243f"
+    },
+    "artifacts": {
+      "dgx_a100_peer_fabric_json": {"bytes": 84797, "sha256": "47d66b66acd5a477f757ee30400256d39569df5a5fef5aea1655a937fc9fa219", "links": 96, "ports": 192, "routes": 56, "paths_per_route": 12},
+      "dgx_h100_peer_fabric_json": {"bytes": 125741, "sha256": "4429ed2ada4ee4e7dc7180dbade0b0be5b60b0fc234918f7e307b5c0214d7278", "links": 144, "ports": 288, "routes": 56, "paths_per_route": 18}
+    }
+  },
+  "capture": {
+    "site": "vast.ai rented container (host kernel names an AWS build)",
+    "offer": 48327339, "machine": 71029, "date": "2026-09-13",
+    "gpu": {"count": 8, "vendor": "0x10de", "device": "0x2901", "sm": 100, "board_part_number": "692-2G525-0220-500",
+            "board_ids": ["0x5100", "0x5200", "0x6200", "0x6300", "0x7500", "0x7600", "0x8600", "0x8700"],
+            "busid_by_dev": {"0": "0000:51:00.0", "1": "0000:52:00.0", "2": "0000:62:00.0", "3": "0000:63:00.0", "4": "0000:75:00.0", "5": "0000:76:00.0", "6": "0000:86:00.0", "7": "0000:87:00.0"},
+            "numa_by_dev": {"0": 0, "1": 0, "2": 0, "3": 0, "4": 1, "5": 1, "6": 1, "7": 1},
+            "pcie_switch_by_dev": {"0": "0000:45:00.0", "1": "0000:45:00.0", "2": "0000:56:00.0", "3": "0000:56:00.0", "4": "0000:67:00.0", "5": "0000:67:00.0", "6": "0000:7a:00.0", "7": "0000:7a:00.0"}},
+    "nvlink": {"links_per_gpu": 18, "signalling_gb_per_s": 53.125, "pair_matrix": "NV18 on all 56 ordered pairs",
+               "remote_device": "FFFFFFFF:FF:FF.0", "switch_pci_devices_visible": 0, "module_id_visible": false,
+               "nccl_row": {"target": "fffffff:ff:ff.0", "count": 18, "tclass": "0x068000"}},
+    "nic": {"name": "eth0", "speed_mbit": 10000, "gdr": 0, "repeated_under_cpus": 2, "rdma_nics": 0},
+    "nccl": {"version": "2.27.3", "framework": "torch 2.8.0+cu128", "ring_channels": 16, "tree_channels": 16, "nvls_channels": 8}
+  },
+  "preset": {
+    "generation": "b200", "nvlink_switch_chips": 2, "bundle": [9, 9], "lanes_per_gpu": 18,
+    "link_payload_rate_bps": 400000000000, "signalling_gb_per_s_recorded": 53.125,
+    "links": 144, "ports": 288, "routes": 56, "paths_per_route": 18, "paths_per_route_per_chip": 9,
+    "public_source": "NVIDIA Fabric Manager User Guide, NVSwitch systems section (https://docs.nvidia.com/datacenter/tesla/fabric-manager-user-guide/index.html): HGX B200 baseboards carry two fourth-generation NVSwitches with nine NVLink 5 links from every GPU to each; HGX H100 carries four third-generation NVSwitches with 4 + 5 + 5 + 4 links per GPU"
+  },
+  "interface": {
+    "preset_entry": "dgx_peer_fabric",
+    "reader_shapes": ["nested pci under a 0x060400 pci", "nic directly under cpu", "switch-attached nvlink row tclass 0x068000 with virtual target", "attribute-identical socket net repeated under several cpus"],
+    "join": "captured_switched_node",
+    "absent_nic_id": "<node_id>:nic-absent-<dev>"
+  },
+  "cells": {
+    "g1_parse": {"cpus": 2, "pcie_switches": 4, "gpus": 8, "switch_attached_rows": 8, "lanes": 18, "distinct_socket_nics": 1, "nic_repetitions": 2},
+    "g2_preset": {"chips": 2, "links": 144, "ports": 288, "routes": 56, "paths_per_route": 18, "paths_per_chip": 9, "link_rate_bps": 400000000000},
+    "g3_gpu_side": ["lanes_per_gpu_equals_active_links", "paths_per_pair_equals_nv18_and_nccl_count", "device_order_and_busids", "pcie_pairs_and_numa_split", "distinct_board_ids_one_part_number", "switch_side_not_observable_recorded"],
+    "g4_live": {"generation": "b200", "widths": [2, 4, 8], "kinds": ["tensor-parallel all-reduce", "expert dispatch and combine"], "rates_bytes_per_second": [12500000000, 25000000000],
+                "relations": ["python_native_exact", "rate_pair_changes_completion", "b200_equals_h100_isolated_pair", "b200_at_or_above_h100_fan_in_and_live"]},
+    "g5_refusals": ["17 lanes on one gpu", "seven gpus", "mixed switch and peer rows", "socket nic repeated with differing attributes", "nested pci under non-switch", "generation a100 against eighteen lanes"],
+    "g6_off_path": ["fabric round trip", "a100 digest", "h100 digest", "dgx study check reproduces"]
+  },
+  "evidence": {
+    "exact_oracle_family": "g4 python versus native",
+    "behavioral_relation_families": ["g4 rate pair", "g4 b200 versus h100"],
+    "structural_guard_cells": ["g1_parse", "g2_preset", "g3_gpu_side", "g6_off_path"],
+    "rejection_control_family": "g5_refusals",
+    "fatal_compatibility_digests": 3
+  },
+  "closure": {
+    "closes": [],
+    "narrows": ["PLACE-6", "PLACE-9"],
+    "registers": ["switch-side binding blocked on bare-metal access"],
+    "untouched": ["TRAF-92", "BACK-74", "PLACE-10"]
+  }
+}

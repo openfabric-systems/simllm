@@ -29,7 +29,13 @@ collective to a physical endpoint and assigns GOAL ranks for the network
 backend.
 """
 
-from simllm.placement.declared import declared_manifest
+from simllm.placement.declared import (
+    DECLARED_EXPERT_PLACEMENT_STRATEGIES,
+    DeclaredExpertLayout,
+    declared_local_expert_ids,
+    declared_manifest,
+    declared_pipeline_partition,
+)
 from simllm.placement.dgx import dgx_peer_fabric
 from simllm.placement.disaggregated import (
     DECLARED_CLOS_ENDPOINTS_PER_LEAF,
@@ -57,6 +63,23 @@ from simllm.placement.manifest import (
     RankPlacement,
 )
 from simllm.placement.mapper import RankMapper
+from simllm.placement.nccl_topology import (
+    NcclTopologyDump,
+    captured_fabric_node,
+    captured_switched_node,
+)
+from simllm.placement.nvidia_smi_inventory import (
+    InventoryPciDevice,
+    NvlinkRemoteGpu,
+    captured_switch_ports,
+    read_gpu_bus_ids,
+    read_gpu_minor_uuids,
+    read_inventory_sections,
+    read_module_ids,
+    read_nvlink_remote_ports,
+    read_nvswitch_list,
+    read_pci_device_list,
+)
 from simllm.placement.peer_topology import PeerFabric, PeerPortPlacement, PeerRoute
 from simllm.placement.rail import (
     RAIL_FABRIC_VARIANTS,
@@ -77,9 +100,11 @@ __all__ = [
     "DECLARED_CLOS_SPINE_SWITCHES",
     "DECLARED_CLOS_SWITCH_LATENCY_PS",
     "DECLARED_CLOS_TOPOLOGY_NAME",
+    "DECLARED_EXPERT_PLACEMENT_STRATEGIES",
     "FABRIC_SCHEMA",
     "PLACEMENT_SCHEMA",
     "RAIL_FABRIC_VARIANTS",
+    "DeclaredExpertLayout",
     "DisaggregatedDeploymentManifests",
     "FabricLink",
     "FabricNodePlacement",
@@ -88,7 +113,10 @@ __all__ = [
     "FabricTopologyManifest",
     "GpuFabricPlacement",
     "GroupMembership",
+    "InventoryPciDevice",
+    "NcclTopologyDump",
     "NicFabricPlacement",
+    "NvlinkRemoteGpu",
     "PeerFabric",
     "PeerPortPlacement",
     "PeerRoute",
@@ -96,11 +124,23 @@ __all__ = [
     "RankMapper",
     "RankPlacement",
     "SglangPoolArrangement",
+    "captured_fabric_node",
+    "captured_switch_ports",
+    "captured_switched_node",
+    "declared_local_expert_ids",
     "declared_manifest",
+    "declared_pipeline_partition",
     "declared_pipeline_placement",
     "declared_rail_fabric",
     "declared_shared_nic_fabric",
     "dgx_peer_fabric",
     "disaggregated_manifests",
+    "read_gpu_bus_ids",
+    "read_gpu_minor_uuids",
+    "read_inventory_sections",
+    "read_module_ids",
+    "read_nvlink_remote_ports",
+    "read_nvswitch_list",
+    "read_pci_device_list",
     "sglang_disaggregated_manifests",
 ]
