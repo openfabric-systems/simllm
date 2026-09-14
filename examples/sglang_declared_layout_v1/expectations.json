@@ -1,0 +1,158 @@
+{
+  "schema": "simllm-sglang-declared-layout-expectations-v1",
+  "task": "PLACE-13",
+  "date": "2026-09-14",
+  "baseline": {
+    "commit": "2a4abea67b9b1ce793781b76f330574059ffe817",
+    "files": {
+      "docs/modules/placement.md": "f4fce420865fbbc944b1817a5b1482452def1480706a2b2ba07e149f015481bf",
+      "examples/declared_expert_placement_v1/run_study.py": "a15c931a4df8109a6e2be34f727f0733e2f8be5635661810969668307bce54d6",
+      "simllm/placement/__init__.py": "f72d9b77df605c3193ff3919a36b460585b9cbdee96dc85e412327835913bc45",
+      "simllm/placement/declared.py": "dcb9588e3ce3d1e07d54bcf97f49ec70cbce14b542951d2bff721cc9f8f14228",
+      "simllm/placement/manifest.py": "2304a34692881bb6ead2ab9cd09ea6964ec4048b5226e8744bce4de368f5921e",
+      "tests/test_declared_expert_placement.py": "458173c5424f185c43c6257e1b5f68911dfe40fbd9a3fe1f85b858dc64581e2a",
+      "tests/test_placement.py": "95d9a83c842c3ebce4aec29b9290708b569e67d0b0921bcd744f48384a3eb952"
+    },
+    "placement_records": {
+      "worked_example_tp4_pp2_dp2": {"bytes": 10832, "sha256": "2e46eadcaccd83de1778ea98c368585b452b83067489b9a2df064e25a14d857e"},
+      "m4_tp8": {"bytes": 5698, "sha256": "3812aef241d93f2af8d86da0f6bbb606dae9c43c768ceb3efb8d649dc3bacfd6"},
+      "rail_pp8": {"bytes": 52310, "sha256": "8d38cf4b6990bfd75fc90dcfe994180c3c1150adce297b6f71983fd8c9c877db"},
+      "m5_tp1_dp8": {"bytes": 5698, "sha256": "0894fae1687217d88466b5692034a8d1863fb8c658afdfde2c317d1c412f60a5"},
+      "width_tp64": {"bytes": 102050, "sha256": "bed8d26c72feaf117f48b651ec18b4fb0caf39df2e47866a550f74252972aecd"}
+    },
+    "place3_study_check_reproduces": true
+  },
+  "framework": {
+    "name": "sglang",
+    "commit": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
+    "installed_version": "0.5.6.post3.dev9406+gbfeae4e79",
+    "version_suffix": "gbfeae4e79",
+    "rank_formula": "tp * pp_rank + tp_rank",
+    "world_size": "tp * pp",
+    "dp_in_rank_space": false,
+    "moe_tp_size": "tp // ep_size // moe_dp_size",
+    "ep_group": "per tensor group base b = pp_rank * tp, per moe_dp_idx and moe_tp_idx: range(b + moe_dp_idx * ep * moe_tp + moe_tp_idx, + ep * moe_tp, moe_tp)",
+    "ep_rank_in_group": "tp_rank % (tp // moe_dp) // moe_tp",
+    "moe_tp_group": "per ep_dp_idx in range(ep * moe_dp): range(b + ep_dp_idx * moe_tp, b + (ep_dp_idx + 1) * moe_tp)",
+    "moe_tp_rank_in_group": "tp_rank % moe_tp",
+    "moe_dp_group": "per idx in range(moe_tp * ep): range(b + idx, b + tp + idx, moe_tp * ep)",
+    "moe_dp_rank_in_group": "tp_rank // (tp // moe_dp)",
+    "expert_count_rule": "num_experts % ep_size == 0",
+    "expert_map": "EP rank r owns [r * L, (r + 1) * L) with L = num_experts // ep_size",
+    "placement_strategies": ["linear"],
+    "pipeline_partition": "base = L // PP; the last L mod PP stages take one extra layer",
+    "node_fill": "global-rank order, tp * pp // nodes ranks per node; nodes must divide or be divided by pp, and tp must be divisible by nodes // pp"
+  },
+  "interface": {
+    "builder": "declared_sglang_manifest",
+    "builder_keywords": ["tp", "pp", "ep_size", "moe_dp_size", "nodes", "gpus_per_node", "hostname_pattern", "framework_version", "experts"],
+    "partition_function": "declared_sglang_pipeline_partition",
+    "layout_type": "DeclaredExpertLayout",
+    "framework_field": "sglang",
+    "group_key_order_without_experts": ["tp", "pp", "dp"],
+    "group_key_order": ["tp", "pp", "dp", "ep", "moe_tp", "moe_dp"]
+  },
+  "cells": {
+    "s1_coincidence": {
+      "tp": 8, "pp": 1, "ep_size": 8, "moe_dp_size": 1,
+      "num_layers": 48, "moe_layers": "0..47", "num_experts": 32,
+      "ep_group": [0, 1, 2, 3, 4, 5, 6, 7],
+      "rank_5": {"rank_in_group": 5, "layer_range": [0, 48], "expert_ids": [20, 21, 22, 23], "moe_tp_group": [5], "moe_dp_group": [5]},
+      "vllm_twin": "declared_manifest(tp=8, experts=same)",
+      "fields_equal_to_vllm_twin": ["global_rank", "hostname", "local_rank", "tp", "pp", "dp", "ep", "pipeline_layer_range", "local_expert_ids", "placement_epoch"],
+      "fields_differing_from_vllm_twin": ["framework", "moe_tp", "moe_dp"]
+    },
+    "s2_expert_sharding": {
+      "tp": 8, "pp": 1, "ep_size": 2, "moe_dp_size": 1, "moe_tp_size": 4,
+      "num_layers": 48, "moe_layers": "0..47", "num_experts": 32,
+      "ep_groups": [[0, 4], [1, 5], [2, 6], [3, 7]],
+      "rank_5": {"ep_group": [1, 5], "rank_in_group": 1, "moe_tp_group": [4, 5, 6, 7], "moe_tp_rank": 1, "moe_dp_group": [5], "expert_ids": "16..31"},
+      "rank_0": {"ep_group": [0, 4], "rank_in_group": 0, "expert_ids": "0..15"},
+      "owners_partition_every_ep_group": true,
+      "moe_tp_members_own_identical_sets": true
+    },
+    "s3_moe_data_parallel": {
+      "tp": 8, "pp": 1, "ep_size": 2, "moe_dp_size": 4, "moe_tp_size": 1,
+      "num_layers": 48, "moe_layers": "0..47", "num_experts": 32,
+      "ep_groups": [[0, 1], [2, 3], [4, 5], [6, 7]],
+      "rank_5": {"ep_group": [4, 5], "rank_in_group": 1, "moe_tp_group": [5], "moe_dp_group": [1, 3, 5, 7], "moe_dp_rank": 2, "expert_ids": "16..31"},
+      "rank_6": {"ep_group": [6, 7], "rank_in_group": 0, "moe_dp_group": [0, 2, 4, 6], "moe_dp_rank": 3, "expert_ids": "0..15"}
+    },
+    "s4_pipeline": {
+      "tp": 4, "pp": 4, "ep_size": 4, "moe_dp_size": 1, "ranks": 16,
+      "num_layers": 61, "moe_layers": "3..60", "moe_layer_count": 58, "num_experts": 64,
+      "stage_ranges": [[0, 15], [15, 30], [30, 45], [45, 61]],
+      "moe_layers_per_stage": [12, 15, 15, 16],
+      "rank_13": {"pp": 3, "tp": 1, "ep_group": [12, 13, 14, 15], "rank_in_group": 1, "layer_range": [45, 61], "expert_ids": "16..31"},
+      "experts_per_rank": 16,
+      "owner_entries_total": 3712
+    },
+    "s5_partitions": {
+      "48/2": [[0, 24], [24, 48]],
+      "61/4": [[0, 15], [15, 30], [30, 45], [45, 61]],
+      "61/8": [[0, 7], [7, 14], [14, 21], [21, 29], [29, 37], [37, 45], [45, 53], [53, 61]],
+      "30/4": [[0, 7], [7, 14], [14, 22], [22, 30]],
+      "5/2": [[0, 2], [2, 5]],
+      "24/3": [[0, 8], [8, 16], [16, 24]],
+      "oracle": "sglang.srt.distributed.utils.get_pp_indices in the SIMLLM_SGLANG_ENV interpreter",
+      "oracle_required_for_closure": true,
+      "oracle_version_suffix": "gbfeae4e79"
+    },
+    "s6_refusals": [
+      "round_robin under the sglang builder",
+      "num_experts 30 at ep_size 8",
+      "tp 8 ep_size 3",
+      "tp 8 ep_size 16",
+      "tp 8 ep_size 2 moe_dp_size 2",
+      "tp 8 moe_dp_size 2 pp 2",
+      "ep_size 0",
+      "moe_dp_size 0",
+      "num_layers 1 at pp 2",
+      "tp 4 pp 3 nodes 2",
+      "tp 4 pp 1 nodes 3",
+      "tp 2 pp 1 nodes 1 gpus_per_node 1"
+    ],
+    "s7_round_trip": {
+      "manifests": ["s2", "s4"],
+      "group_key_order": ["tp", "pp", "dp", "ep", "moe_tp", "moe_dp"],
+      "framework": "sglang",
+      "framework_version_passthrough": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
+      "framework_version_default": null,
+      "local_expert_ids_keys_ascending": true
+    },
+    "s8_node_placement": {
+      "tp8_pp2_nodes2": {"node-0": "0..7", "node-1": "8..15", "local_rank": "rank mod 8"},
+      "tp16_pp1_nodes2": {"node-0": "0..7", "node-1": "8..15", "local_rank": "rank mod 8"},
+      "tp4_pp1_nodes2": {"node-0": [0, 1], "node-1": [2, 3], "local_ranks": [0, 1]},
+      "tp8_pp2_default_nodes": 2
+    },
+    "s9_divergence": {
+      "partition_61_4": {"vllm": [[0, 15], [15, 30], [30, 46], [46, 61]], "sglang": [[0, 15], [15, 30], [30, 45], [45, 61]], "differing_stages": [2, 3]},
+      "ep_group_rank_5_tp8_ep2": {"vllm": [0, 1, 2, 3, 4, 5, 6, 7], "sglang": [1, 5]}
+    },
+    "s10_m5_identity": {
+      "tp": "W", "pp": 1, "ep_size": "W", "worlds": [2, 4, 8],
+      "num_layers": 24, "moe_layers": "0..23", "num_experts": 32,
+      "profile": "rnic-nn-fluid",
+      "linkspeed_bps": 400000000000,
+      "frozen_makespan_ps": {
+        "decode8x2048": {"2": 563362560, "4": 486963888, "8": 448764528},
+        "prefill2048": {"2": 17592951360, "4": 25646015088, "8": 29672546928}
+      },
+      "goal_text_identical_to_hand_typed_ep_ranks": true,
+      "snapshot_owner_entries": 768,
+      "decode_w8_compute_floor_ps": 242664000
+    }
+  },
+  "evidence": {
+    "scored": ["s10_m5_identity"],
+    "structural_exact": ["s1_coincidence", "s2_expert_sharding", "s3_moe_data_parallel", "s4_pipeline", "s5_partitions", "s7_round_trip", "s8_node_placement", "s9_divergence"],
+    "rejection_controls": ["s6_refusals"],
+    "fatal_identities": ["placement_records", "place3_study_check_reproduces"]
+  },
+  "closure": {
+    "task": "PLACE-13",
+    "registers": ["PLACE-14"],
+    "doc_claims": ["a declared manifest can follow either pinned framework", "SGL-18 cross-links the declared what-if counterpart"]
+  }
+}

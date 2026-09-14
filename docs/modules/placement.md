@@ -345,3 +345,26 @@ slots, and reproduces every live DGX cell identically with the bound fabric.
   model-scoped selection that applies those exceptions, whose absence keeps
   every current manifest byte identical. An extracted manifest records the map
   that really ran.
+
+- PLACE-13 (Completeness; P2; M): a declared builder for the pinned SGLang
+  layout. The accepted declared builder follows vLLM 0.27.1, and SGLang's
+  layout at the pinned commit `bfeae4e7` differs where no option can reach:
+  its world is `tp x pp` with no data-parallel term in the rank space, its
+  expert-parallel group is carved out of one tensor group per pipeline stage
+  with the MoE tensor index innermost and the MoE data-parallel index
+  outermost, its expert map is the contiguous block only with a divisibility
+  assertion and no round-robin placement, and its pipeline partition hands
+  the remainder layers to the last stages rather than to the stages indexed
+  `-2, -3, ...`. A consumer reading a vLLM-declared manifest for an SGLang
+  deployment therefore misplaces layers on two of four stages of a 61-layer
+  model and misnames every EP group whenever `ep_size < tp`. Add
+  `declared_sglang_manifest(tp=..., pp=..., ep_size=..., moe_dp_size=...,
+  nodes=..., experts=...)` emitting `framework="sglang"`, the `ep`, `moe_tp`
+  and `moe_dp` memberships, the SGLang partition and block ownership, with
+  the framework's own `get_pp_indices` as an executable oracle; the vLLM
+  builder and every existing manifest stay byte identical. The
+  [freeze](../../examples/sglang_declared_layout_v1/expectations.md) records
+  the cells. Attention and context parallelism inside the tensor group,
+  shared and redundant experts, EPLB maps and the elastic joiner offset are
+  out of scope and are registered at closure. SGL-18 owns the extracted
+  counterpart.
