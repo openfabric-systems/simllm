@@ -35,6 +35,8 @@ from simllm.placement.declared import (
     declared_local_expert_ids,
     declared_manifest,
     declared_pipeline_partition,
+    declared_sglang_manifest,
+    declared_sglang_pipeline_partition,
 )
 from simllm.placement.dgx import dgx_peer_fabric
 from simllm.placement.disaggregated import (
@@ -132,6 +134,8 @@ __all__ = [
     "declared_pipeline_partition",
     "declared_pipeline_placement",
     "declared_rail_fabric",
+    "declared_sglang_manifest",
+    "declared_sglang_pipeline_partition",
     "declared_shared_nic_fabric",
     "dgx_peer_fabric",
     "disaggregated_manifests",
