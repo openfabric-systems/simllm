@@ -350,7 +350,9 @@ def test_s6_refuses_each_frozen_layout(case):
         _refusal_cases()[case]()
 
 
-@pytest.mark.parametrize("field", ["tp", "pp", "ep_size", "moe_dp_size", "gpus_per_node"])
+@pytest.mark.parametrize(
+    "field", ["tp", "pp", "ep_size", "moe_dp_size", "nodes", "gpus_per_node"]
+)
 def test_s6_refuses_a_boolean_width(field):
     with pytest.raises(ValueError, match=field):
         declared_sglang_manifest(**{field: True})

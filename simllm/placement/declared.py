@@ -144,7 +144,27 @@ one or zero throughout.
   ``tp // (nnodes // pp)`` tensor ranks each. In both cases ranks fill nodes in
   global-rank order, ``world // nnodes`` at a time, so the declared builder
   uses that fill and refuses a node count that neither divides nor is divided
-  by ``pp``, or that leaves ``tp`` indivisible by ``nnodes // pp``.
+  by ``pp``, or that leaves ``tp`` indivisible by ``nnodes // pp``; the second
+  refusal is implied by the first together with world divisibility, so it
+  needs no branch of its own.
+- GPU numbering. That same launcher numbers a rank's GPU
+  ``base_gpu_id + (pp_rank % pp_per_node) * tp_per_node +
+  (tp_rank % tp_per_node) * gpu_id_step``, where the base term is the
+  ``--base-gpu-id`` option plus the replica's own offset. The declared builder
+  states the default deployment of one replica, ``--base-gpu-id 0`` and
+  ``--gpu-id-step 1``, so the emitted ``local_rank`` equals the launcher's
+  ``gpu_id`` only under those defaults. A deployment that offsets or strides
+  its GPU ids is PLACE-14.
+
+The group inventory is gated on the declared expert layout. SGLang's
+``initialize_model_parallel`` creates the expert-parallel and both MoE side
+groups for every world, MoE model or not, while this builder emits ``ep``,
+``moe_tp`` and ``moe_dp`` only when ``experts`` is given. That keeps the
+expert-free manifest to the memberships a consumer can act on, and it is a
+declared-manifest convention rather than a claim about the framework's process
+groups. The singleton ``dp`` membership is the same kind of convention: SGLang
+builds no data-parallel group over these ranks, so the entry records that this
+manifest describes one replica, in the schema's own vocabulary.
 
 The two builders never share an output. :func:`declared_manifest` keeps its
 vLLM rank space, its ``ep`` group and its partition exactly as they are, and
@@ -479,6 +499,13 @@ def _sglang_node_fill(
     defaults to the fewest that fit the world at ``gpus_per_node``; the
     launcher's own constraints are then checked against whatever count is in
     force, so an explicit and a defaulted count are refused on the same terms.
+
+    Three refusals cover the four the launcher implies. The fourth, ``tp``
+    indivisible by ``nodes // pp`` when one stage spreads over several nodes,
+    needs no test of its own because the first two already imply it: above
+    ``pp`` the only surviving alternative is ``nodes = pp * k``, and a world of
+    ``tp * pp`` divisible by ``pp * k`` forces ``k`` to divide ``tp``. A
+    separate branch for it would be code no input can reach.
     """
 
     world = tp * pp
@@ -496,11 +523,6 @@ def _sglang_node_fill(
         )
     if pp % nodes and nodes % pp:
         raise ValueError(f"nodes {nodes} must divide or be divided by pp {pp}")
-    if nodes > pp and tp % (nodes // pp):
-        raise ValueError(
-            f"nodes {nodes} spreads one pipeline stage over {nodes // pp} nodes, "
-            f"which must divide tp {tp}"
-        )
     return nodes, ranks_per_node
 
 
