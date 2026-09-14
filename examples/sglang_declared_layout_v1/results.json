@@ -738,18 +738,57 @@
       }
     },
     "s6_refusals": {
-      "ep_size 0": true,
-      "moe_dp_size 0": true,
-      "num_experts 30 at ep_size 8": true,
-      "num_layers 1 at pp 2": true,
-      "round_robin under the sglang builder": true,
-      "tp 2 pp 1 nodes 1 gpus_per_node 1": true,
-      "tp 4 pp 1 nodes 3": true,
-      "tp 4 pp 3 nodes 2": true,
-      "tp 8 ep_size 16": true,
-      "tp 8 ep_size 2 moe_dp_size 2": true,
-      "tp 8 ep_size 3": true,
-      "tp 8 moe_dp_size 2 pp 2": true
+      "controls": {
+        "ep_size 0": {
+          "no_rank_was_built": true,
+          "refused": true
+        },
+        "moe_dp_size 0": {
+          "no_rank_was_built": true,
+          "refused": true
+        },
+        "num_experts 30 at ep_size 8": {
+          "no_rank_was_built": true,
+          "refused": true
+        },
+        "num_layers 1 at pp 2": {
+          "no_rank_was_built": true,
+          "refused": true
+        },
+        "round_robin under the sglang builder": {
+          "no_rank_was_built": true,
+          "refused": true
+        },
+        "tp 2 pp 1 nodes 1 gpus_per_node 1": {
+          "no_rank_was_built": true,
+          "refused": true
+        },
+        "tp 4 pp 1 nodes 3": {
+          "no_rank_was_built": true,
+          "refused": true
+        },
+        "tp 4 pp 3 nodes 2": {
+          "no_rank_was_built": true,
+          "refused": true
+        },
+        "tp 8 ep_size 16": {
+          "no_rank_was_built": true,
+          "refused": true
+        },
+        "tp 8 ep_size 2 moe_dp_size 2": {
+          "no_rank_was_built": true,
+          "refused": true
+        },
+        "tp 8 ep_size 3": {
+          "no_rank_was_built": true,
+          "refused": true
+        },
+        "tp 8 moe_dp_size 2 pp 2": {
+          "no_rank_was_built": true,
+          "refused": true
+        }
+      },
+      "sentinel_detects_a_built_rank": true
     },
     "s7_round_trip": {
       "framework_version_passthrough": "bfeae4e79a8dc4600e006f1a5fbc85321a01c1a3",
@@ -1073,7 +1112,14 @@
   },
   "expectations_commit": "1eef03f5823c00703a78119773fd805bfa3e64f1",
   "findings": [],
-  "implementation_commit": "2b3787fffd87fe87ef088d1631f1cc33c7ab1e95",
+  "implementation_commit": "7c02b28e07991cfec52c27ceced0ad93a9c70528",
+  "physical_sanity": {
+    "s10_decode_w8_compute_floor": {
+      "compute_floor_ps": 242664000,
+      "observed_makespan_ps": 448764528,
+      "sits_above_the_floor": true
+    }
+  },
   "schema": "simllm-sglang-declared-layout-result-v1",
   "status": "PASS"
 }

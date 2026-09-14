@@ -417,25 +417,58 @@ def run_s5(
     return {"oracle": oracle, "rows": rows}
 
 
+class _RankBuilt(Exception):
+    """Signal that the builder reached rank construction."""
+
+
+class _SentinelPattern(str):
+    """A hostname pattern that reports the moment a rank is built.
+
+    Every rank takes its hostname from ``hostname_pattern.format(...)``, so a
+    pattern whose ``format`` raises turns "no rank was built" from a claim
+    about the code into something the run observes. A refusal that fires late
+    raises this instead of its ``ValueError`` and is recorded as a failure.
+    """
+
+    def format(self, *args: object, **kwargs: object) -> str:
+        raise _RankBuilt
+
+
+def _observe_refusal(build) -> dict[str, Any]:
+    """Record whether a layout was refused, and whether it was refused early."""
+
+    try:
+        build()
+    except _RankBuilt:
+        return {"no_rank_was_built": False, "refused": False}
+    except ValueError:
+        return {"no_rank_was_built": True, "refused": True}
+    except Exception:  # noqa: BLE001 - any other type is a wrong refusal
+        return {"no_rank_was_built": True, "refused": False}
+    return {"no_rank_was_built": True, "refused": False}
+
+
 def run_s6() -> dict[str, Any]:
-    """Cell S6: every frozen refusal, each a ValueError before any rank."""
+    """Cell S6: every frozen refusal, each a ValueError before any rank.
+
+    Each control is built with the sentinel hostname pattern, and one accepted
+    layout is built with it as well: without that control the sentinel could
+    be silently inert and every row would pass for the wrong reason.
+    """
 
     from simllm.placement import DeclaredExpertLayout, declared_sglang_manifest
 
-    def refuses(build) -> bool:
-        try:
-            build()
-        except ValueError:
-            return True
-        except Exception:  # noqa: BLE001 - any other type is a wrong refusal
-            return False
-        return False
+    sentinel = _SentinelPattern("node-{}")
 
-    return {
+    def refuses(build) -> dict[str, Any]:
+        return _observe_refusal(build)
+
+    controls = {
         "round_robin under the sglang builder": refuses(
             lambda: declared_sglang_manifest(
                 tp=8,
                 ep_size=8,
+                hostname_pattern=sentinel,
                 experts=_layout(S1_LAYOUT, placement_strategy="round_robin"),
             )
         ),
@@ -443,41 +476,74 @@ def run_s6() -> dict[str, Any]:
             lambda: declared_sglang_manifest(
                 tp=8,
                 ep_size=8,
+                hostname_pattern=sentinel,
                 experts=DeclaredExpertLayout(
                     num_layers=48, moe_layers=tuple(range(48)), num_experts=30
                 ),
             )
         ),
-        "tp 8 ep_size 3": refuses(lambda: declared_sglang_manifest(tp=8, ep_size=3)),
-        "tp 8 ep_size 16": refuses(lambda: declared_sglang_manifest(tp=8, ep_size=16)),
+        "tp 8 ep_size 3": refuses(
+            lambda: declared_sglang_manifest(
+                tp=8, ep_size=3, hostname_pattern=sentinel
+            )
+        ),
+        "tp 8 ep_size 16": refuses(
+            lambda: declared_sglang_manifest(
+                tp=8, ep_size=16, hostname_pattern=sentinel
+            )
+        ),
         "tp 8 ep_size 2 moe_dp_size 2": refuses(
-            lambda: declared_sglang_manifest(tp=8, ep_size=2, moe_dp_size=2)
+            lambda: declared_sglang_manifest(
+                tp=8, ep_size=2, moe_dp_size=2, hostname_pattern=sentinel
+            )
         ),
         "tp 8 moe_dp_size 2 pp 2": refuses(
-            lambda: declared_sglang_manifest(tp=8, moe_dp_size=2, pp=2)
+            lambda: declared_sglang_manifest(
+                tp=8, moe_dp_size=2, pp=2, hostname_pattern=sentinel
+            )
         ),
-        "ep_size 0": refuses(lambda: declared_sglang_manifest(tp=8, ep_size=0)),
+        "ep_size 0": refuses(
+            lambda: declared_sglang_manifest(
+                tp=8, ep_size=0, hostname_pattern=sentinel
+            )
+        ),
         "moe_dp_size 0": refuses(
-            lambda: declared_sglang_manifest(tp=8, moe_dp_size=0)
+            lambda: declared_sglang_manifest(
+                tp=8, moe_dp_size=0, hostname_pattern=sentinel
+            )
         ),
         "num_layers 1 at pp 2": refuses(
             lambda: declared_sglang_manifest(
                 tp=1,
                 pp=2,
+                hostname_pattern=sentinel,
                 experts=DeclaredExpertLayout(
                     num_layers=1, moe_layers=(0,), num_experts=1
                 ),
             )
         ),
         "tp 4 pp 3 nodes 2": refuses(
-            lambda: declared_sglang_manifest(tp=4, pp=3, nodes=2)
+            lambda: declared_sglang_manifest(
+                tp=4, pp=3, nodes=2, hostname_pattern=sentinel
+            )
         ),
         "tp 4 pp 1 nodes 3": refuses(
-            lambda: declared_sglang_manifest(tp=4, pp=1, nodes=3)
+            lambda: declared_sglang_manifest(
+                tp=4, pp=1, nodes=3, hostname_pattern=sentinel
+            )
         ),
         "tp 2 pp 1 nodes 1 gpus_per_node 1": refuses(
-            lambda: declared_sglang_manifest(tp=2, pp=1, nodes=1, gpus_per_node=1)
+            lambda: declared_sglang_manifest(
+                tp=2, pp=1, nodes=1, gpus_per_node=1, hostname_pattern=sentinel
+            )
         ),
+    }
+    accepted = _observe_refusal(
+        lambda: declared_sglang_manifest(tp=2, pp=1, hostname_pattern=sentinel)
+    )
+    return {
+        "controls": controls,
+        "sentinel_detects_a_built_rank": accepted["no_rank_was_built"] is False,
     }
 
 
@@ -858,11 +924,17 @@ def analyze_observation(
 
     # S6, the rejection control family
     frozen_s6 = frozen_cells["s6_refusals"]
-    if sorted(cells["s6_refusals"]) != sorted(frozen_s6):
+    controls = cells["s6_refusals"]["controls"]
+    if sorted(controls) != sorted(frozen_s6):
         findings.append("s6: rejection control family membership")
+    if cells["s6_refusals"]["sentinel_detects_a_built_rank"] is not True:
+        findings.append("s6: the sentinel hostname pattern never fired")
     for refusal in frozen_s6:
-        if cells["s6_refusals"].get(refusal) is not True:
+        row = controls.get(refusal, {})
+        if row.get("refused") is not True:
             findings.append(f"s6: {refusal} was not refused")
+        if row.get("no_rank_was_built") is not True:
+            findings.append(f"s6: {refusal} built a rank before refusing")
 
     # S7, wire identity
     frozen_s7 = frozen_cells["s7_round_trip"]
@@ -944,9 +1016,35 @@ def analyze_observation(
             findings.append(f"{label}: snapshot owner rule")
     if scored_rows != len(S10_WORLDS) * 2:
         findings.append("s10: scored oracle row count")
-    decode_w8 = frozen_s10["frozen_makespan_ps"]["decode8x2048"]["8"]
-    if decode_w8 <= frozen_s10["decode_w8_compute_floor_ps"]:
-        findings.append("s10: decode W=8 sits below its own compute floor")
+    # The physical floor is checked against what this run measured, not
+    # against the literal the freeze already carries: the frozen number
+    # cannot fail its own frozen bound, so comparing the two would be a guard
+    # that no defect can trip.
+    floor = frozen_s10["decode_w8_compute_floor_ps"]
+    decode_w8_rows = [
+        row
+        for row in cells["s10_m5_identity"]
+        if row["shape"] == "decode8x2048" and row["world"] == 8
+    ]
+    if len(decode_w8_rows) != 1:
+        findings.append("s10: the decode W=8 row the compute floor bounds is absent")
+        observed_floor_row: dict[str, Any] = {
+            "compute_floor_ps": floor,
+            "observed_makespan_ps": None,
+            "sits_above_the_floor": None,
+        }
+    else:
+        observed = decode_w8_rows[0]["makespan_ps"]
+        observed_floor_row = {
+            "compute_floor_ps": floor,
+            "observed_makespan_ps": observed,
+            "sits_above_the_floor": observed > floor,
+        }
+        if observed <= floor:
+            findings.append(
+                f"s10: the measured decode W=8 makespan {observed} sits at or "
+                f"below its compute floor {floor}"
+            )
 
     # The fatal identities
     frozen_records = frozen["baseline"]["placement_records"]
@@ -971,13 +1069,14 @@ def analyze_observation(
         "evidence": {
             "fatal_compatibility_digests": len(frozen_records),
             "fatal_place3_study_check": 1,
-            "rejection_controls": len(cells["s6_refusals"]),
+            "rejection_controls": len(cells["s6_refusals"]["controls"]),
             "s5_oracle_arm_ran": oracle_ran,
             "scored_exact_oracle_rows": scored_rows,
             "scored_exact_oracle_rows_matched": scored_matches,
             "structural_guard_cells": len(frozen["evidence"]["structural_exact"]),
         },
         "findings": findings,
+        "physical_sanity": {"s10_decode_w8_compute_floor": observed_floor_row},
         "status": status,
     }
 
@@ -1014,6 +1113,7 @@ def run_study(output_root: Path, sglang_python: Path | None) -> dict[str, Any]:
         "expectations_commit": EXPECTATIONS_COMMIT,
         "findings": analysis["findings"],
         "implementation_commit": _git_output("rev-parse", "HEAD"),
+        "physical_sanity": analysis["physical_sanity"],
         "schema": RESULT_SCHEMA,
         "status": analysis["status"],
     }
@@ -1068,6 +1168,7 @@ def main() -> None:
             {
                 "evidence": summary["evidence"],
                 "findings": summary["findings"],
+                "physical_sanity": summary["physical_sanity"],
                 "status": summary["status"],
             },
             indent=2,
