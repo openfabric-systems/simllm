@@ -159,6 +159,19 @@ BASELINE_FILES_THIS_SLICE_CHANGES = {
 }
 
 
+def _tracked_digest(path: Path) -> str:
+    """Return a tracked file's SHA-256 over line endings normalized to LF.
+
+    The baseline digests were computed on a POSIX checkout. A Windows checkout
+    can hand the same tracked file back with CRLF endings, which changes the
+    hash without changing the file, so normalize first. This is the same
+    normalization `tests/test_bottleneck.py` applies when it compares a tracked
+    file's bytes across platforms.
+    """
+
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+
+
 def test_baseline_amendment_records_this_tree() -> None:
     """Every baseline file the slice does not touch still matches its digest."""
 
@@ -167,8 +180,7 @@ def test_baseline_amendment_records_this_tree() -> None:
     for name, sha in amendment["baseline"]["files"].items():
         if name in BASELINE_FILES_THIS_SLICE_CHANGES:
             continue
-        blob = (ROOT / name).read_bytes()
-        assert hashlib.sha256(blob).hexdigest() == sha, name
+        assert _tracked_digest(ROOT / name) == sha, name
         checked += 1
     assert checked == len(amendment["baseline"]["files"]) - len(
         BASELINE_FILES_THIS_SLICE_CHANGES
