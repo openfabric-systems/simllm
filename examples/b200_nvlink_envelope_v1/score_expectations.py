@@ -1133,9 +1133,11 @@ def graph_availability(stages: dict[str, dict[str, Any]]) -> tuple[dict[str, Any
         summary = "every lane carries graph rows of record"
     else:
         detail = "; ".join(f"{lane}: {reasons[lane.lower()]}" for lane in missing)
+        lanes = ", ".join(missing)
+        verb = "has" if len(missing) == 1 else "have"
         summary = (
-            f"lane {' and '.join(missing)} has no graph rows, so its rows at or below "
-            f"1 MiB fall back to the eager control ({detail})"
+            f"lane {lanes} {verb} no graph rows, so those rows at or below 1 MiB fall "
+            f"back to the eager control ({detail})"
         )
     flags["graph_rows_summary"] = summary
     return flags, summary

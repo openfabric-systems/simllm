@@ -59,7 +59,9 @@ GRAPH_ROW_MAX_BYTES = 1024 * 1024
 TIMED_ITERATIONS_AT_OR_BELOW_1MIB = 200
 METHOD_GRAPH = "graph"
 METHOD_EAGER = "eager"
-METHODS: tuple[str, ...] = (METHOD_GRAPH, METHOD_EAGER)
+#: execution order matters: the eager control of a cell is measured before
+#: anything captures in it, so no capture state can precede it.
+METHODS: tuple[str, ...] = (METHOD_EAGER, METHOD_GRAPH)
 GRAPH_WARMUP_ITERATIONS = 3
 GRAPH_PROBE_ELEMENTS = 8
 
@@ -295,6 +297,163 @@ def _capture_transfer(
     return graph
 
 
+def _transfer_streams(
+    pairs: list[tuple[int, int]],
+) -> tuple[list[Any], list[Any]]:
+    """Return fresh source and destination streams, one pair per transfer."""
+
+    source_streams: list[Any] = []
+    destination_streams: list[Any] = []
+    for src, dst in pairs:
+        with torch.cuda.device(src):
+            source_streams.append(torch.cuda.Stream(device=src))
+        with torch.cuda.device(dst):
+            destination_streams.append(torch.cuda.Stream(device=dst))
+    return source_streams, destination_streams
+
+
+def _issue_copy(
+    index: int,
+    pairs: list[tuple[int, int]],
+    sources: list[torch.Tensor],
+    destinations: list[torch.Tensor],
+    source_streams: list[Any],
+    destination_streams: list[Any],
+) -> None:
+    """Issue one cross-device copy with both of its streams under our control.
+
+    PyTorch runs the copy on the source device's current stream and records its
+    readiness event on the destination device's current stream. Naming both
+    explicitly keeps the copy off the destination device's default stream,
+    which is shared with whatever else holds that device.
+    """
+
+    src, _ = pairs[index]
+    with (
+        torch.cuda.device(src),
+        torch.cuda.stream(source_streams[index]),
+        torch.cuda.stream(destination_streams[index]),
+    ):
+        destinations[index].copy_(sources[index], non_blocking=True)
+
+
+def _transfers_by_eager(
+    pairs: list[tuple[int, int]],
+    sources: list[torch.Tensor],
+    destinations: list[torch.Tensor],
+    warmup: int,
+    timed: int,
+    devices: list[int],
+) -> tuple[list[float], str]:
+    """Time the copies eagerly, bracketing the destination side of each one.
+
+    Both events sit on the destination device, because CUDA cannot measure
+    between events on two devices, and the destination stream is made to wait
+    on an event recorded after the copies on the source stream, so the interval
+    ends when the transfer does rather than when it was enqueued.
+    """
+
+    source_streams, destination_streams = _transfer_streams(pairs)
+    starts: list[Any] = []
+    stops: list[Any] = []
+    dones: list[Any] = []
+    for src, dst in pairs:
+        with torch.cuda.device(dst):
+            starts.append(torch.cuda.Event(enable_timing=True))
+            stops.append(torch.cuda.Event(enable_timing=True))
+        with torch.cuda.device(src):
+            dones.append(torch.cuda.Event())
+
+    for _ in range(warmup):
+        for index in range(len(pairs)):
+            _issue_copy(index, pairs, sources, destinations, source_streams, destination_streams)
+    for index in devices:
+        torch.cuda.synchronize(index)
+
+    for index, (_, dst) in enumerate(pairs):
+        with torch.cuda.device(dst):
+            starts[index].record(destination_streams[index])
+    for _ in range(timed):
+        for index in range(len(pairs)):
+            _issue_copy(index, pairs, sources, destinations, source_streams, destination_streams)
+    for index, (src, _) in enumerate(pairs):
+        with torch.cuda.device(src):
+            dones[index].record(source_streams[index])
+    for index, (_, dst) in enumerate(pairs):
+        with torch.cuda.device(dst):
+            destination_streams[index].wait_event(dones[index])
+            stops[index].record(destination_streams[index])
+    for index in devices:
+        torch.cuda.synchronize(index)
+    return (
+        [starts[index].elapsed_time(stops[index]) * 1e-3 / timed for index in range(len(pairs))],
+        "",
+    )
+
+
+def _transfers_by_graph(
+    pairs: list[tuple[int, int]],
+    sources: list[torch.Tensor],
+    destinations: list[torch.Tensor],
+    warmup: int,
+    timed: int,
+    devices: list[int],
+) -> tuple[list[float], str]:
+    """Capture each transfer once and time one replay of the group.
+
+    The replay is launched on the source stream and the captured graph rejoins
+    its destination stream before it ends, so the source side events bracket
+    the whole transfer.
+    """
+
+    source_streams, destination_streams = _transfer_streams(pairs)
+    starts: list[Any] = []
+    stops: list[Any] = []
+    for src, _ in pairs:
+        with torch.cuda.device(src):
+            starts.append(torch.cuda.Event(enable_timing=True))
+            stops.append(torch.cuda.Event(enable_timing=True))
+
+    for _ in range(warmup):
+        for index in range(len(pairs)):
+            _issue_copy(index, pairs, sources, destinations, source_streams, destination_streams)
+    for index in devices:
+        torch.cuda.synchronize(index)
+
+    graphs: list[Any] = []
+    for index, (src, dst) in enumerate(pairs):
+        try:
+            graphs.append(
+                _capture_transfer(sources[index], destinations[index], src, dst, timed)
+            )
+        except Exception as error:  # noqa: BLE001 - any capture failure falls back
+            for device_index in devices:
+                torch.cuda.synchronize(device_index)
+            return [], f"{type(error).__name__}: {error}"
+    for _ in range(UNTIMED_REPLAYS):
+        for index, (src, _) in enumerate(pairs):
+            with torch.cuda.device(src), torch.cuda.stream(source_streams[index]):
+                graphs[index].replay()
+        for device_index in devices:
+            torch.cuda.synchronize(device_index)
+
+    for index, (src, _) in enumerate(pairs):
+        with torch.cuda.device(src):
+            starts[index].record(source_streams[index])
+    for index, (src, _) in enumerate(pairs):
+        with torch.cuda.device(src), torch.cuda.stream(source_streams[index]):
+            graphs[index].replay()
+    for index, (src, _) in enumerate(pairs):
+        with torch.cuda.device(src):
+            stops[index].record(source_streams[index])
+    for index in devices:
+        torch.cuda.synchronize(index)
+    return (
+        [starts[index].elapsed_time(stops[index]) * 1e-3 / timed for index in range(len(pairs))],
+        "",
+    )
+
+
 def _time_transfers(
     pairs: list[tuple[int, int]],
     nbytes: int,
@@ -306,11 +465,11 @@ def _time_transfers(
 ) -> tuple[list[float], str]:
     """Time one group of simultaneous copies and return per-pair seconds.
 
-    Each copy runs on its own stream on its source device, which is the stream
-    PyTorch issues a cross-device ``copy_`` on, so the events bracket the
-    issuing stream. The makespan of the group is the maximum of the returned
-    seconds. The second return value is empty on success and carries the
-    reason when a graph row could not be captured.
+    The makespan of the group is the maximum of the returned seconds. The
+    second return value is empty on success and carries the reason when a graph
+    row could not be captured. Both devices are synchronized before either
+    method runs, and every stream and event is fresh for this cell, so nothing
+    a previous cell left behind lands inside a timed block.
     """
 
     sources = [
@@ -336,70 +495,12 @@ def _time_transfers(
     if method == METHOD_GRAPH and not _graph_supported(mock):
         return [], "this process cannot capture a CUDA graph"
 
-    # Every CUDA call below runs inside a torch.cuda.device context, which
-    # restores the previous device on exit. The lane must never leave the
-    # process pointed at another rank's device: a communicator created after
-    # it would bind to that device and deadlock.
-    streams = []
-    starts = []
-    stops = []
-    for src, _ in pairs:
-        with torch.cuda.device(src):
-            streams.append(torch.cuda.Stream(device=src))
-            starts.append(torch.cuda.Event(enable_timing=True))
-            stops.append(torch.cuda.Event(enable_timing=True))
     devices = sorted({index for pair in pairs for index in pair})
-
-    for _ in range(warmup):
-        for index, (src, _) in enumerate(pairs):
-            with torch.cuda.device(src), torch.cuda.stream(streams[index]):
-                destinations[index].copy_(sources[index], non_blocking=True)
     for index in devices:
         torch.cuda.synchronize(index)
-
-    graphs: list[Any] = []
     if method == METHOD_GRAPH:
-        # One graph per pair, captured on that pair's source device and
-        # spanning its destination device, so the replay keeps the concurrency
-        # of the cell.
-        for index, (src, dst) in enumerate(pairs):
-            try:
-                graphs.append(
-                    _capture_transfer(sources[index], destinations[index], src, dst, timed)
-                )
-            except Exception as error:  # noqa: BLE001 - any capture failure falls back
-                for device_index in devices:
-                    torch.cuda.synchronize(device_index)
-                return [], f"{type(error).__name__}: {error}"
-        for _ in range(UNTIMED_REPLAYS):
-            for index, (src, _) in enumerate(pairs):
-                with torch.cuda.device(src), torch.cuda.stream(streams[index]):
-                    graphs[index].replay()
-            for device_index in devices:
-                torch.cuda.synchronize(device_index)
-
-    for index, (src, _) in enumerate(pairs):
-        with torch.cuda.device(src):
-            starts[index].record(streams[index])
-    if graphs:
-        for index, (src, _) in enumerate(pairs):
-            with torch.cuda.device(src), torch.cuda.stream(streams[index]):
-                graphs[index].replay()
-    else:
-        for _ in range(timed):
-            for index, (src, _) in enumerate(pairs):
-                with torch.cuda.device(src), torch.cuda.stream(streams[index]):
-                    destinations[index].copy_(sources[index], non_blocking=True)
-    for index, (src, _) in enumerate(pairs):
-        with torch.cuda.device(src):
-            stops[index].record(streams[index])
-    for index in devices:
-        torch.cuda.synchronize(index)
-
-    return (
-        [starts[index].elapsed_time(stops[index]) * 1e-3 / timed for index in range(len(pairs))],
-        "",
-    )
+        return _transfers_by_graph(pairs, sources, destinations, warmup, timed, devices)
+    return _transfers_by_eager(pairs, sources, destinations, warmup, timed, devices)
 
 
 def _copy_row(
@@ -426,6 +527,7 @@ def _copy_row(
         "iterations": timed,
         "status": "measured",
         "time_ns": makespan * 1e9,
+        "timed_on": "source" if method == METHOD_GRAPH else "destination",
         "bytes_per_second": _rate(moved_bytes, makespan),
         "per_stream_time_ns": [value * 1e9 for value in seconds],
         "aggregate_bytes": aggregate,

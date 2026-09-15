@@ -386,6 +386,12 @@ class _FakeStream:
     def __init__(self, device=None) -> None:
         self.device = device
 
+    def wait_event(self, event) -> None:
+        return None
+
+    def wait_stream(self, other) -> None:
+        return None
+
 
 class _FakeStreamContext:
     def __init__(self, stream) -> None:
@@ -715,6 +721,11 @@ def _capture_fakes(monkeypatch, bench, log: _CaptureLog):
         graphs.append(graph)
         return graph
 
+    def _synchronize(device=None):
+        index = device if isinstance(device, int) else getattr(device, "index", device)
+        log.calls.append(("synchronize", index))
+
+    monkeypatch.setattr(torch.cuda, "synchronize", _synchronize)
     monkeypatch.setattr(torch.cuda, "Stream", _stream_factory)
     monkeypatch.setattr(torch.cuda, "stream", _StreamContext)
     monkeypatch.setattr(torch.cuda, "Event", lambda enable_timing=False: _LoggingEvent(log))
@@ -785,3 +796,54 @@ def test_every_graph_row_throws_away_one_replay(monkeypatch) -> None:
     timed_index = [index for index, call in enumerate(log.calls) if call[0] == "replay"]
     records = [index for index, call in enumerate(log.calls) if call[0] == "event_record"]
     assert timed_index[0] < max(records), "the untimed replay precedes the timing events"
+
+
+def test_the_eager_copy_runs_first_and_is_timed_on_the_destination(monkeypatch) -> None:
+    """The stage 1 attempt 5 defect: eager rows polluted by the capture.
+
+    Every eager 0 to 1 row read a flat 2.2 ms at every payload while 1 to 0 was
+    physical, and the only asymmetry was the capture that ran first in the same
+    cell. The eager control is now measured before anything captures, both
+    devices are synchronized before the timed block, streams and events are
+    fresh, and the interval is bracketed on the destination device with an
+    explicit completion event from the source stream.
+    """
+
+    pytest.importorskip("torch")
+    bench = _load("b200_nvlink_envelope_bench_order", BENCH_PATH)
+    log = _CaptureLog()
+    state, _ = _capture_fakes(monkeypatch, bench, log)
+
+    pool = bench.BufferPool(False)
+    rows = bench._copy_cell_rows("unidirectional", [(0, 1)], 8, pool, False, bench.METHODS)
+
+    assert [row["method"] for row in rows] == ["eager", "graph"]
+    assert rows[0]["timed_on"] == "destination"
+    assert rows[1]["timed_on"] == "source"
+
+    kinds = [call[0] for call in log.calls]
+    first_capture = kinds.index("capture_begin")
+    first_record = kinds.index("event_record")
+    assert first_record < first_capture, "the eager row is measured before any capture"
+
+    synchronized = {
+        call[1] for call in log.calls[:first_record] if call[0] == "synchronize"
+    }
+    assert {0, 1} <= synchronized, "both devices are synchronized before the timed block"
+
+    eager_calls = log.calls[:first_capture]
+    records = [call for call in eager_calls if call[0] == "event_record"]
+    assert len(records) == 3
+    assert records[0][2].endswith("@1"), "the start event sits on the destination stream"
+    assert records[1][2].endswith("@0"), "the completion event sits on the source stream"
+    assert records[2][2].endswith("@1"), "the stop event sits on the destination stream"
+
+    waits = [call for call in eager_calls if call[0] == "stream_wait_event"]
+    assert waits, "the destination stream waits for the copies to complete"
+    assert waits[-1][1].endswith("@1")
+    assert waits[-1][2] == records[1][1], "it waits on the source side completion event"
+
+    entered = [call[1] for call in eager_calls if call[0] == "stream_enter"]
+    assert any(name.endswith("@0") for name in entered)
+    assert any(name.endswith("@1") for name in entered)
+    assert state.current == 0, "the cell must not leave the process on another device"

@@ -37,24 +37,59 @@ bash examples/nccl_topology_capture_v1/capture_container.sh "$INVENTORY"
   echo "--- nvidia-smi topo -m ---"; nvidia-smi topo -m 2>&1
 } > "$OUT/rdma_evidence.txt"
 
-# 3. NVLink precheck. Abort before timing when every link is inactive or the
-#    topology matrix shows no NV between GPUs 0 and 1.
+# 3. NVLink precheck. Every visible GPU must present its full set of active
+#    links, and the topology matrix must show NV18 on every pair the stage
+#    uses: all of them in stage 2, GPU 0 to GPU 1 in stage 1. A board with one
+#    dead GPU passes a total link count and fails here, which is what a rental
+#    that cannot run the study should do before it costs anything.
 nvidia-smi nvlink -s > "$OUT/nvlink_status.txt" 2>&1
 nvidia-smi topo -m > "$OUT/topo_matrix.txt" 2>&1
+GPU_COUNT=$(nvidia-smi -L | grep -c "^GPU ")
+LINKS_PER_GPU=18
 ACTIVE_LINKS=$(grep -c "GB/s" "$OUT/nvlink_status.txt" || true)
-PAIR_01=$(awk '/^GPU0/ {print $3; exit}' "$OUT/topo_matrix.txt")
-if [ "${ACTIVE_LINKS:-0}" -eq 0 ]; then
-  echo "NVLINK PRECHECK FAILED: nvidia-smi nvlink -s reports no active link" >&2
+LINK_BLOCKS=$(grep -c "^GPU [0-9]*:" "$OUT/nvlink_status.txt" || true)
+SHORT_GPUS=$(awk -v expected="$LINKS_PER_GPU" '
+  /^GPU [0-9]+:/ {
+    if (seen && links != expected) printf "GPU%s(%d) ", gpu, links
+    gpu = $2; sub(":", "", gpu); links = 0; seen = 1; next
+  }
+  /GB\/s/ { links++ }
+  END { if (seen && links != expected) printf "GPU%s(%d) ", gpu, links }
+' "$OUT/nvlink_status.txt")
+BAD_PAIRS=$(awk -v n="$GPU_COUNT" -v stage="$STAGE" '
+  $1 ~ /^GPU[0-9]+$/ {
+    row = $1; sub("GPU", "", row); r = row + 0
+    for (i = 1; i <= n; i++) {
+      c = i - 1
+      if (c == r) continue
+      if (stage == 1 && !((r == 0 && c == 1) || (r == 1 && c == 0))) continue
+      if ($(i + 1) != "NV18") printf "%d->%d=%s ", r, c, $(i + 1)
+    }
+  }
+' "$OUT/topo_matrix.txt")
+
+if [ "${GPU_COUNT:-0}" -lt 2 ]; then
+  echo "NVLINK PRECHECK FAILED: $GPU_COUNT GPUs visible, the study needs at least 2" >&2
   exit 3
 fi
-case "$PAIR_01" in
-  NV*) ;;
-  *)
-    echo "NVLINK PRECHECK FAILED: GPU0 to GPU1 is '$PAIR_01', not an NV link" >&2
-    exit 3
-    ;;
-esac
-echo "nvlink precheck: $ACTIVE_LINKS active links, GPU0 to GPU1 is $PAIR_01"
+if [ "${LINK_BLOCKS:-0}" -ne "$GPU_COUNT" ]; then
+  echo "NVLINK PRECHECK FAILED: nvidia-smi nvlink -s reported $LINK_BLOCKS blocks for" \
+    "$GPU_COUNT visible GPUs" >&2
+  exit 3
+fi
+if [ -n "$SHORT_GPUS" ]; then
+  echo "NVLINK PRECHECK FAILED: these GPUs do not report $LINKS_PER_GPU active links:" \
+    "$SHORT_GPUS" >&2
+  exit 3
+fi
+if [ -n "$BAD_PAIRS" ]; then
+  echo "NVLINK PRECHECK FAILED: these GPU pairs are not NV18 in the topology matrix:" \
+    "$BAD_PAIRS" >&2
+  exit 3
+fi
+PAIR_01=$(awk '$1 == "GPU0" {print $3; exit}' "$OUT/topo_matrix.txt")
+echo "nvlink precheck: $GPU_COUNT GPUs, $ACTIVE_LINKS active links," \
+  "$LINKS_PER_GPU per GPU, every checked pair NV18, GPU0 to GPU1 is $PAIR_01"
 
 # 4. The timed lanes, one process per visible GPU.
 #
@@ -94,6 +129,7 @@ fi
   ls -la "$OUT/inventory"
   echo "stage: $STAGE"
   echo "ranks: $RANKS"
+  echo "gpus: $GPU_COUNT"
   echo "active_nvlinks: $ACTIVE_LINKS"
   echo "gpu0_gpu1: $PAIR_01"
   echo "pg_timeout_seconds: $PG_TIMEOUT_SECONDS"
