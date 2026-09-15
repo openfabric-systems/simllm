@@ -1829,7 +1829,13 @@ NVSwitch allocation; it does not qualify an eight-GPU switched board.
   asymptotic value at 1 GiB is 141.93 GB/s. A slope fitted inside the
   latency-dominated regime is not a fabric bandwidth, so the B200 refit must
   extend past the payload where bus bandwidth flattens rather than only adding
-  point-to-point samples inside the existing window.
+  point-to-point samples inside the existing window. The first slice, a
+  rented-container capture in two stages (a pinned pair with width-2
+  collectives, then the eight-GPU placements when a board is listed), is
+  frozen in the
+  [B200 NVLink envelope expectations](../../examples/b200_nvlink_envelope_v1/expectations.md);
+  it registers the outcome as a new named profile and leaves the existing
+  constants untouched.
 - TRAF-94 (Precision; P1; L): identify the channel model's GPU and control
   service costs with the [standardized primitive experiment](../design/nccl-primitive-identification-v1.md)
   and its [versioned matrix](../../examples/nccl_primitive_identification_v1/manifest.json).
