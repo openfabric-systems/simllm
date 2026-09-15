@@ -803,6 +803,14 @@ def score_e5(stages: dict[str, dict[str, Any]]) -> tuple[list[Outcome], dict[str
     slope_bytes_per_second = PICOSECONDS_PER_SECOND / ps_per_byte
     bandwidth = round(slope_bytes_per_second)
     constants = {width: round(value) for width, value in intercepts_ps.items()}
+    holdout_error_by_width: dict[int, float] = {}
+    for width in widths:
+        row = point(sorted(rows_by_width[width], key=requested_bytes), REFIT_HOLDOUT_BYTES)
+        if row is None:
+            continue
+        load = endpoint_bytes(width, REFIT_HOLDOUT_BYTES)
+        predicted_ps = constants[width] + ceil_div(load * PICOSECONDS_PER_SECOND, bandwidth)
+        holdout_error_by_width[width] = abs(predicted_ps - float(row["time_ns"]) * 1_000.0)
     bands: dict[int, tuple[int, int]] = {}
     row_index = 0
     residual_by_width: dict[int, list[float]] = {width: [] for width in widths}
@@ -811,9 +819,16 @@ def score_e5(stages: dict[str, dict[str, Any]]) -> tuple[list[Outcome], dict[str
             residual_by_width[width].append(float(residuals[row_index]))
             row_index += 1
     for width in widths:
-        spread = round(max((abs(value) for value in residual_by_width[width]), default=0.0))
-        low = max(0, constants[width] - spread)
-        bands[width] = (low, constants[width] + spread)
+        # The band is the inclusive minimum and maximum of the intercept plus
+        # the fit residuals, so it brackets every row the fit saw, widened to
+        # the holdout error when that reaches further than any residual.
+        spread = residual_by_width[width] or [0.0]
+        low = constants[width] + round(min(spread))
+        high = constants[width] + round(max(spread))
+        holdout_error = holdout_error_by_width.get(width, 0.0)
+        low = max(0, min(low, constants[width] - round(holdout_error)))
+        high = max(high, constants[width] + round(holdout_error))
+        bands[width] = (low, high)
 
     record.update(
         {
@@ -1040,7 +1055,7 @@ def score_e8() -> list[Outcome]:
             ident,
             "fatal-external",
             None,
-            f"run separately: {description}",
+            f"run separately, see RESULTS.md: {description}",
             {},
         )
         for ident, description in IDENTITY_GUARDS
