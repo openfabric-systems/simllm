@@ -20,8 +20,12 @@ esac
 mkdir -p "$OUT"
 
 # 1. The inventory the topology capture study records, unchanged and not
-#    duplicated here.
-bash examples/nccl_topology_capture_v1/capture_container.sh "$OUT/inventory"
+#    duplicated here. That script cds into its own output directory and then
+#    reuses the path it was given, so resolve the directory first and hand it
+#    an absolute one; the caller may pass a relative output directory.
+mkdir -p "$OUT/inventory"
+INVENTORY=$(cd "$OUT/inventory" && pwd)
+bash examples/nccl_topology_capture_v1/capture_container.sh "$INVENTORY"
 
 # 2. The RDMA evidence the freeze lists for the PLACE-6 NIC clause.
 {
