@@ -1100,6 +1100,47 @@ def proposed_profile(
     }
 
 
+def graph_availability(stages: dict[str, dict[str, Any]]) -> tuple[dict[str, Any], str]:
+    """Report, per lane, whether any graph row of record survived.
+
+    A lane whose captures all failed silently falls back to its eager control,
+    and every cell downstream would then be scoring the dispatch floor. That
+    has to be visible at the top of the report, not buried per row.
+    """
+
+    flags: dict[str, Any] = {}
+    missing: list[str] = []
+    reasons: dict[str, str] = {}
+    for lane in ("p1", "p2", "p3"):
+        rows = [row for result in stages.values() for row in result.get(lane, [])]
+        if not rows:
+            continue
+        graph_rows = [
+            row
+            for row in rows
+            if row_method(row) == METHOD_GRAPH and row.get("status") == "measured"
+        ]
+        flags[f"{lane}_graph_rows_available"] = bool(graph_rows)
+        if graph_rows:
+            continue
+        missing.append(lane.upper())
+        reason = next(
+            (str(row["graph_skip_reason"]) for row in rows if row.get("graph_skip_reason")),
+            "no reason recorded",
+        )
+        reasons[lane] = reason.strip().splitlines()[0]
+    if not missing:
+        summary = "every lane carries graph rows of record"
+    else:
+        detail = "; ".join(f"{lane}: {reasons[lane.lower()]}" for lane in missing)
+        summary = (
+            f"lane {' and '.join(missing)} has no graph rows, so its rows at or below "
+            f"1 MiB fall back to the eager control ({detail})"
+        )
+    flags["graph_rows_summary"] = summary
+    return flags, summary
+
+
 def build_report(
     stages: dict[str, dict[str, Any]],
     expectations: dict[str, Any],
@@ -1134,6 +1175,7 @@ def build_report(
 
     scored = [outcome for outcome in outcomes if outcome.cls == "scored"]
     passed = sum(1 for outcome in scored if outcome.passed)
+    availability, _ = graph_availability(stages)
     return {
         "schema": SCHEMA,
         "study": STUDY,
@@ -1163,6 +1205,7 @@ def build_report(
             }
         ),
         "identity_guards_pending": [ident for ident, _ in IDENTITY_GUARDS],
+        **availability,
     }
 
 
@@ -1192,6 +1235,8 @@ def main(argv: list[str] | None = None) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(_sanitize(report), indent=2, sort_keys=True) + "\n")
 
+    print(f"Timing methods: {report['graph_rows_summary']}")
+    print()
     print("Fatal guards")
     if not report["fatal"]:
         print("  every evaluated fatal guard held")

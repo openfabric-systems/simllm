@@ -624,3 +624,164 @@ def test_the_graph_path_is_requested_only_in_cuda_mode() -> None:
     assert "cannot be captured" in skip
     seconds, skip = bench._time_transfers([(0, 1)], 8, 1, 2, pool, True, bench.METHOD_EAGER)
     assert len(seconds) == 1 and skip == ""
+
+
+class _CaptureLog:
+    def __init__(self) -> None:
+        self.calls: list[tuple] = []
+
+
+class _LoggingStream:
+    def __init__(self, log: _CaptureLog, name: str) -> None:
+        self.log = log
+        self.name = name
+        self.device = name
+
+    def wait_event(self, event) -> None:
+        self.log.calls.append(("stream_wait_event", self.name, event.name))
+
+    def wait_stream(self, other) -> None:
+        self.log.calls.append(("stream_wait_stream", self.name, other.name))
+
+
+class _LoggingEvent:
+    counter = 0
+
+    def __init__(self, log: _CaptureLog, enable_timing: bool = False) -> None:
+        _LoggingEvent.counter += 1
+        self.log = log
+        self.name = f"event{_LoggingEvent.counter}"
+        self.enable_timing = enable_timing
+
+    def record(self, stream=None) -> None:
+        self.log.calls.append(("event_record", self.name, getattr(stream, "name", None)))
+
+    def elapsed_time(self, other) -> float:
+        return 1.0
+
+
+class _LoggingGraph:
+    def __init__(self, log: _CaptureLog) -> None:
+        self.log = log
+        self.replays = 0
+
+    def replay(self) -> None:
+        self.replays += 1
+        self.log.calls.append(("replay",))
+
+
+def _capture_fakes(monkeypatch, bench, log: _CaptureLog):
+    """Patch the CUDA surface the capture path uses, recording the call shape."""
+
+    torch = bench.torch
+    state = _FakeCudaDevices(current=0)
+    _fake_cuda(monkeypatch, bench, state)
+    streams: dict[str, _LoggingStream] = {}
+
+    def _stream_factory(device=None):
+        name = f"stream{len(streams)}@{device}"
+        stream = _LoggingStream(log, name)
+        streams[name] = stream
+        return stream
+
+    class _StreamContext:
+        def __init__(self, stream) -> None:
+            self.stream = stream
+
+        def __enter__(self):
+            log.calls.append(("stream_enter", self.stream.name))
+            return self
+
+        def __exit__(self, *exc_info) -> bool:
+            log.calls.append(("stream_exit", self.stream.name))
+            return False
+
+    class _GraphContext:
+        def __init__(self, graph, stream=None, capture_error_mode=None) -> None:
+            self.stream = stream
+            log.calls.append(("capture_begin", getattr(stream, "name", None), capture_error_mode))
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc_info) -> bool:
+            log.calls.append(("capture_end",))
+            return False
+
+    graphs: list[_LoggingGraph] = []
+
+    def _graph_factory():
+        graph = _LoggingGraph(log)
+        graphs.append(graph)
+        return graph
+
+    monkeypatch.setattr(torch.cuda, "Stream", _stream_factory)
+    monkeypatch.setattr(torch.cuda, "stream", _StreamContext)
+    monkeypatch.setattr(torch.cuda, "Event", lambda enable_timing=False: _LoggingEvent(log))
+    monkeypatch.setattr(torch.cuda, "CUDAGraph", _graph_factory)
+    monkeypatch.setattr(torch.cuda, "graph", _GraphContext)
+    return state, graphs
+
+
+def test_the_peer_copy_capture_forks_and_joins_the_destination_stream(monkeypatch) -> None:
+    """The shape the first board run was missing.
+
+    A cross-device copy touches the destination device's stream, so that stream
+    has to join the capture from the capture stream and rejoin it before the
+    capture ends. Capturing only the source stream is what failed on the board
+    with "operation failed due to a previous error during capture".
+    """
+
+    pytest.importorskip("torch")
+    bench = _load("b200_nvlink_envelope_bench_capture", BENCH_PATH)
+    log = _CaptureLog()
+    state, _ = _capture_fakes(monkeypatch, bench, log)
+
+    pool = bench.BufferPool(False)
+    source = pool.get(0, "src0", 8)
+    destination = pool.get(1, "dst0", 8)
+    bench._capture_transfer(source, destination, 0, 1, 3)
+
+    kinds = [call[0] for call in log.calls]
+    assert kinds.index("capture_begin") < kinds.index("event_record")
+    fork_record = log.calls[kinds.index("event_record")]
+    capture_begin = log.calls[kinds.index("capture_begin")]
+    assert fork_record[2] == capture_begin[1], "the fork event is recorded on the capture stream"
+    assert capture_begin[2] == "thread_local"
+
+    wait = log.calls[kinds.index("stream_wait_event")]
+    fork_name = fork_record[1]
+    assert wait[2] == fork_name, "the destination stream waits on the fork event"
+    destination_stream = wait[1]
+    assert destination_stream != capture_begin[1]
+
+    assert ("stream_enter", destination_stream) in log.calls
+    join_index = len(kinds) - 1 - kinds[::-1].index("event_record")
+    join_record = log.calls[join_index]
+    assert join_record[2] == destination_stream, "the join event is recorded on the destination"
+    last_wait = log.calls[len(kinds) - 1 - kinds[::-1].index("stream_wait_event")]
+    assert last_wait[1] == capture_begin[1], "the capture stream waits on the join event"
+    assert last_wait[2] == join_record[1]
+    assert kinds.index("capture_end") == len(kinds) - 1
+    assert state.current == 0, "capture must not leave the process on another device"
+
+
+def test_every_graph_row_throws_away_one_replay(monkeypatch) -> None:
+    pytest.importorskip("torch")
+    bench = _load("b200_nvlink_envelope_bench_replay", BENCH_PATH)
+    assert bench.UNTIMED_REPLAYS == 1
+    log = _CaptureLog()
+    _, graphs = _capture_fakes(monkeypatch, bench, log)
+
+    pool = bench.BufferPool(False)
+    seconds, skip = bench._time_transfers(
+        [(0, 1)], 8, 1, 4, pool, False, bench.METHOD_GRAPH
+    )
+    assert skip == ""
+    assert len(seconds) == 1
+    assert len(graphs) == 1
+    assert graphs[0].replays == bench.UNTIMED_REPLAYS + 1, "one untimed replay, then the timed one"
+
+    timed_index = [index for index, call in enumerate(log.calls) if call[0] == "replay"]
+    records = [index for index, call in enumerate(log.calls) if call[0] == "event_record"]
+    assert timed_index[0] < max(records), "the untimed replay precedes the timing events"

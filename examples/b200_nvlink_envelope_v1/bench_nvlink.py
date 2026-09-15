@@ -63,6 +63,11 @@ METHODS: tuple[str, ...] = (METHOD_GRAPH, METHOD_EAGER)
 GRAPH_WARMUP_ITERATIONS = 3
 GRAPH_PROBE_ELEMENTS = 8
 
+#: one replay is thrown away before the timed one. The first replay of a fresh
+#: graph pays its instantiation and, for a point to point graph, its first
+#: channel use; the first captured payload of a lane must not carry that.
+UNTIMED_REPLAYS = 1
+
 STAGE2_ALL_PAIRS_PAYLOADS: tuple[int, ...] = (65536, 16777216, 1073741824)
 STAGE2_CONCURRENT_PAYLOAD = 67108864
 STAGE2_FANIN_DONORS: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7)
@@ -235,21 +240,58 @@ def _capture(issue: Any, timed: int, device_index: int | None = None) -> Any:
     """Capture ``timed`` issues of ``issue`` into a CUDA graph.
 
     The caller warms the work up first, on a side stream, with the
-    communicator already initialized. Capture runs on the graph context's own
-    side stream, so the replay can be launched later on whichever stream the
-    lane wants to time.
+    communicator already initialized. The capture stream is created here on the
+    device that owns the work: the context manager's default capture stream is
+    a class level singleton bound to whichever device was current when it was
+    first built, which is the wrong device as soon as a lane captures on two.
     """
 
     graph = torch.cuda.CUDAGraph()
-    context = torch.cuda.graph(graph, capture_error_mode="thread_local")
     if device_index is None:
-        with context:
+        capture_stream = torch.cuda.Stream()
+        with torch.cuda.graph(graph, stream=capture_stream, capture_error_mode="thread_local"):
             for _ in range(timed):
                 issue()
         return graph
-    with torch.cuda.device(device_index), context:
-        for _ in range(timed):
-            issue()
+    with torch.cuda.device(device_index):
+        capture_stream = torch.cuda.Stream(device=device_index)
+        with torch.cuda.graph(graph, stream=capture_stream, capture_error_mode="thread_local"):
+            for _ in range(timed):
+                issue()
+    return graph
+
+
+def _capture_transfer(
+    source: torch.Tensor,
+    destination: torch.Tensor,
+    src: int,
+    dst: int,
+    timed: int,
+) -> Any:
+    """Capture ``timed`` cross-device copies into one graph spanning both.
+
+    A PyTorch cross-device ``copy_`` touches two streams: it records an event
+    on the destination device's current stream and makes the source device's
+    copy stream wait on it. Capturing only the source stream is therefore
+    invalid, which is what the first graph run hit. The destination stream is
+    forked into the capture from the capture stream and joined back before the
+    capture ends, which is the legal shape for a multi-device graph.
+    """
+
+    graph = torch.cuda.CUDAGraph()
+    with torch.cuda.device(src):
+        capture_stream = torch.cuda.Stream(device=src)
+        destination_stream = torch.cuda.Stream(device=dst)
+        fork = torch.cuda.Event()
+        join = torch.cuda.Event()
+        with torch.cuda.graph(graph, stream=capture_stream, capture_error_mode="thread_local"):
+            fork.record(capture_stream)
+            destination_stream.wait_event(fork)
+            with torch.cuda.stream(destination_stream):
+                for _ in range(timed):
+                    destination.copy_(source, non_blocking=True)
+                join.record(destination_stream)
+            capture_stream.wait_event(join)
     return graph
 
 
@@ -317,19 +359,24 @@ def _time_transfers(
 
     graphs: list[Any] = []
     if method == METHOD_GRAPH:
-        # One graph per pair, captured on that pair's source device, so the
-        # replay keeps the concurrency of the cell.
-        for index, (src, _) in enumerate(pairs):
-
-            def _issue(index: int = index) -> None:
-                destinations[index].copy_(sources[index], non_blocking=True)
-
+        # One graph per pair, captured on that pair's source device and
+        # spanning its destination device, so the replay keeps the concurrency
+        # of the cell.
+        for index, (src, dst) in enumerate(pairs):
             try:
-                graphs.append(_capture(_issue, timed, src))
+                graphs.append(
+                    _capture_transfer(sources[index], destinations[index], src, dst, timed)
+                )
             except Exception as error:  # noqa: BLE001 - any capture failure falls back
                 for device_index in devices:
                     torch.cuda.synchronize(device_index)
                 return [], f"{type(error).__name__}: {error}"
+        for _ in range(UNTIMED_REPLAYS):
+            for index, (src, _) in enumerate(pairs):
+                with torch.cuda.device(src), torch.cuda.stream(streams[index]):
+                    graphs[index].replay()
+            for device_index in devices:
+                torch.cuda.synchronize(device_index)
 
     for index, (src, _) in enumerate(pairs):
         with torch.cuda.device(src):
@@ -608,6 +655,9 @@ def _time_block(
             torch.cuda.current_stream(device).wait_stream(side)
             torch.cuda.synchronize(device)
             graph = _capture(issue, timed)
+            for _ in range(UNTIMED_REPLAYS):
+                graph.replay()
+                torch.cuda.synchronize(device)
         except Exception as error:  # noqa: BLE001 - fall back to the eager row
             torch.cuda.synchronize(device)
             return 0.0, f"{type(error).__name__}: {error}"
@@ -972,6 +1022,7 @@ def build_header(
         "graph_capture_enabled": graph_enabled,
         "graph_capture_reason": graph_reason,
         "graph_row_max_bytes": GRAPH_ROW_MAX_BYTES,
+        "untimed_replays": UNTIMED_REPLAYS,
         "timed_iterations_at_or_below_1mib": (
             MOCK_TIMED_ITERATIONS if mock else TIMED_ITERATIONS_AT_OR_BELOW_1MIB
         ),
