@@ -1,0 +1,25 @@
+{
+  "schema": "simllm-b200-nvlink-envelope-amendment-v1",
+  "task": "TRAF-31",
+  "amends": "expectations.json",
+  "sequence": "b",
+  "date": "2026-09-15",
+  "trigger": {
+    "capture": "stage 1 attempt 5, two-GPU B200 slice, graph rows in every lane",
+    "graph_rows_8b_us": {"p1_copy": 6.8, "p2_exchange": 23.7},
+    "refit_w2": {"intercept_ps": 9126016, "slope_bytes_per_second": 69422515624, "holdout_4kib_error_us": 0.662},
+    "asymptotes": {"p1_1to0_bytes_per_second": 779340000000, "p2_bytes_per_second": 697320000000},
+    "defect": "forward eager copy rows above 1 MiB flat near 2.2 ms after a preceding capture in the same cell"
+  },
+  "eager_copy_method": {
+    "order_in_cell": ["eager", "graph"],
+    "synchronize_both_devices_before_timing": true,
+    "streams": "source and destination streams entered around copy_",
+    "timing_bracket": "start and stop events on the destination stream, completion event on the source stream awaited by the destination stream",
+    "graph_rows": "unchanged, source-stream bracket",
+    "row_field": "timed_on"
+  },
+  "precheck": {"every_gpu_active_links": 18, "every_used_pair": "NV18", "exit_code": 3, "blocklisted_machine": "the stage-2 attempt-1 host with one GPU's links inactive"},
+  "if_still_flat": "the affected direction is reported unscored with the reason; a third amendment would move inter-lane barriers to a CPU-backed group before any further run",
+  "unchanged": ["bands", "holdouts", "tolerances", "lanes P2 and P3", "graph rows", "stages", "budget"]
+}
