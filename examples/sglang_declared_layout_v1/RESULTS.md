@@ -8,7 +8,7 @@ qualification, built declared placements for the pinned SGLang commit
 package's layout rules with its own `get_pp_indices` as an executable oracle,
 and drove `HtsimStepSink` on `rnic-nn-fluid` with the expert-parallel (EP)
 group read from an SGLang-declared manifest. The expectations-only commit is
-`1eef03f5` and the harness commit is `51529fec`.
+`61fc8878` and the harness commit is `536ee6a4`.
 
 What came out: the result is `PASS` with no finding. The deciding number is
 6 of 6 frozen m5 check-B makespans reproduced exactly with the EP group taken
