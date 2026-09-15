@@ -30,7 +30,7 @@ import os
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -66,6 +66,10 @@ TOKEN_BYTES = 8
 EXIT_NO_PEER_ACCESS = 4
 EXIT_TOO_FEW_DEVICES = 5
 
+#: process group timeout. A collective that hangs must raise long before the
+#: rental cap rather than spin, so the stage script can still write evidence.
+PG_TIMEOUT_SECONDS = 120
+
 
 def busbw_factor(op: str, width: int) -> float:
     """Return the nccl-tests bus bandwidth factor for one collective."""
@@ -77,6 +81,32 @@ def busbw_factor(op: str, width: int) -> float:
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _progress(message: str) -> None:
+    """Print one flushed progress line, so a tail of the log shows the lane."""
+
+    print(f"LANE {_utc_now()} {message}", flush=True)
+
+
+def _init_process_group(mock: bool, local_rank: int, timeout_seconds: int) -> None:
+    """Start the process group with the rank to device mapping pinned.
+
+    Without ``device_id`` a communicator binds to whatever device happens to be
+    current when it is first used, which is how a leaked ``set_device`` in one
+    lane can give two ranks the same device and hang the next communicator.
+    The timeout turns a stuck collective into an error instead of a spin.
+    """
+
+    timeout = timedelta(seconds=timeout_seconds)
+    if mock:
+        dist.init_process_group("gloo", timeout=timeout)
+        return
+    dist.init_process_group(
+        "nccl",
+        timeout=timeout,
+        device_id=torch.device("cuda", local_rank),
+    )
 
 
 def _driver_version() -> str:
@@ -204,35 +234,37 @@ def _time_transfers(
         elapsed = (time.perf_counter_ns() - start) * 1e-9 / timed
         return [elapsed] * len(pairs)
 
+    # Every CUDA call below runs inside a torch.cuda.device context, which
+    # restores the previous device on exit. The lane must never leave the
+    # process pointed at another rank's device: a communicator created after
+    # it would bind to that device and deadlock.
     streams = []
     starts = []
     stops = []
     for src, _ in pairs:
-        torch.cuda.set_device(src)
-        streams.append(torch.cuda.Stream(device=src))
-        starts.append(torch.cuda.Event(enable_timing=True))
-        stops.append(torch.cuda.Event(enable_timing=True))
+        with torch.cuda.device(src):
+            streams.append(torch.cuda.Stream(device=src))
+            starts.append(torch.cuda.Event(enable_timing=True))
+            stops.append(torch.cuda.Event(enable_timing=True))
     devices = sorted({index for pair in pairs for index in pair})
 
     for _ in range(warmup):
         for index, (src, _) in enumerate(pairs):
-            torch.cuda.set_device(src)
-            with torch.cuda.stream(streams[index]):
+            with torch.cuda.device(src), torch.cuda.stream(streams[index]):
                 destinations[index].copy_(sources[index], non_blocking=True)
     for index in devices:
         torch.cuda.synchronize(index)
 
     for index, (src, _) in enumerate(pairs):
-        torch.cuda.set_device(src)
-        starts[index].record(streams[index])
+        with torch.cuda.device(src):
+            starts[index].record(streams[index])
     for _ in range(timed):
         for index, (src, _) in enumerate(pairs):
-            torch.cuda.set_device(src)
-            with torch.cuda.stream(streams[index]):
+            with torch.cuda.device(src), torch.cuda.stream(streams[index]):
                 destinations[index].copy_(sources[index], non_blocking=True)
     for index, (src, _) in enumerate(pairs):
-        torch.cuda.set_device(src)
-        stops[index].record(streams[index])
+        with torch.cuda.device(src):
+            stops[index].record(streams[index])
     for index in devices:
         torch.cuda.synchronize(index)
 
@@ -296,27 +328,43 @@ def check_peer_access(devices: list[int], mock: bool) -> list[dict[str, Any]]:
     return rows
 
 
-def run_lane_p1(stage: int, devices: list[int], mock: bool) -> list[dict[str, Any]]:
-    """Time the peer copy cells of lane P1 on rank 0."""
+def run_lane_p1(
+    stage: int,
+    devices: list[int],
+    mock: bool,
+    restore_device: int = 0,
+) -> list[dict[str, Any]]:
+    """Time the peer copy cells of lane P1 on rank 0.
+
+    The lane touches every visible device, so it restores the process device
+    on the way out even if a cell raises. ``restore_device`` is this rank's own
+    device, the one every later communicator must keep using.
+    """
 
     pool = BufferPool(mock)
     rows: list[dict[str, Any]] = []
-    for requested in _sweep(mock):
-        moved = _capped(requested, mock)
-        warmup, timed = _iterations(requested, mock)
-        for src, dst in ((0, 1), (1, 0)):
-            seconds = _time_transfers([(src, dst)], moved, warmup, timed, pool, mock)
-            rows.append(_copy_row("unidirectional", [(src, dst)], requested, moved, timed, seconds))
-        seconds = _time_transfers([(0, 1), (1, 0)], moved, warmup, timed, pool, mock)
-        row = _copy_row("bidirectional", [(0, 1), (1, 0)], requested, moved, timed, seconds)
-        row["direction"] = "bidirectional"
-        if mock:
-            row["concurrency"] = "sequential_mock"
-        rows.append(row)
+    try:
+        for requested in _sweep(mock):
+            moved = _capped(requested, mock)
+            warmup, timed = _iterations(requested, mock)
+            for src, dst in ((0, 1), (1, 0)):
+                seconds = _time_transfers([(src, dst)], moved, warmup, timed, pool, mock)
+                rows.append(
+                    _copy_row("unidirectional", [(src, dst)], requested, moved, timed, seconds)
+                )
+            seconds = _time_transfers([(0, 1), (1, 0)], moved, warmup, timed, pool, mock)
+            row = _copy_row("bidirectional", [(0, 1), (1, 0)], requested, moved, timed, seconds)
+            row["direction"] = "bidirectional"
+            if mock:
+                row["concurrency"] = "sequential_mock"
+            rows.append(row)
 
-    if stage == 2 and len(devices) >= 8:
-        rows.extend(_lane_p1_stage2(devices, pool, mock))
-    pool.release()
+        if stage == 2 and len(devices) >= 8:
+            rows.extend(_lane_p1_stage2(devices, pool, mock))
+    finally:
+        pool.release()
+        if not mock and torch.cuda.is_available():
+            torch.cuda.set_device(restore_device)
     return rows
 
 
@@ -723,6 +771,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="exercise the control flow on CPU tensors over gloo with capped payloads",
     )
+    parser.add_argument(
+        "--pg-timeout-seconds",
+        type=int,
+        default=PG_TIMEOUT_SECONDS,
+        help="process group timeout; a stuck collective raises instead of spinning",
+    )
     return parser.parse_args(argv)
 
 
@@ -752,17 +806,42 @@ def main(argv: list[str] | None = None) -> int:
         device_count = torch.cuda.device_count()
     devices = list(range(device_count))
     peer_access = check_peer_access(devices, args.mock)
+    if rank == 0:
+        _progress(f"peer access verified on {len(devices)} devices")
 
-    dist.init_process_group("gloo" if args.mock else "nccl")
+    _init_process_group(args.mock, local_rank, args.pg_timeout_seconds)
     device = torch.device("cpu") if args.mock else torch.device("cuda", local_rank)
+    if rank == 0:
+        _progress(
+            f"process group ready, backend {'gloo' if args.mock else 'nccl'}, "
+            f"timeout {args.pg_timeout_seconds} s"
+        )
 
     p1_rows: list[dict[str, Any]] = []
     if rank == 0:
-        p1_rows = run_lane_p1(args.stage, devices, args.mock)
+        _progress("P1 start")
+        started_lane = time.perf_counter()
+        p1_rows = run_lane_p1(args.stage, devices, args.mock, local_rank)
+        _progress(f"P1 end, {len(p1_rows)} rows in {time.perf_counter() - started_lane:.1f} s")
+    if not args.mock:
+        # Belt and braces: no lane may leave this process on another device.
+        torch.cuda.set_device(local_rank)
     dist.barrier()
+
+    if rank == 0:
+        _progress("P2 start")
+        started_lane = time.perf_counter()
     p2_rows = run_lane_p2(args.stage, args.mock, rank, world_size, device)
+    if rank == 0:
+        _progress(f"P2 end, {len(p2_rows)} rows in {time.perf_counter() - started_lane:.1f} s")
     dist.barrier()
+
+    if rank == 0:
+        _progress("P3 start")
+        started_lane = time.perf_counter()
     p3_rows = run_lane_p3(args.stage, args.mock, rank, world_size, device)
+    if rank == 0:
+        _progress(f"P3 end, {len(p3_rows)} rows in {time.perf_counter() - started_lane:.1f} s")
     dist.barrier()
 
     if rank == 0:

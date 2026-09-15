@@ -57,12 +57,35 @@ esac
 echo "nvlink precheck: $ACTIVE_LINKS active links, GPU0 to GPU1 is $PAIR_01"
 
 # 4. The timed lanes, one process per visible GPU.
+#
+#    Three guards keep a hang from eating the rental cap. The process group
+#    carries a timeout, so a stuck collective raises. The watchdog aborts the
+#    process on that timeout without changing how a completed collective is
+#    waited on, which blocking wait would, and which would add a host round
+#    trip to every timed iteration of the small-payload window this study
+#    scores. The hard wall clock is the only guard that also bounds a hang
+#    inside communicator bootstrap, where no collective exists to time out.
 RANKS=$(python -c "import torch; print(torch.cuda.device_count())")
-NCCL_DEBUG=INFO NCCL_DEBUG_SUBSYS=INIT,NET \
+LANE_WALL_CLOCK_SECONDS=900
+PG_TIMEOUT_SECONDS=120
+if [ "$STAGE" = "2" ]; then
+  # Lane P1 walks 56 ordered pairs while seven ranks wait in one barrier.
+  PG_TIMEOUT_SECONDS=300
+fi
+
+export NCCL_DEBUG=INFO
+export NCCL_DEBUG_SUBSYS=INIT,NET
+export TORCH_NCCL_ASYNC_ERROR_HANDLING=1
+timeout --signal=TERM "$LANE_WALL_CLOCK_SECONDS" \
   python -m torch.distributed.run --standalone --nproc_per_node="$RANKS" \
   examples/b200_nvlink_envelope_v1/bench_nvlink.py \
-  --stage "$STAGE" --output "$OUT" > "$OUT/nccl_bench.log" 2>&1
-BENCH_STATUS=$?
+  --stage "$STAGE" --output "$OUT" --pg-timeout-seconds "$PG_TIMEOUT_SECONDS" 2>&1 \
+  | tee "$OUT/nccl_bench.log" \
+  | grep --line-buffered -E "^(LANE|FATAL|wrote )" || true
+BENCH_STATUS="${PIPESTATUS[0]}"
+if [ "$BENCH_STATUS" = "124" ]; then
+  echo "BENCH TIMED OUT after $LANE_WALL_CLOCK_SECONDS s; see nccl_bench.log" >&2
+fi
 
 # 5. The listing the orchestrator reads back. STAGE_DONE means the stage
 #    script reached its end; bench_exit carries the lane's own status.
@@ -73,6 +96,8 @@ BENCH_STATUS=$?
   echo "ranks: $RANKS"
   echo "active_nvlinks: $ACTIVE_LINKS"
   echo "gpu0_gpu1: $PAIR_01"
+  echo "pg_timeout_seconds: $PG_TIMEOUT_SECONDS"
+  echo "lane_wall_clock_seconds: $LANE_WALL_CLOCK_SECONDS"
   echo "bench_exit: $BENCH_STATUS"
   echo "STAGE_DONE"
 } > "$OUT/listing.txt" 2>&1

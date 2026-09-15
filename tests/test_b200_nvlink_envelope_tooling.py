@@ -354,3 +354,145 @@ def test_the_benchmark_constants_match_the_freeze() -> None:
     assert bench._iterations(64 * 1024 * 1024, False) == (5, 20)
     assert bench._iterations(128 * 1024 * 1024, False) == (5, 10)
     assert math.isfinite(bench._rate(1024, 1e-6))
+
+
+class _FakeCudaDevices:
+    """Track the process device the way ``torch.cuda`` does, without a GPU."""
+
+    def __init__(self, current: int) -> None:
+        self.current = current
+        self.entered: list[int] = []
+        self.set_device_calls: list[int] = []
+
+
+class _FakeDeviceContext:
+    def __init__(self, state: _FakeCudaDevices, index: int) -> None:
+        self.state = state
+        self.index = index
+        self.previous = index
+
+    def __enter__(self):
+        self.previous = self.state.current
+        self.state.current = self.index
+        self.state.entered.append(self.index)
+        return self
+
+    def __exit__(self, *exc_info) -> bool:
+        self.state.current = self.previous
+        return False
+
+
+class _FakeStream:
+    def __init__(self, device=None) -> None:
+        self.device = device
+
+
+class _FakeStreamContext:
+    def __init__(self, stream) -> None:
+        self.stream = stream
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info) -> bool:
+        return False
+
+
+class _FakeEvent:
+    def __init__(self, enable_timing: bool = False) -> None:
+        self.enable_timing = enable_timing
+
+    def record(self, stream=None) -> None:
+        return None
+
+    def elapsed_time(self, other) -> float:
+        return 1.0
+
+
+def _fake_cuda(monkeypatch, bench, state: _FakeCudaDevices) -> None:
+    torch = bench.torch
+    monkeypatch.setattr(bench, "_device", lambda index, mock: torch.device("cpu"))
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+    monkeypatch.setattr(torch.cuda, "device", lambda index: _FakeDeviceContext(state, index))
+    monkeypatch.setattr(torch.cuda, "Stream", _FakeStream)
+    monkeypatch.setattr(torch.cuda, "stream", _FakeStreamContext)
+    monkeypatch.setattr(torch.cuda, "Event", _FakeEvent)
+    monkeypatch.setattr(torch.cuda, "synchronize", lambda index=None: None)
+    monkeypatch.setattr(torch.cuda, "empty_cache", lambda: None)
+    monkeypatch.setattr(torch.cuda, "current_device", lambda: state.current)
+
+    def _set_device(index: int) -> None:
+        state.current = index
+        state.set_device_calls.append(index)
+
+    monkeypatch.setattr(torch.cuda, "set_device", _set_device)
+
+
+def test_lane_p1_leaves_the_process_on_its_own_device(monkeypatch) -> None:
+    """The stage 1 hang: P1 walked both devices and left the process on one.
+
+    A communicator created afterwards binds to the current device, so rank 0
+    and rank 1 claimed the same GPU and the next init never completed.
+    """
+
+    pytest.importorskip("torch")
+    bench = _load("b200_nvlink_envelope_bench_devices", BENCH_PATH)
+    monkeypatch.setattr(bench, "PAYLOAD_BYTES", (8, 1_024))
+    state = _FakeCudaDevices(current=0)
+    _fake_cuda(monkeypatch, bench, state)
+
+    rows = bench.run_lane_p1(1, [0, 1], False, 0)
+
+    assert rows, "the lane produced no rows"
+    assert state.entered, "the lane never entered a device context"
+    assert 1 in state.entered, "the lane never drove the second device"
+    assert state.current == 0, "lane P1 left the process on another rank's device"
+    assert state.set_device_calls == [0], "only the deliberate restore may set the device"
+
+
+def test_lane_p1_restores_the_device_even_when_a_cell_raises(monkeypatch) -> None:
+    pytest.importorskip("torch")
+    bench = _load("b200_nvlink_envelope_bench_raises", BENCH_PATH)
+    monkeypatch.setattr(bench, "PAYLOAD_BYTES", (8,))
+    state = _FakeCudaDevices(current=0)
+    _fake_cuda(monkeypatch, bench, state)
+
+    def _boom(*args, **kwargs):
+        state.current = 1
+        raise RuntimeError("cell failed")
+
+    monkeypatch.setattr(bench, "_time_transfers", _boom)
+    with pytest.raises(RuntimeError):
+        bench.run_lane_p1(1, [0, 1], False, 0)
+    assert state.current == 0
+
+
+def test_the_cuda_path_pins_the_communicator_device(monkeypatch) -> None:
+    torch = pytest.importorskip("torch")
+    bench = _load("b200_nvlink_envelope_bench_init", BENCH_PATH)
+    calls: list[tuple[tuple, dict]] = []
+    monkeypatch.setattr(
+        bench.dist,
+        "init_process_group",
+        lambda *args, **kwargs: calls.append((args, kwargs)),
+    )
+
+    bench._init_process_group(False, 1, 120)
+    args, kwargs = calls[-1]
+    assert args[0] == "nccl"
+    assert kwargs["device_id"] == torch.device("cuda", 1)
+    assert kwargs["timeout"].total_seconds() == 120
+
+    bench._init_process_group(True, 0, 45)
+    args, kwargs = calls[-1]
+    assert args[0] == "gloo"
+    assert kwargs["timeout"].total_seconds() == 45
+    assert "device_id" not in kwargs
+
+
+def test_the_default_timeout_is_bounded() -> None:
+    pytest.importorskip("torch")
+    bench = _load("b200_nvlink_envelope_bench_timeout", BENCH_PATH)
+    assert 0 < bench.PG_TIMEOUT_SECONDS <= 600
+    args = bench.parse_args(["--stage", "1", "--output", "out"])
+    assert args.pg_timeout_seconds == bench.PG_TIMEOUT_SECONDS
