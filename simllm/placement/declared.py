@@ -488,9 +488,9 @@ def declared_resolved_placement_strategy(
 def _check_expert_map_exceptions(
     experts: DeclaredExpertLayout, tp: int, ep_size: int
 ) -> None:
-    """Refuse a layout the declared model-scoped exceptions cannot honor.
+    """Refuse a layout the declared exceptions cannot honor.
 
-    Both refusals are raised before the first rank is built, so a refusal
+    Every refusal here is raised before the first rank is built, so a refusal
     never leaves a half-populated manifest behind.
     """
 

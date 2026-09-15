@@ -143,17 +143,39 @@ def test_reference_manifests_keep_their_digests(tmp_path: Path) -> None:
         assert (size, sha) == (frozen[name]["bytes"], frozen[name]["sha256"]), name
 
 
+#: The baseline files this slice changes, so their recorded digests are
+#: pre-change values by design and no longer describe the tree. Everything
+#: else in the baseline must still match, which is what makes the record a
+#: statement about what the slice touched rather than a list of hashes.
+BASELINE_FILES_THIS_SLICE_CHANGES = {
+    # The two selections and their exports.
+    "simllm/placement/declared.py",
+    "simllm/placement/__init__.py",
+    # The registry: two entries close, one registers, the interface and status
+    # sections gain the selections.
+    "docs/modules/placement.md",
+    # Repointed at its merged commit hashes so its own --check runs on main.
+    "examples/sglang_declared_layout_v1/run_study.py",
+}
+
+
 def test_baseline_amendment_records_this_tree() -> None:
-    """The rebased baseline digests are the files this slice modifies."""
+    """Every baseline file the slice does not touch still matches its digest."""
 
     amendment = _baseline_amendment()
+    checked = 0
     for name, sha in amendment["baseline"]["files"].items():
-        if name in {"simllm/placement/declared.py", "simllm/placement/__init__.py"}:
-            # These two are what the slice changes; their pre-change digests
-            # are the point of the record, so they no longer match the tree.
+        if name in BASELINE_FILES_THIS_SLICE_CHANGES:
             continue
         blob = (ROOT / name).read_bytes()
         assert hashlib.sha256(blob).hexdigest() == sha, name
+        checked += 1
+    assert checked == len(amendment["baseline"]["files"]) - len(
+        BASELINE_FILES_THIS_SLICE_CHANGES
+    )
+    # Every name declared as changed must really be in the baseline, so a
+    # stale entry here cannot silently excuse a file the record never named.
+    assert BASELINE_FILES_THIS_SLICE_CHANGES <= set(amendment["baseline"]["files"])
 
 
 # --- PLACE-7 ---------------------------------------------------------------
