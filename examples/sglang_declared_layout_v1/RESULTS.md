@@ -256,3 +256,10 @@ run" and the status is `INCOMPLETE` rather than `PASS`, because the freeze
 makes that arm required for closure. The check mode rebuilds every cell and
 compares the summary to the tracked results, ignoring only the implementation
 commit stamp.
+
+The tracked `implementation_commit` field is that stamp: it records whichever
+commit was checked out when the run happened, it is the one field `--check`
+excludes, and it is therefore not repointed when history is rewritten. It
+still reads `7c02b28e`, the pre-rebase hash of the run; the rebased twin of
+that commit is `79c055e8`. The expectations and harness commits above, which
+`--check` does enforce, were repointed at their merged hashes.

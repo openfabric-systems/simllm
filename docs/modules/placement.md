@@ -427,7 +427,12 @@ slots, and reproduces every live DGX cell identically with the bound fabric.
   experts EPLB creates: `DeclaredExpertMapExceptions.redundant_experts`
   declares the condition that overrules a `round_robin` map, while the extra
   physical copies, their logical-to-physical map and its rebalancing epochs
-  are not represented at all. And the widths behind
+  are not represented at all; because of that the declared EPLB divisibility
+  refusal counts logical experts where vLLM counts
+  `global_num_experts = num_experts + num_redundant_experts`
+  (`model_executor/layers/fused_moe/layer.py`), so with redundant experts
+  declared the two can disagree about which expert counts divide. And the
+  widths behind
   `all2all_without_round_robin`: the declared layout folds
   `use_all2all_kernels and not needs_round_robin_routing_tables` into one
   boolean instead of stating a sequence-parallel width, a prefill

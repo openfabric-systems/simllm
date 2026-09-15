@@ -114,7 +114,7 @@ builder follows the source:
 |---|---|
 | Scored exact-oracle rows | 0 of 0, by design and as frozen; see "Why nothing is scored" |
 | Structural exact guards (V1, V3, V4, V5, V6, V7, V8, V10, V11, V12) | 10 of 10 cells exact |
-| Rejection controls (V9) | 8 of 8 refused, each a `ValueError` naming the field, with the four matching build controls all building unchanged |
+| Rejection controls (V9) | 8 of 8 refused, each a `ValueError` naming the field, with both matching build controls building unchanged |
 | Fatal off-path defaults (V2) | `expert_parallel` defaults true, `exceptions` defaults `None`, every condition defaults false |
 | Fatal compatibility digests | 5 of 5 reference manifests byte identical to the pre-change record |
 | Fatal study checks | PLACE-3 and PLACE-13 both reproduced their tracked results |
@@ -286,6 +286,44 @@ reported as a passing fraction of anything.
   strategy, not the declared one, so a layout refused before this slice builds
   once a condition forces `linear`. V5 is the frozen row. No existing manifest
   moves, because the resolution is the identity without the new fields.
+- **Why the two remainder refusals treat `expert_parallel` differently.**
+  `eplb`'s refusal is skipped when expert parallelism is off, and
+  `model_uniform_expert_blocks`'s is not. That asymmetry follows the source.
+  vLLM's EPLB refusal sits behind `if use_ep and ...` in
+  `model_executor/layers/fused_moe/layer.py`, so it cannot fire with the flag
+  off. The `MixtureOfExperts` bookkeeping the other condition mirrors never
+  reads `moe_parallel_config.ep_size`; it reads the EP process group, as
+  `self.ep_size = self.ep_group.size()` in `mixtral.py` and `deepseek_v2.py`.
+  That group exists for every MoE model whatever the launcher asks, which is
+  the fact `expert_parallel=False` exists to state, so it keeps its `DP x TP`
+  size and the model's uniform block arithmetic runs on it either way.
+
+## Disclosures
+
+Two places where the declared statement is knowingly narrower than the
+framework. Neither changes a frozen cell, and both are recorded here rather
+than left for a reader to find.
+
+- **The EPLB refusal counts a different number.** vLLM tests
+  `global_num_experts % ep_size`, and `layer.py` builds `global_num_experts`
+  as `num_experts + num_redundant_experts`. The declared layout tests the
+  logical `num_experts`, because it does not represent the redundant physical
+  copies and therefore cannot compute the framework's number. With
+  `redundant_experts=True` the two refusals can disagree about which expert
+  counts divide: a layout this module accepts may be one vLLM's EPLB path
+  rejects, and the reverse. The counts agree exactly when no redundant experts
+  are declared, which is every cell in this study. PLACE-15 owns the
+  representation that would close it.
+- **A condition pair vLLM refuses to boot.** The builder accepts
+  `DeclaredExpertMapExceptions(redundant_experts=True, eplb=False)`, and cell
+  V7 scores `redundant_experts` as an independent fallback row. vLLM asserts
+  `num_redundant_experts == 0` in the `else` arm of its `enable_eplb` branch,
+  so that combination never reaches a running engine. The row is kept because
+  `determine_expert_placement_strategy` really does test the two conditions
+  independently, and the declared conditions are meant to be a faithful
+  transcript of that resolver rather than a second, different rule. Read the
+  V7 `redundant_experts` row as "what the map resolver does with this
+  condition", not as a deployment anyone can launch.
 
 ## Reproduction
 
