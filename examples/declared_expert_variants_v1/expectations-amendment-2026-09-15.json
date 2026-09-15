@@ -1,0 +1,42 @@
+{
+  "schema": "simllm-declared-expert-variants-amendment-v1",
+  "tasks": ["PLACE-7", "PLACE-11"],
+  "date": "2026-09-15",
+  "chronology": "baseline replacement only, frozen before the implementation; no cell, literal, refusal, interface or closure condition changes",
+  "reason": "the freeze named this case: PLACE-13 landed first, so the declared builder, the placement package entry and the placement registry carry new digests",
+  "place13_landed_at": "622188a1308b379f2c1c7943e4f45ccfe7583e8f",
+  "baseline": {
+    "commit": "841dfb380180608f6c18b68ed5ae1e585d9be689",
+    "commit_is": "the 2026-09-15 freeze replayed onto the main branch head that carries PLACE-13",
+    "files": {
+      "docs/modules/placement.md": "56a289dee802145a5a4d3d196248b4a68afc0c3ed587509f074b328bbf4715ec",
+      "examples/declared_expert_placement_v1/run_study.py": "a15c931a4df8109a6e2be34f727f0733e2f8be5635661810969668307bce54d6",
+      "examples/sglang_declared_layout_v1/run_study.py": "bb2737733a4f768cf7424ac15b5fba02af5e64dfea20783e0fc34b7d086384dc",
+      "simllm/adapters/vllm/schedule.py": "ed62a1ae58ffe50d9d5c5b4b406776cb471867a0327adf048154e898cd83116d",
+      "simllm/placement/__init__.py": "7834bb2dc186e276e8424abb96d9f90fc443db8a2b71e881270aa560f02b6234",
+      "simllm/placement/declared.py": "86f05437dd935ebade8c8d0c71dc4c02b41e3a6d0b36470588210cda02df37e3",
+      "simllm/placement/manifest.py": "2304a34692881bb6ead2ab9cd09ea6964ec4048b5226e8744bce4de368f5921e",
+      "tests/test_declared_expert_placement.py": "458173c5424f185c43c6257e1b5f68911dfe40fbd9a3fe1f85b858dc64581e2a",
+      "tests/test_sglang_declared_layout.py": "00b6d452ebe0d643ed682d1ce3c5890d45d2ec357e4292ce251d5df96012c1d5"
+    },
+    "files_moved": [
+      "docs/modules/placement.md",
+      "simllm/placement/__init__.py",
+      "simllm/placement/declared.py"
+    ],
+    "files_added_to_baseline": [
+      "examples/sglang_declared_layout_v1/run_study.py",
+      "tests/test_sglang_declared_layout.py"
+    ]
+  },
+  "unchanged": {
+    "placement_records": "all five reference manifest digests were recomputed on the new base and are byte for byte the frozen values",
+    "cells": "V1 through V13",
+    "evidence": "zero scored rows, the same structural, rejection, fatal and finding classes",
+    "closure": "both PLACE-7 and PLACE-11 conditions stand as frozen",
+    "fatal_identities": [
+      "place3_study_check_reproduces",
+      "place13_study_check_reproduces"
+    ]
+  }
+}
