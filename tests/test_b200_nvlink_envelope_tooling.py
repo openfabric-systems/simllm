@@ -496,3 +496,131 @@ def test_the_default_timeout_is_bounded() -> None:
     assert 0 < bench.PG_TIMEOUT_SECONDS <= 600
     args = bench.parse_args(["--stage", "1", "--output", "out"])
     assert args.pg_timeout_seconds == bench.PG_TIMEOUT_SECONDS
+
+
+def _method_row(size: int, method: str, time_ns: float) -> dict:
+    return {
+        "cell": "unidirectional",
+        "method": method,
+        "of_record": method == ("graph" if size <= 1_048_576 else "eager"),
+        "direction": "0->1",
+        "requested_bytes": size,
+        "bytes": size,
+        "iterations": 200 if size <= 1_048_576 else 20,
+        "status": "measured",
+        "time_ns": time_ns,
+        "bytes_per_second": size / (time_ns * 1e-9),
+    }
+
+
+def test_the_scorer_selects_the_amendments_row_of_record() -> None:
+    """Graph rows at or below 1 MiB, eager rows above, fallbacks disclosed."""
+
+    pytest.importorskip("numpy")
+    scorer = _scorer()
+    rows = [
+        _method_row(8, "graph", 5_000.0),
+        _method_row(8, "eager", 80_000.0),
+        _method_row(1_048_576, "graph", 9_000.0),
+        _method_row(1_048_576, "eager", 43_000.0),
+        _method_row(2_097_152, "graph", 12_000.0),
+        _method_row(2_097_152, "eager", 11_000.0),
+        _method_row(4_194_304, "eager", 20_000.0),
+    ]
+    selected, record = scorer.rows_of_record(rows)
+    chosen = {row["requested_bytes"]: scorer.row_method(row) for row in selected}
+    assert chosen == {
+        8: "graph",
+        1_048_576: "graph",
+        2_097_152: "eager",
+        4_194_304: "eager",
+    }
+    assert record["fallback_payload_bytes"] == []
+    assert record["methods_present"] == ["eager", "graph"]
+
+    eager_only = [row for row in rows if scorer.row_method(row) == "eager"]
+    selected, record = scorer.rows_of_record(eager_only)
+    assert record["fallback_payload_bytes"] == [8, 1_048_576]
+    assert all(scorer.row_method(row) == "eager" for row in selected)
+
+    assert scorer.method_of_record(1_048_576) == "graph"
+    assert scorer.method_of_record(1_048_577) == "eager"
+    assert scorer.row_method({"bytes": 8}) == "eager"
+
+
+def test_the_scorer_reports_a_degenerate_fit_instead_of_crashing(tmp_path: Path) -> None:
+    """The stage 1 shape: a flat window whose fitted slope is not positive."""
+
+    pytest.importorskip("numpy")
+    expectations = _expectations()
+    result = _synthetic_result(expectations)
+    for row in result["p3"]:
+        size = row["requested_bytes"]
+        if size <= 262_144:
+            row["time_ns"] = 70_000.0 + (8 - size) * 1e-6
+            row["method"] = "graph"
+    report = _score(result, tmp_path)
+
+    fit = _outcome(report, "E5-fit")
+    assert fit["passed"] is False
+    assert fit["observed"]["fit_degenerate"] is True
+    assert "not positive" in fit["observed"]["fit_reason"]
+    holdout = _outcome(report, "E5-holdout-w2")
+    assert holdout["passed"] is False
+    assert holdout["observed"]["fit_degenerate"] is True
+    assert report["proposed_profile"] is None
+    assert report["void"] is False
+
+    raw = (tmp_path / "measurements" / "scored.json").read_text()
+    assert "Infinity" not in raw and "NaN" not in raw
+    json.loads(raw)
+
+
+def test_a_degenerate_fit_is_structured_not_an_exception() -> None:
+    pytest.importorskip("numpy")
+    scorer = _scorer()
+    flat = scorer.ols_fit([1.0, 2.0, 3.0], [5.0, 5.0, 5.0])
+    assert flat.degenerate is True
+    assert flat.beta_bytes_per_second == float("inf")
+    too_few = scorer.ols_fit([1.0], [5.0])
+    assert too_few.degenerate is True
+    assert "at least 3" in too_few.reason
+    no_spread = scorer.ols_fit([2.0, 2.0, 2.0], [1.0, 2.0, 3.0])
+    assert no_spread.degenerate is True
+    good = scorer.ols_fit([1.0, 2.0, 3.0], [2.0, 3.0, 4.0])
+    assert good.degenerate is False
+    assert good.beta_bytes_per_second == pytest.approx(1.0)
+    assert scorer._finite(float("inf")) is None
+    assert scorer._sanitize({"a": [float("nan"), 1.0]}) == {"a": [None, 1.0]}
+
+
+def test_the_graph_path_is_requested_only_in_cuda_mode() -> None:
+    pytest.importorskip("torch")
+    bench = _load("b200_nvlink_envelope_bench_graph", BENCH_PATH)
+
+    assert bench._graph_supported(True) is False
+    assert bench.GRAPH_ROW_MAX_BYTES == 1_048_576
+    assert bench._iterations(1_048_576, False) == (5, 200)
+    assert bench._iterations(2_097_152, False) == (5, 20)
+    assert bench._of_record("graph", 1_048_576) is True
+    assert bench._of_record("eager", 1_048_576) is False
+    assert bench._of_record("eager", 2_097_152) is True
+
+    enabled, reason = bench.probe_graph_support(True, bench.torch.device("cpu"))
+    assert enabled is False
+    assert "mock" in reason
+
+    seconds, skip = bench._time_block(
+        True, bench.torch.device("cpu"), 2, lambda: None, bench.METHOD_GRAPH
+    )
+    assert seconds == 0.0
+    assert "cannot be captured" in skip
+
+    pool = bench.BufferPool(True)
+    seconds, skip = bench._time_transfers(
+        [(0, 1)], 8, 1, 2, pool, True, bench.METHOD_GRAPH
+    )
+    assert seconds == []
+    assert "cannot be captured" in skip
+    seconds, skip = bench._time_transfers([(0, 1)], 8, 1, 2, pool, True, bench.METHOD_EAGER)
+    assert len(seconds) == 1 and skip == ""

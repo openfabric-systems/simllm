@@ -52,6 +52,17 @@ MOCK_WARMUP_ITERATIONS = 1
 MOCK_TIMED_ITERATIONS = 2
 MOCK_DEVICE_COUNT = {1: 2, 2: 8}
 
+#: amendment of 2026-09-15: at or below this payload the row of record is
+#: measured by CUDA graph replay and the timed count rises to 200, because
+#: eager Python dispatch, not the link, bounds a smaller transfer.
+GRAPH_ROW_MAX_BYTES = 1024 * 1024
+TIMED_ITERATIONS_AT_OR_BELOW_1MIB = 200
+METHOD_GRAPH = "graph"
+METHOD_EAGER = "eager"
+METHODS: tuple[str, ...] = (METHOD_GRAPH, METHOD_EAGER)
+GRAPH_WARMUP_ITERATIONS = 3
+GRAPH_PROBE_ELEMENTS = 8
+
 STAGE2_ALL_PAIRS_PAYLOADS: tuple[int, ...] = (65536, 16777216, 1073741824)
 STAGE2_CONCURRENT_PAYLOAD = 67108864
 STAGE2_FANIN_DONORS: tuple[int, ...] = (1, 2, 3, 4, 5, 6, 7)
@@ -151,13 +162,33 @@ def _nccl_version() -> Any:
 
 
 def _iterations(nbytes: int, mock: bool) -> tuple[int, int]:
-    """Return ``(warmup, timed)`` for one payload under the frozen rule."""
+    """Return ``(warmup, timed)`` for one payload.
+
+    The freeze sets 5 warmup and 20 timed, 10 above 64 MiB. The amendment
+    raises the timed count to 200 at or below 1 MiB, where one row was noisier
+    than the payload term it was meant to measure.
+    """
 
     if mock:
         return MOCK_WARMUP_ITERATIONS, MOCK_TIMED_ITERATIONS
+    if nbytes <= GRAPH_ROW_MAX_BYTES:
+        return WARMUP_ITERATIONS, TIMED_ITERATIONS_AT_OR_BELOW_1MIB
     if nbytes > LARGE_PAYLOAD_BYTES:
         return WARMUP_ITERATIONS, TIMED_ITERATIONS_ABOVE_64MIB
     return WARMUP_ITERATIONS, TIMED_ITERATIONS
+
+
+def _of_record(method: str, requested_bytes: int) -> bool:
+    """Return whether this method is the amendment's row of record."""
+
+    expected = METHOD_GRAPH if requested_bytes <= GRAPH_ROW_MAX_BYTES else METHOD_EAGER
+    return method == expected
+
+
+def _graph_supported(mock: bool) -> bool:
+    """Return whether this process can capture a CUDA graph at all."""
+
+    return not mock and torch.cuda.is_available() and hasattr(torch.cuda, "CUDAGraph")
 
 
 def _sweep(mock: bool) -> tuple[int, ...]:
@@ -200,6 +231,28 @@ class BufferPool:
             torch.cuda.empty_cache()
 
 
+def _capture(issue: Any, timed: int, device_index: int | None = None) -> Any:
+    """Capture ``timed`` issues of ``issue`` into a CUDA graph.
+
+    The caller warms the work up first, on a side stream, with the
+    communicator already initialized. Capture runs on the graph context's own
+    side stream, so the replay can be launched later on whichever stream the
+    lane wants to time.
+    """
+
+    graph = torch.cuda.CUDAGraph()
+    context = torch.cuda.graph(graph, capture_error_mode="thread_local")
+    if device_index is None:
+        with context:
+            for _ in range(timed):
+                issue()
+        return graph
+    with torch.cuda.device(device_index), context:
+        for _ in range(timed):
+            issue()
+    return graph
+
+
 def _time_transfers(
     pairs: list[tuple[int, int]],
     nbytes: int,
@@ -207,13 +260,15 @@ def _time_transfers(
     timed: int,
     pool: BufferPool,
     mock: bool,
-) -> list[float]:
+    method: str = METHOD_EAGER,
+) -> tuple[list[float], str]:
     """Time one group of simultaneous copies and return per-pair seconds.
 
     Each copy runs on its own stream on its source device, which is the stream
     PyTorch issues a cross-device ``copy_`` on, so the events bracket the
     issuing stream. The makespan of the group is the maximum of the returned
-    seconds.
+    seconds. The second return value is empty on success and carries the
+    reason when a graph row could not be captured.
     """
 
     sources = [
@@ -224,6 +279,8 @@ def _time_transfers(
     ]
 
     if mock:
+        if method == METHOD_GRAPH:
+            return [], "mock mode copies CPU tensors, which cannot be captured"
         for _ in range(warmup):
             for source, destination in zip(sources, destinations):
                 destination.copy_(source)
@@ -232,7 +289,10 @@ def _time_transfers(
             for source, destination in zip(sources, destinations):
                 destination.copy_(source)
         elapsed = (time.perf_counter_ns() - start) * 1e-9 / timed
-        return [elapsed] * len(pairs)
+        return [elapsed] * len(pairs), ""
+
+    if method == METHOD_GRAPH and not _graph_supported(mock):
+        return [], "this process cannot capture a CUDA graph"
 
     # Every CUDA call below runs inside a torch.cuda.device context, which
     # restores the previous device on exit. The lane must never leave the
@@ -255,22 +315,44 @@ def _time_transfers(
     for index in devices:
         torch.cuda.synchronize(index)
 
+    graphs: list[Any] = []
+    if method == METHOD_GRAPH:
+        # One graph per pair, captured on that pair's source device, so the
+        # replay keeps the concurrency of the cell.
+        for index, (src, _) in enumerate(pairs):
+
+            def _issue(index: int = index) -> None:
+                destinations[index].copy_(sources[index], non_blocking=True)
+
+            try:
+                graphs.append(_capture(_issue, timed, src))
+            except Exception as error:  # noqa: BLE001 - any capture failure falls back
+                for device_index in devices:
+                    torch.cuda.synchronize(device_index)
+                return [], f"{type(error).__name__}: {error}"
+
     for index, (src, _) in enumerate(pairs):
         with torch.cuda.device(src):
             starts[index].record(streams[index])
-    for _ in range(timed):
+    if graphs:
         for index, (src, _) in enumerate(pairs):
             with torch.cuda.device(src), torch.cuda.stream(streams[index]):
-                destinations[index].copy_(sources[index], non_blocking=True)
+                graphs[index].replay()
+    else:
+        for _ in range(timed):
+            for index, (src, _) in enumerate(pairs):
+                with torch.cuda.device(src), torch.cuda.stream(streams[index]):
+                    destinations[index].copy_(sources[index], non_blocking=True)
     for index, (src, _) in enumerate(pairs):
         with torch.cuda.device(src):
             stops[index].record(streams[index])
     for index in devices:
         torch.cuda.synchronize(index)
 
-    return [
-        starts[index].elapsed_time(stops[index]) * 1e-3 / timed for index in range(len(pairs))
-    ]
+    return (
+        [starts[index].elapsed_time(stops[index]) * 1e-3 / timed for index in range(len(pairs))],
+        "",
+    )
 
 
 def _copy_row(
@@ -280,11 +362,14 @@ def _copy_row(
     moved_bytes: int,
     timed: int,
     seconds: list[float],
+    method: str,
 ) -> dict[str, Any]:
     makespan = max(seconds)
     aggregate = moved_bytes * len(pairs)
     row: dict[str, Any] = {
         "cell": cell,
+        "method": method,
+        "of_record": _of_record(method, requested_bytes),
         "pairs": [list(pair) for pair in pairs],
         "src": pairs[0][0],
         "dst": pairs[0][1],
@@ -300,6 +385,39 @@ def _copy_row(
         "aggregate_bytes_per_second": _rate(aggregate, makespan),
     }
     return row
+
+
+def _copy_cell_rows(
+    cell: str,
+    pairs: list[tuple[int, int]],
+    requested: int,
+    pool: BufferPool,
+    mock: bool,
+    methods: tuple[str, ...] = (METHOD_EAGER,),
+) -> list[dict[str, Any]]:
+    """Time one copy cell by both methods and return the rows.
+
+    The amendment keeps the eager measurement beside the graph replay at every
+    payload, so the dispatch floor stays on the record.
+    """
+
+    moved = _capped(requested, mock)
+    warmup, timed = _iterations(requested, mock)
+    rows: list[dict[str, Any]] = []
+    skip_reason = ""
+    for method in methods:
+        seconds, reason = _time_transfers(pairs, moved, warmup, timed, pool, mock, method)
+        if not seconds:
+            skip_reason = reason
+            continue
+        rows.append(_copy_row(cell, pairs, requested, moved, timed, seconds, method))
+    for row in rows:
+        if skip_reason:
+            row["graph_skipped"] = True
+            row["graph_skip_reason"] = skip_reason
+        if mock and row["method"] == METHOD_EAGER and len(pairs) > 1:
+            row["concurrency"] = "sequential_mock"
+    return rows
 
 
 def check_peer_access(devices: list[int], mock: bool) -> list[dict[str, Any]]:
@@ -333,6 +451,7 @@ def run_lane_p1(
     devices: list[int],
     mock: bool,
     restore_device: int = 0,
+    methods: tuple[str, ...] = (METHOD_EAGER,),
 ) -> list[dict[str, Any]]:
     """Time the peer copy cells of lane P1 on rank 0.
 
@@ -345,22 +464,20 @@ def run_lane_p1(
     rows: list[dict[str, Any]] = []
     try:
         for requested in _sweep(mock):
-            moved = _capped(requested, mock)
-            warmup, timed = _iterations(requested, mock)
             for src, dst in ((0, 1), (1, 0)):
-                seconds = _time_transfers([(src, dst)], moved, warmup, timed, pool, mock)
-                rows.append(
-                    _copy_row("unidirectional", [(src, dst)], requested, moved, timed, seconds)
+                rows.extend(
+                    _copy_cell_rows(
+                        "unidirectional", [(src, dst)], requested, pool, mock, methods
+                    )
                 )
-            seconds = _time_transfers([(0, 1), (1, 0)], moved, warmup, timed, pool, mock)
-            row = _copy_row("bidirectional", [(0, 1), (1, 0)], requested, moved, timed, seconds)
-            row["direction"] = "bidirectional"
-            if mock:
-                row["concurrency"] = "sequential_mock"
-            rows.append(row)
+            for row in _copy_cell_rows(
+                "bidirectional", [(0, 1), (1, 0)], requested, pool, mock, methods
+            ):
+                row["direction"] = "bidirectional"
+                rows.append(row)
 
         if stage == 2 and len(devices) >= 8:
-            rows.extend(_lane_p1_stage2(devices, pool, mock))
+            rows.extend(_lane_p1_stage2(devices, pool, mock, methods))
     finally:
         pool.release()
         if not mock and torch.cuda.is_available():
@@ -372,43 +489,35 @@ def _lane_p1_stage2(
     devices: list[int],
     pool: BufferPool,
     mock: bool,
+    methods: tuple[str, ...],
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for requested in STAGE2_ALL_PAIRS_PAYLOADS:
-        moved = _capped(requested, mock)
-        warmup, timed = _iterations(requested, mock)
         for src in devices:
             for dst in devices:
                 if src == dst:
                     continue
-                seconds = _time_transfers([(src, dst)], moved, warmup, timed, pool, mock)
-                rows.append(
-                    _copy_row("all_pairs", [(src, dst)], requested, moved, timed, seconds)
+                rows.extend(
+                    _copy_cell_rows("all_pairs", [(src, dst)], requested, pool, mock, methods)
                 )
 
     requested = STAGE2_CONCURRENT_PAYLOAD
-    moved = _capped(requested, mock)
-    warmup, timed = _iterations(requested, mock)
-
     disjoint = [(0, 1), (2, 3), (4, 5), (6, 7)]
-    seconds = _time_transfers(disjoint, moved, warmup, timed, pool, mock)
-    row = _copy_row("disjoint_pairs", disjoint, requested, moved, timed, seconds)
-    row["direction"] = "four disjoint pairs"
-    rows.append(row)
+    for row in _copy_cell_rows("disjoint_pairs", disjoint, requested, pool, mock, methods):
+        row["direction"] = "four disjoint pairs"
+        rows.append(row)
 
     fanout = [(0, peer) for peer in devices if peer != 0]
-    seconds = _time_transfers(fanout, moved, warmup, timed, pool, mock)
-    row = _copy_row("fanout", fanout, requested, moved, timed, seconds)
-    row["direction"] = "0->all"
-    rows.append(row)
+    for row in _copy_cell_rows("fanout", fanout, requested, pool, mock, methods):
+        row["direction"] = "0->all"
+        rows.append(row)
 
     for donors in STAGE2_FANIN_DONORS:
         fanin = [(donor, 0) for donor in devices[1 : donors + 1]]
-        seconds = _time_transfers(fanin, moved, warmup, timed, pool, mock)
-        row = _copy_row("fanin", fanin, requested, moved, timed, seconds)
-        row["direction"] = f"{donors}->0"
-        row["donors"] = donors
-        rows.append(row)
+        for row in _copy_cell_rows("fanin", fanin, requested, pool, mock, methods):
+            row["direction"] = f"{donors}->0"
+            row["donors"] = donors
+            rows.append(row)
     return rows
 
 
@@ -420,22 +529,101 @@ def _max_across(value: float, device: torch.device, group: Any = None) -> float:
     return float(tensor.item())
 
 
-def _time_block(mock: bool, device: torch.device, timed: int, issue: Any) -> float:
-    """Time ``timed`` issues of ``issue`` on the issuing stream."""
+def _all_agree(value: bool, device: torch.device, group: Any = None) -> bool:
+    """Return whether every rank of ``group`` reports ``True``."""
+
+    tensor = torch.tensor([1.0 if value else 0.0], dtype=torch.float64, device=device)
+    dist.all_reduce(tensor, op=dist.ReduceOp.MIN, group=group)
+    return bool(tensor.item() > 0.5)
+
+
+def probe_graph_support(mock: bool, device: torch.device) -> tuple[bool, str]:
+    """Decide once, for every rank together, whether NCCL rows can be captured.
+
+    Capture and replay have to happen in lockstep: a rank that replayed a graph
+    while another issued eagerly would leave the communicator mismatched. One
+    agreed decision for the whole run removes that risk, and a container that
+    cannot capture simply records eager rows and says so.
+    """
+
+    if not _graph_supported(mock):
+        return False, "mock mode or no CUDA graph support in this build"
+    probe = torch.zeros(GRAPH_PROBE_ELEMENTS, dtype=torch.float32, device=device)
+
+    def issue() -> None:
+        dist.all_reduce(probe)
+
+    reason = ""
+    captured = True
+    try:
+        for _ in range(GRAPH_WARMUP_ITERATIONS):
+            issue()
+        torch.cuda.synchronize(device)
+        graph = _capture(issue, 2)
+        graph.replay()
+        torch.cuda.synchronize(device)
+        del graph
+    except Exception as error:  # noqa: BLE001 - any capture failure disables the method
+        captured = False
+        reason = f"{type(error).__name__}: {error}"
+        torch.cuda.synchronize(device)
+    agreed = _all_agree(captured, device)
+    if not agreed and not reason:
+        reason = "another rank could not capture a CUDA graph"
+    return agreed, reason
+
+
+def _time_block(
+    mock: bool,
+    device: torch.device,
+    timed: int,
+    issue: Any,
+    method: str = METHOD_EAGER,
+) -> tuple[float, str]:
+    """Time ``timed`` issues of ``issue`` and return ``(seconds, reason)``.
+
+    The eager path issues every iteration from Python between the CUDA events,
+    which is what the amendment keeps as a control. The graph path captures the
+    iterations once and replays them inside the same bracket, so no dispatch
+    sits between them.
+    """
 
     if mock:
+        if method == METHOD_GRAPH:
+            return 0.0, "mock mode runs on CPU over gloo, which cannot be captured"
         start = time.perf_counter_ns()
         for _ in range(timed):
             issue()
-        return (time.perf_counter_ns() - start) * 1e-9 / timed
+        return (time.perf_counter_ns() - start) * 1e-9 / timed, ""
+
     begin = torch.cuda.Event(enable_timing=True)
     end = torch.cuda.Event(enable_timing=True)
+    if method == METHOD_GRAPH:
+        try:
+            side = torch.cuda.Stream(device=device)
+            side.wait_stream(torch.cuda.current_stream(device))
+            with torch.cuda.stream(side):
+                for _ in range(GRAPH_WARMUP_ITERATIONS):
+                    issue()
+            torch.cuda.current_stream(device).wait_stream(side)
+            torch.cuda.synchronize(device)
+            graph = _capture(issue, timed)
+        except Exception as error:  # noqa: BLE001 - fall back to the eager row
+            torch.cuda.synchronize(device)
+            return 0.0, f"{type(error).__name__}: {error}"
+        begin.record(torch.cuda.current_stream(device))
+        graph.replay()
+        end.record(torch.cuda.current_stream(device))
+        torch.cuda.synchronize(device)
+        del graph
+        return begin.elapsed_time(end) * 1e-3 / timed, ""
+
     begin.record(torch.cuda.current_stream(device))
     for _ in range(timed):
         issue()
     end.record(torch.cuda.current_stream(device))
     torch.cuda.synchronize(device)
-    return begin.elapsed_time(end) * 1e-3 / timed
+    return begin.elapsed_time(end) * 1e-3 / timed, ""
 
 
 def _p2_pair_cell(
@@ -445,21 +633,23 @@ def _p2_pair_cell(
     mock: bool,
     rank: int,
     device: torch.device,
+    method: str,
 ) -> dict[str, Any] | None:
-    """Time one unidirectional point-to-point payload with its 8-byte token.
+    """Time one unidirectional point-to-point payload and its 8-byte reply.
 
-    Only the two ranks of the pair transfer anything. The source rank times the
-    block and returns the row; every other rank returns ``None`` and the rows
-    are gathered once at the end of the lane.
+    Both ranks of the pair run the identical block, so a captured graph stays
+    in lockstep; only the source rank reports the row. Under the eager method
+    the reply is the freeze's host-side completion token. Under the graph
+    method the same exchange is captured, so the reply still proves completion
+    but costs no host round trip per iteration.
     """
 
     moved = _capped(requested, mock)
     warmup, timed = _iterations(requested, mock)
-    payload = None
-    token = None
-    if rank in (src, dst):
-        payload = torch.empty(moved, dtype=torch.uint8, device=device)
-        token = torch.empty(TOKEN_BYTES, dtype=torch.uint8, device=device)
+    if rank not in (src, dst):
+        return None
+    payload = torch.empty(moved, dtype=torch.uint8, device=device)
+    token = torch.empty(TOKEN_BYTES, dtype=torch.uint8, device=device)
 
     def issue() -> None:
         if rank == src:
@@ -467,27 +657,23 @@ def _p2_pair_cell(
             recv = dist.irecv(token, dst)
             send.wait()
             recv.wait()
-        elif rank == dst:
+        else:
             recv = dist.irecv(payload, src)
             send = dist.isend(token, src)
             recv.wait()
             send.wait()
 
-    if rank not in (src, dst):
-        return None
     for _ in range(warmup):
         issue()
     if not mock:
         torch.cuda.synchronize(device)
-    if rank == dst:
-        for _ in range(timed):
-            issue()
-        if not mock:
-            torch.cuda.synchronize(device)
+    seconds, reason = _time_block(mock, device, timed, issue, method)
+    if reason or rank != src:
         return None
-    seconds = _time_block(mock, device, timed, issue)
     return {
         "cell": "unidirectional",
+        "method": method,
+        "of_record": _of_record(method, requested),
         "src": src,
         "dst": dst,
         "direction": f"{src}->{dst}",
@@ -508,21 +694,19 @@ def _p2_bidirectional_cell(
     mock: bool,
     rank: int,
     device: torch.device,
+    method: str,
 ) -> dict[str, Any] | None:
     """Time one bidirectional exchange issued with ``batch_isend_irecv``."""
 
     moved = _capped(requested, mock)
     warmup, timed = _iterations(requested, mock)
-    send_buffer = None
-    recv_buffer = None
+    if rank not in (src, dst):
+        return None
     peer = dst if rank == src else src
-    if rank in (src, dst):
-        send_buffer = torch.empty(moved, dtype=torch.uint8, device=device)
-        recv_buffer = torch.empty(moved, dtype=torch.uint8, device=device)
+    send_buffer = torch.empty(moved, dtype=torch.uint8, device=device)
+    recv_buffer = torch.empty(moved, dtype=torch.uint8, device=device)
 
     def issue() -> None:
-        if rank not in (src, dst):
-            return
         ops = [
             dist.P2POp(dist.isend, send_buffer, peer),
             dist.P2POp(dist.irecv, recv_buffer, peer),
@@ -530,21 +714,17 @@ def _p2_bidirectional_cell(
         for work in dist.batch_isend_irecv(ops):
             work.wait()
 
-    if rank not in (src, dst):
-        return None
     for _ in range(warmup):
         issue()
     if not mock:
         torch.cuda.synchronize(device)
-    if rank == dst:
-        for _ in range(timed):
-            issue()
-        if not mock:
-            torch.cuda.synchronize(device)
+    seconds, reason = _time_block(mock, device, timed, issue, method)
+    if reason or rank != src:
         return None
-    seconds = _time_block(mock, device, timed, issue)
     return {
         "cell": "bidirectional",
+        "method": method,
+        "of_record": _of_record(method, requested),
         "src": src,
         "dst": dst,
         "direction": "bidirectional",
@@ -565,6 +745,7 @@ def run_lane_p2(
     rank: int,
     world_size: int,
     device: torch.device,
+    methods: tuple[str, ...],
 ) -> list[dict[str, Any]]:
     """Time the NCCL point-to-point cells of lane P2."""
 
@@ -572,24 +753,26 @@ def run_lane_p2(
     if world_size < 2:
         return rows
     for requested in _sweep(mock):
-        for row in (
-            _p2_pair_cell(0, 1, requested, mock, rank, device),
-            _p2_bidirectional_cell(0, 1, requested, mock, rank, device),
-        ):
-            if row is not None:
-                rows.append(row)
+        for method in methods:
+            for row in (
+                _p2_pair_cell(0, 1, requested, mock, rank, device, method),
+                _p2_bidirectional_cell(0, 1, requested, mock, rank, device, method),
+            ):
+                if row is not None:
+                    rows.append(row)
     if stage == 2:
         for src, dst in STAGE2_P2_PAIRS:
             if max(src, dst) >= world_size:
                 continue
             for requested in STAGE2_P2_PAYLOADS:
-                # One pair at a time, so a placement cell measures an
-                # otherwise idle fabric.
-                dist.barrier()
-                row = _p2_pair_cell(src, dst, requested, mock, rank, device)
-                if row is not None:
-                    row["cell"] = "stage2_pair"
-                    rows.append(row)
+                for method in methods:
+                    # One pair at a time, so a placement cell measures an
+                    # otherwise idle fabric.
+                    dist.barrier()
+                    row = _p2_pair_cell(src, dst, requested, mock, rank, device, method)
+                    if row is not None:
+                        row["cell"] = "stage2_pair"
+                        rows.append(row)
     gathered: list[Any] = [None] * world_size
     dist.all_gather_object(gathered, rows)
     merged: list[dict[str, Any]] = []
@@ -623,6 +806,7 @@ def _run_collective_point(
     group: Any,
     send: torch.Tensor,
     recv: torch.Tensor,
+    method: str,
 ) -> dict[str, Any]:
     moved = _capped(requested, mock)
     warmup, timed = _iterations(requested, mock)
@@ -631,6 +815,8 @@ def _run_collective_point(
         return {
             "op": op,
             "width": width,
+            "method": method,
+            "of_record": _of_record(method, requested),
             "requested_bytes": requested,
             "bytes": moved,
             "status": "skipped_not_divisible",
@@ -661,7 +847,19 @@ def _run_collective_point(
     if not mock:
         torch.cuda.synchronize(device)
     dist.barrier(group=group)
-    seconds = _time_block(mock, device, timed, issue)
+    seconds, reason = _time_block(mock, device, timed, issue, method)
+    if reason:
+        return {
+            "op": op,
+            "width": width,
+            "method": method,
+            "of_record": _of_record(method, requested),
+            "requested_bytes": requested,
+            "bytes": moved,
+            "status": "graph_skipped",
+            "graph_skipped": True,
+            "graph_skip_reason": reason,
+        }
     seconds = _max_across(seconds, device, group=group)
 
     factor = busbw_factor(op, width)
@@ -669,6 +867,8 @@ def _run_collective_point(
     return {
         "op": op,
         "width": width,
+        "method": method,
+        "of_record": _of_record(method, requested),
         "requested_bytes": requested,
         "bytes": moved,
         "iterations": timed,
@@ -688,6 +888,7 @@ def run_lane_p3(
     rank: int,
     world_size: int,
     device: torch.device,
+    methods: tuple[str, ...],
 ) -> list[dict[str, Any]]:
     """Time the NCCL collectives of lane P3 at the frozen widths."""
 
@@ -706,12 +907,22 @@ def run_lane_p3(
         group = groups[width]
         for op in COLLECTIVE_OPS:
             for requested in sweep:
-                if rank < width:
-                    rows.append(
-                        _run_collective_point(
-                            op, width, requested, mock, rank, device, group, send, recv
+                for method in methods:
+                    if rank < width:
+                        rows.append(
+                            _run_collective_point(
+                                op,
+                                width,
+                                requested,
+                                mock,
+                                rank,
+                                device,
+                                group,
+                                send,
+                                recv,
+                                method,
+                            )
                         )
-                    )
             dist.barrier()
     del send, recv
     if not mock and torch.cuda.is_available():
@@ -719,7 +930,13 @@ def run_lane_p3(
     return rows
 
 
-def build_header(mock: bool, world_size: int, started: str) -> dict[str, Any]:
+def build_header(
+    mock: bool,
+    world_size: int,
+    started: str,
+    graph_enabled: bool = False,
+    graph_reason: str = "",
+) -> dict[str, Any]:
     """Return the header the freeze requires, with the hostname redacted."""
 
     device_count = torch.cuda.device_count() if torch.cuda.is_available() else 0
@@ -751,6 +968,14 @@ def build_header(mock: bool, world_size: int, started: str) -> dict[str, Any]:
         "mock": mock,
         "mock_payload_cap_bytes": MOCK_PAYLOAD_CAP_BYTES if mock else None,
         "mock_timed_iterations": MOCK_TIMED_ITERATIONS if mock else None,
+        "amendment": "expectations-amendment-2026-09-15",
+        "graph_capture_enabled": graph_enabled,
+        "graph_capture_reason": graph_reason,
+        "graph_row_max_bytes": GRAPH_ROW_MAX_BYTES,
+        "timed_iterations_at_or_below_1mib": (
+            MOCK_TIMED_ITERATIONS if mock else TIMED_ITERATIONS_AT_OR_BELOW_1MIB
+        ),
+        "methods": list(METHODS if graph_enabled else (METHOD_EAGER,)),
         "devices": devices,
         "payload_bytes": list(_sweep(mock)),
         "frozen_payload_bytes": list(PAYLOAD_BYTES),
@@ -817,11 +1042,19 @@ def main(argv: list[str] | None = None) -> int:
             f"timeout {args.pg_timeout_seconds} s"
         )
 
+    graph_enabled, graph_reason = probe_graph_support(args.mock, device)
+    methods = METHODS if graph_enabled else (METHOD_EAGER,)
+    if rank == 0:
+        _progress(
+            f"graph capture {'enabled' if graph_enabled else 'disabled'}"
+            + (f": {graph_reason}" if graph_reason else "")
+        )
+
     p1_rows: list[dict[str, Any]] = []
     if rank == 0:
         _progress("P1 start")
         started_lane = time.perf_counter()
-        p1_rows = run_lane_p1(args.stage, devices, args.mock, local_rank)
+        p1_rows = run_lane_p1(args.stage, devices, args.mock, local_rank, methods)
         _progress(f"P1 end, {len(p1_rows)} rows in {time.perf_counter() - started_lane:.1f} s")
     if not args.mock:
         # Belt and braces: no lane may leave this process on another device.
@@ -831,7 +1064,7 @@ def main(argv: list[str] | None = None) -> int:
     if rank == 0:
         _progress("P2 start")
         started_lane = time.perf_counter()
-    p2_rows = run_lane_p2(args.stage, args.mock, rank, world_size, device)
+    p2_rows = run_lane_p2(args.stage, args.mock, rank, world_size, device, methods)
     if rank == 0:
         _progress(f"P2 end, {len(p2_rows)} rows in {time.perf_counter() - started_lane:.1f} s")
     dist.barrier()
@@ -839,13 +1072,23 @@ def main(argv: list[str] | None = None) -> int:
     if rank == 0:
         _progress("P3 start")
         started_lane = time.perf_counter()
-    p3_rows = run_lane_p3(args.stage, args.mock, rank, world_size, device)
+    p3_rows = run_lane_p3(args.stage, args.mock, rank, world_size, device, methods)
     if rank == 0:
         _progress(f"P3 end, {len(p3_rows)} rows in {time.perf_counter() - started_lane:.1f} s")
     dist.barrier()
 
+    if not graph_enabled:
+        # No row of record exists at or below 1 MiB when capture is off, so
+        # every row says on its face that it is the eager control.
+        for lane_rows in (p1_rows, p2_rows, p3_rows):
+            for row in lane_rows:
+                row["graph_skipped"] = True
+                row.setdefault(
+                    "graph_skip_reason", graph_reason or "graph rows disabled for this run"
+                )
+
     if rank == 0:
-        header = build_header(args.mock, world_size, started)
+        header = build_header(args.mock, world_size, started, graph_enabled, graph_reason)
         header["finished_utc"] = _utc_now()
         result = {
             "schema": SCHEMA,

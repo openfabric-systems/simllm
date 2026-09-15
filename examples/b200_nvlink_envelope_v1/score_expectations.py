@@ -57,6 +57,13 @@ DISJOINT_SLOWDOWN_MAX = 0.15
 CONCURRENT_PAYLOAD_BYTES = 67_108_864
 ALL_PAIRS_STRUCTURE_BYTES = 16_777_216
 
+#: amendment of 2026-09-15: at or below this payload the row of record is the
+#: CUDA graph replay, above it the eager row, and the other method is kept
+#: beside it as an unscored control.
+GRAPH_ROW_MAX_BYTES = 1_048_576
+METHOD_GRAPH = "graph"
+METHOD_EAGER = "eager"
+
 IDENTITY_GUARDS = (
     ("E8-placement-records", "the five vLLM reference manifest digests of the PLACE-13 freeze"),
     ("E8-floor-study-check", "the tracked results of examples/collective_latency_floor_v1"),
@@ -111,26 +118,112 @@ def tolerance_ps(observed_ps: float) -> float:
     return max(float(TOLERANCE_FLOOR_PS), abs(observed_ps) * HOLDOUT_TOLERANCE_FRACTION)
 
 
-def ols_fit(sizes: list[float], seconds: list[float]) -> tuple[float, float, float]:
-    """Return ``(alpha_seconds, beta_bytes_per_second, r_squared)``.
+@dataclass
+class Fit:
+    """One ``t = alpha + S / beta`` fit, degenerate cases included.
 
-    The model is ``t = alpha + S / beta`` fitted by ordinary least squares of
-    ``t`` on ``S``, the same form the A100 envelope used.
+    A fit is degenerate when the rows carry no usable payload term: too few
+    points, no spread in the payloads, or a slope that is zero or negative
+    because the window is latency dominated and the measured times do not grow
+    with the payload. A degenerate fit has no bandwidth, so every consumer
+    reports it rather than rounding an infinity into a profile constant.
+    """
+
+    alpha_seconds: float
+    beta_bytes_per_second: float
+    r_squared: float
+    slope_seconds_per_byte: float
+    points: int
+    degenerate: bool
+    reason: str
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "alpha_us": _finite(self.alpha_seconds * 1e6),
+            "beta_bytes_per_second": _finite(self.beta_bytes_per_second),
+            "r_squared": _finite(self.r_squared),
+            "slope_seconds_per_byte": _finite(self.slope_seconds_per_byte),
+            "fit_points": self.points,
+            "fit_degenerate": self.degenerate,
+            "fit_reason": self.reason,
+        }
+
+
+def _finite(value: Any) -> Any:
+    """Return ``value`` when it is a finite number, else ``None``.
+
+    Infinity and NaN are not JSON, and a consumer that reads them back as a
+    bandwidth would silently carry a nonsense constant.
+    """
+
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    return value
+
+
+def _sanitize(payload: Any) -> Any:
+    """Recursively replace non-finite floats so the report is strict JSON."""
+
+    if isinstance(payload, dict):
+        return {key: _sanitize(value) for key, value in payload.items()}
+    if isinstance(payload, (list, tuple)):
+        return [_sanitize(value) for value in payload]
+    return _finite(payload)
+
+
+def ols_fit(sizes: list[float], seconds: list[float]) -> Fit:
+    """Fit ``t = alpha + S / beta`` by ordinary least squares of ``t`` on ``S``.
+
+    The form is the A100 envelope's and the floor study's. The result is always
+    a :class:`Fit`; a window that cannot identify a bandwidth comes back
+    degenerate instead of raising or returning an infinite constant.
     """
 
     count = len(sizes)
+    if count < 3:
+        return Fit(
+            float("nan"),
+            float("inf"),
+            float("nan"),
+            float("nan"),
+            count,
+            True,
+            f"only {count} rows in the window, at least 3 are needed",
+        )
     mean_x = sum(sizes) / count
     mean_y = sum(seconds) / count
     sxx = sum((x - mean_x) ** 2 for x in sizes)
+    if sxx <= 0:
+        return Fit(
+            mean_y,
+            float("inf"),
+            float("nan"),
+            float("nan"),
+            count,
+            True,
+            "every row in the window carries the same payload",
+        )
     sxy = sum((x - mean_x) * (y - mean_y) for x, y in zip(sizes, seconds))
-    slope = sxy / sxx if sxx > 0 else float("nan")
+    slope = sxy / sxx
     alpha = mean_y - slope * mean_x
     predicted = [alpha + slope * x for x in sizes]
-    ss_res = sum((y - p) ** 2 for y, p in zip(seconds, predicted))
+    ss_res = sum((y - value) ** 2 for y, value in zip(seconds, predicted))
     ss_tot = sum((y - mean_y) ** 2 for y in seconds)
     r_squared = 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
-    beta = 1.0 / slope if slope > 0 else float("inf")
-    return alpha, beta, r_squared
+    if not math.isfinite(slope) or slope <= 0:
+        return Fit(
+            alpha,
+            float("inf"),
+            r_squared,
+            slope,
+            count,
+            True,
+            (
+                "the fitted slope is not positive, so the window identifies no "
+                "serialization term: completion time does not grow with the payload here"
+            ),
+        )
+    return Fit(alpha, 1.0 / slope, r_squared, slope, count, False, "")
 
 
 def requested_bytes(row: dict[str, Any]) -> int:
@@ -182,6 +275,63 @@ def fit_window(rows: list[dict[str, Any]], exclude: int) -> list[dict[str, Any]]
         for row in rows
         if low <= requested_bytes(row) <= high and requested_bytes(row) != exclude
     ]
+
+
+def row_method(row: dict[str, Any]) -> str:
+    """Return a row's timing method, defaulting to the pre-amendment eager."""
+
+    return str(row.get("method", METHOD_EAGER))
+
+
+def method_of_record(size_bytes: int) -> str:
+    """Return the amendment's method of record for one payload."""
+
+    return METHOD_GRAPH if size_bytes <= GRAPH_ROW_MAX_BYTES else METHOD_EAGER
+
+
+def rows_of_record(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Select one row per payload: graph at or below 1 MiB, eager above.
+
+    When the run carries no row for the method of record, for instance a
+    container that could not capture or a capture taken before the amendment,
+    the other method is used and the payload is listed as a fallback so the
+    report never presents a control row as a row of record silently.
+    """
+
+    by_payload: dict[int, dict[str, dict[str, Any]]] = {}
+    for row in rows:
+        by_payload.setdefault(requested_bytes(row), {})[row_method(row)] = row
+    chosen: list[dict[str, Any]] = []
+    fallbacks: list[int] = []
+    for size_bytes, by_method in sorted(by_payload.items()):
+        wanted = method_of_record(size_bytes)
+        row = by_method.get(wanted)
+        if row is None:
+            alternative = METHOD_EAGER if wanted == METHOD_GRAPH else METHOD_GRAPH
+            row = by_method.get(alternative)
+            if row is None:
+                continue
+            fallbacks.append(size_bytes)
+        chosen.append(row)
+    record = {
+        "rows_selected": len(chosen),
+        "fallback_payload_bytes": fallbacks,
+        "methods_present": sorted({row_method(row) for row in rows}),
+    }
+    return chosen, record
+
+
+def control_row(
+    rows: list[dict[str, Any]],
+    size_bytes: int,
+    method: str,
+) -> dict[str, Any] | None:
+    """Return the row for one payload measured by one named method."""
+
+    for row in rows:
+        if requested_bytes(row) == size_bytes and row_method(row) == method:
+            return row
+    return None
 
 
 def score_e1(stages: dict[str, dict[str, Any]]) -> tuple[Outcome, list[Outcome]]:
@@ -316,21 +466,28 @@ def _asymptote_cell(
     small_band: tuple[float, float],
     label: str,
 ) -> tuple[list[Outcome], dict[str, Any]]:
-    """Fit one asymptote cell and return its outcomes plus the fit record."""
+    """Fit one asymptote cell and return its outcomes plus the fit record.
 
-    window = fit_window(rows, ASYMPTOTE_HOLDOUT_BYTES)
-    holdout = point(rows, ASYMPTOTE_HOLDOUT_BYTES)
-    small = point(rows, SOURCE_PAYLOAD_BYTES[0])
-    record: dict[str, Any] = {"fit_points": len(window)}
+    ``rows`` are already the rows of record. A window that cannot identify a
+    bandwidth is reported as a degenerate fit and fails its holdout, because
+    the freeze scores that holdout against a prediction the fit cannot make.
+    """
+
+    selected, selection = rows_of_record(rows)
+    window = fit_window(selected, ASYMPTOTE_HOLDOUT_BYTES)
+    holdout = point(selected, ASYMPTOTE_HOLDOUT_BYTES)
+    small = point(selected, SOURCE_PAYLOAD_BYTES[0])
+    record: dict[str, Any] = {"selection": selection}
     outcomes: list[Outcome] = []
 
-    if len(window) < 3 or holdout is None:
+    if holdout is None:
+        record["fit_points"] = len(window)
         outcomes.append(
             Outcome(
                 f"{ident}-fit",
                 "structural",
                 None,
-                f"{label}: not enough rows in the 1 MiB to 1 GiB window to fit",
+                f"{label}: no rows to fit in the 1 MiB to 1 GiB window",
                 record,
             )
         )
@@ -345,57 +502,79 @@ def _asymptote_cell(
         )
         return outcomes, record
 
-    alpha, beta, r_squared = ols_fit(
+    fit = ols_fit(
         [float(row["bytes"]) for row in window],
         [float(row["time_ns"]) * 1e-9 for row in window],
     )
-    predicted_s = alpha + float(holdout["bytes"]) / beta
+    record.update(fit.as_dict())
+    record["window_payload_bytes"] = [requested_bytes(row) for row in window]
     observed_s = float(holdout["time_ns"]) * 1e-9
-    error = abs(predicted_s - observed_s) / observed_s if observed_s > 0 else float("inf")
-    record.update(
-        {
-            "alpha_us": alpha * 1e6,
-            "beta_bytes_per_second": beta,
-            "r_squared": r_squared,
-            "holdout_bytes": holdout["bytes"],
-            "holdout_observed_us": observed_s * 1e6,
-            "holdout_predicted_us": predicted_s * 1e6,
-            "holdout_error_fraction": error,
-        }
-    )
-    outcomes.append(
-        Outcome(
-            f"{ident}-fit",
-            "structural",
-            bool(r_squared >= R2_MIN and beta_band[0] <= beta <= beta_band[1]),
-            f"{label}: beta {fmt(beta / 1e9, 2)} GB/s in "
-            f"[{beta_band[0] / 1e9}, {beta_band[1] / 1e9}] with R^2 {fmt(r_squared, 5)}, "
-            f"floor {R2_MIN}",
-            dict(record),
+    record["holdout_bytes"] = holdout["bytes"]
+    record["holdout_observed_us"] = observed_s * 1e6
+
+    if fit.degenerate:
+        outcomes.append(
+            Outcome(
+                f"{ident}-fit",
+                "structural",
+                False,
+                f"{label}: degenerate fit over {fit.points} rows, {fit.reason}",
+                dict(record),
+            )
         )
-    )
-    outcomes.append(
-        Outcome(
-            f"{ident}-holdout",
-            "scored",
-            bool(error <= HOLDOUT_TOLERANCE_FRACTION),
-            f"{label}: the 64 MiB holdout predicts {fmt(predicted_s * 1e6, 2)} us against "
-            f"{fmt(observed_s * 1e6, 2)} us observed, error {fmt(error * 100, 2)} percent, "
-            f"limit {HOLDOUT_TOLERANCE_FRACTION * 100} percent",
-            dict(record),
+        outcomes.append(
+            Outcome(
+                f"{ident}-holdout",
+                "scored",
+                False,
+                f"{label}: the 64 MiB holdout cannot be predicted because the fit is "
+                f"degenerate ({fit.reason})",
+                dict(record),
+            )
         )
-    )
+    else:
+        predicted_s = fit.alpha_seconds + float(holdout["bytes"]) / fit.beta_bytes_per_second
+        error = abs(predicted_s - observed_s) / observed_s if observed_s > 0 else float("inf")
+        record["holdout_predicted_us"] = predicted_s * 1e6
+        record["holdout_error_fraction"] = error
+        outcomes.append(
+            Outcome(
+                f"{ident}-fit",
+                "structural",
+                bool(
+                    fit.r_squared >= R2_MIN
+                    and beta_band[0] <= fit.beta_bytes_per_second <= beta_band[1]
+                ),
+                f"{label}: beta {fmt(fit.beta_bytes_per_second / 1e9, 2)} GB/s in "
+                f"[{beta_band[0] / 1e9}, {beta_band[1] / 1e9}] with R^2 "
+                f"{fmt(fit.r_squared, 5)}, floor {R2_MIN}",
+                dict(record),
+            )
+        )
+        outcomes.append(
+            Outcome(
+                f"{ident}-holdout",
+                "scored",
+                bool(error <= HOLDOUT_TOLERANCE_FRACTION),
+                f"{label}: the 64 MiB holdout predicts {fmt(predicted_s * 1e6, 2)} us against "
+                f"{fmt(observed_s * 1e6, 2)} us observed, error {fmt(error * 100, 2)} percent, "
+                f"limit {HOLDOUT_TOLERANCE_FRACTION * 100} percent",
+                dict(record),
+            )
+        )
     if small is not None:
         small_us = float(small["time_ns"]) * 1e-3
         record["small_payload_us"] = small_us
+        record["small_payload_method"] = row_method(small)
         outcomes.append(
             Outcome(
                 f"{ident}-small-payload",
                 "reported",
                 bool(small_band[0] <= small_us <= small_band[1]),
-                f"{label}: the 8 B point is {fmt(small_us, 3)} us, recorded against the "
+                f"{label}: the 8 B point is {fmt(small_us, 3)} us by the "
+                f"{row_method(small)} method, recorded against the "
                 f"[{small_band[0]}, {small_band[1]}] us expectation and not scored",
-                {"small_payload_us": small_us},
+                {"small_payload_us": small_us, "method": row_method(small)},
             )
         )
     return outcomes, record
@@ -434,18 +613,21 @@ def score_e4(
     stages: dict[str, dict[str, Any]],
     predictions: dict[str, dict[str, int]],
 ) -> tuple[list[Outcome], dict[str, Any]]:
-    """Report the current profile's before error at every measured width."""
+    """Report the current profile's before error at every measured width.
+
+    The amendment reads the before error from the graph rows and keeps the
+    eager row of the same payload beside it, so the size of the dispatch floor
+    the first capture found stays on the record.
+    """
 
     outcomes: list[Outcome] = []
     table: dict[str, Any] = {}
     for width_key, frozen in sorted(predictions.items(), key=lambda item: int(item[0])):
         width = int(width_key)
-        rows: list[dict[str, Any]] = []
+        all_rows: list[dict[str, Any]] = []
         for result in stages.values():
-            rows.extend(collective_series(result, "all_reduce", width))
-        rows = sorted({requested_bytes(row): row for row in rows}.items())
-        rows = [row for _, row in rows]
-        if not rows:
+            all_rows.extend(collective_series(result, "all_reduce", width))
+        if not all_rows:
             outcomes.append(
                 Outcome(
                     f"E4-w{width}",
@@ -456,10 +638,11 @@ def score_e4(
                 )
             )
             continue
+        selected, selection = rows_of_record(all_rows)
         entries = []
         validated = True
         for size_bytes in BEFORE_ERROR_ROWS_BYTES:
-            row = point(rows, size_bytes)
+            row = point(selected, size_bytes)
             predicted_ps = frozen.get(str(size_bytes))
             if row is None or predicted_ps is None:
                 validated = False
@@ -469,19 +652,23 @@ def score_e4(
             delta_ps = observed_ps - float(predicted_ps)
             within = abs(delta_ps) <= tolerance_ps(observed_ps)
             validated = validated and within
-            entries.append(
-                {
-                    "bytes": size_bytes,
-                    "observed_ps": observed_ps,
-                    "predicted_ps": predicted_ps,
-                    "delta_ps": delta_ps,
-                    "delta_fraction_of_observed": (
-                        delta_ps / observed_ps if observed_ps > 0 else None
-                    ),
-                    "within_tolerance": within,
-                }
-            )
-        table[width_key] = entries
+            control = control_row(all_rows, size_bytes, METHOD_EAGER)
+            entry: dict[str, Any] = {
+                "bytes": size_bytes,
+                "method": row_method(row),
+                "observed_ps": observed_ps,
+                "predicted_ps": predicted_ps,
+                "delta_ps": delta_ps,
+                "delta_fraction_of_observed": (
+                    delta_ps / observed_ps if observed_ps > 0 else None
+                ),
+                "within_tolerance": within,
+            }
+            if control is not None and control is not row:
+                entry["eager_control_ps"] = float(control["time_ns"]) * 1_000.0
+                entry["dispatch_floor_ps"] = entry["eager_control_ps"] - observed_ps
+            entries.append(entry)
+        table[width_key] = {"rows": entries, "selection": selection}
         worst = max(
             (abs(entry.get("delta_ps", 0.0)) for entry in entries if "delta_ps" in entry),
             default=0.0,
@@ -494,25 +681,32 @@ def score_e4(
                 f"width {width} before error: worst row misses the frozen prediction by "
                 f"{fmt(worst / 1e6, 3)} us; the profile is "
                 f"{'validated' if validated else 'not validated'} at this width",
-                {"rows": entries},
+                {"rows": entries, "selection": selection},
             )
         )
     return outcomes, table
 
 
 def score_e5(stages: dict[str, dict[str, Any]]) -> tuple[list[Outcome], dict[str, Any]]:
-    """Refit one intercept per measured width under one shared slope."""
+    """Refit one intercept per measured width under one shared slope.
 
-    widths: list[int] = []
+    The fit rows run from 8 B to 256 KiB, so every one of them is a row of
+    record by graph replay under the amendment. A slope that comes back zero or
+    negative means the window carries no serialization term; that is reported
+    as a degenerate fit whose holdout fails, and no profile is proposed.
+    """
+
     rows_by_width: dict[int, list[dict[str, Any]]] = {}
     for result in stages.values():
         for row in measured(result.get("p3", [])):
             if row.get("op") != "all_reduce":
                 continue
-            width = int(row["width"])
-            rows_by_width.setdefault(width, [])
-            if point(rows_by_width[width], requested_bytes(row)) is None:
-                rows_by_width[width].append(row)
+            rows_by_width.setdefault(int(row["width"]), []).append(row)
+    selection_by_width: dict[str, Any] = {}
+    for width, rows in list(rows_by_width.items()):
+        selected, selection = rows_of_record(rows)
+        rows_by_width[width] = selected
+        selection_by_width[str(width)] = selection
     widths = sorted(rows_by_width)
 
     design: list[list[float]] = []
@@ -533,8 +727,15 @@ def score_e5(stages: dict[str, dict[str, Any]]) -> tuple[list[Outcome], dict[str
             target.append(observed_ps)
             used[width].append((size_bytes, load, observed_ps))
 
-    record: dict[str, Any] = {"widths": widths, "fit_rows": sum(len(v) for v in used.values())}
+    record: dict[str, Any] = {
+        "widths": widths,
+        "fit_rows": sum(len(value) for value in used.values()),
+        "selection": selection_by_width,
+        "fit_degenerate": False,
+    }
     if len(design) < len(widths) + 2:
+        record["fit_degenerate"] = True
+        record["fit_reason"] = "not enough all-reduce rows to refit"
         return (
             [
                 Outcome(
@@ -553,14 +754,53 @@ def score_e5(stages: dict[str, dict[str, Any]]) -> tuple[list[Outcome], dict[str
     solution, _, _, _ = np.linalg.lstsq(matrix, values, rcond=None)
     intercepts_ps = {width: float(solution[index]) for index, width in enumerate(widths)}
     ps_per_byte = float(solution[-1])
-    slope_bytes_per_second = (
-        PICOSECONDS_PER_SECOND / ps_per_byte if ps_per_byte > 0 else float("inf")
-    )
     predicted = matrix @ solution
     residuals = values - predicted
     ss_tot = float(((values - values.mean()) ** 2).sum())
     r_squared = 1.0 - float((residuals**2).sum()) / ss_tot if ss_tot > 0 else float("nan")
+    record["r_squared"] = _finite(r_squared)
+    record["ps_per_byte"] = _finite(ps_per_byte)
+    record["intercept_ps"] = {
+        str(width): _finite(intercepts_ps[width]) for width in widths
+    }
+    record["fit_rows_by_width"] = {
+        str(width): [size for size, _, _ in used[width]] for width in widths
+    }
 
+    degenerate_reason = ""
+    if not all(math.isfinite(value) for value in solution):
+        degenerate_reason = "the least squares solution is not finite"
+    elif ps_per_byte <= 0:
+        degenerate_reason = (
+            "the shared slope is not positive, so the 8 B to 256 KiB window identifies no "
+            "endpoint serializer: completion time does not grow with the payload there"
+        )
+    if degenerate_reason:
+        record["fit_degenerate"] = True
+        record["fit_reason"] = degenerate_reason
+        outcomes = [
+            Outcome(
+                "E5-fit",
+                "structural",
+                False,
+                f"degenerate refit over {record['fit_rows']} rows at widths {widths}: "
+                f"{degenerate_reason}",
+                dict(record),
+            )
+        ]
+        for width in widths:
+            outcomes.append(
+                Outcome(
+                    f"E5-holdout-w{width}",
+                    "scored",
+                    False,
+                    f"width {width} 4 KiB holdout cannot be predicted: {degenerate_reason}",
+                    {"fit_degenerate": True, "fit_reason": degenerate_reason},
+                )
+            )
+        return outcomes, record
+
+    slope_bytes_per_second = PICOSECONDS_PER_SECOND / ps_per_byte
     bandwidth = round(slope_bytes_per_second)
     constants = {width: round(value) for width, value in intercepts_ps.items()}
     bands: dict[int, tuple[int, int]] = {}
@@ -579,7 +819,6 @@ def score_e5(stages: dict[str, dict[str, Any]]) -> tuple[list[Outcome], dict[str
         {
             "intercept_ps": {str(width): constants[width] for width in widths},
             "bandwidth_bytes_per_second": bandwidth,
-            "r_squared": r_squared,
             "band_ps": {str(width): list(bands[width]) for width in widths},
             "max_abs_residual_ps": {
                 str(width): max((abs(v) for v in residual_by_width[width]), default=0.0)
@@ -592,7 +831,7 @@ def score_e5(stages: dict[str, dict[str, Any]]) -> tuple[list[Outcome], dict[str
         Outcome(
             "E5-fit",
             "structural",
-            bool(bandwidth > 0),
+            True,
             f"refit over {record['fit_rows']} rows at widths {widths}: shared slope "
             f"{bandwidth} bytes per second with intercepts "
             + ", ".join(f"{width}:{constants[width]} ps" for width in widths)
@@ -627,6 +866,7 @@ def score_e5(stages: dict[str, dict[str, Any]]) -> tuple[list[Outcome], dict[str
             "observed_ps": observed_ps,
             "error_ps": error,
             "allowed_ps": allowed,
+            "method": row_method(row),
         }
         outcomes.append(
             Outcome(
@@ -648,56 +888,68 @@ def score_e6(
     refit: dict[str, Any],
     e2_records: dict[str, Any],
 ) -> tuple[list[Outcome], dict[str, Any]]:
-    """Report the serializer question side by side, structural and unscored."""
+    """Report the serializer question side by side, structural and unscored.
 
-    rows = collective_series(stage1, "all_reduce", 2)
+    The amendment reads the window slope from the graph rows, which is what the
+    refit returns, and the large-payload asymptote from the eager rows, which
+    are the rows of record above 1 MiB.
+    """
+
+    rows = [
+        row
+        for row in collective_series(stage1, "all_reduce", 2)
+        if row_method(row) == METHOD_EAGER
+    ] or collective_series(stage1, "all_reduce", 2)
     window = fit_window(rows, ASYMPTOTE_HOLDOUT_BYTES)
     record: dict[str, Any] = {}
-    if len(window) < 3 or "bandwidth_bytes_per_second" not in refit:
+    fit = ols_fit(
+        [float(row["bytes"]) for row in window],
+        [float(row["time_ns"]) * 1e-9 for row in window],
+    )
+    record["all_reduce_asymptote"] = fit.as_dict()
+    window_slope = refit.get("bandwidth_bytes_per_second")
+    record["e5_slope_bytes_per_second"] = window_slope
+    record["e5_fit_degenerate"] = bool(refit.get("fit_degenerate"))
+    record["e2_beta_bytes_per_second"] = e2_records.get("0->1", {}).get(
+        "beta_bytes_per_second"
+    )
+    crossover = None
+    if not fit.degenerate:
+        factor = busbw_factor("all_reduce", 2)
+        target = ASYMPTOTE_FRACTION * fit.beta_bytes_per_second * factor
+        for row in rows:
+            if float(row.get("busbw_bytes_per_second", 0.0)) >= target:
+                crossover = requested_bytes(row)
+                break
+    record["busbw_90_percent_payload_bytes"] = crossover
+
+    if fit.degenerate or window_slope is None:
+        missing = "the refit slope" if window_slope is None else "the collective asymptote"
         return (
             [
                 Outcome(
                     "E6",
                     "structural",
                     None,
-                    "the collective asymptote or the refit slope is not available",
+                    f"the side by side is incomplete: {missing} is not available"
+                    + (f" ({fit.reason})" if fit.degenerate else ""),
                     record,
                 )
             ],
             record,
         )
-    _, beta_collective, r_squared = ols_fit(
-        [float(row["bytes"]) for row in window],
-        [float(row["time_ns"]) * 1e-9 for row in window],
-    )
-    factor = busbw_factor("all_reduce", 2)
-    target = ASYMPTOTE_FRACTION * beta_collective * factor
-    crossover = None
-    for row in rows:
-        if float(row.get("busbw_bytes_per_second", 0.0)) >= target:
-            crossover = requested_bytes(row)
-            break
-    window_slope = float(refit["bandwidth_bytes_per_second"])
-    beta_pair = e2_records.get("0->1", {}).get("beta_bytes_per_second")
-    record = {
-        "e5_slope_bytes_per_second": window_slope,
-        "all_reduce_asymptote_bytes_per_second": beta_collective,
-        "all_reduce_asymptote_r_squared": r_squared,
-        "busbw_90_percent_payload_bytes": crossover,
-        "e2_beta_bytes_per_second": beta_pair,
-        "slope_over_asymptote": window_slope / beta_collective if beta_collective else None,
-    }
-    passed = bool(window_slope < SERIALIZER_QUARTER * beta_collective)
+    ratio = window_slope / fit.beta_bytes_per_second
+    record["slope_over_asymptote"] = ratio
     return (
         [
             Outcome(
                 "E6",
                 "structural",
-                passed,
+                bool(window_slope < SERIALIZER_QUARTER * fit.beta_bytes_per_second),
                 f"the window slope is {fmt(window_slope / 1e9, 2)} GB/s against a large-payload "
-                f"all-reduce asymptote of {fmt(beta_collective / 1e9, 2)} GB/s, a ratio of "
-                f"{fmt(window_slope / beta_collective, 4)} against the frozen quarter; bus "
-                f"bandwidth first reaches 90 percent of the asymptote at {crossover} B",
+                f"all-reduce asymptote of {fmt(fit.beta_bytes_per_second / 1e9, 2)} GB/s, a "
+                f"ratio of {fmt(ratio, 4)} against the frozen quarter; bus bandwidth first "
+                f"reaches 90 percent of the asymptote at {crossover} B",
                 record,
             )
         ],
@@ -897,6 +1149,19 @@ def build_report(
         "asymptotes": {"e2": e2_records, "e3": e3_record, "e6": e6_record},
         "refit": refit,
         "proposed_profile": proposed_profile(refit, stage1.get("header", {}), expectations),
+        "proposed_profile_reason": (
+            refit.get("fit_reason", "")
+            if refit.get("fit_degenerate")
+            else "the refit produced the constants below"
+        ),
+        "timing_methods": sorted(
+            {
+                row_method(row)
+                for result in stages.values()
+                for lane in ("p1", "p2", "p3")
+                for row in result.get(lane, [])
+            }
+        ),
         "identity_guards_pending": [ident for ident, _ in IDENTITY_GUARDS],
     }
 
@@ -925,7 +1190,7 @@ def main(argv: list[str] | None = None) -> int:
     report = build_report(stages, expectations)
     out = args.out or (args.measurements / "scored.json")
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+    out.write_text(json.dumps(_sanitize(report), indent=2, sort_keys=True) + "\n")
 
     print("Fatal guards")
     if not report["fatal"]:
