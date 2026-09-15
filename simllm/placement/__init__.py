@@ -32,9 +32,11 @@ backend.
 from simllm.placement.declared import (
     DECLARED_EXPERT_PLACEMENT_STRATEGIES,
     DeclaredExpertLayout,
+    DeclaredExpertMapExceptions,
     declared_local_expert_ids,
     declared_manifest,
     declared_pipeline_partition,
+    declared_resolved_placement_strategy,
     declared_sglang_manifest,
     declared_sglang_pipeline_partition,
 )
@@ -107,6 +109,7 @@ __all__ = [
     "PLACEMENT_SCHEMA",
     "RAIL_FABRIC_VARIANTS",
     "DeclaredExpertLayout",
+    "DeclaredExpertMapExceptions",
     "DisaggregatedDeploymentManifests",
     "FabricLink",
     "FabricNodePlacement",
@@ -134,6 +137,7 @@ __all__ = [
     "declared_pipeline_partition",
     "declared_pipeline_placement",
     "declared_rail_fabric",
+    "declared_resolved_placement_strategy",
     "declared_sglang_manifest",
     "declared_sglang_pipeline_partition",
     "declared_shared_nic_fabric",
