@@ -8,7 +8,7 @@ qualification, built declared placements for the pinned SGLang commit
 package's layout rules with its own `get_pp_indices` as an executable oracle,
 and drove `HtsimStepSink` on `rnic-nn-fluid` with the expert-parallel (EP)
 group read from an SGLang-declared manifest. The expectations-only commit is
-`1eef03f5` and the harness commit is `51529fec`.
+`61fc8878` and the harness commit is `536ee6a4`.
 
 What came out: the result is `PASS` with no finding. The deciding number is
 6 of 6 frozen m5 check-B makespans reproduced exactly with the EP group taken
@@ -256,3 +256,10 @@ run" and the status is `INCOMPLETE` rather than `PASS`, because the freeze
 makes that arm required for closure. The check mode rebuilds every cell and
 compares the summary to the tracked results, ignoring only the implementation
 commit stamp.
+
+The tracked `implementation_commit` field is that stamp: it records whichever
+commit was checked out when the run happened, it is the one field `--check`
+excludes, and it is therefore not repointed when history is rewritten. It
+still reads `7c02b28e`, the pre-rebase hash of the run; the rebased twin of
+that commit is `79c055e8`. The expectations and harness commits above, which
+`--check` does enforce, were repointed at their merged hashes.

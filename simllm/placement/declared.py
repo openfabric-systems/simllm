@@ -69,15 +69,60 @@ describe the same deployment. File names are given relative to the installed
   ``VLLM_PP_LAYER_PARTITION`` is deliberately not modeled: a declared layout
   states its own partition through ``num_layers`` and ``pp``.
 
-The ``round_robin`` strategy is the caller's declaration. vLLM falls back to
-``linear`` on its own when the model has at most one expert group, has
-redundant experts, enables expert-parallel load balancing, or uses an
-all-to-all backend without round-robin routing tables; that fallback is not
-modeled here, and an extracted manifest records the map that really ran.
+The ``round_robin`` strategy is the caller's declaration, and
+:class:`DeclaredExpertMapExceptions` is how a layout says that the framework
+would overrule it. vLLM resolves the strategy in two steps, both in
+``model_executor/layers/fused_moe/expert_map_manager.py``:
+
+- ``determine_expert_placement_strategy`` runs only when
+  ``moe_parallel_config.use_ep``. It returns ``linear`` when
+  ``round_robin_supported`` is false, that is when
+  ``num_expert_group is None or num_expert_group <= 1``, or
+  ``num_redundant_experts != 0``, or ``enable_eplb``; and it returns ``linear``
+  again when ``use_all2all_kernels and not needs_round_robin_routing_tables``.
+  In ``config.py`` those two are
+  ``use_ep and (dp_size > 1 or pcp_size > 1 or is_sequence_parallel)`` and
+  ``use_deepep_ll_kernels or use_nixl_ep_kernels``, so the second fallback
+  fires whenever an all-to-all path runs on a backend that is neither
+  ``deepep_low_latency`` nor ``nixl_ep``.
+- ``ExpertMapManager._determine_placement_strategy`` then runs
+  unconditionally and returns ``linear`` when ``ep_size == 1``, which is the
+  branch the expert-parallel-disabled layout below shares.
+
+Note that the first condition tests ``num_expert_group is not None and
+num_expert_group > 1``, so a model that never sets the field at all, which is
+every model outside the grouped-topk family, also falls back.
+
+**Declared expert parallelism off.** ``expert_parallel=False`` states the MoE
+deployment vLLM runs when the launcher does not ask for expert parallelism.
+``distributed/parallel_state.py`` (``initialize_model_parallel``) still
+creates the ``ep`` group, under the single condition
+``config.model_config is None or config.model_config.is_moe``, in which the
+``enable_expert_parallel`` flag does not appear, so the group and every
+member's index in it are exactly what they are with expert parallelism on.
+``model_executor/layers/fused_moe/config.py``
+(``FusedMoEParallelConfig.make``) then computes
+``use_ep = dp_size_ * pcp_size_ * tp_size_ > 1 and enable_expert_parallel``
+and, in its ``not use_ep`` branch, keeps the flattened ``tp_size`` and
+``tp_rank`` of ``flatten_tp_across_dp_and_pcp`` while setting ``ep_size=1``.
+``FusedMoEConfig.__post_init__`` shards ``intermediate_size`` by that
+flattened ``DP * TP`` width, and ``determine_expert_map`` returns
+``(global_num_experts, None, None)`` at ``ep_size == 1``, so every rank of the
+stage holds every expert of every MoE layer it owns. The declared manifest
+records that ownership; the tensor shard of each expert is not represented,
+because the manifest schema states which global expert ids live on a rank, not
+which slice of an expert's weights lives there.
+
+Because ``use_ep`` also tests the flattened width, expert parallelism is off
+whenever ``DP * TP`` is one whatever the launcher asks, which is why the two
+settings of ``expert_parallel`` build identical manifests at ``ep_size == 1``.
 
 Omitting ``experts`` is the explicit off path. It adds no group, no layer
 range and no expert ownership, and every manifest built without it is byte
-identical to the pre-expert output.
+identical to the pre-expert output. Omitting ``expert_parallel`` and
+``exceptions`` is the explicit off path of the two selections above, and a
+manifest built without naming them is byte identical to the pre-selection
+output.
 
 **Declared SGLang layout.** :func:`declared_sglang_manifest` is the second
 declared builder. It answers the same what-if question for a deployment that
@@ -182,6 +227,19 @@ from simllm.placement.manifest import GroupMembership, PlacementManifest, RankPl
 DECLARED_EXPERT_PLACEMENT_STRATEGIES = ("linear", "round_robin")
 
 
+def _plain_bool(name: str, value: object) -> bool:
+    """Return ``value`` as a plain boolean, refusing an integer spelling.
+
+    The layout already refuses ``True`` where a width belongs; this is the
+    mirror of that rule. A selection spelled ``1`` is a caller mistake, never
+    an enabled flag, because a reader cannot tell it from a count.
+    """
+
+    if type(value) is not bool:
+        raise ValueError(f"{name} must be a bool, got {value!r}")
+    return value
+
+
 def _positive_int(name: str, value: object, *, minimum: int) -> int:
     """Return ``value`` as a plain integer at or above ``minimum``."""
 
@@ -192,6 +250,108 @@ def _positive_int(name: str, value: object, *, minimum: int) -> int:
     if value < minimum:
         raise ValueError(f"{name} must be >= {minimum}, got {value}")
     return value
+
+
+@dataclass(frozen=True)
+class DeclaredExpertMapExceptions:
+    """The framework-side and model-side rules a declared layout opts into.
+
+    Each field mirrors one condition of the pinned vLLM 0.27.1 source, named
+    for the condition rather than for its effect, so a reader can check the
+    declaration against the framework instead of against this module.
+
+    The first four are the conditions under which vLLM overrules a declared
+    ``round_robin`` map and runs ``linear`` instead:
+
+    - ``single_expert_group`` is ``num_expert_group is None or
+      num_expert_group <= 1``. The unset case is included deliberately: the
+      source tests ``num_expert_group is not None and num_expert_group > 1``,
+      so a model that never sets the field falls back too.
+    - ``redundant_experts`` is ``num_redundant_experts != 0``. The layout does
+      not represent the extra physical expert copies themselves, only the
+      condition; ``layer.py`` permits them under EPLB alone, asserting
+      ``num_redundant_experts == 0`` in the ``else`` arm of its ``enable_eplb``
+      branch. This module still accepts ``redundant_experts=True`` with
+      ``eplb=False``, because each field states one resolver condition and
+      ``determine_expert_placement_strategy`` really does test them
+      independently. Such a layout describes a map resolution for a
+      configuration vLLM refuses to boot, and it is accepted rather than
+      refused so that the declared conditions stay a faithful transcript of
+      the resolver instead of a second, different rule.
+    - ``eplb`` is ``enable_eplb``. It additionally emits the ``eplb`` process
+      group and brings the framework's divisibility refusal into scope.
+    - ``all2all_without_round_robin`` is
+      ``use_all2all_kernels and not needs_round_robin_routing_tables``, folded
+      into one boolean because a declared layout states no sequence-parallel
+      or prefill-context-parallel width and no all-to-all backend name.
+
+    The last two are model-scoped. Neither is the rule the registry entry
+    originally claimed, which was a model that refuses an expert count its
+    expert-parallel size does not divide; no model implementation does that.
+
+    - ``model_refuses_tp_above_experts`` is the refusal sixteen sparse-MoE
+      blocks under ``model_executor/models`` really raise, among them
+      ``qwen3_moe.py``, ``mimo_v2.py``, ``laguna.py``, ``cohere2_moe.py`` and
+      ``minimax_m2.py``: ``ValueError`` when ``tp_size > num_experts``, where
+      ``tp_size`` is ``get_tensor_model_parallel_world_size()``, the declared
+      tensor width rather than the expert-parallel size.
+    - ``model_uniform_expert_blocks`` is the silent assumption the
+      ``MixtureOfExperts`` bookkeeping of ``deepseek_v2.py``, ``mixtral.py``,
+      ``qwen3_moe.py`` and ``transformers/moe.py`` carries,
+      ``n_local_physical_experts = n_physical_experts // ep_size`` with
+      ``physical_expert_start = ep_rank * n_local_physical_experts``. Nothing
+      raises there: with a remainder the model silently disagrees with
+      ``determine_expert_map``, which hands ``base + 1`` experts to the ranks
+      below it. The declared layout refuses the remainder instead of recording
+      ownership such a model would not honor.
+
+    The two remainder refusals are deliberately asymmetric about
+    ``expert_parallel``, and the asymmetry follows the source rather than
+    taste. ``eplb``'s refusal lives in
+    ``model_executor/layers/fused_moe/layer.py`` behind ``if use_ep and ...``,
+    so it cannot fire with expert parallelism off, and neither does this
+    module's. ``model_uniform_expert_blocks`` is not guarded, because the
+    ``MixtureOfExperts`` bookkeeping does not read
+    ``moe_parallel_config.ep_size`` at all: it reads the EP process group,
+    ``self.ep_size = self.ep_group.size()`` in ``mixtral.py`` and
+    ``deepseek_v2.py``. That group is created for every MoE model whatever the
+    launcher asks, which is exactly the fact ``expert_parallel=False``
+    exists to state, so it keeps its ``DP * TP`` size and the model's uniform
+    block arithmetic runs on that size with expert parallelism off as well.
+    """
+
+    single_expert_group: bool = False
+    redundant_experts: bool = False
+    eplb: bool = False
+    all2all_without_round_robin: bool = False
+    model_uniform_expert_blocks: bool = False
+    model_refuses_tp_above_experts: bool = False
+
+    def __post_init__(self) -> None:
+        for name in (
+            "single_expert_group",
+            "redundant_experts",
+            "eplb",
+            "all2all_without_round_robin",
+            "model_uniform_expert_blocks",
+            "model_refuses_tp_above_experts",
+        ):
+            _plain_bool(name, getattr(self, name))
+
+    @property
+    def forces_linear(self) -> bool:
+        """Return whether any framework condition overrules ``round_robin``.
+
+        The two model-scoped fields are deliberately absent: they add
+        refusals, they do not resolve a strategy.
+        """
+
+        return (
+            self.single_expert_group
+            or self.redundant_experts
+            or self.eplb
+            or self.all2all_without_round_robin
+        )
 
 
 @dataclass(frozen=True)
@@ -208,6 +368,16 @@ class DeclaredExpertLayout:
     so a consumer can join routed traffic to the placement it was routed
     under.
 
+    ``expert_parallel`` is the launcher's ``enable_expert_parallel``. With it
+    false every rank of a stage owns every expert of that stage's MoE layers
+    and the ``ep`` group is unchanged, which is the deployment described in
+    the module docstring. ``exceptions`` is the optional
+    :class:`DeclaredExpertMapExceptions`; absent, the declared strategy stands
+    exactly as before.
+
+    Both default to the accepted behavior, so a layout written before they
+    existed keeps its meaning and its bytes.
+
     Field-local rules are checked here. The one rule that depends on the
     surrounding parallel layout, ``num_layers >= pp``, is checked by
     :func:`declared_manifest`.
@@ -218,10 +388,20 @@ class DeclaredExpertLayout:
     num_experts: int
     placement_strategy: str = "linear"
     placement_epoch: int = 0
+    expert_parallel: bool = True
+    exceptions: DeclaredExpertMapExceptions | None = None
 
     def __post_init__(self) -> None:
         _positive_int("num_layers", self.num_layers, minimum=1)
         _positive_int("num_experts", self.num_experts, minimum=1)
+        _plain_bool("expert_parallel", self.expert_parallel)
+        if self.exceptions is not None and not isinstance(
+            self.exceptions, DeclaredExpertMapExceptions
+        ):
+            raise ValueError(
+                "exceptions must be a DeclaredExpertMapExceptions or None, "
+                f"got {self.exceptions!r}"
+            )
         _positive_int("placement_epoch", self.placement_epoch, minimum=0)
         if self.placement_strategy not in DECLARED_EXPERT_PLACEMENT_STRATEGIES:
             raise ValueError(
@@ -294,6 +474,80 @@ def _check_round_robin_expert_count(num_experts: int, ep_size: int, strategy: st
         )
 
 
+def declared_resolved_placement_strategy(
+    experts: DeclaredExpertLayout, ep_size: int
+) -> str:
+    """Return the expert map the framework would really build for a layout.
+
+    This is the single authority for the two-step resolution the pinned vLLM
+    0.27.1 ``ExpertMapManager`` performs, and the only place the resolution is
+    exposed. Nothing is added to the manifest for it: the manifest schema
+    carries no placement-strategy field, adding one would move the bytes of
+    every manifest ever emitted, and ``local_expert_ids`` already records the
+    map that runs, which is the only thing a consumer can act on. A study that
+    wants to report the resolution calls this function.
+
+    A declared ``linear`` is returned unchanged, mirroring the resolver's own
+    first line, ``if requested_strategy != "round_robin": return
+    requested_strategy``. A declared ``round_robin`` becomes ``linear`` when
+    expert parallelism is off or the expert-parallel size is one, which are the
+    two ways the framework reaches its ``ep_size == 1`` branch, or when any
+    framework condition of :class:`DeclaredExpertMapExceptions` holds.
+    """
+
+    if not isinstance(experts, DeclaredExpertLayout):
+        raise TypeError("experts must be a DeclaredExpertLayout")
+    _positive_int("ep_size", ep_size, minimum=1)
+    if experts.placement_strategy != "round_robin":
+        return experts.placement_strategy
+    if not experts.expert_parallel or ep_size == 1:
+        return "linear"
+    if experts.exceptions is not None and experts.exceptions.forces_linear:
+        return "linear"
+    return "round_robin"
+
+
+def _check_expert_map_exceptions(
+    experts: DeclaredExpertLayout, tp: int, ep_size: int
+) -> None:
+    """Refuse a layout the declared exceptions cannot honor.
+
+    Every refusal here is raised before the first rank is built, so a refusal
+    never leaves a half-populated manifest behind.
+    """
+
+    exceptions = experts.exceptions
+    if exceptions is None:
+        return
+    # The declared layout counts logical experts. vLLM's EPLB refusal counts
+    # global_num_experts, which layer.py builds as
+    # num_experts + num_redundant_experts, so with redundant_experts declared
+    # the two can disagree about which counts divide. The declared layout does
+    # not represent the redundant copies, so it cannot compute the framework's
+    # number; PLACE-15 owns closing that gap.
+    remainder = experts.num_experts % ep_size
+    # The framework's own EPLB refusal is guarded by ``use_ep``, so it cannot
+    # fire with expert parallelism off; neither does this one. The
+    # uniform-block refusal below is deliberately not guarded, because the
+    # model bookkeeping it mirrors reads the EP process group size, which
+    # survives the flag. See DeclaredExpertMapExceptions.
+    if exceptions.eplb and experts.expert_parallel and remainder:
+        raise ValueError(
+            f"num_experts {experts.num_experts} must be divisible by ep_size "
+            f"{ep_size} under eplb"
+        )
+    if exceptions.model_uniform_expert_blocks and remainder:
+        raise ValueError(
+            f"num_experts {experts.num_experts} must be divisible by ep_size "
+            f"{ep_size} under model_uniform_expert_blocks"
+        )
+    if exceptions.model_refuses_tp_above_experts and tp > experts.num_experts:
+        raise ValueError(
+            f"tp {tp} must be <= num_experts {experts.num_experts} under "
+            "model_refuses_tp_above_experts"
+        )
+
+
 def declared_local_expert_ids(
     num_experts: int,
     ep_size: int,
@@ -356,6 +610,15 @@ def declared_manifest(
     its pipeline stage, the global expert ids it owns in each MoE layer of
     that interval, and the declared placement epoch. With it absent the
     manifest is exactly the expert-free placement, byte for byte.
+
+    Two fields of that layout select the variants this builder additionally
+    models. With ``expert_parallel`` false the ``ep`` group keeps its ranks and
+    its index but every rank owns the full ``[0, num_experts)`` list in each of
+    its stage's MoE layers, and the tensor shard of each expert is not
+    represented. With ``exceptions.eplb`` true every rank also carries an
+    ``eplb`` membership, inserted after ``ep``, with the same ranks and index.
+    With both absent the manifest is byte identical to the output before either
+    existed.
     """
     for name, value in (("tp", tp), ("pp", pp), ("dp", dp)):
         if value < 1:
@@ -376,6 +639,9 @@ def declared_manifest(
     stage_intervals: tuple[tuple[int, int], ...] = ()
     stage_moe_layers: tuple[tuple[int, ...], ...] = ()
     ep_size = tp * dp
+    resolved_strategy = "linear"
+    owns_every_expert = False
+    emits_eplb_group = False
     if experts is not None:
         if not isinstance(experts, DeclaredExpertLayout):
             raise TypeError("experts must be a DeclaredExpertLayout or None")
@@ -384,8 +650,20 @@ def declared_manifest(
                 f"num_layers must be >= pp {pp} so every stage owns a layer, "
                 f"got {experts.num_layers}"
             )
+        _check_expert_map_exceptions(experts, tp, ep_size)
+        resolved_strategy = declared_resolved_placement_strategy(experts, ep_size)
+        # The arange refusal is checked against the resolved strategy, not the
+        # declared one: when the framework falls back to linear it never
+        # reaches the arange that fails, so refusing there would reject a
+        # layout the framework runs.
         _check_round_robin_expert_count(
-            experts.num_experts, ep_size, experts.placement_strategy
+            experts.num_experts, ep_size, resolved_strategy
+        )
+        # With expert parallelism off the framework's ep_size is one, so
+        # determine_expert_map returns every expert to every rank.
+        owns_every_expert = not experts.expert_parallel
+        emits_eplb_group = (
+            experts.exceptions is not None and experts.exceptions.eplb
         )
         stage_intervals = declared_pipeline_partition(experts.num_layers, pp)
         stage_moe_layers = tuple(
@@ -419,13 +697,23 @@ def declared_manifest(
                     ]
                     ep_rank = dp_index * tp + tp_index
                     groups["ep"] = GroupMembership(ep_rank, ep_ranks)
+                    if emits_eplb_group:
+                        # initialize_model_parallel builds the eplb group from
+                        # the same rank lists as ep, so a declared manifest
+                        # that omitted it would differ from an extracted one
+                        # in group inventory alone.
+                        groups["eplb"] = GroupMembership(ep_rank, list(ep_ranks))
                     layer_range = stage_intervals[pp_index]
-                    owned = list(
-                        declared_local_expert_ids(
-                            experts.num_experts,
-                            ep_size,
-                            ep_rank,
-                            experts.placement_strategy,
+                    owned = (
+                        list(range(experts.num_experts))
+                        if owns_every_expert
+                        else list(
+                            declared_local_expert_ids(
+                                experts.num_experts,
+                                ep_size,
+                                ep_rank,
+                                resolved_strategy,
+                            )
                         )
                     )
                     local_expert_ids = {
@@ -559,6 +847,13 @@ def declared_sglang_manifest(
     Every refusal is a :class:`ValueError` naming the field at fault, raised
     before the first rank is built so a refusal never leaves a half-populated
     manifest behind.
+
+    The two vLLM-specific selections of :class:`DeclaredExpertLayout` are
+    refused rather than reinterpreted: ``expert_parallel=False`` because
+    SGLang spells that ``ep_size=1``, which gives each rank a singleton ``ep``
+    group and the full expert range, and a non-default ``exceptions`` because
+    the pinned SGLang expert map has no round-robin placement to fall back
+    from.
     """
 
     _positive_int("tp", tp, minimum=1)
@@ -594,6 +889,25 @@ def declared_sglang_manifest(
             raise ValueError(
                 "placement_strategy must be 'linear' under the SGLang expert "
                 f"map, got {experts.placement_strategy!r}"
+            )
+        if not experts.expert_parallel:
+            # SGLang's own off switch is --ep-size 1, which this builder
+            # already takes: at ep_size 1 the EP group is the rank's own
+            # singleton and the block map is the full expert range. The vLLM
+            # meaning of the flag, a group that still spans DP x TP while
+            # every rank owns everything, has no SGLang counterpart, so two
+            # spellings of one thing would be two different geometries.
+            raise ValueError(
+                "expert_parallel False has no SGLang spelling; declare "
+                "ep_size=1 instead"
+            )
+        if experts.exceptions is not None:
+            # The pinned SGLang expert map has no round-robin placement at
+            # all, and this builder already refuses the strategy, so no SGLang
+            # run can take the fallback these conditions describe.
+            raise ValueError(
+                "exceptions must be None under the SGLang expert map, which "
+                "has no round_robin placement to fall back from"
             )
         if experts.num_experts % ep_size:
             raise ValueError(

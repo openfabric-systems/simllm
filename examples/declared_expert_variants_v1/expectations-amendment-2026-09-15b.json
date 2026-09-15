@@ -1,0 +1,36 @@
+{
+  "schema": "simllm-declared-expert-variants-amendment-v1",
+  "tasks": ["PLACE-7", "PLACE-11"],
+  "date": "2026-09-15",
+  "subject": "cell V13",
+  "chronology": "post-specified to an observation made while implementing the builder, frozen before the study harness and before any run",
+  "refuted": [
+    "ExpertPlacementSnapshot.owner_map collapses the all-owner entries to 768 keys and loses seven of every eight"
+  ],
+  "v13": {
+    "ownership_entries": 6144,
+    "distinct_layer_expert_pairs": 768,
+    "snapshot_over_full_ep_group": {
+      "refused": true,
+      "error": "snapshot.expert_owners: expert has multiple owners",
+      "raised_by": "validate_expert_placement_snapshot in simllm/traffic/routed_moe.py"
+    },
+    "snapshot_over_single_rank_slice": {"ep_ranks": [3], "entries": 768},
+    "snapshot_over_expert_parallel_on_twin": {"entries": 768},
+    "owner_map_row": "withdrawn; construction fails before owner_map is reached",
+    "vllm_step_schedule_refuses": "dims.local_num_experts * len(ranks) is 32 * 8, not 32"
+  },
+  "conclusion_effect": "strengthened: the consumer fails closed rather than losing rows quietly, so the zero scored denominator and the decision to run no backend stand and are better supported",
+  "unchanged": {
+    "cells": "V1 through V12",
+    "shared_counts": "the 6144 and 768 counts V13 shares with V11",
+    "evidence": "V13 remains a recorded finding, not a structural guard or a scored row",
+    "fatal_identities": [
+      "placement_records",
+      "place3_study_check_reproduces",
+      "place13_study_check_reproduces"
+    ],
+    "closure": "PLACE-7 and PLACE-11 close on the same cells; V13 was never among them"
+  },
+  "residual_owner": "PLACE-8"
+}

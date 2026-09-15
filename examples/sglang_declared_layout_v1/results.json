@@ -1110,7 +1110,7 @@
     "scored_exact_oracle_rows_matched": 6,
     "structural_guard_cells": 8
   },
-  "expectations_commit": "1eef03f5823c00703a78119773fd805bfa3e64f1",
+  "expectations_commit": "61fc887877e1bbf21f851ebb545ae8ff912c3c2a",
   "findings": [],
   "implementation_commit": "7c02b28e07991cfec52c27ceced0ad93a9c70528",
   "physical_sanity": {

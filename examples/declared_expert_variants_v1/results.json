@@ -1,0 +1,665 @@
+{
+  "amendment_commits": {
+    "baseline": "e08bed05e13c72a62fd183eba7798f86eb86e0f6",
+    "cell_v13": "5ffe5606c303fccd56b14ff13284cd22ae11543d"
+  },
+  "cells": {
+    "compatibility_digests": {
+      "m4_tp8": {
+        "bytes": 5698,
+        "sha256": "3812aef241d93f2af8d86da0f6bbb606dae9c43c768ceb3efb8d649dc3bacfd6"
+      },
+      "m5_tp1_dp8": {
+        "bytes": 5698,
+        "sha256": "0894fae1687217d88466b5692034a8d1863fb8c658afdfde2c317d1c412f60a5"
+      },
+      "rail_pp8": {
+        "bytes": 52310,
+        "sha256": "8d38cf4b6990bfd75fc90dcfe994180c3c1150adce297b6f71983fd8c9c877db"
+      },
+      "width_tp64": {
+        "bytes": 102050,
+        "sha256": "bed8d26c72feaf117f48b651ec18b4fb0caf39df2e47866a550f74252972aecd"
+      },
+      "worked_example_tp4_pp2_dp2": {
+        "bytes": 10832,
+        "sha256": "2e46eadcaccd83de1778ea98c368585b452b83067489b9a2df064e25a14d857e"
+      }
+    },
+    "place13_study_check": {
+      "reproduces": true,
+      "study": "examples/sglang_declared_layout_v1/run_study.py"
+    },
+    "place3_study_check": {
+      "reproduces": true,
+      "study": "examples/declared_expert_placement_v1/run_study.py"
+    },
+    "v10_eplb_group": {
+      "absent_without_eplb": true,
+      "every_rank_mirrors_ep": true,
+      "group_keys": [
+        "tp",
+        "pp",
+        "dp",
+        "ep",
+        "eplb"
+      ],
+      "rank_9_eplb": {
+        "rank_in_group": 5,
+        "ranks": [
+          0,
+          1,
+          2,
+          3,
+          8,
+          9,
+          10,
+          11
+        ]
+      }
+    },
+    "v11_composed": {
+      "eplb_at_32": {
+        "rank_in_group": 3,
+        "ranks": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      "owned_at_30": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29
+      ],
+      "owned_at_32": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31
+      ],
+      "refused_at_30": null,
+      "resolved": "linear"
+    },
+    "v12_wire_identity": {
+      "v1": {
+        "group_key_orders": [
+          [
+            "tp",
+            "pp",
+            "dp",
+            "ep"
+          ]
+        ],
+        "layer_keys_ascending": true,
+        "round_trips": true,
+        "source": "declared"
+      },
+      "v10": {
+        "group_key_orders": [
+          [
+            "tp",
+            "pp",
+            "dp",
+            "ep",
+            "eplb"
+          ]
+        ],
+        "layer_keys_ascending": true,
+        "round_trips": true,
+        "source": "declared"
+      }
+    },
+    "v13_consumer_finding": {
+      "distinct_pairs": 768,
+      "expert_parallel_on_twin_entries": 768,
+      "ownership_entries": 6144,
+      "single_rank_slice_entries": 768,
+      "snapshot_refusal": "snapshot.expert_owners: expert has multiple owners"
+    },
+    "v1_ep_disabled_worked_example": {
+      "owner_entries_total": 12288,
+      "owners_per_pair": [
+        8
+      ],
+      "ranks": {
+        "15": {
+          "ep": {
+            "rank_in_group": 7,
+            "ranks": [
+              4,
+              5,
+              6,
+              7,
+              12,
+              13,
+              14,
+              15
+            ]
+          },
+          "layer_range": [
+            24,
+            48
+          ],
+          "layers": [
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            47
+          ],
+          "owned": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ],
+          "owned_with_expert_parallel_true": [
+            28,
+            29,
+            30,
+            31
+          ]
+        },
+        "9": {
+          "ep": {
+            "rank_in_group": 5,
+            "ranks": [
+              0,
+              1,
+              2,
+              3,
+              8,
+              9,
+              10,
+              11
+            ]
+          },
+          "layer_range": [
+            0,
+            24
+          ],
+          "layers": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23
+          ],
+          "owned": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ],
+          "owned_with_expert_parallel_true": [
+            20,
+            21,
+            22,
+            23
+          ]
+        }
+      }
+    },
+    "v2_off_path_identity": {
+      "exceptions_all_false_by_default": true,
+      "exceptions_default_is_none": true,
+      "expert_parallel_default": true
+    },
+    "v3_group_inventory_gap": {
+      "base_fields_equal": true,
+      "differing": [
+        "ep",
+        "local_expert_ids",
+        "pipeline_layer_range"
+      ]
+    },
+    "v4_degenerate_identity": {
+      "byte_identical": true,
+      "ep": {
+        "rank_in_group": 0,
+        "ranks": [
+          0
+        ]
+      },
+      "owned": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31
+      ]
+    },
+    "v5_round_robin_arange": {
+      "distinct_ownership_rows": 1,
+      "owned_every_rank": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "refused_with_expert_parallel_true": "num_experts 4 must be >= ep_size - 1 (7) under round_robin placement",
+      "resolved_strategy": "linear"
+    },
+    "v6_sglang": {
+      "contrast_ep": {
+        "rank_in_group": 0,
+        "ranks": [
+          5
+        ]
+      },
+      "contrast_moe_tp": {
+        "rank_in_group": 5,
+        "ranks": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      "contrast_owned": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31
+      ],
+      "refusal": "expert_parallel False has no SGLang spelling; declare ep_size=1 instead",
+      "vllm_ep_ranks": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    "v7_fallback_rows": {
+      "all2all_without_round_robin": {
+        "rank_0": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "rank_5": [
+          20,
+          21,
+          22,
+          23
+        ],
+        "resolved": "linear"
+      },
+      "all_false": {
+        "rank_0": [
+          0,
+          8,
+          16,
+          24
+        ],
+        "rank_5": [
+          5,
+          13,
+          21,
+          29
+        ],
+        "resolved": "round_robin"
+      },
+      "all_four": {
+        "rank_0": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "rank_5": [
+          20,
+          21,
+          22,
+          23
+        ],
+        "resolved": "linear"
+      },
+      "eplb": {
+        "rank_0": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "rank_5": [
+          20,
+          21,
+          22,
+          23
+        ],
+        "resolved": "linear"
+      },
+      "none": {
+        "rank_0": [
+          0,
+          8,
+          16,
+          24
+        ],
+        "rank_5": [
+          5,
+          13,
+          21,
+          29
+        ],
+        "resolved": "round_robin"
+      },
+      "redundant_experts": {
+        "rank_0": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "rank_5": [
+          20,
+          21,
+          22,
+          23
+        ],
+        "resolved": "linear"
+      },
+      "single_expert_group": {
+        "rank_0": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "rank_5": [
+          20,
+          21,
+          22,
+          23
+        ],
+        "resolved": "linear"
+      }
+    },
+    "v8_linear_untouched": {
+      "matches_the_plain_layout": true,
+      "rank_5": [
+        20,
+        21,
+        22,
+        23
+      ],
+      "resolved": "linear"
+    },
+    "v9_refusals": {
+      "all_refused": true,
+      "build_controls": {
+        "remainder_counts": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          3,
+          3
+        ],
+        "remainder_rank_6": [
+          24,
+          25,
+          26
+        ],
+        "remainder_rank_7": [
+          27,
+          28,
+          29
+        ],
+        "tp_below_expert_count_unchanged": true
+      },
+      "refusals": {
+        "eplb remainder": "num_experts 30 must be divisible by ep_size 8 under eplb",
+        "exceptions is a string": "exceptions must be a DeclaredExpertMapExceptions or None, got 'round_robin'",
+        "expert_parallel spelled 1": "expert_parallel must be a bool, got 1",
+        "model_refuses_tp_above_experts": "tp 8 must be <= num_experts 4 under model_refuses_tp_above_experts",
+        "model_uniform_expert_blocks remainder": "num_experts 30 must be divisible by ep_size 8 under model_uniform_expert_blocks",
+        "sglang exceptions": "exceptions must be None under the SGLang expert map, which has no round_robin placement to fall back from",
+        "sglang expert_parallel False": "expert_parallel False has no SGLang spelling; declare ep_size=1 instead",
+        "single_expert_group spelled 1": "single_expert_group must be a bool, got 1"
+      }
+    }
+  },
+  "evidence": {
+    "fatal_compatibility_digests": 5,
+    "fatal_off_path_defaults": 1,
+    "fatal_study_checks": 2,
+    "recorded_findings": 1,
+    "rejection_controls": 8,
+    "scored_exact_oracle_rows": 0,
+    "structural_guard_cells": 10
+  },
+  "expectations_commit": "841dfb380180608f6c18b68ed5ae1e585d9be689",
+  "findings": [],
+  "implementation_commit": "4171bb49ae175ef2be8d75024222340fec739f60",
+  "physical_sanity": {
+    "v13_distinct_pairs": 768,
+    "v13_ownership_entries": 6144,
+    "v1_conservation_rule": "num_experts times the stage MoE layer count times DP x TP, summed over stages",
+    "v1_ownership_entries": 12288
+  },
+  "schema": "simllm-declared-expert-variants-result-v1",
+  "status": "PASS"
+}
