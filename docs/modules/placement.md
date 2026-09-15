@@ -351,7 +351,10 @@ slots, and reproduces every live DGX cell identically with the bound fabric.
   group inventory. Add an explicit selection that emits the group with
   all-expert ownership; omitting it must keep every current manifest byte
   identical, and the enabled variant must not change any step metric of an
-  expert-free run.
+  expert-free run. The
+  [expectations-only freeze](../../examples/declared_expert_variants_v1/expectations.md)
+  pins the `expert_parallel` selection, its literal ranks and expert lists, and
+  the two consumers that refuse the replicated geometry today.
 
 - PLACE-8 (Completeness; P2; S): uneven per-rank expert ownership in the
   step-sink consumers. A declared layout whose expert count `DP x TP` does
@@ -377,7 +380,12 @@ slots, and reproduces every live DGX cell identically with the bound fabric.
   caller's declared strategy and the remainder rule as stated; add an explicit
   model-scoped selection that applies those exceptions, whose absence keeps
   every current manifest byte identical. An extracted manifest records the map
-  that really ran.
+  that really ran. The
+  [expectations-only freeze](../../examples/declared_expert_variants_v1/expectations.md)
+  pins each condition against the pinned source and corrects two claims above:
+  a model that leaves the expert-group count unset also falls back, and the
+  model-scoped refusal is a tensor width above the expert count rather than a
+  non-divisible one.
 
 - PLACE-14 (Completeness; P2; M): the SGLang layout variants the declared
   builder leaves out. `declared_sglang_manifest` states one replica of a
