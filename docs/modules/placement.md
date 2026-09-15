@@ -34,11 +34,24 @@ both.
   expert map; `declared_pipeline_partition` and `declared_local_expert_ids`
   expose the two rules on their own. When `DP x TP` does not divide the
   expert count, each EP rank below the remainder owns one extra expert, as in
-  the framework's own expert map. `round_robin` is the caller's declaration;
-  vLLM's own fallback to `linear` is not modeled, and an extracted manifest
-  records the map that really ran. Omitting `experts`
-  is the explicit off path and keeps every expert-free manifest byte
-  identical.
+  the framework's own expert map. `round_robin` is the caller's declaration,
+  and `DeclaredExpertMapExceptions`, passed as
+  `DeclaredExpertLayout(..., exceptions=...)`, is how a layout says the
+  framework would overrule it: `single_expert_group`, `redundant_experts`,
+  `eplb` and `all2all_without_round_robin` resolve a declared `round_robin` to
+  `linear` exactly as the pinned resolver does, `eplb` additionally emits the
+  `eplb` group that shares the `ep` group's ranks, and
+  `model_uniform_expert_blocks` and `model_refuses_tp_above_experts` carry the
+  two model-scoped rules as refusals. `declared_resolved_placement_strategy`
+  reports the resolution; the manifest gains no strategy field, because
+  ownership already records the map that runs.
+  `DeclaredExpertLayout(expert_parallel=False)` states the deployment vLLM runs
+  with expert parallelism off: the `ep` group is unchanged and every rank of a
+  stage owns every expert of that stage's MoE layers, the geometry an extracted
+  manifest of such a run records. The tensor shard of one expert is not
+  represented. Omitting `experts` is the explicit off path and keeps every
+  expert-free manifest byte identical; omitting the two selections keeps every
+  expert-bearing manifest byte identical.
 - `declared_sglang_manifest(tp=..., pp=..., ep_size=..., moe_dp_size=...,
   nodes=..., gpus_per_node=..., hostname_pattern=..., framework_version=...,
   experts=...)` and `declared_sglang_pipeline_partition(num_layers, pp)`: the
@@ -56,7 +69,9 @@ both.
   hands the layer remainder to the *last* stages where the vLLM rule hands it
   to the stages indexed `-2, -3, ...`. `DeclaredExpertLayout` is shared with
   the vLLM builder, and `round_robin`, an expert count `ep_size` does not
-  divide, and a node count the launcher could not produce are refused. The two
+  divide, a node count the launcher could not produce, `expert_parallel=False`
+  (SGLang spells that `ep_size=1`) and a non-default `exceptions` object (the
+  pinned SGLang map has no `round_robin` to fall back from) are refused. The two
   builders are separate entry points and never share an output: every manifest
   the vLLM builder emits is byte identical to its pre-change bytes.
 - Fabric topology manifest (`simllm-fabric-topology-v1`): GPU to PCIe/NVLink
@@ -196,6 +211,21 @@ group read from `declared_sglang_manifest(tp=W, pp=1, ep_size=W, experts=...)`
 reproduces all six frozen m5 check-B makespans exactly with byte-identical
 GOAL text. The five vLLM reference manifests stay byte identical and the
 PLACE-3 study still reproduces its tracked results.
+
+A declared layout also states the two deployments where the framework
+overrules the caller. The
+[declared expert variant study](../../examples/declared_expert_variants_v1/RESULTS.md)
+validates both: with `expert_parallel=False` every rank of a stage keeps its
+`ep` membership and owns every expert of that stage's MoE layers, conserving
+12,288 ownership entries at eight owners per pair in the worked example and
+collapsing to the accepted bytes at a flattened width of one; and each of the
+four framework conditions of `DeclaredExpertMapExceptions` resolves a declared
+`round_robin` to `linear` on the frozen rows, with `eplb` also emitting the
+group that shares the `ep` ranks, while a declared `linear` never moves. The
+SGLang builder refuses both selections, all eight rejection controls refuse,
+the five reference manifests stay byte identical, and the PLACE-3 and PLACE-13
+studies both still reproduce their tracked results. The all-owner geometry is
+representable but reaches no consumer yet, which PLACE-8 records.
 
 The disaggregated builder supplies the one-prefill plus one-decode placement
 used by the live CORE-51 session and the same fixed structure at 16 prefill
@@ -341,21 +371,6 @@ slots, and reproduces every live DGX cell identically with the bound fabric.
   the lowerer and the sink. Absent selection must keep every current artifact
   byte identical. CORE-14 owns the coarse runtime's affinity.
 
-- PLACE-7 (Completeness; P2; S): declared MoE ownership with expert
-  parallelism disabled. vLLM 0.27.1 still creates the `ep` group for a MoE
-  model when expert parallelism is off, but then tensor-shards every expert
-  across the flattened DP x TP group so each rank owns every expert of its
-  stage's MoE layers. Today that deployment is declared by omitting `experts`, which is
-  the accepted all-experts-local geometry but records no `ep` group, so an
-  extracted manifest from such a run and its declared counterpart differ in
-  group inventory. Add an explicit selection that emits the group with
-  all-expert ownership; omitting it must keep every current manifest byte
-  identical, and the enabled variant must not change any step metric of an
-  expert-free run. The
-  [expectations-only freeze](../../examples/declared_expert_variants_v1/expectations.md)
-  pins the `expert_parallel` selection, its literal ranks and expert lists, and
-  the two consumers that refuse the replicated geometry today.
-
 - PLACE-8 (Completeness; P2; S): uneven per-rank expert ownership in the
   step-sink consumers. A declared layout whose expert count `DP x TP` does
   not divide is representable in the manifest, with the remainder experts on
@@ -368,24 +383,14 @@ slots, and reproduces every live DGX cell identically with the bound fabric.
   the expert count before floor-dividing it, and the memory estimate in
   `simllm/calibration/external_db.py` floor-divides `num_experts` by
   `moe_ep_size`, dropping remainder experts silently, so both belong to the
-  same path. Add an explicit uneven-ownership path; its absence must keep
-  every current artifact byte identical.
-
-- PLACE-11 (Completeness; P2; S): framework-side expert map exceptions the
-  declared layout does not model. vLLM 0.27.1 falls back from `round_robin`
-  to `linear` when the model has at most one expert group, has redundant
-  experts, runs EPLB, or uses an all-to-all backend without round-robin
-  routing tables, and some model implementations refuse expert counts their
-  expert-parallel size does not divide. `DeclaredExpertLayout` emits the
-  caller's declared strategy and the remainder rule as stated; add an explicit
-  model-scoped selection that applies those exceptions, whose absence keeps
-  every current manifest byte identical. An extracted manifest records the map
-  that really ran. The
-  [expectations-only freeze](../../examples/declared_expert_variants_v1/expectations.md)
-  pins each condition against the pinned source and corrects two claims above:
-  a model that leaves the expert-group count unset also falls back, and the
-  model-scoped refusal is a tensor width above the expert count rather than a
-  non-divisible one.
+  same path. The all-owner geometry that `expert_parallel=False` now declares
+  belongs to this task as well: the
+  [variant study](../../examples/declared_expert_variants_v1/RESULTS.md) found
+  that `ExpertPlacementSnapshot.from_manifest` refuses it outright, with
+  `snapshot.expert_owners: expert has multiple owners`, so a manifest in which
+  every rank of a stage owns every expert is representable but reaches no
+  consumer. Add an explicit uneven-ownership path and an all-owner projection;
+  the absence of both must keep every current artifact byte identical.
 
 - PLACE-14 (Completeness; P2; M): the SGLang layout variants the declared
   builder leaves out. `declared_sglang_manifest` states one replica of a
@@ -403,9 +408,32 @@ slots, and reproduces every live DGX cell identically with the bound fabric.
   states). The unrepresented
   tensor shard under `moe_tp > 1`, where every rank of one MoE tensor group
   owns the same expert ids and holds one shard of each, is the same gap
-  PLACE-7 records for vLLM and is settled with it. Add an explicit selection
+  PLACE-15 now records for vLLM and is settled with it. Add an explicit selection
   for each, so the layout that opts in says so; the absence of any new
   selection must keep every current manifest byte identical, which the five
   vLLM reference digests and the
   [SGLang study](../../examples/sglang_declared_layout_v1/RESULTS.md) rows
   both lock. SGL-18 owns the extracted counterpart of these same mechanisms.
+
+- PLACE-15 (Completeness; P2; M): the declared MoE dimensions that carry no
+  manifest field. Three gaps survive PLACE-7 and PLACE-11, all of them
+  representational rather than defects. The tensor shard of one expert: with
+  expert parallelism off, vLLM cuts every expert's `intermediate_size` into
+  `DP x TP` shards
+  (`model_executor/layers/fused_moe/config.py`, `FusedMoEConfig.__post_init__`),
+  and with `moe_tp > 1` SGLang does the same inside a MoE tensor group, but
+  `local_expert_ids` states which global expert ids live on a rank and has no
+  way to say which slice of one expert's weights does. The redundant physical
+  experts EPLB creates: `DeclaredExpertMapExceptions.redundant_experts`
+  declares the condition that overrules a `round_robin` map, while the extra
+  physical copies, their logical-to-physical map and its rebalancing epochs
+  are not represented at all. And the widths behind
+  `all2all_without_round_robin`: the declared layout folds
+  `use_all2all_kernels and not needs_round_robin_routing_tables` into one
+  boolean instead of stating a sequence-parallel width, a prefill
+  context-parallel width and an all-to-all backend name. Add a field for each,
+  so a layout that opts in says so; the absence of every new field must keep
+  the five reference manifest digests and the
+  [variant study](../../examples/declared_expert_variants_v1/RESULTS.md) rows
+  byte identical. PLACE-8 owns the consumers of uneven and all-owner
+  ownership; PLACE-14 owns the SGLang side of the same shard question.
