@@ -269,7 +269,15 @@ class DeclaredExpertMapExceptions:
       so a model that never sets the field falls back too.
     - ``redundant_experts`` is ``num_redundant_experts != 0``. The layout does
       not represent the extra physical expert copies themselves, only the
-      condition; ``layer.py`` permits them under EPLB alone.
+      condition; ``layer.py`` permits them under EPLB alone, asserting
+      ``num_redundant_experts == 0`` in the ``else`` arm of its ``enable_eplb``
+      branch. This module still accepts ``redundant_experts=True`` with
+      ``eplb=False``, because each field states one resolver condition and
+      ``determine_expert_placement_strategy`` really does test them
+      independently. Such a layout describes a map resolution for a
+      configuration vLLM refuses to boot, and it is accepted rather than
+      refused so that the declared conditions stay a faithful transcript of
+      the resolver instead of a second, different rule.
     - ``eplb`` is ``enable_eplb``. It additionally emits the ``eplb`` process
       group and brings the framework's divisibility refusal into scope.
     - ``all2all_without_round_robin`` is
@@ -296,6 +304,20 @@ class DeclaredExpertMapExceptions:
       ``determine_expert_map``, which hands ``base + 1`` experts to the ranks
       below it. The declared layout refuses the remainder instead of recording
       ownership such a model would not honor.
+
+    The two remainder refusals are deliberately asymmetric about
+    ``expert_parallel``, and the asymmetry follows the source rather than
+    taste. ``eplb``'s refusal lives in
+    ``model_executor/layers/fused_moe/layer.py`` behind ``if use_ep and ...``,
+    so it cannot fire with expert parallelism off, and neither does this
+    module's. ``model_uniform_expert_blocks`` is not guarded, because the
+    ``MixtureOfExperts`` bookkeeping does not read
+    ``moe_parallel_config.ep_size`` at all: it reads the EP process group,
+    ``self.ep_size = self.ep_group.size()`` in ``mixtral.py`` and
+    ``deepseek_v2.py``. That group is created for every MoE model whatever the
+    launcher asks, which is exactly the fact ``expert_parallel=False``
+    exists to state, so it keeps its ``DP * TP`` size and the model's uniform
+    block arithmetic runs on that size with expert parallelism off as well.
     """
 
     single_expert_group: bool = False
@@ -497,9 +519,18 @@ def _check_expert_map_exceptions(
     exceptions = experts.exceptions
     if exceptions is None:
         return
+    # The declared layout counts logical experts. vLLM's EPLB refusal counts
+    # global_num_experts, which layer.py builds as
+    # num_experts + num_redundant_experts, so with redundant_experts declared
+    # the two can disagree about which counts divide. The declared layout does
+    # not represent the redundant copies, so it cannot compute the framework's
+    # number; PLACE-15 owns closing that gap.
     remainder = experts.num_experts % ep_size
     # The framework's own EPLB refusal is guarded by ``use_ep``, so it cannot
-    # fire with expert parallelism off; neither does this one.
+    # fire with expert parallelism off; neither does this one. The
+    # uniform-block refusal below is deliberately not guarded, because the
+    # model bookkeeping it mirrors reads the EP process group size, which
+    # survives the flag. See DeclaredExpertMapExceptions.
     if exceptions.eplb and experts.expert_parallel and remainder:
         raise ValueError(
             f"num_experts {experts.num_experts} must be divisible by ep_size "

@@ -955,6 +955,21 @@ def main() -> None:
 
     if args.check:
         tracked = json.loads(RESULTS_PATH.read_text(encoding="utf-8"))
+        # The in-run guard compares the summary against the constant this same
+        # process just wrote, so it can only ever agree. The tracked file is
+        # the one independent witness of which freeze the recorded run was
+        # checked against, so compare that against the constant too: a freeze
+        # commit that moved under a tracked result is exactly the drift the
+        # guard exists to catch.
+        if tracked.get("expectations_commit") != EXPECTATIONS_COMMIT:
+            raise SystemExit(
+                "the tracked results.json names expectations commit "
+                f"{tracked.get('expectations_commit')!r}, not {EXPECTATIONS_COMMIT!r}"
+            )
+        if tracked.get("amendment_commits") != summary["amendment_commits"]:
+            raise SystemExit(
+                "the tracked results.json names different amendment commits"
+            )
         if comparable(summary) != comparable(tracked):
             raise SystemExit("this run disagrees with the tracked results.json")
         print("check: this run reproduces the tracked results.json")
