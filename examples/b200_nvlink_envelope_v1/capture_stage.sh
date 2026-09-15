@@ -74,7 +74,7 @@ if [ "$STAGE" = "2" ]; then
 fi
 
 export NCCL_DEBUG=INFO
-export NCCL_DEBUG_SUBSYS=INIT,NET
+export NCCL_DEBUG_SUBSYS=INIT,NET,TUNING
 export TORCH_NCCL_ASYNC_ERROR_HANDLING=1
 timeout --signal=TERM "$LANE_WALL_CLOCK_SECONDS" \
   python -m torch.distributed.run --standalone --nproc_per_node="$RANKS" \
