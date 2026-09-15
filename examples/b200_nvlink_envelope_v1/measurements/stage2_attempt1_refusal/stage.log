@@ -1,0 +1,3 @@
+nvlink precheck: 126 active links, GPU0 to GPU1 is NV18
+FATAL no peer access (and therefore no NVLink) on pairs: 0->4, 1->4, 2->4, 3->4, 4->0, 4->1, 4->2, 4->3, 4->5, 4->6, 4->7, 5->4, 6->4, 7->4; the study aborts before any timed lane
+FATAL no peer access (and therefore no NVLink) on pairs: 0->4, 1->4, 2->4, 3->4, 4->0, 4->1, 4->2, 4->3, 4->5, 4->6, 4->7, 5->4, 6->4, 7->4; the study aborts before any timed lane

@@ -1,0 +1,26 @@
+total 28
+drwxr-xr-x 3 root root  186 Sep 15 23:43 .
+drwx------ 1 root root 4096 Sep 15 23:43 ..
+drwxr-xr-x 2 root root  135 Sep 15 23:43 inventory
+-rw-r--r-- 1 root root    0 Sep 15 23:43 listing.txt
+-rw-r--r-- 1 root root 4295 Sep 15 23:43 nccl_bench.log
+-rw-r--r-- 1 root root 2938 Sep 15 23:43 nvlink_status.txt
+-rw-r--r-- 1 root root 1279 Sep 15 23:43 rdma_evidence.txt
+-rw-r--r-- 1 root root  416 Sep 15 23:43 stage.log
+-rw-r--r-- 1 root root 1124 Sep 15 23:43 topo_matrix.txt
+total 64
+drwxr-xr-x 2 root root   135 Sep 15 23:43 .
+drwxr-xr-x 3 root root   186 Sep 15 23:43 ..
+-rw-r--r-- 1 root root   391 Sep 15 23:43 listing.txt
+-rw-r--r-- 1 root root   426 Sep 15 23:42 nccl_dump.py
+-rw-r--r-- 1 root root    54 Sep 15 23:42 nccl_env.txt
+-rw-r--r-- 1 root root  3617 Sep 15 23:43 nccl_run.log
+-rw-r--r-- 1 root root 48006 Sep 15 23:42 node_inventory.txt
+stage: 2
+ranks: 8
+active_nvlinks: 126
+gpu0_gpu1: NV18
+pg_timeout_seconds: 300
+lane_wall_clock_seconds: 900
+bench_exit: 1
+STAGE_DONE
