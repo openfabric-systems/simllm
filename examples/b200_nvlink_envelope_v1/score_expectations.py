@@ -56,6 +56,15 @@ ALL_PAIRS_SPREAD_MAX = 0.15
 DISJOINT_SLOWDOWN_MAX = 0.15
 CONCURRENT_PAYLOAD_BYTES = 67_108_864
 ALL_PAIRS_STRUCTURE_BYTES = 16_777_216
+FANIN_DONORS = 7
+#: amendment c: a placement row of record is a graph row at every payload, and
+#: an eager placement row this slow whose captured twin is less than half of it
+#: was timed into a device hosting a spinning peer rank, so it measures the
+#: wait and not the link.
+NOT_MEANINGFUL_ABOVE_NS = 2_000_000.0
+NOT_MEANINGFUL_TWIN_FRACTION = 0.5
+EAGER_AGREEMENT_FRACTION = 0.05
+PLACEMENT_CELLS = ("all_pairs", "disjoint_pairs", "fanout", "fanin")
 
 #: amendment of 2026-09-15: at or below this payload the row of record is the
 #: CUDA graph replay, above it the eager row, and the other method is kept
@@ -319,6 +328,71 @@ def rows_of_record(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], di
         "methods_present": sorted({row_method(row) for row in rows}),
     }
     return chosen, record
+
+
+def placement_rows_of_record(
+    rows: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Select the graph row of every placement cell, at every payload.
+
+    Amendment c moves the placement cells to graph rows throughout, because
+    their eager rows were timed while seven idle ranks span in an NCCL barrier
+    on the very devices being written to.
+    """
+
+    graph_rows = [row for row in rows if row_method(row) == METHOD_GRAPH]
+    fallbacks = sorted({requested_bytes(row) for row in rows}) if not graph_rows else []
+    record = {
+        "rows_selected": len(graph_rows) or len(rows),
+        "method_of_record": METHOD_GRAPH,
+        "fallback_payload_bytes": fallbacks,
+    }
+    return (graph_rows or rows), record
+
+
+def mark_not_meaningful(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Report the eager placement rows that timed a spinning peer, not a link."""
+
+    marked: list[dict[str, Any]] = []
+    for row in rows:
+        if row_method(row) != METHOD_EAGER or row.get("cell") not in PLACEMENT_CELLS:
+            continue
+        observed = float(row["time_ns"])
+        if observed <= NOT_MEANINGFUL_ABOVE_NS:
+            continue
+        twin = next(
+            (
+                other
+                for other in rows
+                if row_method(other) == METHOD_GRAPH
+                and other.get("cell") == row.get("cell")
+                and other.get("direction") == row.get("direction")
+                and requested_bytes(other) == requested_bytes(row)
+                and other.get("donors") == row.get("donors")
+            ),
+            None,
+        )
+        if twin is None:
+            continue
+        if float(twin["time_ns"]) < NOT_MEANINGFUL_TWIN_FRACTION * observed:
+            marked.append(
+                {
+                    "cell": row.get("cell"),
+                    "direction": row.get("direction"),
+                    "bytes": row["bytes"],
+                    "eager_time_ns": observed,
+                    "graph_time_ns": float(twin["time_ns"]),
+                }
+            )
+    return {
+        "not_meaningful_eager_rows": len(marked),
+        "reason": (
+            "the eager row is above 2 ms while its captured twin is less than half of "
+            "it, which is the signature of a copy timed into a device hosting a peer "
+            "rank spinning in an NCCL barrier"
+        ),
+        "rows": marked,
+    }
 
 
 def control_row(
@@ -988,19 +1062,46 @@ def score_e6(
 
 
 def score_e7(stage2: dict[str, Any] | None, e2_records: dict[str, Any]) -> list[Outcome]:
-    """Evaluate the stage 2 placement structure, structural and unscored."""
+    """Evaluate the stage 2 placement structure, structural and unscored.
+
+    Amendment c makes the graph-replay row the row of record in every placement
+    cell at every payload, keeps the eager rows as a control with the ones
+    timed into a spinning peer's device marked not meaningful, and replaces the
+    fan-in rule, which as frozen inverted its fraction and asked the seven-donor
+    fan-in to be slower than the nameplate allows.
+    """
 
     if stage2 is None:
         return [
             Outcome("E7", "structural", None, "stage 2 did not run", {}),
         ]
     outcomes: list[Outcome] = []
-    pairs = [
+    placement = [
         row
         for row in measured(stage2.get("p1", []))
-        if row.get("cell") == "all_pairs"
-        and requested_bytes(row) == ALL_PAIRS_STRUCTURE_BYTES
+        if row.get("cell") in PLACEMENT_CELLS
     ]
+    control = mark_not_meaningful(placement)
+    outcomes.append(
+        Outcome(
+            "E7-eager-control",
+            "reported",
+            None,
+            f"{control['not_meaningful_eager_rows']} of "
+            f"{sum(1 for row in placement if row_method(row) == METHOD_EAGER)} eager "
+            "placement rows are marked not meaningful: " + control["reason"],
+            control,
+        )
+    )
+
+    pairs, pairs_selection = placement_rows_of_record(
+        [
+            row
+            for row in placement
+            if row.get("cell") == "all_pairs"
+            and requested_bytes(row) == ALL_PAIRS_STRUCTURE_BYTES
+        ]
+    )
     if pairs:
         times = [float(row["time_ns"]) for row in pairs]
         spread = (max(times) - min(times)) / min(times) if min(times) > 0 else float("inf")
@@ -1012,14 +1113,30 @@ def score_e7(stage2: dict[str, Any] | None, e2_records: dict[str, Any]) -> list[
                 f"over {len(pairs)} ordered pairs at 16 MiB the slowest is "
                 f"{fmt(spread * 100, 2)} percent above the fastest, limit "
                 f"{ALL_PAIRS_SPREAD_MAX * 100} percent",
-                {"pairs": len(pairs), "spread_fraction": spread},
+                {
+                    "pairs": len(pairs),
+                    "spread_fraction": spread,
+                    "fastest_us": min(times) / 1e3,
+                    "slowest_us": max(times) / 1e3,
+                    "selection": pairs_selection,
+                },
             )
         )
-    isolated = point(copy_series(stage2, "unidirectional", "0->1"), CONCURRENT_PAYLOAD_BYTES)
-    disjoint = next(
-        (row for row in measured(stage2.get("p1", [])) if row.get("cell") == "disjoint_pairs"),
-        None,
+
+    isolated_rows, _ = placement_rows_of_record(
+        [
+            row
+            for row in measured(stage2.get("p1", []))
+            if row.get("cell") == "unidirectional"
+            and row.get("direction") == "0->1"
+            and requested_bytes(row) == CONCURRENT_PAYLOAD_BYTES
+        ]
     )
+    isolated = isolated_rows[0] if isolated_rows else None
+    disjoint_rows, _ = placement_rows_of_record(
+        [row for row in placement if row.get("cell") == "disjoint_pairs"]
+    )
+    disjoint = disjoint_rows[0] if disjoint_rows else None
     if isolated is not None and disjoint is not None:
         ratio = float(disjoint["time_ns"]) / float(isolated["time_ns"])
         outcomes.append(
@@ -1029,37 +1146,140 @@ def score_e7(stage2: dict[str, Any] | None, e2_records: dict[str, Any]) -> list[
                 bool(ratio <= 1.0 + DISJOINT_SLOWDOWN_MAX),
                 f"four disjoint pairs at 64 MiB take {fmt(ratio, 4)} times the isolated pair, "
                 f"limit {1.0 + DISJOINT_SLOWDOWN_MAX}",
-                {"ratio": ratio},
+                {
+                    "ratio": ratio,
+                    "disjoint_us": float(disjoint["time_ns"]) / 1e3,
+                    "isolated_us": float(isolated["time_ns"]) / 1e3,
+                },
             )
         )
-    fanin = next(
-        (
-            row
-            for row in measured(stage2.get("p1", []))
-            if row.get("cell") == "fanin" and row.get("donors") == 7
-        ),
-        None,
+
+    fanout_rows, _ = placement_rows_of_record(
+        [row for row in placement if row.get("cell") == "fanout"]
     )
-    beta_pair = e2_records.get("0->1", {}).get("beta_bytes_per_second")
-    if fanin is not None and isolated is not None and beta_pair:
-        floor_ns = (
-            7.0 * float(isolated["time_ns"]) * beta_pair / float(UNIDIRECTIONAL_CEILING_BPS)
+    if fanout_rows:
+        fanout = fanout_rows[0]
+        aggregate = float(fanout.get("aggregate_bytes_per_second", 0.0))
+        outcomes.append(
+            Outcome(
+                "E7-fanout",
+                "reported",
+                None,
+                f"the fan-out to seven peers completes in "
+                f"{fmt(float(fanout['time_ns']) / 1e6, 3)} ms at "
+                f"{fmt(aggregate / 1e9, 1)} GB/s aggregate, "
+                f"{fmt(aggregate / UNIDIRECTIONAL_CEILING_BPS * 100, 1)} percent of the "
+                "nameplate",
+                {
+                    "time_ns": fanout["time_ns"],
+                    "aggregate_bytes_per_second": aggregate,
+                    "fraction_of_nameplate": aggregate / UNIDIRECTIONAL_CEILING_BPS,
+                },
+            )
         )
+
+    fanin_rows, _ = placement_rows_of_record(
+        [
+            row
+            for row in placement
+            if row.get("cell") == "fanin" and row.get("donors") == FANIN_DONORS
+        ]
+    )
+    if fanin_rows:
+        fanin = fanin_rows[0]
+        observed_ns = float(fanin["time_ns"])
+        # Amendment c: the nameplate floor for seven donors into one receiver.
+        floor_ns = (
+            FANIN_DONORS * CONCURRENT_PAYLOAD_BYTES / float(UNIDIRECTIONAL_CEILING_BPS) * 1e9
+        )
+        aggregate = float(fanin.get("aggregate_bytes_per_second", 0.0))
+        fraction = aggregate / UNIDIRECTIONAL_CEILING_BPS
         outcomes.append(
             Outcome(
                 "E7-fanin",
                 "structural",
-                bool(float(fanin["time_ns"]) >= floor_ns),
-                f"the seven-donor fan-in takes {fmt(float(fanin['time_ns']) / 1e6, 3)} ms "
-                f"against a receiver-limited floor of {fmt(floor_ns / 1e6, 3)} ms",
-                {"fanin_ns": fanin["time_ns"], "floor_ns": floor_ns},
+                bool(observed_ns >= floor_ns),
+                f"the seven-donor fan-in takes {fmt(observed_ns / 1e6, 3)} ms against the "
+                f"nameplate floor of {fmt(floor_ns / 1e6, 3)} ms, receiving at "
+                f"{fmt(aggregate / 1e9, 1)} GB/s, {fmt(fraction * 100, 1)} percent of the "
+                "900 GB/s nameplate",
+                {
+                    "fanin_ns": observed_ns,
+                    "floor_ns": floor_ns,
+                    "aggregate_bytes_per_second": aggregate,
+                    "fraction_of_nameplate": fraction,
+                },
             )
         )
-    if not outcomes:
+
+    if len(outcomes) <= 1:
         outcomes.append(
             Outcome("E7", "structural", None, "stage 2 carries no placement rows", {})
         )
     return outcomes
+
+
+def score_eager_agreement(stages: dict[str, dict[str, Any]]) -> Outcome:
+    """Compare the eager control against the row of record above 1 MiB.
+
+    Amendment c expects the two methods to agree within 5 percent above 1 MiB
+    once the idle ranks wait on the host. The check is structural: it reports
+    whether the control is usable, and never moves a scored count.
+    """
+
+    worst: dict[str, Any] | None = None
+    compared = 0
+    outside = 0
+    for name, result in stages.items():
+        rows = measured(result.get("p1", []))
+        for row in rows:
+            if row_method(row) != METHOD_EAGER or requested_bytes(row) <= GRAPH_ROW_MAX_BYTES:
+                continue
+            twin = next(
+                (
+                    other
+                    for other in rows
+                    if row_method(other) == METHOD_GRAPH
+                    and other.get("cell") == row.get("cell")
+                    and other.get("direction") == row.get("direction")
+                    and requested_bytes(other) == requested_bytes(row)
+                    and other.get("donors") == row.get("donors")
+                ),
+                None,
+            )
+            if twin is None or float(twin["time_ns"]) <= 0:
+                continue
+            compared += 1
+            gap = abs(float(row["time_ns"]) - float(twin["time_ns"])) / float(twin["time_ns"])
+            if gap > EAGER_AGREEMENT_FRACTION:
+                outside += 1
+            if worst is None or gap > worst["gap_fraction"]:
+                worst = {
+                    "stage": name,
+                    "cell": row.get("cell"),
+                    "direction": row.get("direction"),
+                    "bytes": row["bytes"],
+                    "eager_time_ns": row["time_ns"],
+                    "graph_time_ns": twin["time_ns"],
+                    "gap_fraction": gap,
+                }
+    if not compared:
+        return Outcome(
+            "E7-eager-agreement",
+            "structural",
+            None,
+            "no payload above 1 MiB carries both methods, so the control cannot be compared",
+            {},
+        )
+    return Outcome(
+        "E7-eager-agreement",
+        "structural",
+        bool(outside == 0),
+        f"above 1 MiB {compared - outside} of {compared} eager rows agree with their "
+        f"captured row within {EAGER_AGREEMENT_FRACTION * 100} percent; the worst gap is "
+        f"{fmt((worst or {}).get('gap_fraction', 0.0) * 100, 2)} percent",
+        {"compared": compared, "outside": outside, "worst": worst},
+    )
 
 
 def score_e8() -> list[Outcome]:
@@ -1203,6 +1423,7 @@ def build_report(
     e6_outcomes, e6_record = score_e6(stage1, refit, e2_records)
     outcomes.extend(e6_outcomes)
     outcomes.extend(score_e7(stage2, e2_records))
+    outcomes.append(score_eager_agreement(stages))
     outcomes.extend(score_e8())
 
     scored = [outcome for outcome in outcomes if outcome.cls == "scored"]

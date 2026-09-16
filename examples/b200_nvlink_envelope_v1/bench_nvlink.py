@@ -62,6 +62,7 @@ TIMED_ITERATIONS_AT_OR_BELOW_1MIB = 200
 AMENDMENTS_IN_FORCE: tuple[str, ...] = (
     "expectations-amendment-2026-09-15",
     "expectations-amendment-2026-09-15b",
+    "expectations-amendment-2026-09-15c",
 )
 METHOD_GRAPH = "graph"
 METHOD_EAGER = "eager"
@@ -728,6 +729,32 @@ def probe_graph_support(mock: bool, device: torch.device) -> tuple[bool, str]:
     return agreed, reason
 
 
+def make_barrier_group(mock: bool) -> tuple[Any, str]:
+    """Return the group that inter-lane barriers wait in, and its backend.
+
+    An idle rank in an NCCL barrier spins on its own device. While rank 0 times
+    lane P1 across every device, that spin lands inside another rank's
+    measurement: in stage 2 every eager copy into a device hosting a waiting
+    rank read a flat 2.33 ms whatever the payload. A CPU-backed group makes the
+    waiting ranks block on the host instead, so the NCCL group is used only
+    inside the timed lanes.
+    """
+
+    if mock:
+        # The mock world group is already gloo, so it needs no second group.
+        return None, "gloo"
+    try:
+        return dist.new_group(backend="gloo"), "gloo"
+    except Exception as error:  # noqa: BLE001 - fall back rather than lose the run
+        print(
+            f"WARNING no gloo group for the inter-lane barriers ({error}); "
+            "idle ranks will spin on their devices",
+            file=sys.stderr,
+            flush=True,
+        )
+        return None, "nccl"
+
+
 def _time_block(
     mock: bool,
     device: torch.device,
@@ -904,6 +931,7 @@ def run_lane_p2(
     world_size: int,
     device: torch.device,
     methods: tuple[str, ...],
+    barrier_group: Any = None,
 ) -> list[dict[str, Any]]:
     """Time the NCCL point-to-point cells of lane P2."""
 
@@ -925,14 +953,15 @@ def run_lane_p2(
             for requested in STAGE2_P2_PAYLOADS:
                 for method in methods:
                     # One pair at a time, so a placement cell measures an
-                    # otherwise idle fabric.
-                    dist.barrier()
+                    # otherwise idle fabric, and the ranks that sit it out wait
+                    # on the host rather than on their devices.
+                    dist.barrier(group=barrier_group)
                     row = _p2_pair_cell(src, dst, requested, mock, rank, device, method)
                     if row is not None:
                         row["cell"] = "stage2_pair"
                         rows.append(row)
     gathered: list[Any] = [None] * world_size
-    dist.all_gather_object(gathered, rows)
+    dist.all_gather_object(gathered, rows, group=barrier_group)
     merged: list[dict[str, Any]] = []
     for part in gathered:
         merged.extend(part or [])
@@ -1048,6 +1077,7 @@ def run_lane_p3(
     world_size: int,
     device: torch.device,
     methods: tuple[str, ...],
+    barrier_group: Any = None,
 ) -> list[dict[str, Any]]:
     """Time the NCCL collectives of lane P3 at the frozen widths."""
 
@@ -1082,7 +1112,7 @@ def run_lane_p3(
                                 method,
                             )
                         )
-            dist.barrier()
+            dist.barrier(group=barrier_group)
     del send, recv
     if not mock and torch.cuda.is_available():
         torch.cuda.empty_cache()
@@ -1095,6 +1125,7 @@ def build_header(
     started: str,
     graph_enabled: bool = False,
     graph_reason: str = "",
+    barrier_backend: str = "nccl",
 ) -> dict[str, Any]:
     """Return the header the freeze requires, with the hostname redacted."""
 
@@ -1124,6 +1155,7 @@ def build_header(
         "visible_device_count": device_count,
         "world_size": world_size,
         "backend": "gloo" if mock else "nccl",
+        "barrier_backend": barrier_backend,
         "mock": mock,
         "mock_payload_cap_bytes": MOCK_PAYLOAD_CAP_BYTES if mock else None,
         "mock_timed_iterations": MOCK_TIMED_ITERATIONS if mock else None,
@@ -1202,6 +1234,10 @@ def main(argv: list[str] | None = None) -> int:
             f"timeout {args.pg_timeout_seconds} s"
         )
 
+    barrier_group, barrier_backend = make_barrier_group(args.mock)
+    if rank == 0:
+        _progress(f"inter-lane barriers wait in a {barrier_backend} group")
+
     graph_enabled, graph_reason = probe_graph_support(args.mock, device)
     methods = METHODS if graph_enabled else (METHOD_EAGER,)
     if rank == 0:
@@ -1219,23 +1255,27 @@ def main(argv: list[str] | None = None) -> int:
     if not args.mock:
         # Belt and braces: no lane may leave this process on another device.
         torch.cuda.set_device(local_rank)
-    dist.barrier()
+    dist.barrier(group=barrier_group)
 
     if rank == 0:
         _progress("P2 start")
         started_lane = time.perf_counter()
-    p2_rows = run_lane_p2(args.stage, args.mock, rank, world_size, device, methods)
+    p2_rows = run_lane_p2(
+        args.stage, args.mock, rank, world_size, device, methods, barrier_group
+    )
     if rank == 0:
         _progress(f"P2 end, {len(p2_rows)} rows in {time.perf_counter() - started_lane:.1f} s")
-    dist.barrier()
+    dist.barrier(group=barrier_group)
 
     if rank == 0:
         _progress("P3 start")
         started_lane = time.perf_counter()
-    p3_rows = run_lane_p3(args.stage, args.mock, rank, world_size, device, methods)
+    p3_rows = run_lane_p3(
+        args.stage, args.mock, rank, world_size, device, methods, barrier_group
+    )
     if rank == 0:
         _progress(f"P3 end, {len(p3_rows)} rows in {time.perf_counter() - started_lane:.1f} s")
-    dist.barrier()
+    dist.barrier(group=barrier_group)
 
     if not graph_enabled:
         # No row of record exists at or below 1 MiB when capture is off, so
@@ -1248,7 +1288,9 @@ def main(argv: list[str] | None = None) -> int:
                 )
 
     if rank == 0:
-        header = build_header(args.mock, world_size, started, graph_enabled, graph_reason)
+        header = build_header(
+            args.mock, world_size, started, graph_enabled, graph_reason, barrier_backend
+        )
         header["finished_utc"] = _utc_now()
         result = {
             "schema": SCHEMA,

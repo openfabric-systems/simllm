@@ -907,3 +907,149 @@ def test_the_e6_asymptote_fits_the_whole_window(tmp_path: Path) -> None:
     assert asymptote["fit_points"] == len(window)
     holdout_fit = _outcome(report, "E2-0->1-fit")["observed"]
     assert holdout_fit["fit_points"] == len(window) - 1
+
+
+class _FakeDist:
+    """Enough of torch.distributed to record how the lane calls it."""
+
+    def __init__(self, new_group_error: Exception | None = None) -> None:
+        self.calls: list[tuple] = []
+        self.new_group_error = new_group_error
+
+    def new_group(self, *args, **kwargs):
+        self.calls.append(("new_group", args, kwargs))
+        if self.new_group_error is not None:
+            raise self.new_group_error
+        return f"group:{kwargs.get('backend', 'default')}"
+
+    def barrier(self, *args, **kwargs):
+        self.calls.append(("barrier", args, kwargs))
+
+
+def test_the_inter_lane_barriers_wait_in_a_host_group(monkeypatch) -> None:
+    """Amendment c: an idle rank must not spin on a device another rank times."""
+
+    pytest.importorskip("torch")
+    bench = _load("b200_nvlink_envelope_bench_barrier", BENCH_PATH)
+    fake = _FakeDist()
+    monkeypatch.setattr(bench, "dist", fake)
+
+    group, backend = bench.make_barrier_group(False)
+    assert backend == "gloo"
+    assert group == "group:gloo"
+    assert fake.calls == [("new_group", (), {"backend": "gloo"})]
+
+    # Mock mode already runs the world group on gloo, so it needs no second one.
+    fake.calls.clear()
+    group, backend = bench.make_barrier_group(True)
+    assert (group, backend) == (None, "gloo")
+    assert fake.calls == []
+
+
+def test_a_host_group_that_cannot_be_built_falls_back_and_says_so(monkeypatch) -> None:
+    pytest.importorskip("torch")
+    bench = _load("b200_nvlink_envelope_bench_fallback", BENCH_PATH)
+    monkeypatch.setattr(bench, "dist", _FakeDist(RuntimeError("no gloo in this build")))
+
+    group, backend = bench.make_barrier_group(False)
+    assert group is None
+    assert backend == "nccl"
+
+
+def test_every_barrier_in_the_lane_names_its_group() -> None:
+    """The NCCL world group is never waited in outside a timed lane."""
+
+    source = BENCH_PATH.read_text(encoding="utf-8")
+    bare = source.count("dist.barrier()")
+    assert bare == 0, "a barrier without a group waits in the NCCL world group"
+    assert source.count("dist.barrier(group=") >= 4
+
+
+def _placement_row(cell: str, method: str, size: int, time_ns: float, **extra) -> dict:
+    row = {
+        "cell": cell,
+        "method": method,
+        "of_record": method == "graph",
+        "direction": extra.pop("direction", "0->1"),
+        "requested_bytes": size,
+        "bytes": size,
+        "iterations": 20,
+        "status": "measured",
+        "time_ns": time_ns,
+        "bytes_per_second": size / (time_ns * 1e-9),
+        "aggregate_bytes_per_second": extra.pop("aggregate", size / (time_ns * 1e-9)),
+    }
+    row.update(extra)
+    return row
+
+
+def test_the_placement_cells_read_graph_rows_and_mark_the_spinning_peer(tmp_path) -> None:
+    pytest.importorskip("numpy")
+    scorer = _scorer()
+    rows = [
+        _placement_row("all_pairs", "graph", 16_777_216, 27_500.0),
+        _placement_row("all_pairs", "eager", 16_777_216, 2_330_000.0),
+        _placement_row("fanin", "graph", 67_108_864, 594_000.0, donors=7),
+        _placement_row("fanin", "eager", 67_108_864, 595_000.0, donors=7),
+    ]
+    selected, record = scorer.placement_rows_of_record(rows)
+    assert [scorer.row_method(row) for row in selected] == ["graph", "graph"]
+    assert record["method_of_record"] == "graph"
+    assert record["fallback_payload_bytes"] == []
+
+    marked = scorer.mark_not_meaningful(rows)
+    assert marked["not_meaningful_eager_rows"] == 1
+    assert marked["rows"][0]["cell"] == "all_pairs"
+    assert "spinning" in marked["reason"]
+    # The clean fan-in control is under 2 ms and keeps its meaning.
+    assert all(entry["cell"] != "fanin" for entry in marked["rows"])
+
+
+def test_the_fanin_floor_is_the_nameplate_not_the_inverted_fraction() -> None:
+    """The frozen rule asked for 636 us where the nameplate allows 522 us."""
+
+    pytest.importorskip("numpy")
+    scorer = _scorer()
+    stage2 = {
+        "p1": [
+            _placement_row("unidirectional", "graph", 67_108_864, 85_900.0),
+            _placement_row("fanin", "graph", 67_108_864, 594_000.0, donors=7, aggregate=790.9e9),
+        ]
+    }
+    outcomes = scorer.score_e7(stage2, {"0->1": {"beta_bytes_per_second": 781e9}})
+    fanin = next(outcome for outcome in outcomes if outcome.ident == "E7-fanin")
+
+    floor_ns = 7 * 67_108_864 / 900e9 * 1e9
+    assert floor_ns == pytest.approx(521_962.0, abs=100)
+    assert fanin.observed["floor_ns"] == pytest.approx(floor_ns)
+    assert fanin.passed is True
+    assert fanin.observed["fraction_of_nameplate"] == pytest.approx(0.879, abs=0.001)
+
+
+def test_the_eager_agreement_check_reports_the_worst_gap() -> None:
+    pytest.importorskip("numpy")
+    scorer = _scorer()
+    agree = {
+        "stage2": {
+            "p1": [
+                _placement_row("all_pairs", "graph", 16_777_216, 27_500.0),
+                _placement_row("all_pairs", "eager", 16_777_216, 28_000.0),
+            ]
+        }
+    }
+    outcome = scorer.score_eager_agreement(agree)
+    assert outcome.passed is True
+    assert outcome.observed["outside"] == 0
+
+    spinning = {
+        "stage2": {
+            "p1": [
+                _placement_row("all_pairs", "graph", 16_777_216, 27_500.0),
+                _placement_row("all_pairs", "eager", 16_777_216, 2_330_000.0),
+            ]
+        }
+    }
+    outcome = scorer.score_eager_agreement(spinning)
+    assert outcome.passed is False
+    assert outcome.observed["outside"] == 1
+    assert outcome.cls == "structural"
