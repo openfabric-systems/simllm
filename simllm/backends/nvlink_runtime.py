@@ -198,6 +198,13 @@ class NvlinkCausalEngine:
         self._packets: list[NvlinkFlitPacket] = []
         self._tx_queues: list[deque[int]] = []
         self._read_requests: dict[str, int] = {}
+        # Retained peer reads may depend on work owned by a resource outside the
+        # packet engine (for example, servicing a remote load through the
+        # buffer owner's GPU-memory scheduler).  A missing value means that the
+        # request is admitted but the response is still blocked.  The release
+        # timestamp is recorded once so the response cannot race ahead of that
+        # external service or be released twice.
+        self._read_response_gates: dict[str, int | None] = {}
         self._domains: dict[tuple[int, str], deque[int]] = {}
         self._rx_done: set[int] = set()
         self._visible: set[int] = set()
@@ -300,7 +307,12 @@ class NvlinkCausalEngine:
             claim.credit_available_at_ps, claim.returned,
         ) for claim in self._claims)
 
-    def _preflight(self, transfers: tuple[NvlinkTransfer, ...], include_switch: bool) -> NvlinkCausalEngine:
+    def _preflight(
+        self,
+        transfers: tuple[NvlinkTransfer, ...],
+        include_switch: bool,
+        externally_gated_reads: tuple[str, ...] = (),
+    ) -> NvlinkCausalEngine:
         """Build an isolated packetization only after checking the retained state."""
 
         if self._used and not self._streaming:
@@ -309,8 +321,28 @@ class NvlinkCausalEngine:
             raise TypeError("include_switch must be a boolean")
         if not transfers or any(not isinstance(t, NvlinkTransfer) for t in transfers):
             raise ValueError("a retained phase needs transfer records")
-        if any(t.operation is not NvlinkOperation.PEER_WRITE for t in transfers):
-            raise ValueError("retained local phases currently require peer writes")
+        if (not isinstance(externally_gated_reads, tuple)
+                or any(not isinstance(name, str) or not name for name in externally_gated_reads)
+                or len(set(externally_gated_reads)) != len(externally_gated_reads)):
+            raise ValueError("external read gates require unique nonblank extent identities")
+        read_ids = {
+            transfer.extent_id
+            for transfer in transfers
+            if transfer.operation is NvlinkOperation.PEER_READ
+        }
+        if any(transfer.operation not in (NvlinkOperation.PEER_WRITE, NvlinkOperation.PEER_READ)
+               for transfer in transfers):
+            raise ValueError("retained local phases require peer reads or writes")
+        if read_ids != set(externally_gated_reads):
+            raise ValueError(
+                "ordinary retained admission accepts peer writes; every retained peer read "
+                "requires exactly one external response gate"
+            )
+        if externally_gated_reads and self._causal is not None:
+            # The packet-only critical-path projection cannot yet name the
+            # external GPU-memory edge.  Rejecting avoids publishing a trace
+            # that silently attributes the wait to transport.
+            raise ValueError("critical-path capture cannot represent an external read response gate")
         if self.options.replay_counts:
             raise ValueError("retained local phases do not select injected component replays")
         queued = include_switch and self.profile.switch.mode is NvlinkSwitchMode.QUEUED
@@ -340,26 +372,50 @@ class NvlinkCausalEngine:
                 raise ValueError("retained visibility sequence reuses a prior domain position")
         return probe
 
-    def preview(self, transfers: Sequence[NvlinkTransfer], *, include_switch: bool) -> tuple[NvlinkFlitPacket, ...]:
+    def preview(
+        self,
+        transfers: Sequence[NvlinkTransfer],
+        *,
+        include_switch: bool,
+        externally_gated_reads: Sequence[str] = (),
+    ) -> tuple[NvlinkFlitPacket, ...]:
         """Validate a complete phase without tokens, callbacks or calendar mutation."""
-        return self._preflight(tuple(transfers), include_switch).packets
+        return self._preflight(
+            tuple(transfers), include_switch, tuple(externally_gated_reads)
+        ).packets
 
-    def admit(self, transfers: Sequence[NvlinkTransfer], *, include_switch: bool) -> None:
+    def admit(
+        self,
+        transfers: Sequence[NvlinkTransfer],
+        *,
+        include_switch: bool,
+        externally_gated_reads: Sequence[str] = (),
+    ) -> None:
         """Preflight the complete phase, then append it without advancing time."""
         transfers = tuple(transfers)
-        probe = self._preflight(transfers, include_switch)
+        gated_reads = tuple(externally_gated_reads)
+        probe = self._preflight(transfers, include_switch, gated_reads)
         ids = [transfer.extent_id for transfer in transfers]
 
         offset = len(self._packets)
         self._packets.extend(probe._packets)
         self._transfers.extend(transfers)
         self._tx_queues.extend(deque(offset + i for i in queue) for queue in probe._tx_queues)
+        # ``probe`` owns packet indices relative to its isolated preflight.
+        # Retained state must translate the read-request index alongside every
+        # other packet-owned structure before response eligibility is queried.
+        self._read_requests.update({
+            extent_id: offset + index
+            for extent_id, index in probe._read_requests.items()
+        })
         for key, queue in probe._domains.items():
             self._domains.setdefault(key, deque()).extend(offset + i for i in queue)
         for extent_id in ids:
             self._extent_packets[extent_id] = tuple(
                 offset + i for i, packet in enumerate(probe._packets) if packet.extent_id == extent_id
             )
+        for extent_id in gated_reads:
+            self._read_response_gates[extent_id] = None
         self._queued_switch = probe._queued_switch
         self._used = self._streaming = True
         if self._causal is not None:
@@ -374,6 +430,27 @@ class NvlinkCausalEngine:
                                  resource_id=resource, interval_kind="source_pacing" if paced else None)
         for release in sorted({packet.released_at_ps for packet in probe._packets}):
             self._schedule(release, "wake", -1)
+
+    def release_read_response(self, extent_id: str) -> None:
+        """Release one externally serviced peer-read response at ``now_ps``.
+
+        The caller is expected to invoke this from the completion callback of
+        the external service.  Requiring the request to be visible here makes
+        the causal contract executable: request transport precedes owner-side
+        service, which precedes response transport.
+        """
+
+        if extent_id not in self._read_response_gates:
+            raise ValueError("read response release requires an admitted external gate")
+        if self._read_response_gates[extent_id] is not None:
+            raise ValueError("read response gate can be released exactly once")
+        request_index = self._read_requests[extent_id]
+        if request_index not in self._visible:
+            raise RuntimeError("read response cannot be released before request visibility")
+        self._read_response_gates[extent_id] = self._now
+        # A wake event makes the newly eligible response visible to the normal
+        # grant loop without advancing or re-entering the calendar here.
+        self._schedule(self._now, "wake", -1)
 
     def advance_until_visible(self, extent_ids: Sequence[str]) -> int:
         """Reach the requested logical boundary without draining later work."""
@@ -543,11 +620,31 @@ class NvlinkCausalEngine:
         payload_limit = min(self.profile.tx.max_payload_bytes, fmt.maximum_payload_flits * 16)
         for transfer in transfers:
             count = (transfer.payload_bytes + payload_limit - 1) // payload_limit
-            wire = 16 * (fmt.header_flits + transfer.address_extension_flits + transfer.byte_enable_flits
-                         + (payload_limit + 15) // 16)
-            horizon += count * packet_bound(transfer.source, transfer.destination, wire)
+            data_wire = 16 * (
+                fmt.header_flits
+                + transfer.address_extension_flits
+                + transfer.byte_enable_flits
+                + (payload_limit + 15) // 16
+            )
+            data_source, data_destination = transfer.source, transfer.destination
+            if transfer.operation is NvlinkOperation.PEER_READ:
+                # A read's logical source is the requester.  Its data packets
+                # travel in the reverse direction, and the zero-payload request
+                # consumes its own forward-path service.
+                request_wire = 16 * (
+                    fmt.header_flits
+                    + transfer.address_extension_flits
+                    + transfer.byte_enable_flits
+                )
+                horizon += packet_bound(
+                    transfer.source, transfer.destination, request_wire
+                )
+                data_source, data_destination = transfer.destination, transfer.source
+            horizon += count * packet_bound(data_source, data_destination, data_wire)
             if transfer.offered_rate_bytes_per_second is not None:
-                horizon += _serialize_ps(count * wire, transfer.offered_rate_bytes_per_second)
+                horizon += _serialize_ps(
+                    count * data_wire, transfer.offered_rate_bytes_per_second
+                )
         if horizon > maximum:
             raise ValueError("physical completion horizon exceeds unsigned 64-bit picoseconds")
 
@@ -706,6 +803,11 @@ class NvlinkCausalEngine:
             if request_visible is None:
                 raise AssertionError("NVLink read request has no visibility timestamp")
             ready = max(ready, request_visible)
+            if packet.extent_id in self._read_response_gates:
+                released = self._read_response_gates[packet.extent_id]
+                if released is None:
+                    return None
+                ready = max(ready, released)
         return ready
 
     def _tx_candidate(self, index: int) -> tuple[int, int, str, int] | None:

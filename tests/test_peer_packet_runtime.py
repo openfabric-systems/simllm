@@ -10,6 +10,8 @@ import pytest
 from simllm.backends.htsim_nvlink import (
     NvlinkAlignedOptions,
     NvlinkFifoPlacement,
+    NvlinkOperation,
+    NvlinkPacketDirection,
     NvlinkSwitchConfig,
     NvlinkSwitchMode,
     NvlinkTransfer,
@@ -78,6 +80,110 @@ def engine(*, switched=False, ranks=3, rate=25_000_000_000, capacity=65536,
 def transfer(name, source=0, destination=1, payload=256, release=0):
     return NvlinkTransfer(extent_id=name, source=source, destination=destination,
                           payload_bytes=payload, released_at_ps=release)
+
+
+def test_retained_peer_read_waits_for_external_owner_service():
+    """The request, external service and response share one causal calendar."""
+
+    source = engine(ranks=2)
+    session = GpuPeerPacketSession("gated-read", source.profile, source.physical)
+    delay_ps = 1_000_000
+    request_observed = []
+    read = NvlinkTransfer(
+        extent_id="read",
+        source=1,
+        destination=0,
+        payload_bytes=256,
+        operation=NvlinkOperation.PEER_READ,
+        topology_endpoint_count=2,
+    )
+
+    def request_visible():
+        request_observed.append(session.now_ps)
+        session.schedule_callback(
+            session.now_ps + delay_ps,
+            lambda: session.release_read_response("read"),
+        )
+
+    session.admit_read("exec", "load", read, request_visible)
+    session.advance_until_visible(("read",))
+    request = next(
+        packet for packet in session.packets
+        if packet.direction is NvlinkPacketDirection.REQUEST
+    )
+    responses = [
+        packet for packet in session.packets
+        if packet.direction is NvlinkPacketDirection.RESPONSE
+    ]
+    assert request_observed == [request.visible_at_ps]
+    assert all(packet.tx_started_at_ps >= request.visible_at_ps + delay_ps for packet in responses)
+    with pytest.raises(ValueError, match="exactly once"):
+        session.release_read_response("read")
+    session.drain()
+
+
+@pytest.mark.parametrize("delay_ps", [0, 10_000, 1_000_000])
+def test_retained_peer_read_external_delay_has_exact_response_delta(delay_ps):
+    def run(delay):
+        source = engine(ranks=2)
+        session = GpuPeerPacketSession("read-delay", source.profile, source.physical)
+        read = NvlinkTransfer(
+            extent_id="read",
+            source=1,
+            destination=0,
+            payload_bytes=256,
+            operation=NvlinkOperation.PEER_READ,
+            topology_endpoint_count=2,
+        )
+
+        def request_visible():
+            session.schedule_callback(
+                session.now_ps + delay,
+                lambda: session.release_read_response("read"),
+            )
+
+        session.admit_read("exec", "load", read, request_visible)
+        session.advance_until_visible(("read",))
+        request = next(
+            packet for packet in session.packets
+            if packet.direction is NvlinkPacketDirection.REQUEST
+        )
+        response = next(
+            packet for packet in session.packets
+            if packet.direction is NvlinkPacketDirection.RESPONSE
+        )
+        session.drain()
+        return request, response
+
+    baseline_request, baseline_response = run(0)
+    request, response = run(delay_ps)
+    assert request == baseline_request
+    assert response.tx_started_at_ps - baseline_response.tx_started_at_ps == delay_ps
+    assert response.visible_at_ps - baseline_response.visible_at_ps == delay_ps
+
+
+def test_retained_peer_read_requires_gate_and_rejects_packet_only_report():
+    source = engine(ranks=2)
+    read = NvlinkTransfer(
+        extent_id="read",
+        source=1,
+        destination=0,
+        payload_bytes=16,
+        operation=NvlinkOperation.PEER_READ,
+        topology_endpoint_count=2,
+    )
+    with pytest.raises(ValueError, match="external response gate"):
+        source.admit((read,), include_switch=False)
+
+    session = GpuPeerPacketSession(
+        "reported-read",
+        source.profile,
+        source.physical,
+        capture_critical_path=True,
+    )
+    with pytest.raises(ValueError, match="critical-path capture"):
+        session.admit_read("exec", "load", read, lambda: None)
+    assert session.extents == ()
 
 
 @pytest.mark.parametrize("processing", (0, 100000))

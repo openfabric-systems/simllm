@@ -107,8 +107,8 @@ class NcclRingProgram:
             object.__setattr__(self, "channel_rank_orders", tuple(tuple(order) for order in self.channel_rank_orders))
         if self.source_commit != NCCL_SOURCE_COMMIT:
             raise ValueError("NCCL program source identity is not supported")
-        if self.protocol not in PROTOCOLS or self.connection_mode != "buffered":
-            raise ValueError("only LL/LL128/Simple buffered peer-write branches are implemented")
+        if self.protocol not in PROTOCOLS or self.connection_mode not in ("buffered", "buffered_read"):
+            raise ValueError("only LL/LL128/Simple buffered write/read placements are implemented")
         if (type(self.payload_bytes) is not int or self.payload_bytes <= 0 or self.payload_bytes % 4
                 or len(self.ranks) not in (2, 4) or len(set(self.ranks)) != len(self.ranks)
                 or any(type(rank) is not int or rank < 0 for rank in self.ranks)):

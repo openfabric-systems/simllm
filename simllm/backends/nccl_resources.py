@@ -131,15 +131,37 @@ class NcclGpuResources:
                                           "submitted_at_ps": started})
         self._grant(rank)
 
-    def service(self, block_id: str, kind: str, units: int, callback: Callable[[], None],
-                *, memory: bool = False, shared: bool = False) -> None:
-        """Issue ready instruction cycles or local bytes, never a whole-CTA fit."""
+    def service(
+        self,
+        block_id: str,
+        kind: str,
+        units: int,
+        callback: Callable[[], None],
+        *,
+        memory: bool = False,
+        shared: bool = False,
+        memory_rank: int | None = None,
+    ) -> None:
+        """Issue ready instruction cycles or bytes, never a whole-CTA fit.
+
+        ``memory_rank`` represents a remote load serviced by the GPU that owns
+        the source buffer.  The requesting block remains the attribution owner,
+        but the byte service contends on the buffer owner's memory cursor.  It
+        deliberately does not require a sender block to remain resident.
+        """
+
         if memory and shared:
             raise ValueError("a visit must select one memory resource")
+        if memory_rank is not None and (not memory or shared):
+            raise ValueError("a remote memory owner applies only to global-memory service")
+        if memory_rank is not None and (type(memory_rank) is not int or memory_rank < 0):
+            raise ValueError("a remote memory owner must be a nonnegative GPU rank")
         if type(units) is not int or units < 0:
             raise ValueError("resource work units must be nonnegative integers")
         rank, sm, _, _ = self._resident[block_id]
-        key = (rank, "memory") if memory else (rank, "shared" if shared else "sm", sm)
+        service_rank = rank if memory_rank is None else memory_rank
+        key = ((service_rank, "memory") if memory
+               else (rank, "shared" if shared else "sm", sm))
         eligible = self.calendar.now_ps
         start = max(eligible, self._cursors.get(key, 0))
         rate = self.profile.shared_memory_bytes_per_second if shared else self.profile.memory_bytes_per_second
@@ -147,7 +169,7 @@ class NcclGpuResources:
                     if memory or shared else self.profile.cycles_ps(units))
         finish = start + duration
         self._cursors[key] = finish
-        visit = NcclResourceVisit(block_id, rank, ":".join(map(str, key)), kind,
+        visit = NcclResourceVisit(block_id, service_rank, ":".join(map(str, key)), kind,
                                   eligible, eligible, start, finish, finish, units)
 
         def complete():

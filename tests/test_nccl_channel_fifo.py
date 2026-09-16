@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from test_peer_packet_runtime import engine
 
+from simllm.backends.htsim_nvlink import NvlinkPacketDirection
 from simllm.backends.nccl_resources import NcclGpuProfile, NcclGpuResources
 from simllm.backends.nccl_runtime import NcclChannelRuntime, NcclConnection, NcclExecutionConfig
 from simllm.compute.gpu_packet_port import GpuPeerPacketSession
@@ -148,6 +149,54 @@ def test_connection_steps_survive_ll_simple_ll128_calls_and_alignment():
     assert all(c.consumer_step == c.returned_head == 14 for c in model.connections.values())
 
 
+def test_read_capable_communicator_switches_protocols_without_changing_placement():
+    """A communicator owns its placement, while each call chooses a protocol.
+
+    Real NCCL communicators may select LL, Simple, and LL128 for consecutive
+    operations.  This sequence catches two easy implementation mistakes: tying
+    ``buffered_read`` to Simple's first invocation only, or treating a later LL
+    write as an illegal placement change.  Simple must use peer reads; LL and
+    LL128 must retain their source-faithful peer-write paths.
+    """
+
+    model = runtime()
+    for index, (protocol, warps) in enumerate((
+        ("LL", 4),
+        ("SIMPLE", 5),
+        ("LL128", 4),
+        ("SIMPLE", 5),
+    )):
+        before = len(model.session.packets)
+        program = NcclRingProgram(
+            64,
+            (0, 1),
+            protocol,
+            (64,),
+            warps,
+            communicator="read-capable",
+            connection_mode="buffered_read",
+        )
+        model.run("switch", str(index), program)
+        new_packets = model.session.packets[before:]
+        # Peer writes also use REQUEST as their payload direction.  A peer read
+        # is uniquely identified by its header-only request plus at least one
+        # reverse-direction RESPONSE, so assert both halves of that shape.
+        has_read_request = (
+            any(
+                packet.direction is NvlinkPacketDirection.REQUEST
+                and packet.payload_bytes == 0
+                for packet in new_packets
+            )
+            and any(
+                packet.direction is NvlinkPacketDirection.RESPONSE
+                for packet in new_packets
+            )
+        )
+        assert has_read_request is (protocol == "SIMPLE")
+
+    model.session.drain()
+
+
 def test_ll_flag_wrap_cleanup_is_real_peer_work():
     model = runtime()
     program = NcclRingProgram(64, (0, 1), "LL", (64,), 4)
@@ -170,6 +219,90 @@ def test_invalid_branch_and_duplicate_operation_do_not_admit_new_packets():
     with pytest.raises(ValueError, match="unique"):
         model.run("exec", "o", program)
     assert model.session.packets == before
+
+
+def test_simple_buffered_read_uses_request_owner_service_and_response():
+    model = runtime()
+    program = NcclRingProgram(
+        64,
+        (0, 1),
+        "SIMPLE",
+        (64,),
+        5,
+        connection_mode="buffered_read",
+    )
+    result = model.run("read", "sum", program)
+    result.validate()
+
+    requests = [
+        packet for packet in model.session.packets
+        if packet.direction is NvlinkPacketDirection.REQUEST
+        and not packet.payload_bytes
+    ]
+    responses = [
+        packet for packet in model.session.packets
+        if packet.direction is NvlinkPacketDirection.RESPONSE
+    ]
+    read_bindings = [
+        binding for binding in result.transfer_bindings
+        if binding.role == "payload_read"
+    ]
+    owner_visits = [
+        visit for visit in result.resource_visits
+        if visit.kind == "peer_buffer_read_source"
+    ]
+    assert requests and responses and len(requests) == len(read_bindings)
+    assert sum(packet.payload_bytes for packet in responses) == result.protocol_data_bytes
+    assert sum(visit.units for visit in owner_visits) == result.protocol_data_bytes
+    assert all(visit.rank != int(visit.block_id.rsplit("r", 1)[1]) for visit in owner_visits)
+    assert all(response.tx_started_at_ps >= requests[0].visible_at_ps for response in responses)
+    assert any(visit.kind == "local_fifo_store" for visit in result.resource_visits)
+    assert not any(binding.role == "payload" for binding in result.transfer_bindings)
+    model.session.drain()
+
+
+def test_buffered_read_empty_simple_slice_moves_only_control():
+    model = runtime(width=4)
+    program = NcclRingProgram(
+        4,
+        (0, 1, 2, 3),
+        "SIMPLE",
+        (4,),
+        5,
+        connection_mode="buffered_read",
+    )
+    result = model.run("empty-read", "sum", program)
+    result.validate()
+    assert all(binding.useful_bytes > 0 for binding in result.transfer_bindings
+               if binding.role == "payload_read")
+    assert any(binding.role == "tail" for binding in result.transfer_bindings)
+    assert any(binding.role == "head" for binding in result.transfer_bindings)
+    model.session.drain()
+
+
+@pytest.mark.parametrize("protocol,warps", [("LL", 4), ("LL128", 4)])
+def test_read_capable_communicator_keeps_ll_protocols_on_peer_writes(protocol, warps):
+    write_model, read_model = runtime(), runtime()
+    write_program = NcclRingProgram(256, (0, 1), protocol, (256,), warps)
+    read_program = replace(write_program, connection_mode="buffered_read")
+    write_result = write_model.run("same", "sum", write_program)
+    read_result = read_model.run("same", "sum", read_program)
+    assert write_model.session.packets == read_model.session.packets
+    assert write_result.resource_visits == read_result.resource_visits
+    assert all(binding.role != "payload_read" for binding in read_result.transfer_bindings)
+    write_model.session.drain()
+    read_model.session.drain()
+
+
+def test_communicator_cannot_change_buffer_placement_after_admission():
+    model = runtime()
+    base = NcclRingProgram(64, (0, 1), "LL", (64,), 4, communicator="stable")
+    model.run("first", "sum", base)
+    before = model.session.packets
+    with pytest.raises(ValueError, match="cannot change"):
+        model.run("second", "sum", replace(base, connection_mode="buffered_read"))
+    assert model.session.packets == before
+    model.session.drain()
 
 
 def test_callback_cannot_advance_its_own_calendar():
@@ -259,6 +392,37 @@ def test_shared_memory_rate_and_sm_domains_have_independent_oracle(size, rate, s
     service = (size * 10**12 + rate - 1) // rate
     assert max(completions) == service * (2 if sms == 1 else 1)
     assert sum(v.units for v in resources.visits) == 2 * size
+
+
+@pytest.mark.parametrize("rate", [50_000_000_000, 100_000_000_000])
+def test_remote_read_uses_owner_memory_cursor_without_owner_block_residency(rate):
+    calendar = engine(ranks=2)
+    resources = NcclGpuResources(calendar, gpu(1, memory_bytes_per_second=rate))
+    completed = []
+
+    def local_job():
+        resources.service("owner", "local", 1024, lambda: completed.append(calendar.now_ps),
+                          memory=True)
+
+    def remote_job():
+        resources.service(
+            "requester",
+            "remote",
+            1024,
+            lambda: completed.append(calendar.now_ps),
+            memory=True,
+            memory_rank=0,
+        )
+
+    resources.admit("owner", 0, 4, local_job)
+    resources.admit("requester", 1, 4, remote_job)
+    calendar.advance_until(lambda: len(completed) == 2)
+    service_ps = (1024 * 10**12 + rate - 1) // rate
+    assert max(completed) == 2 * service_ps
+    assert {(visit.block_id, visit.rank) for visit in resources.visits} == {
+        ("owner", 0),
+        ("requester", 0),
+    }
 
 
 @pytest.mark.parametrize("protocol", ["LL", "LL128", "SIMPLE"])
