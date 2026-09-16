@@ -15,6 +15,7 @@ and host addresses are site local and are not recorded here.
 |---|---|---|---|
 | `stage1_result.json` | attempt 6, the stage 1 result of record: lanes P1, P2 and P3 by both timing methods | 181,705 | `dcbd929d5b404796d07bd5efbd6a0dd0dc9441c635baecbb82a2e3c452b794be` |
 | `scored.json` | the scorer's evaluation of that result against the freeze and its two amendments | 23,468 | `0464577dac129a75dc20a80b38b4bd8173e772de2161b0b35d9dfd91acc43a0a` |
+| `stage1_graph_attempt5_result.json` | attempt 5, the independent rental whose refit reproduces the record's constants, retained by amendment b as the contaminated eager-copy evidence | 177,673 | `08d66f2d360e917b74a2a23e634a327d2c1b5544f2ad2398fbc9a1aeb0b3ebb3` |
 | `stage1_eager_attempt3_result.json` | attempt 3, eager timing only, retained by amendment a as the dispatch-floor evidence | 80,699 | `aa2cc3813f64f5cbdcf905f57b57097ca7f232fffb7d174ae9611a51a2f0eba0` |
 | `stage2_attempt1_refusal/stage.log` | the stage 2 refusal: precheck line and the benchmark's peer-access abort | 416 | `f21570379b8807ac7425ee149f825d98895f5bf1d7121794b264797acb3756de` |
 | `stage2_attempt1_refusal/listing.txt` | the stage script's own listing for that refusal | 992 | `1bc17c5adcd8cc535d75886a060d70127e3064489c3bcfc80392e7ab62a91df6` |
@@ -30,7 +31,7 @@ and host addresses are site local and are not recorded here.
 | stage 1, 3 | 51156549 | 56359 | every lane completed, eager timing only; the sub-megabyte dispatch floor this documents triggered amendment a |
 | stage 1, 4 | 51062340 | 142255 | graph-replay rows in lanes P2 and P3; every lane P1 capture failed and fell back to eager |
 | stage 1, 5 | 51062340 | 142255 | graph rows in all three lanes; the forward eager copy rows were contaminated by the capture preceding them, which triggered amendment b |
-| stage 1, 6 | 51062340 | 142255 | the result of record: graph rows in every lane, both eager directions physical |
+| stage 1, 6 | 51062340 | 142255 | the result of record: graph rows in every lane; the eager unidirectional rows are physical from 4 KiB up in both directions, while three forward rows and the whole bidirectional eager cell are not, as the results document sets out |
 | stage 2, 1 | 51061978 | 137781 | refused before timing, one GPU with every NVLink inactive; the machine is excluded from further rentals |
 
 One further stage 1 search between attempts 3 and 4 listed no eligible offer
@@ -42,12 +43,15 @@ charges across the day's instances.
 ## Capture facts, read from these files
 
 - Substrate of the record attempt: two NVIDIA B200 GPUs at PCI bus ids
-  `00000000:5F:00.0` and `00000000:70:00.0`, `NV18` between them, eighteen
-  active NVLinks per GPU at 53.125 GB/s signalling, driver 595.91.07, NCCL
-  2.27.3 through PyTorch 2.8.0 on CUDA 12.8. Machine 56359, which served
-  attempts 1 to 3, also signalled 53.125 GB/s; the refused eight-GPU board of
-  machine 137781 signalled 50 GB/s on its seven live GPUs, so link rate is a
-  property of the host and not of the generation.
+  `00000000:86:00.0` and `00000000:87:00.0` on machine 142255, `NV18` between
+  them, eighteen active NVLinks per GPU at 53.125 GB/s signalling, driver
+  595.91.07, NCCL 2.27.3 through PyTorch 2.8.0 on CUDA 12.8. Attempt 5 ran on
+  the same machine and reports the same bus ids and driver. Machine 56359,
+  which served attempts 1 to 3, exposed bus ids `00000000:5F:00.0` and
+  `00000000:70:00.0` on driver 595.84 and also signalled 53.125 GB/s; the
+  refused eight-GPU board of machine 137781 signalled 50 GB/s on its seven
+  live GPUs, so link rate is a property of the host and not of the
+  generation.
 - Timing: each row at or below 1 MiB is a CUDA graph replay of 200 captured
   iterations, and each row above it is 20 eager iterations, 10 above 64 MiB.
   Both methods are recorded at every payload; `method`, `of_record` and

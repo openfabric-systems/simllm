@@ -178,8 +178,8 @@ projection without charging the analytic local duration again.
   container, where every row at or below 1 MiB is a CUDA graph replay of 200
   captured iterations so no host dispatch sits between them. It measures one
   width and refuses every other, its held-out 4 KiB row lands 0.615 us from
-  its prediction, and an independent rental reproduced the constants to within
-  0.8 percent. It claims nothing about widths 4 and 8, about switched
+  its prediction, and an independent rental, whose result is tracked beside the
+  record, reproduced the constants to within 0.8 percent. It claims nothing about widths 4 and 8, about switched
   eight-GPU boards, about cross-node paths, or about bare metal: the capture
   is a marketplace container, and the public
   `b200-nccl-2.27-local-v1` it was compared against keeps its own constants,

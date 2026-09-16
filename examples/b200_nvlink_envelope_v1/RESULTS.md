@@ -61,12 +61,14 @@ gap.
 | Fatal physical ceilings (E1) | every ceiling held; peak unidirectional 777.53 GB/s, peak bidirectional aggregate 1,545.19 GB/s, peak bus bandwidth 572.40 GB/s, fastest timed row 6,218 ns, every all-reduce correctness probe exact |
 | Fatal identity guards (E8) | run separately, see Reproduction: the five PLACE-13 reference manifest digests, the collective floor study's own check, the public profile by name, and the full test suite |
 | Reported, decides refit or validation (E4) | 4 of 5 rows outside the tolerance, all low; the profile is not validated at width 2 |
-| Structural, unscored (E6) | the window slope is 0.1199 of the large-payload asymptote, below the frozen quarter |
+| Structural, unscored (E6) | the window slope is 0.1197 of the large-payload asymptote, below the frozen quarter |
 | Structural, only with stage 2 (E7) | not evaluated, stage 2 did not run |
 
 Counts in different evidence classes are never added. The tracked
 [result](measurements/stage1_result.json) and
-[scored report](measurements/scored.json) hold every row.
+[scored report](measurements/scored.json) hold every row, and the
+[provenance](measurements/PROVENANCE.md) registers the two earlier attempts
+kept beside them.
 
 ## The current profile's before error, width 2
 
@@ -109,8 +111,8 @@ beside the refit: the peer copy asymptote is 780.54 and 781.66 GB/s per
 direction with R squared 0.99977 and 0.99974 and holdout errors of 1.24 and
 3.03 percent, and the NCCL point-to-point asymptote is 697.50 GB/s with
 R squared 0.99589 and a holdout error of 2.16 percent. The width-2 all-reduce
-asymptote is 574.66 GB/s, and bus bandwidth first reaches 90 percent of it at
-512 MiB.
+asymptote is 575.47 GB/s over the whole 1 MiB to 1 GiB window, and bus
+bandwidth first reaches 90 percent of it at 512 MiB.
 
 ## Physical sanity
 
@@ -150,7 +152,10 @@ of 5 to 100 microseconds, so no explanation is owed.
   that the constants are wrong: the held-out row lands within 0.615
   microseconds, and an independent rental one attempt earlier returned
   9,126,016 ps and 69,422,515,624 bytes per second, which is 0.4 and 0.8
-  percent from the record. It is evidence that the intercept, not the slope,
+  percent from the record. That rental is tracked as
+  [the attempt 5 result](measurements/stage1_graph_attempt5_result.json), so
+  the reproduction can be recomputed rather than taken on trust; scoring it
+  gives its own 4 KiB holdout at 0.662 microseconds. It is evidence that the intercept, not the slope,
   is what this window identifies, which is the same thing the A100 envelope
   warned about and what cell E6 reports.
 - **One untimed replay per row.** The first replay of a fresh graph pays its
@@ -163,6 +168,44 @@ of 5 to 100 microseconds, so no explanation is owed.
   in one row, which is visible in the residuals: the 64 KiB row sits 1.658
   microseconds above the fit and is the largest single contributor to the R
   squared above.
+- **Part of the eager control is not meaningful, and is marked so.** Amendment
+  b's clause for a forward eager sweep that stays flat applies to four rows of
+  the record. Lane P1's eager forward rows at 8 B, 1 KiB and 2 KiB read 2,332
+  microseconds each, and the entire eager bidirectional sweep is flat between
+  2,331 and 2,342 microseconds at every payload including 1 GiB, where the
+  captured row of the same cell reads 1,390 microseconds. The remaining eager
+  rows are physical: the forward direction from 4 KiB up, the reverse direction
+  throughout, and both at 1 GiB within 1.1 percent of their captured rows. The
+  likely mechanism is the one amendment b named: during lane P1 the peer rank
+  waits in an NCCL barrier that spins on the destination device
+  (`bench_nvlink.py`, the barrier after the lane), so an eager iteration that
+  records its readiness event on that device interleaves with it, and a graph
+  replay does not because it makes no per-iteration call there. Those rows are
+  recorded as not meaningful and are not substituted by the other direction.
+  Nothing scored reads them: below 1 MiB the row of record is the captured row,
+  the E2 fit window starts at 1 MiB, and cell E1's peak bidirectional aggregate
+  comes from the captured row, so the flat rows only understate a ceiling they
+  cannot breach.
+- **The 900 GB/s ceiling assumes this host's link rate.** Cell E1's ceilings
+  come from eighteen lanes at 400 Gbit/s of payload, which is the NVLink 5
+  nameplate, and both two-GPU hosts signalled 53.125 GB/s per link. The
+  eight-GPU board refused for stage 2 signalled 50 GB/s, so a board whose links
+  run slower would be judged against a ceiling it cannot reach, and the ceiling
+  would stop being a tight guard. Link rate is recorded per host in the
+  provenance for that reason, and a stage 2 result from a 50 GB/s board would
+  need its own ceiling rather than this one.
+- **The correctness check of the tracked run read three elements.** The freeze
+  asks for one correctness check per all-reduce point; the run of record
+  compared the first, middle and last element of the result against the
+  expected sum, which cannot see a reduction that is wrong only in between. The
+  lane now compares every element, and the scorer now treats a row with no
+  correctness result as a violation rather than silence, but the tracked result
+  predates both, so its correctness evidence is the three-element form.
+- **The tracked header names one amendment.** The result header of the record
+  carries `amendment` naming amendment a only, because the field predates
+  amendment b; the lane now writes an `amendments` list. The method the run
+  actually used is amendment b's, which the `timed_on` field on every row
+  shows directly.
 - **Trailing charges.** The rental cost below is the credit ledger's reading,
   which includes storage charges that accrue after an instance is destroyed,
   so the per-attempt figures carry about a dollar of tail across the day that
@@ -177,9 +220,13 @@ device, `ibdev2netdev` is absent from the image, and NCCL logs `NET/IB : No
 device found` before using the socket network, so no GPU Direct RDMA path was
 available. NCCL also selected no NVLS at width 2 on this board, reporting
 `0 nvls channels` against 32 collective channels, and the image carries no
-tuner plugin, so the internal tuner chose every algorithm. The protocol NCCL
-selected per call is not on the record: the debug subsystems the freeze names
-are `INIT` and `NET`, which do not print it.
+tuner plugin, so the internal tuner chose every algorithm. The capture sets the NCCL debug
+subsystems to `INIT`, `NET` and `TUNING`, so the log carries the tuner's
+algorithm and protocol bandwidth table for this board, listing Tree, Ring,
+CollNet, NVLS, NVLSTree and PAT against LL, LL128 and Simple. What it does not
+carry is the algorithm and protocol NCCL chose for each individual call, which
+needs a finer debug level than the freeze asks for, so no per-call protocol
+claim is made here.
 
 ## Stage 2
 
