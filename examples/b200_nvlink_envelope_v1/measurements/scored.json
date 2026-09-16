@@ -109,19 +109,19 @@
     },
     "e6": {
       "all_reduce_asymptote": {
-        "alpha_us": 33.85203469780416,
-        "beta_bytes_per_second": 574655385431.3649,
+        "alpha_us": 36.28804803199915,
+        "beta_bytes_per_second": 575469671848.5795,
         "fit_degenerate": false,
-        "fit_points": 10,
+        "fit_points": 11,
         "fit_reason": "",
-        "r_squared": 0.9991774139774809,
-        "slope_seconds_per_byte": 1.7401733723409732e-12
+        "r_squared": 0.9990660326871073,
+        "slope_seconds_per_byte": 1.7377110366002489e-12
       },
       "busbw_90_percent_payload_bytes": 536870912,
       "e2_beta_bytes_per_second": 780539492426.8489,
       "e5_fit_degenerate": false,
       "e5_slope_bytes_per_second": 68888931479,
-      "slope_over_asymptote": 0.11987868420877766
+      "slope_over_asymptote": 0.1197090565306566
     }
   },
   "before_error": {
@@ -615,23 +615,23 @@
     },
     {
       "class": "structural",
-      "detail": "the window slope is 68.89 GB/s against a large-payload all-reduce asymptote of 574.66 GB/s, a ratio of 0.1199 against the frozen quarter; bus bandwidth first reaches 90 percent of the asymptote at 536870912 B",
+      "detail": "the window slope is 68.89 GB/s against a large-payload all-reduce asymptote of 575.47 GB/s, a ratio of 0.1197 against the frozen quarter; bus bandwidth first reaches 90 percent of the asymptote at 536870912 B",
       "id": "E6",
       "observed": {
         "all_reduce_asymptote": {
-          "alpha_us": 33.85203469780416,
-          "beta_bytes_per_second": 574655385431.3649,
+          "alpha_us": 36.28804803199915,
+          "beta_bytes_per_second": 575469671848.5795,
           "fit_degenerate": false,
-          "fit_points": 10,
+          "fit_points": 11,
           "fit_reason": "",
-          "r_squared": 0.9991774139774809,
-          "slope_seconds_per_byte": 1.7401733723409732e-12
+          "r_squared": 0.9990660326871073,
+          "slope_seconds_per_byte": 1.7377110366002489e-12
         },
         "busbw_90_percent_payload_bytes": 536870912,
         "e2_beta_bytes_per_second": 780539492426.8489,
         "e5_fit_degenerate": false,
         "e5_slope_bytes_per_second": 68888931479,
-        "slope_over_asymptote": 0.11987868420877766
+        "slope_over_asymptote": 0.1197090565306566
       },
       "passed": true
     },
@@ -780,5 +780,6 @@
     "eager",
     "graph"
   ],
-  "void": false
+  "void": false,
+  "void_scope": "void is decided by cell E1, the physical ceilings, over the rows in this result. The E8 identity guards are equally fatal but are run separately and reported in RESULTS.md, so a false value here never means E8 held"
 }

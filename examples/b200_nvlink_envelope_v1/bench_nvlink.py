@@ -57,6 +57,12 @@ MOCK_DEVICE_COUNT = {1: 2, 2: 8}
 #: eager Python dispatch, not the link, bounds a smaller transfer.
 GRAPH_ROW_MAX_BYTES = 1024 * 1024
 TIMED_ITERATIONS_AT_OR_BELOW_1MIB = 200
+#: the amendments this lane implements, newest last. A result header carries
+#: the list so a later reader does not have to date the harness by hand.
+AMENDMENTS_IN_FORCE: tuple[str, ...] = (
+    "expectations-amendment-2026-09-15",
+    "expectations-amendment-2026-09-15b",
+)
 METHOD_GRAPH = "graph"
 METHOD_EAGER = "eager"
 #: execution order matters: the eager control of a cell is measured before
@@ -989,9 +995,10 @@ def _run_collective_point(
     if op == "all_reduce":
         target.fill_(float(rank + 1))
         dist.all_reduce(target, op=dist.ReduceOp.SUM, group=group)
+        # Every element, not a probe: a reduction that is wrong in the middle of
+        # a buffer is exactly the failure a three-point probe would miss.
         expected = float(width * (width + 1) // 2)
-        probes = (0, output_elements // 2, output_elements - 1)
-        correct = all(float(target[index].item()) == expected for index in probes)
+        correct = bool(torch.equal(target, torch.full_like(target, expected)))
         target.zero_()
 
     for _ in range(warmup):
@@ -1120,7 +1127,7 @@ def build_header(
         "mock": mock,
         "mock_payload_cap_bytes": MOCK_PAYLOAD_CAP_BYTES if mock else None,
         "mock_timed_iterations": MOCK_TIMED_ITERATIONS if mock else None,
-        "amendment": "expectations-amendment-2026-09-15",
+        "amendments": list(AMENDMENTS_IN_FORCE),
         "graph_capture_enabled": graph_enabled,
         "graph_capture_reason": graph_reason,
         "graph_row_max_bytes": GRAPH_ROW_MAX_BYTES,

@@ -847,3 +847,63 @@ def test_the_eager_copy_runs_first_and_is_timed_on_the_destination(monkeypatch) 
     assert any(name.endswith("@0") for name in entered)
     assert any(name.endswith("@1") for name in entered)
     assert state.current == 0, "the cell must not leave the process on another device"
+
+
+def test_a_missing_scored_holdout_fails_and_keeps_the_denominator(tmp_path: Path) -> None:
+    """A scored row that was never measured is not a row that passed."""
+
+    pytest.importorskip("numpy")
+    expectations = _expectations()
+    result = _synthetic_result(expectations)
+    for lane, cell in (("p1", "unidirectional"), ("p2", "unidirectional")):
+        result[lane] = [
+            row
+            for row in result[lane]
+            if not (row["cell"] == cell and row["requested_bytes"] == 67_108_864)
+        ]
+    result["p3"] = [row for row in result["p3"] if row["requested_bytes"] != 4_096]
+    report = _score(result, tmp_path)
+
+    assert report["scored_total"] == 4
+    assert report["scored_passed"] == 0
+    for ident in ("E2-0->1-holdout", "E2-1->0-holdout", "E3-holdout", "E5-holdout-w2"):
+        outcome = _outcome(report, ident)
+        assert outcome["passed"] is False, ident
+        assert "missing" in outcome["detail"] or "has no" in outcome["detail"]
+
+
+def test_an_all_reduce_row_without_a_correctness_result_is_fatal(tmp_path: Path) -> None:
+    pytest.importorskip("numpy")
+    expectations = _expectations()
+    result = _synthetic_result(expectations)
+    for row in result["p3"]:
+        if row["requested_bytes"] == 65_536:
+            del row["all_reduce_correct"]
+    scorer = _scorer()
+    measurements = tmp_path / "measurements"
+    measurements.mkdir(parents=True, exist_ok=True)
+    (measurements / "stage1_result.json").write_text(json.dumps(result))
+    assert scorer.main(["--measurements", str(measurements)]) == 1
+
+    report = json.loads((measurements / "scored.json").read_text())
+    assert report["void"] is True
+    assert any("carries no correctness result" in entry["detail"] for entry in report["fatal"])
+    assert "E1" in report["void_scope"] and "E8" in report["void_scope"]
+
+
+def test_the_e6_asymptote_fits_the_whole_window(tmp_path: Path) -> None:
+    """E6 reports rather than scores, so it keeps the 64 MiB row."""
+
+    pytest.importorskip("numpy")
+    expectations = _expectations()
+    report = _score(_synthetic_result(expectations), tmp_path)
+
+    window = [
+        size
+        for size in expectations["lanes"]["payload_bytes"]
+        if 1_048_576 <= size <= 1_073_741_824
+    ]
+    asymptote = _outcome(report, "E6")["observed"]["all_reduce_asymptote"]
+    assert asymptote["fit_points"] == len(window)
+    holdout_fit = _outcome(report, "E2-0->1-fit")["observed"]
+    assert holdout_fit["fit_points"] == len(window) - 1

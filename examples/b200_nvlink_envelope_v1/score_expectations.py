@@ -268,7 +268,7 @@ def point(rows: list[dict[str, Any]], size_bytes: int) -> dict[str, Any] | None:
     return None
 
 
-def fit_window(rows: list[dict[str, Any]], exclude: int) -> list[dict[str, Any]]:
+def fit_window(rows: list[dict[str, Any]], exclude: int | None) -> list[dict[str, Any]]:
     low, high = FIT_WINDOW_BYTES
     return [
         row
@@ -434,15 +434,25 @@ def score_e1(stages: dict[str, dict[str, Any]]) -> tuple[Outcome, list[Outcome]]
                         {"op": row["op"], "bytes": row["bytes"], "busbw": busbw},
                     )
                 )
-            if row["op"] == "all_reduce" and row.get("all_reduce_correct") is False:
+            if row["op"] == "all_reduce" and row.get("all_reduce_correct") is not True:
+                recorded = row.get("all_reduce_correct")
                 violations.append(
                     Outcome(
                         "E1",
                         "fatal",
                         False,
-                        f"{name} all-reduce width {row['width']} at {row['bytes']} B failed "
-                        "its correctness check",
-                        {"width": row["width"], "bytes": row["bytes"]},
+                        f"{name} all-reduce width {row['width']} at {row['bytes']} B "
+                        + (
+                            "failed its correctness check"
+                            if recorded is False
+                            else "carries no correctness result, which the freeze requires "
+                            "on every all-reduce point"
+                        ),
+                        {
+                            "width": row["width"],
+                            "bytes": row["bytes"],
+                            "all_reduce_correct": recorded,
+                        },
                     )
                 )
 
@@ -482,6 +492,7 @@ def _asymptote_cell(
 
     if holdout is None:
         record["fit_points"] = len(window)
+        record["holdout_missing"] = True
         outcomes.append(
             Outcome(
                 f"{ident}-fit",
@@ -495,8 +506,9 @@ def _asymptote_cell(
             Outcome(
                 f"{ident}-holdout",
                 "scored",
-                None,
-                f"{label}: the 64 MiB holdout is not available",
+                False,
+                f"{label}: the 64 MiB holdout row is missing, so the cell cannot be "
+                "satisfied; a scored row that was not measured is not a row that passed",
                 record,
             )
         )
@@ -864,9 +876,10 @@ def score_e5(stages: dict[str, dict[str, Any]]) -> tuple[list[Outcome], dict[str
                 Outcome(
                     f"E5-holdout-w{width}",
                     "scored",
-                    None,
-                    f"width {width} has no 4 KiB holdout row",
-                    {},
+                    False,
+                    f"width {width} has no 4 KiB holdout row, so its refit cannot be "
+                    "declared eligible",
+                    {"holdout_missing": True},
                 )
             )
             continue
@@ -915,7 +928,9 @@ def score_e6(
         for row in collective_series(stage1, "all_reduce", 2)
         if row_method(row) == METHOD_EAGER
     ] or collective_series(stage1, "all_reduce", 2)
-    window = fit_window(rows, ASYMPTOTE_HOLDOUT_BYTES)
+    # E6 reports an asymptote rather than scoring a holdout, so it fits the whole
+    # 1 MiB to 1 GiB window; the 64 MiB row is held out only where it is scored.
+    window = fit_window(rows, None)
     record: dict[str, Any] = {}
     fit = ols_fit(
         [float(row["bytes"]) for row in window],
@@ -1199,6 +1214,11 @@ def build_report(
         "stages_present": sorted(stages),
         "expectations_task": expectations.get("task"),
         "void": bool(fatal),
+        "void_scope": (
+            "void is decided by cell E1, the physical ceilings, over the rows in this "
+            "result. The E8 identity guards are equally fatal but are run separately and "
+            "reported in RESULTS.md, so a false value here never means E8 held"
+        ),
         "scored_passed": passed,
         "scored_total": len(scored),
         "fatal_violations": len(fatal),
