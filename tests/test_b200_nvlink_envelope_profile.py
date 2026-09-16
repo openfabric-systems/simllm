@@ -24,10 +24,16 @@ from simllm.traffic import (
 
 STUDY = Path(__file__).resolve().parents[1] / "examples/b200_nvlink_envelope_v1"
 PROFILE_ID = "b200-nccl-2.27-local-firstparty-v1"
-INTERCEPT_PS = 9_088_984
-BANDWIDTH_BYTES_PER_SECOND = 68_888_931_479
-BAND_PS = (8_152_843, 10_746_592)
-SERVICE_AT_4KIB_PS = 9_148_443
+BANDWIDTH_BYTES_PER_SECOND = 74_361_308_462
+INTERCEPT_PS = {2: 9_185_311, 4: 12_788_419, 8: 22_780_276}
+BAND_PS = {
+    2: (7_181_333, 10_961_562),
+    4: (10_285_918, 14_028_131),
+    8: (16_686_693, 24_666_332),
+}
+#: the 4 KiB holdout of cell E5 per width, with endpoint bytes 2(W-1)S/W
+HOLDOUT_ENDPOINT_BYTES = {2: 4_096, 4: 6_144, 8: 7_168}
+SERVICE_AT_4KIB_PS = {2: 9_240_394, 4: 12_871_043, 8: 22_876_671}
 
 
 def _expectations() -> dict:
@@ -39,12 +45,15 @@ def test_the_first_party_profile_carries_the_measured_constants():
 
     assert profile.profile_id == PROFILE_ID
     assert profile.bandwidth_bytes_per_second == BANDWIDTH_BYTES_PER_SECOND
-    assert profile.participant_latency_ps == ((2, INTERCEPT_PS),)
-    assert profile.supported_participant_counts == (2,)
+    assert profile.participant_latency_ps == tuple(sorted(INTERCEPT_PS.items()))
+    assert profile.supported_participant_counts == (2, 4, 8)
     assert profile.propagation_reference_ps == 2_000_000
     assert profile.endpoint_byte_bounds(2) == (8, 262_144)
-    assert profile.base_latency_band_ps(2) == BAND_PS
-    assert BAND_PS[0] <= INTERCEPT_PS <= BAND_PS[1]
+    assert profile.endpoint_byte_bounds(4) == (12, 393_216)
+    assert profile.endpoint_byte_bounds(8) == (14, 458_752)
+    for width, band in BAND_PS.items():
+        assert profile.base_latency_band_ps(width) == band
+        assert band[0] <= INTERCEPT_PS[width] <= band[1]
     assert profile.evidence_class == "calibrated"
 
 
@@ -54,29 +63,47 @@ def test_the_first_party_profile_resolves_by_name():
     )
 
 
-@pytest.mark.parametrize("width", [4, 8])
+@pytest.mark.parametrize("width", [3, 6, 16, 64])
 def test_the_first_party_profile_refuses_every_width_it_did_not_measure(width):
     with pytest.raises(ValueError) as raised:
         B200_NCCL_2_27_LOCAL_FIRSTPARTY_PROFILE.base_latency_ps(width)
     message = str(raised.value)
     assert PROFILE_ID in message
     assert f"does not support participant count {width}" in message
-    assert "supported counts are 2" in message
+    assert "supported counts are 2, 4, 8" in message
 
 
-def test_the_first_party_profile_charges_the_scored_holdout_service():
+@pytest.mark.parametrize("width", [2, 4, 8])
+def test_the_first_party_profile_charges_the_scored_holdout_service(width):
     profile = B200_NCCL_2_27_LOCAL_FIRSTPARTY_PROFILE
-    # The 4 KiB holdout of cell E5: endpoint bytes are 2(W-1)S/W, so S at width 2.
-    assert profile.total_service_ps(2, 4_096) == SERVICE_AT_4KIB_PS
-    assert profile.total_service_ps(2, 8) == INTERCEPT_PS + 117
-    assert profile.realized_fixed_cost_ps(2) == INTERCEPT_PS + 2_000_000
+    # The 4 KiB holdout of cell E5, whose endpoint load is 2(W-1)S/W.
+    endpoint = HOLDOUT_ENDPOINT_BYTES[width]
+    assert endpoint == 2 * (width - 1) * 4_096 // width
+    assert profile.total_service_ps(width, endpoint) == SERVICE_AT_4KIB_PS[width]
+    assert profile.realized_fixed_cost_ps(width) == INTERCEPT_PS[width] + 2_000_000
+
+
+def test_the_smallest_payload_costs_its_intercept_plus_one_rounded_slope():
+    profile = B200_NCCL_2_27_LOCAL_FIRSTPARTY_PROFILE
+    assert profile.total_service_ps(2, 8) == INTERCEPT_PS[2] + 108
 
 
 def test_the_provenance_names_the_substrate_and_the_band_rule():
     provenance = B200_NCCL_2_27_LOCAL_FIRSTPARTY_PROFILE.require_provenance()
 
-    assert provenance.participant_latency_band_ps == ((2, BAND_PS[0], BAND_PS[1]),)
-    for fragment in ("vast.ai", "2026-09-15", "595.91.07", "2.27.3", "2.8.0", "CUDA graph"):
+    assert provenance.participant_latency_band_ps == tuple(
+        (width, low, high) for width, (low, high) in sorted(BAND_PS.items())
+    )
+    for fragment in (
+        "vast.ai",
+        "2026-09-15",
+        "595.91.07",
+        "2.27.3",
+        "2.8.0",
+        "CUDA graph",
+        "142255",
+        "150403",
+    ):
         assert fragment in provenance.source
     assert "b200_nvlink_envelope_v1" in provenance.locator
     assert "residuals" in provenance.locator

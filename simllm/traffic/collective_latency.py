@@ -605,33 +605,45 @@ B200_NCCL_2_27_LOCAL_PROFILE = CollectiveLatencyProfile(
 
 B200_NCCL_2_27_LOCAL_FIRSTPARTY_PROFILE = CollectiveLatencyProfile(
     profile_id="b200-nccl-2.27-local-firstparty-v1",
-    bandwidth_bytes_per_second=68_888_931_479,
-    participant_latency_ps=((2, 9_088_984),),
+    bandwidth_bytes_per_second=74_361_308_462,
+    participant_latency_ps=(
+        (2, 9_185_311),
+        (4, 12_788_419),
+        (8, 22_780_276),
+    ),
     source_payload_bytes_min=8,
     source_payload_bytes_max=262_144,
     propagation_reference_ps=COLLECTIVE_PROPAGATION_REFERENCE_PS,
     provenance=CollectiveLatencyProvenance(
         evidence_class="calibrated",
         source=(
-            "first-party float32 sum ALL-REDUCE capture of two NVIDIA B200 GPUs "
-            "linked by NV18, rented on the vast.ai marketplace on 2026-09-15 and "
-            "measured inside the provider's pytorch/pytorch:2.8.0-cuda12.8-cudnn9"
-            "-runtime container on driver 595.91.07 with NCCL 2.27.3 through "
-            "PyTorch 2.8.0; each timed point is a CUDA graph replay of 200 "
-            "captured iterations, so no host dispatch sits between them"
+            "first-party float32 sum ALL-REDUCE capture of NVIDIA B200 GPUs rented "
+            "on the vast.ai marketplace on 2026-09-15 and measured inside the "
+            "provider's pytorch/pytorch:2.8.0-cuda12.8-cudnn9-runtime container on "
+            "driver 595.91.07 with NCCL 2.27.3 through PyTorch 2.8.0: width 2 from "
+            "the two-GPU slice of machine 142255 in stage 1 and widths 4 and 8 from "
+            "the eight-GPU board of machine 150403 in stage 2, every timed point a "
+            "CUDA graph replay of 200 captured iterations so no host dispatch sits "
+            "between them"
         ),
         locator=(
-            "the width-2 refit of examples/b200_nvlink_envelope_v1 over 8 B to "
-            "256 KiB excluding the 4 KiB holdout, whose error is 0.615 us; the "
-            "band is the inclusive minimum and maximum of the intercept plus the "
-            "fit residuals, widened to the holdout error when that is larger"
+            "the refit of examples/b200_nvlink_envelope_v1 over 8 B to 256 KiB "
+            "excluding the 4 KiB holdout, one intercept per width under one shared "
+            "slope, held out at 4 KiB with errors of 0.589, 0.321 and 1.080 us at "
+            "widths 2, 4 and 8; each band is the inclusive minimum and maximum of "
+            "the intercept plus that width's fit residuals, widened to the holdout "
+            "error when that is larger"
         ),
         transfer=(
             "the intra-node ALL-REDUCE intercept is charged unchanged as the "
             "per-collective surcharge of any supported collective; the profile "
-            "carries only the width this study measured and refuses every other"
+            "carries only the widths this study measured and refuses every other"
         ),
-        participant_latency_band_ps=((2, 8_152_843, 10_746_592),),
+        participant_latency_band_ps=(
+            (2, 7_181_333, 10_961_562),
+            (4, 10_285_918, 14_028_131),
+            (8, 16_686_693, 24_666_332),
+        ),
     ),
 )
 
