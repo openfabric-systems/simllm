@@ -24,16 +24,16 @@ from simllm.traffic import (
 
 STUDY = Path(__file__).resolve().parents[1] / "examples/b200_nvlink_envelope_v1"
 PROFILE_ID = "b200-nccl-2.27-local-firstparty-v1"
-BANDWIDTH_BYTES_PER_SECOND = 74_361_308_462
-INTERCEPT_PS = {2: 9_185_311, 4: 12_788_419, 8: 22_780_276}
+BANDWIDTH_BYTES_PER_SECOND = 75_888_107_438
+INTERCEPT_PS = {2: 9_236_136, 4: 12_822_835, 8: 23_087_092}
 BAND_PS = {
-    2: (7_181_333, 10_961_562),
-    4: (10_285_918, 14_028_131),
-    8: (16_686_693, 24_666_332),
+    2: (7_235_575, 10_901_213),
+    4: (10_301_762, 14_075_670),
+    8: (16_949_256, 24_957_971),
 }
 #: the 4 KiB holdout of cell E5 per width, with endpoint bytes 2(W-1)S/W
 HOLDOUT_ENDPOINT_BYTES = {2: 4_096, 4: 6_144, 8: 7_168}
-SERVICE_AT_4KIB_PS = {2: 9_240_394, 4: 12_871_043, 8: 22_876_671}
+SERVICE_AT_4KIB_PS = {2: 9_290_111, 4: 12_903_797, 8: 23_181_547}
 
 
 def _expectations() -> dict:
@@ -85,7 +85,7 @@ def test_the_first_party_profile_charges_the_scored_holdout_service(width):
 
 def test_the_smallest_payload_costs_its_intercept_plus_one_rounded_slope():
     profile = B200_NCCL_2_27_LOCAL_FIRSTPARTY_PROFILE
-    assert profile.total_service_ps(2, 8) == INTERCEPT_PS[2] + 108
+    assert profile.total_service_ps(2, 8) == INTERCEPT_PS[2] + 106
 
 
 def test_the_provenance_names_the_substrate_and_the_band_rule():

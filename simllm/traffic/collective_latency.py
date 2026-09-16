@@ -605,11 +605,11 @@ B200_NCCL_2_27_LOCAL_PROFILE = CollectiveLatencyProfile(
 
 B200_NCCL_2_27_LOCAL_FIRSTPARTY_PROFILE = CollectiveLatencyProfile(
     profile_id="b200-nccl-2.27-local-firstparty-v1",
-    bandwidth_bytes_per_second=74_361_308_462,
+    bandwidth_bytes_per_second=75_888_107_438,
     participant_latency_ps=(
-        (2, 9_185_311),
-        (4, 12_788_419),
-        (8, 22_780_276),
+        (2, 9_236_136),
+        (4, 12_822_835),
+        (8, 23_087_092),
     ),
     source_payload_bytes_min=8,
     source_payload_bytes_max=262_144,
@@ -624,12 +624,15 @@ B200_NCCL_2_27_LOCAL_FIRSTPARTY_PROFILE = CollectiveLatencyProfile(
             "the two-GPU slice of machine 142255 in stage 1 and widths 4 and 8 from "
             "the eight-GPU board of machine 150403 in stage 2, every timed point a "
             "CUDA graph replay of 200 captured iterations so no host dispatch sits "
-            "between them"
+            "between them; the widths come from the stage 2 run whose idle ranks "
+            "waited in a CPU-backed barrier group, and an earlier run of the same "
+            "board whose idle ranks spun on their devices reproduces these "
+            "intercepts within 1.4 percent"
         ),
         locator=(
             "the refit of examples/b200_nvlink_envelope_v1 over 8 B to 256 KiB "
             "excluding the 4 KiB holdout, one intercept per width under one shared "
-            "slope, held out at 4 KiB with errors of 0.589, 0.321 and 1.080 us at "
+            "slope, held out at 4 KiB with errors of 0.638, 0.097 and 0.674 us at "
             "widths 2, 4 and 8; each band is the inclusive minimum and maximum of "
             "the intercept plus that width's fit residuals, widened to the holdout "
             "error when that is larger"
@@ -640,9 +643,9 @@ B200_NCCL_2_27_LOCAL_FIRSTPARTY_PROFILE = CollectiveLatencyProfile(
             "carries only the widths this study measured and refuses every other"
         ),
         participant_latency_band_ps=(
-            (2, 7_181_333, 10_961_562),
-            (4, 10_285_918, 14_028_131),
-            (8, 16_686_693, 24_666_332),
+            (2, 7_235_575, 10_901_213),
+            (4, 10_301_762, 14_075_670),
+            (8, 16_949_256, 24_957_971),
         ),
     ),
 )
