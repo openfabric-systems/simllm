@@ -15,8 +15,8 @@ and host addresses are site local and are not recorded here.
 | File | Content | Bytes | SHA-256 |
 |---|---|---|---|
 | `stage1_result.json` | attempt 6, the stage 1 result of record: lanes P1, P2 and P3 by both timing methods | 181,705 | `dcbd929d5b404796d07bd5efbd6a0dd0dc9441c635baecbb82a2e3c452b794be` |
-| `scored.json` | the scorer's evaluation of both results of record against the freeze and its three amendments | 42,563 | `06477d9e7fcc915ebb4355d36af094675ad30709065c807f27e3cb04ecdf0f4a` |
-| `stage1_graph_attempt5_result.json` | attempt 5, the independent rental whose refit reproduces the record's constants, retained by amendment b as the contaminated eager-copy evidence | 177,673 | `08d66f2d360e917b74a2a23e634a327d2c1b5544f2ad2398fbc9a1aeb0b3ebb3` |
+| `scored.json` | the scorer's evaluation of both results of record against the freeze and its three amendments | 43,715 | `3a5b7207f62345866bb1f461512c486345c50a87ea2f3fa454787a44bd915257` |
+| `stage1_graph_attempt5_result.json` | attempt 5, a separate rental of the same machine whose width-2 refit reproduces attempt 6's within 0.77 percent, retained by amendment b as the contaminated eager-copy evidence | 177,673 | `08d66f2d360e917b74a2a23e634a327d2c1b5544f2ad2398fbc9a1aeb0b3ebb3` |
 | `stage1_eager_attempt3_result.json` | attempt 3, eager timing only, retained by amendment a as the dispatch-floor evidence | 80,699 | `aa2cc3813f64f5cbdcf905f57b57097ca7f232fffb7d174ae9611a51a2f0eba0` |
 | `stage2_result.json` | stage 2 attempt 3, the stage 2 result of record: eight GPUs with the idle ranks waiting in a CPU-backed barrier group | 532,452 | `7958b0a5fdfb7b742222d8679b4b509fd837a0e515a44de2013cd3b16340d837` |
 | `stage2_nccl_barrier_result.json` | stage 2 attempt 2, the same board with the idle ranks spinning in an NCCL barrier, retained by amendment c as the evidence for that artifact | 532,340 | `af71bf2c341ca04aeef469b16bfd233b3991967c64fd3d01ac3c223bcbb87c28` |

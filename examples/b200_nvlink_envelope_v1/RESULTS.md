@@ -15,12 +15,15 @@ retained as evidence, with every rental named in
 
 What came out: neither stage is void, every fatal ceiling held, and all six
 scored holdout rows are inside their bands. The deciding numbers are the
-refit's, over both stages: one shared slope of 75,888,107,438 bytes per second
-with intercepts of 9,236,136, 12,822,835 and 23,087,092 ps at widths 2, 4 and
-8, whose held-out 4 KiB rows miss by 0.638, 0.097 and 0.674 microseconds. The
-public profile under test is refuted at every width, always low, by up to
-3.487 microseconds at width 2, 5.443 at width 4 and 13.179 at width 8, so the
-study refits rather than validates.
+refit's, over both stages: one shared slope of 76,201,055,302 bytes per second
+with intercepts of 9,169,338, 12,827,518 and 23,092,555 ps at widths 2, 4 and
+8, whose held-out 4 KiB rows miss by 0.689, 0.092 and 0.669 microseconds. Each
+width's rows of record come from the stage that is its evidence: width 2 from
+the pinned pair of stage 1, widths 4 and 8 from the eight-GPU board of stage 2,
+with the slope shared across all 27 rows. The public profile under test is
+refuted at every width, always low, by up to 2.569 microseconds at width 2,
+5.443 at width 4 and 13.179 at width 8, so the study refits rather than
+validates.
 
 What it changes for the project: TRAF-31's same-generation point-to-point
 capture exists and is first party, and the refit is registered as
@@ -59,7 +62,7 @@ gap.
 | Evidence class | Result |
 |---|---|
 | Scored holdout rows (E2 in each direction, E3, E5 at each measured width) | 6 of 6 inside their bands |
-| Fatal physical ceilings (E1) | every ceiling held; peak unidirectional 777.53 GB/s, peak bidirectional aggregate 1,545.19 GB/s, peak bus bandwidth 572.40 GB/s, fastest timed row 6,218 ns, every all-reduce correctness probe exact |
+| Fatal physical ceilings (E1) | every ceiling held across both stages; peak unidirectional 778.92 GB/s, peak bus bandwidth 631.80 GB/s, fastest timed row 6,173.1 ns, every all-reduce correctness check exact |
 | Fatal identity guards (E8) | run separately, see Reproduction: the five PLACE-13 reference manifest digests, the collective floor study's own check, the public profile by name, and the full test suite |
 | Reported, decides refit or validation (E4) | at width 2, 4 of 5 rows outside the tolerance; at widths 4 and 8, 5 of 5; always low, so the profile is validated at no measured width |
 | Structural, unscored (E6) | the window slope is 0.1319 of the large-payload asymptote, below the frozen quarter |
@@ -104,27 +107,41 @@ whose intercepts it carries unchanged.
 
 ## The refit
 
-Ordinary least squares over the width-2 all-reduce rows from 8 B to 256 KiB,
+Ordinary least squares over the all-reduce rows of record from 8 B to 256 KiB,
 excluding the 4 KiB holdout, in the floor study's form
-`t = intercept + E / bandwidth` with `E = S` at width 2.
+`t = intercept + E / bandwidth` with the endpoint load `E = 2(W-1)S/W`, which
+is `S` at width 2, `1.5 S` at width 4 and `1.75 S` at width 8. One intercept is
+fitted per width and one slope is shared across all three, so the nine rows of
+each width carry their own fixed cost while the serializer is common.
 
 | Constant | Value |
 |---|---|
-| Shared slope | 75,888,107,438 bytes per second |
-| Intercept, width 2 | 9,236,136 ps, band 7,235,575 to 10,901,213 |
-| Intercept, width 4 | 12,822,835 ps, band 10,301,762 to 14,075,670 |
-| Intercept, width 8 | 23,087,092 ps, band 16,949,256 to 24,957,971 |
+| Shared slope | 76,201,055,302 bytes per second |
+| Intercept, width 2 | 9,169,338 ps, band 8,152,855 to 10,837,880, from stage 1 |
+| Intercept, width 4 | 12,827,518 ps, band 10,301,763 to 14,078,330, from stage 2 |
+| Intercept, width 8 | 23,092,555 ps, band 16,949,257 to 24,958,747, from stage 2 |
 | Fit rows | 27, nine per width |
-| R squared | 0.937 |
-| Holdout, width 2 | predicted 9,290,111 ps against 8,651,680 observed, error 0.638 us, allowed 1.000 us |
-| Holdout, width 4 | predicted 12,903,797 ps against 13,191,839 observed, error 0.097 us, allowed 1.319 us |
-| Holdout, width 8 | predicted 23,181,547 ps against 23,956,480 observed, error 0.674 us, allowed 2.396 us |
+| R squared | 0.940 |
 
-The first stage 2 run, on the same board with its idle ranks spinning, returns
-74,361,308,462 bytes per second with intercepts of 9,185,311, 12,788,419 and
-22,780,276 ps. The intercepts agree with the record within 1.35 percent and
-the slope within 2.05 percent, which is the cross-rental reproduction; the
-record is the run whose control rows are also usable.
+| Holdout, 4 KiB | Predicted | Observed | Error | Allowed |
+|---|---:|---:|---:|---:|
+| Width 2, stage 1 | 9,223,091 ps | 8,533,600 ps | 0.689 us | 1.000 us |
+| Width 4, stage 2 | 12,908,147 ps | 13,000,480 ps | 0.092 us | 1.300 us |
+| Width 8, stage 2 | 23,186,622 ps | 23,855,519 ps | 0.669 us | 2.386 us |
+
+Three comparisons stand behind these constants, and they are different kinds
+of comparison. Stage 2's own width-2 rows, from the eight-GPU board rather
+than the pinned pair, refit to an intercept of 9,139,198 ps, 0.33 percent from
+the one carried: that is the same-board cross-check of width 2. Repeating the
+whole two-stage refit with the first stage 2 run in place of the record, the
+same board on the same offer with its idle ranks spinning, gives 74,539,408,350
+bytes per second with intercepts of 9,152,462, 12,791,200 and 22,783,519 ps,
+so the intercepts agree within 1.36 percent and the slope within 2.23 percent:
+that is a same-board rerun, not an independent one. The only comparison across
+rentals is in stage 1, where attempt 5 and attempt 6, two separate rentals of
+machine 142255, refit their own width-2 rows to 9,126,016 and 9,088,984 ps
+over 69,422,515,624 and 68,888,931,479 bytes per second, 0.41 and 0.77 percent
+apart. No comparison here is across different machines.
 
 Each band is the inclusive minimum and maximum of that width's intercept plus
 its fit residuals, widened to the holdout error where that reaches further.
@@ -140,10 +157,12 @@ bandwidth first reaches 90 percent of it at 512 MiB.
 Eighteen lanes at 400 Gbit/s payload give 900 GB/s per GPU per direction, so a
 1 GiB copy cannot complete below 1,193,047 ns; the measured graph-replay copy
 is 1,381,000 ns in both directions, 15.8 percent above the floor, and the
-eager rows agree at 1,396,000 and 1,395,000 ns. No unidirectional rate reaches
-the ceiling, the bidirectional aggregate of 1,545 GB/s stays under the 1,800
-GB/s pair ceiling, and the fastest timed row in the run is 6.2 microseconds,
-far above the 1 microsecond harness floor.
+eager rows agree at 1,396,000 and 1,395,000 ns. Over both stages the fastest
+unidirectional rate is 778.92 GB/s and the fastest bus bandwidth 631.80 GB/s,
+neither at its ceiling; the bidirectional aggregate of 1,545 GB/s stays under
+the 1,800 GB/s pair ceiling; the seven-donor fan-in receives 791.38 GB/s,
+under the 900 GB/s a single receiver can take; and the fastest timed row of
+either stage is 6,173.1 ns, far above the 1 microsecond harness floor.
 
 Two numbers need stating rather than defending. The width-2 all-gather reports
 903.8 and 905.8 GB/s of algorithm bandwidth at 1 GiB, above the 900 GB/s
@@ -152,8 +171,10 @@ nccl-tests convention divides the gathered output by the time while only half
 of it crosses the link, so the physically bounded quantity is the 452 GB/s bus
 bandwidth, and that is what cell E1 guards. The width-2 all-reduce of 256 KiB
 moves 256 KiB per endpoint direction and cannot complete below 291 ns of pure
-serialization; it completes in 11.965 microseconds, inside the freeze's window
-of 5 to 100 microseconds, so no explanation is owed.
+serialization; its row of record, from the pinned pair of stage 1, completes
+in 11.965 microseconds, and the same payload on the eight-GPU board reads
+12.086, both inside the freeze's window of 5 to 100 microseconds, so no
+explanation is owed.
 
 ## Choices the freeze left open
 
@@ -170,24 +191,28 @@ of 5 to 100 microseconds, so no explanation is owed.
   serialization term the fit is trying to find is a few microseconds against
   intercepts of 9 to 23, so much of the variance in the window is not payload
   dependent and no fit of this form can explain it. Across three widths the
-  two-stage fit reaches 0.937, because the widths separate the intercepts;
+  two-stage fit reaches 0.940, because the widths separate the intercepts;
   the width-2 fit of stage 1 alone reached 0.624. Neither number is evidence
   that the constants are wrong: every held-out row lands well inside its
-  tolerance, and three independent rentals reproduce the constants. Stage 1
-  attempt 5, tracked as
-  [the attempt 5 result](measurements/stage1_graph_attempt5_result.json),
-  returned 9,126,016 ps and 69,422,515,624 bytes per second; the first stage 2
-  run, tracked beside the record, returned intercepts within 1.35 percent and
-  a slope within 2.05 percent of it. What this window identifies well is the
-  intercept, not the slope, which is what cell E6 reports and what the A100
-  envelope warned about. It is evidence that the intercept, not the slope,
-  is what this window identifies, which is the same thing the A100 envelope
-  warned about and what cell E6 reports.
+  tolerance, and the repetitions listed under the refit agree to between 0.33
+  and 2.23 percent. What this window identifies well is the intercept, not the
+  slope, which is what cell E6 reports and what the A100 envelope warned
+  about.
 - **One untimed replay per row.** The first replay of a fresh graph pays its
   instantiation, and in attempt 5 that landed entirely in the 8 B
   point-to-point row, which read 132 microseconds against 32 for its
   neighbours. Every captured row now replays once untimed before the timed
   replay; the same row reads 23.64 microseconds in the record.
+- **Cell E2 is fitted on eager rows, and they carry the dispatch offset.**
+  Above 1 MiB the row of record is the eager row, by the freeze and by both
+  amendments, and the eager penalty the E7 table quantifies applies to it: the
+  64 MiB peer copy of record reads about 105 microseconds where its captured
+  twin reads about 95, some 10 microseconds of host dispatch inside a row the
+  E2 fit uses. That offset is roughly constant across the fit window, so it
+  raises the fitted intercept of E2 and leaves the fitted beta, the quantity
+  the cell is about, essentially untouched; it is also why the E2 intercepts
+  are not the same quantity as the E5 intercepts and are not compared with
+  them anywhere here.
 - **One row, one block.** Each row is a single timed block with no repetition
   and no median over samples, as frozen. A host hiccup therefore lands whole
   in one row, which is visible in the residuals: the 64 KiB row sits 1.658

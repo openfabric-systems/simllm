@@ -173,23 +173,28 @@ projection without charging the analytic local duration again.
   outside the phase-local maximum. TRAF-31 owns the missing same-generation
   point-to-point capture.
 - `b200-nccl-2.27-local-firstparty-v1` is the first-party answer to most of
-  that clause: one shared serializer of 75,888,107,438 bytes/s with intercepts
-  of 9,236,136, 12,822,835 and 23,087,092 ps at widths 2, 4 and 8, refitted
+  that clause: one shared serializer of 76,201,055,302 bytes/s with intercepts
+  of 9,169,338, 12,827,518 and 23,092,555 ps at widths 2, 4 and 8, refitted
   from this project's own capture of NVLink-joined B200 GPUs in a rented
-  container, a two-GPU slice for width 2 and an eight-GPU board for the other
-  two. Every row at or below 1 MiB is a CUDA graph replay of 200 captured
-  iterations, so no host dispatch sits between them, and the idle ranks wait
-  in a CPU-backed barrier group rather than spinning on the devices being
-  timed. Each width's held-out 4 KiB row lands 0.638, 0.097 and 0.674 us from
-  its prediction, and three independent rentals reproduce the constants, the
-  closest pair within 1.35 percent on the intercepts. The profile carries only
-  those three widths and refuses every other. It claims nothing about switch
-  behaviour, cross-node paths or bare metal: the capture is a marketplace
-  container that sees no NVSwitch, and the public `b200-nccl-2.27-local-v1` it
-  was compared against keeps its own constants, which this study leaves
-  untouched. That profile is refuted at every measured width, always low, by up
-  to 3.487 us at width 2, 5.443 at width 4 and 13.179 at width 8, which is why
-  the study refits rather than validates. See
+  container. Each width's rows come from the stage that measured it, width 2
+  from a pinned two-GPU pair and widths 4 and 8 from an eight-GPU board, with
+  the slope shared across all 27 rows. Every row at or below 1 MiB is a CUDA
+  graph replay of 200 captured iterations, so no host dispatch sits between
+  them, and the idle ranks wait in a CPU-backed barrier group rather than
+  spinning on the devices being timed. Each width's held-out 4 KiB row lands
+  0.689, 0.092 and 0.669 us from its prediction. The repetitions are narrower
+  than the constants' own bands but none of them is across machines: two
+  rentals of the same two-GPU machine refit width 2 within 0.77 percent, the
+  eight-GPU board's own width-2 rows sit 0.33 percent from the carried
+  intercept, and a rerun of that board agrees within 1.36 percent on the
+  intercepts. The profile carries only those three widths and refuses every
+  other. It claims nothing about switch behaviour, cross-node paths or bare
+  metal: the capture is a marketplace container that sees no NVSwitch, and the
+  public `b200-nccl-2.27-local-v1` it was compared against keeps its own
+  constants, which this study leaves untouched. That profile is refuted at
+  every measured width, always low, by up to 2.569 us at width 2, 5.443 at
+  width 4 and 13.179 at width 8, which is why the study refits rather than
+  validates. See
   [the B200 NVLink envelope results](../../examples/b200_nvlink_envelope_v1/RESULTS.md).
 - `CollectiveFixedCostEnvelope` is that same selection expressed as a named
   bracket rather than one silently chosen constant. An envelope names a
