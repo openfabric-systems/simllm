@@ -1220,18 +1220,31 @@ def score_e7(stage2: dict[str, Any] | None, e2_records: dict[str, Any]) -> list[
 
 
 def score_eager_agreement(stages: dict[str, dict[str, Any]]) -> Outcome:
-    """Compare the eager control against the row of record above 1 MiB.
+    """Compare the eager control against its captured twin above 1 MiB.
 
     Amendment c expects the two methods to agree within 5 percent above 1 MiB
-    once the idle ranks wait on the host. The check is structural: it reports
-    whether the control is usable, and never moves a scored count.
+    once the idle ranks wait on the host. The criterion is frozen and the
+    outcome is reported as it falls; what the check must not do is count rows
+    an earlier amendment already declared not meaningful, because a row with no
+    meaning cannot disagree with anything. The offsets are reported per payload
+    as well as the fractions, since a constant offset and a constant fraction
+    are different claims about the method.
     """
 
-    worst: dict[str, Any] | None = None
     compared = 0
     outside = 0
+    worst: dict[str, Any] | None = None
+    excluded = 0
+    by_payload: dict[int, list[tuple[float, float]]] = {}
+    per_stage: dict[str, dict[str, int]] = {}
+
     for name, result in stages.items():
         rows = measured(result.get("p1", []))
+        meaningless = {
+            (entry["cell"], entry["direction"], entry["bytes"])
+            for entry in mark_not_meaningful(rows)["rows"]
+        }
+        stage_record = per_stage.setdefault(name, {"compared": 0, "outside": 0})
         for row in rows:
             if row_method(row) != METHOD_EAGER or requested_bytes(row) <= GRAPH_ROW_MAX_BYTES:
                 continue
@@ -1249,10 +1262,18 @@ def score_eager_agreement(stages: dict[str, dict[str, Any]]) -> Outcome:
             )
             if twin is None or float(twin["time_ns"]) <= 0:
                 continue
+            key = (row.get("cell"), row.get("direction"), row["bytes"])
+            if key in meaningless or _spinning_peer_row(row, twin):
+                excluded += 1
+                continue
+            offset = float(row["time_ns"]) - float(twin["time_ns"])
+            gap = abs(offset) / float(twin["time_ns"])
             compared += 1
-            gap = abs(float(row["time_ns"]) - float(twin["time_ns"])) / float(twin["time_ns"])
+            stage_record["compared"] += 1
+            by_payload.setdefault(requested_bytes(row), []).append((offset, gap))
             if gap > EAGER_AGREEMENT_FRACTION:
                 outside += 1
+                stage_record["outside"] += 1
             if worst is None or gap > worst["gap_fraction"]:
                 worst = {
                     "stage": name,
@@ -1261,24 +1282,62 @@ def score_eager_agreement(stages: dict[str, dict[str, Any]]) -> Outcome:
                     "bytes": row["bytes"],
                     "eager_time_ns": row["time_ns"],
                     "graph_time_ns": twin["time_ns"],
+                    "offset_ns": offset,
                     "gap_fraction": gap,
                 }
+
+    table = []
+    for size_bytes in sorted(by_payload):
+        offsets = sorted(value for value, _ in by_payload[size_bytes])
+        gaps = sorted(value for _, value in by_payload[size_bytes])
+        middle = len(offsets) // 2
+        table.append(
+            {
+                "bytes": size_bytes,
+                "rows": len(offsets),
+                "median_offset_ns": offsets[middle],
+                "median_gap_fraction": gaps[middle],
+                "max_gap_fraction": gaps[-1],
+            }
+        )
+
+    observed = {
+        "compared": compared,
+        "outside": outside,
+        "excluded_not_meaningful": excluded,
+        "per_stage": per_stage,
+        "offset_by_payload": table,
+        "worst": worst,
+    }
     if not compared:
         return Outcome(
             "E7-eager-agreement",
             "structural",
             None,
             "no payload above 1 MiB carries both methods, so the control cannot be compared",
-            {},
+            observed,
         )
+    offsets = [entry["median_offset_ns"] for entry in table]
     return Outcome(
         "E7-eager-agreement",
         "structural",
         bool(outside == 0),
         f"above 1 MiB {compared - outside} of {compared} eager rows agree with their "
-        f"captured row within {EAGER_AGREEMENT_FRACTION * 100} percent; the worst gap is "
-        f"{fmt((worst or {}).get('gap_fraction', 0.0) * 100, 2)} percent",
-        {"compared": compared, "outside": outside, "worst": worst},
+        f"captured row within {EAGER_AGREEMENT_FRACTION * 100} percent "
+        f"({excluded} rows excluded as not meaningful); the median eager minus graph "
+        f"offset runs from {fmt(min(offsets) / 1e3, 1)} to {fmt(max(offsets) / 1e3, 1)} us "
+        "across the payloads, which is the per-iteration dispatch the capture removes",
+        observed,
+    )
+
+
+def _spinning_peer_row(row: dict[str, Any], twin: dict[str, Any]) -> bool:
+    """Return whether this eager row carries the spinning-peer artifact."""
+
+    observed = float(row["time_ns"])
+    return (
+        observed > NOT_MEANINGFUL_ABOVE_NS
+        and float(twin["time_ns"]) < NOT_MEANINGFUL_TWIN_FRACTION * observed
     )
 
 

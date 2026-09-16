@@ -1041,6 +1041,8 @@ def test_the_eager_agreement_check_reports_the_worst_gap() -> None:
     assert outcome.passed is True
     assert outcome.observed["outside"] == 0
 
+    # A row the spinning peer made meaningless cannot disagree with anything,
+    # so it is excluded rather than counted against the criterion.
     spinning = {
         "stage2": {
             "p1": [
@@ -1050,6 +1052,24 @@ def test_the_eager_agreement_check_reports_the_worst_gap() -> None:
         }
     }
     outcome = scorer.score_eager_agreement(spinning)
+    assert outcome.passed is None
+    assert outcome.observed["compared"] == 0
+    assert outcome.observed["excluded_not_meaningful"] == 1
+
+    # A clean row that carries only the eager dispatch offset does disagree,
+    # and the frozen 5 percent criterion fails on it as written.
+    dispatch = {
+        "stage2": {
+            "p1": [
+                _placement_row("bidirectional", "graph", 2_097_152, 9_457.6),
+                _placement_row("bidirectional", "eager", 2_097_152, 66_251.2),
+            ]
+        }
+    }
+    outcome = scorer.score_eager_agreement(dispatch)
     assert outcome.passed is False
     assert outcome.observed["outside"] == 1
     assert outcome.cls == "structural"
+    table = outcome.observed["offset_by_payload"]
+    assert table[0]["bytes"] == 2_097_152
+    assert table[0]["median_offset_ns"] == pytest.approx(56_793.6)
