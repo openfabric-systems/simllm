@@ -65,6 +65,13 @@ NOT_MEANINGFUL_ABOVE_NS = 2_000_000.0
 NOT_MEANINGFUL_TWIN_FRACTION = 0.5
 EAGER_AGREEMENT_FRACTION = 0.05
 PLACEMENT_CELLS = ("all_pairs", "disjoint_pairs", "fanout", "fanin")
+#: Width 2 is measured in both stages. Its rows of record are stage 1's, the
+#: pinned pair the freeze's E5 text describes; the wider communicators exist
+#: only in stage 2. Pooling the stages would let one silently shadow the other,
+#: which is how a refit can end up carrying a board its provenance does not
+#: name.
+PINNED_PAIR_WIDTH = 2
+PINNED_PAIR_STAGE = "stage1"
 
 #: amendment of 2026-09-15: at or below this payload the row of record is the
 #: CUDA graph replay, above it the eager row, and the other method is kept
@@ -328,6 +335,28 @@ def rows_of_record(rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], di
         "methods_present": sorted({row_method(row) for row in rows}),
     }
     return chosen, record
+
+
+def all_reduce_rows_by_width(
+    stages: dict[str, dict[str, Any]],
+) -> dict[int, dict[str, list[dict[str, Any]]]]:
+    """Return the measured all-reduce rows as ``{width: {stage: rows}}``."""
+
+    by_width: dict[int, dict[str, list[dict[str, Any]]]] = {}
+    for name, result in stages.items():
+        for row in measured(result.get("p3", [])):
+            if row.get("op") != "all_reduce":
+                continue
+            by_width.setdefault(int(row["width"]), {}).setdefault(name, []).append(row)
+    return by_width
+
+
+def source_stage_for_width(width: int, by_stage: dict[str, list[dict[str, Any]]]) -> str:
+    """Return the stage whose rows are this width's rows of record."""
+
+    if width == PINNED_PAIR_WIDTH and PINNED_PAIR_STAGE in by_stage:
+        return PINNED_PAIR_STAGE
+    return min(by_stage)
 
 
 def placement_rows_of_record(
@@ -710,9 +739,9 @@ def score_e4(
     table: dict[str, Any] = {}
     for width_key, frozen in sorted(predictions.items(), key=lambda item: int(item[0])):
         width = int(width_key)
-        all_rows: list[dict[str, Any]] = []
-        for result in stages.values():
-            all_rows.extend(collective_series(result, "all_reduce", width))
+        by_stage = all_reduce_rows_by_width(stages).get(width, {})
+        source = source_stage_for_width(width, by_stage) if by_stage else ""
+        all_rows = sorted(by_stage.get(source, []), key=requested_bytes)
         if not all_rows:
             outcomes.append(
                 Outcome(
@@ -725,6 +754,7 @@ def score_e4(
             )
             continue
         selected, selection = rows_of_record(all_rows)
+        selection["source_stage"] = source
         entries = []
         validated = True
         for size_bytes in BEFORE_ERROR_ROWS_BYTES:
@@ -782,15 +812,14 @@ def score_e5(stages: dict[str, dict[str, Any]]) -> tuple[list[Outcome], dict[str
     as a degenerate fit whose holdout fails, and no profile is proposed.
     """
 
+    by_width = all_reduce_rows_by_width(stages)
     rows_by_width: dict[int, list[dict[str, Any]]] = {}
-    for result in stages.values():
-        for row in measured(result.get("p3", [])):
-            if row.get("op") != "all_reduce":
-                continue
-            rows_by_width.setdefault(int(row["width"]), []).append(row)
     selection_by_width: dict[str, Any] = {}
-    for width, rows in list(rows_by_width.items()):
-        selected, selection = rows_of_record(rows)
+    for width, by_stage in by_width.items():
+        source = source_stage_for_width(width, by_stage)
+        selected, selection = rows_of_record(by_stage[source])
+        selection["source_stage"] = source
+        selection["stages_measuring_this_width"] = sorted(by_stage)
         rows_by_width[width] = selected
         selection_by_width[str(width)] = selection
     widths = sorted(rows_by_width)
@@ -963,6 +992,7 @@ def score_e5(stages: dict[str, dict[str, Any]]) -> tuple[list[Outcome], dict[str
         allowed = tolerance_ps(observed_ps)
         error = abs(predicted_ps - observed_ps)
         holdouts[str(width)] = {
+            "source_stage": selection_by_width[str(width)]["source_stage"],
             "endpoint_bytes": load,
             "predicted_ps": predicted_ps,
             "observed_ps": observed_ps,
@@ -1324,7 +1354,8 @@ def score_eager_agreement(stages: dict[str, dict[str, Any]]) -> Outcome:
         bool(outside == 0),
         f"above 1 MiB {compared - outside} of {compared} eager rows agree with their "
         f"captured row within {EAGER_AGREEMENT_FRACTION * 100} percent "
-        f"({excluded} rows excluded as not meaningful); the median eager minus graph "
+        f"({excluded} rows excluded as carrying the spinning-peer signature); the "
+        f"median eager minus graph "
         f"offset runs from {fmt(min(offsets) / 1e3, 1)} to {fmt(max(offsets) / 1e3, 1)} us "
         "across the payloads, which is the per-iteration dispatch the capture removes",
         observed,

@@ -24,16 +24,16 @@ from simllm.traffic import (
 
 STUDY = Path(__file__).resolve().parents[1] / "examples/b200_nvlink_envelope_v1"
 PROFILE_ID = "b200-nccl-2.27-local-firstparty-v1"
-BANDWIDTH_BYTES_PER_SECOND = 75_888_107_438
-INTERCEPT_PS = {2: 9_236_136, 4: 12_822_835, 8: 23_087_092}
+BANDWIDTH_BYTES_PER_SECOND = 76_201_055_302
+INTERCEPT_PS = {2: 9_169_338, 4: 12_827_518, 8: 23_092_555}
 BAND_PS = {
-    2: (7_235_575, 10_901_213),
-    4: (10_301_762, 14_075_670),
-    8: (16_949_256, 24_957_971),
+    2: (8_152_855, 10_837_880),
+    4: (10_301_763, 14_078_330),
+    8: (16_949_257, 24_958_747),
 }
 #: the 4 KiB holdout of cell E5 per width, with endpoint bytes 2(W-1)S/W
 HOLDOUT_ENDPOINT_BYTES = {2: 4_096, 4: 6_144, 8: 7_168}
-SERVICE_AT_4KIB_PS = {2: 9_290_111, 4: 12_903_797, 8: 23_181_547}
+SERVICE_AT_4KIB_PS = {2: 9_223_091, 4: 12_908_147, 8: 23_186_622}
 
 
 def _expectations() -> dict:
@@ -85,7 +85,7 @@ def test_the_first_party_profile_charges_the_scored_holdout_service(width):
 
 def test_the_smallest_payload_costs_its_intercept_plus_one_rounded_slope():
     profile = B200_NCCL_2_27_LOCAL_FIRSTPARTY_PROFILE
-    assert profile.total_service_ps(2, 8) == INTERCEPT_PS[2] + 106
+    assert profile.total_service_ps(2, 8) == INTERCEPT_PS[2] + 105
 
 
 def test_the_provenance_names_the_substrate_and_the_band_rule():
@@ -146,6 +146,22 @@ def test_the_reference_manifest_digests_are_unchanged(tmp_path, label):
 
     assert len(payload) == record["bytes"]
     assert hashlib.sha256(payload).hexdigest() == record["sha256"]
+
+
+def test_the_refit_names_the_stage_each_width_came_from():
+    """Width 2 is the pinned pair of stage 1, the wider communicators stage 2's."""
+
+    scored = STUDY / "measurements/scored.json"
+    if not scored.is_file():
+        pytest.skip("no scored result of record is tracked yet")
+    refit = json.loads(scored.read_text(encoding="utf-8"))["refit"]
+
+    assert refit["selection"]["2"]["source_stage"] == "stage1"
+    assert refit["selection"]["4"]["source_stage"] == "stage2"
+    assert refit["selection"]["8"]["source_stage"] == "stage2"
+    assert refit["selection"]["2"]["stages_measuring_this_width"] == ["stage1", "stage2"]
+    for width, holdout in refit["holdouts"].items():
+        assert holdout["source_stage"] == refit["selection"][width]["source_stage"]
 
 
 def test_the_scorer_proposes_exactly_the_registered_constants():
