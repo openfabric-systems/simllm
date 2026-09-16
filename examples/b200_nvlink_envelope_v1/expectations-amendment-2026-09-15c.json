@@ -1,0 +1,23 @@
+{
+  "schema": "simllm-b200-nvlink-envelope-amendment-v1",
+  "task": "TRAF-31",
+  "amends": "expectations.json",
+  "sequence": "c",
+  "date": "2026-09-15",
+  "trigger": {
+    "capture": "stage 2 attempt 2, eight-GPU B200 board, every lane completed, no capture skipped",
+    "scored_holdouts": "6 of 6 inside their bands across both stages",
+    "refit": {"widths": [2, 4, 8], "shared_slope_bytes_per_second": 74361308462, "intercepts_ps": {"2": 9185311, "4": 12788419, "8": 22780276}},
+    "graph_rows": {"all_pairs_16mib_spread_fraction_max": 0.05, "all_pairs_1gib_spread_fraction_max": 0.002, "disjoint_pairs_64mib_slowdown_max": 1.07, "fanout_aggregate_bytes_per_second": 715000000000, "fanin_7_aggregate_bytes_per_second": 791000000000},
+    "eager_artifact": "eager copies into a device hosting a spinning peer rank read a flat 2.33 ms at 16 MiB, 64 MiB and 1 GiB",
+    "eager_graph_agreement_where_clean": "within 1.2 percent at 1 GiB",
+    "fanin_rule_defect": "the frozen floor 7 * isolated / (beta_pair / 900e9) = 636 us inverted the fraction; the nameplate floor is 522 us and the observation is 594 us"
+  },
+  "rows_of_record": {
+    "stage2_placement_cells": "graph rows at every payload; eager rows retained as control, rows into a spinning peer's device marked not meaningful",
+    "e2_pinned_pair": "unchanged: graph at or below 1 MiB, eager above",
+    "e7_fanin_rule": "time >= 7 * 67108864 / 900e9 seconds; aggregate receive rate reported as a fraction of 900e9"
+  },
+  "barriers": {"inter_lane_group": "gloo", "nccl_group_use": "timed lanes P2 and P3 only", "confirming_rerun": "one stage-2 rerun permitted; eager rows expected within 5 percent of graph rows above 1 MiB, structural, unscored"},
+  "unchanged": ["scored denominator", "bands", "fit windows", "payload set", "nameplate ceilings", "refit form", "profile name", "closure rule"]
+}
