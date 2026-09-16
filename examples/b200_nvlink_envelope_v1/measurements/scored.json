@@ -1,0 +1,785 @@
+{
+  "asymptotes": {
+    "e2": {
+      "0->1": {
+        "alpha_us": 20.459847558510045,
+        "beta_bytes_per_second": 780539492426.8489,
+        "fit_degenerate": false,
+        "fit_points": 10,
+        "fit_reason": "",
+        "holdout_bytes": 67108864,
+        "holdout_error_fraction": 0.012378106456748235,
+        "holdout_observed_us": 105.1360011100769,
+        "holdout_predicted_us": 106.43738572425424,
+        "r_squared": 0.9997678850036393,
+        "selection": {
+          "fallback_payload_bytes": [],
+          "methods_present": [
+            "eager",
+            "graph"
+          ],
+          "rows_selected": 22
+        },
+        "slope_seconds_per_byte": 1.2811651552579432e-12,
+        "small_payload_method": "graph",
+        "small_payload_us": 6.450560092926025,
+        "window_payload_bytes": [
+          1048576,
+          2097152,
+          4194304,
+          8388608,
+          16777216,
+          33554432,
+          134217728,
+          268435456,
+          536870912,
+          1073741824
+        ]
+      },
+      "1->0": {
+        "alpha_us": 21.089388734989146,
+        "beta_bytes_per_second": 781657002855.5333,
+        "fit_degenerate": false,
+        "fit_points": 10,
+        "fit_reason": "",
+        "holdout_bytes": 67108864,
+        "holdout_error_fraction": 0.030273246947881517,
+        "holdout_observed_us": 103.80159616470337,
+        "holdout_predicted_us": 106.9440075189817,
+        "r_squared": 0.9997379420559945,
+        "selection": {
+          "fallback_payload_bytes": [],
+          "methods_present": [
+            "eager",
+            "graph"
+          ],
+          "rows_selected": 22
+        },
+        "slope_seconds_per_byte": 1.279333513736614e-12,
+        "small_payload_method": "graph",
+        "small_payload_us": 7.548639774322509,
+        "window_payload_bytes": [
+          1048576,
+          2097152,
+          4194304,
+          8388608,
+          16777216,
+          33554432,
+          134217728,
+          268435456,
+          536870912,
+          1073741824
+        ]
+      }
+    },
+    "e3": {
+      "alpha_us": 52.875253631025494,
+      "beta_bytes_per_second": 697497148215.8905,
+      "fit_degenerate": false,
+      "fit_points": 10,
+      "fit_reason": "",
+      "holdout_bytes": 67108864,
+      "holdout_error_fraction": 0.02158147406444894,
+      "holdout_observed_us": 152.37760543823242,
+      "holdout_predicted_us": 149.08907209846438,
+      "r_squared": 0.9958901040168652,
+      "selection": {
+        "fallback_payload_bytes": [],
+        "methods_present": [
+          "eager",
+          "graph"
+        ],
+        "rows_selected": 22
+      },
+      "slope_seconds_per_byte": 1.4336976180589032e-12,
+      "small_payload_method": "graph",
+      "small_payload_us": 23.644320964813236,
+      "window_payload_bytes": [
+        1048576,
+        2097152,
+        4194304,
+        8388608,
+        16777216,
+        33554432,
+        134217728,
+        268435456,
+        536870912,
+        1073741824
+      ]
+    },
+    "e6": {
+      "all_reduce_asymptote": {
+        "alpha_us": 36.28804803199915,
+        "beta_bytes_per_second": 575469671848.5795,
+        "fit_degenerate": false,
+        "fit_points": 11,
+        "fit_reason": "",
+        "r_squared": 0.9990660326871073,
+        "slope_seconds_per_byte": 1.7377110366002489e-12
+      },
+      "busbw_90_percent_payload_bytes": 536870912,
+      "e2_beta_bytes_per_second": 780539492426.8489,
+      "e5_fit_degenerate": false,
+      "e5_slope_bytes_per_second": 68888931479,
+      "slope_over_asymptote": 0.1197090565306566
+    }
+  },
+  "before_error": {
+    "2": {
+      "rows": [
+        {
+          "bytes": 8,
+          "delta_fraction_of_observed": -0.3151330406628202,
+          "delta_ps": -2569267.057182311,
+          "dispatch_floor_ps": 9863360.524177551,
+          "eager_control_ps": 18016320.46699524,
+          "method": "graph",
+          "observed_ps": 8152959.942817689,
+          "predicted_ps": 10722227,
+          "within_tolerance": false
+        },
+        {
+          "bytes": 1024,
+          "delta_fraction_of_observed": -0.30093040700980284,
+          "delta_ps": -2483614.816055298,
+          "dispatch_floor_ps": 10842239.85671997,
+          "eager_control_ps": 19095360.040664673,
+          "method": "graph",
+          "observed_ps": 8253120.183944702,
+          "predicted_ps": 10736735,
+          "within_tolerance": false
+        },
+        {
+          "bytes": 4096,
+          "delta_fraction_of_observed": -0.2633125567705257,
+          "delta_ps": -2247004.0272750854,
+          "dispatch_floor_ps": 9824319.48184967,
+          "eager_control_ps": 18357919.454574585,
+          "method": "graph",
+          "observed_ps": 8533599.972724915,
+          "predicted_ps": 10780604,
+          "within_tolerance": false
+        },
+        {
+          "bytes": 65536,
+          "delta_fraction_of_observed": 0.0034144154620531103,
+          "delta_ps": 39941.56083679013,
+          "dispatch_floor_ps": 6442719.697952272,
+          "eager_control_ps": 18140640.258789062,
+          "method": "graph",
+          "observed_ps": 11697920.56083679,
+          "predicted_ps": 11657979,
+          "within_tolerance": true
+        },
+        {
+          "bytes": 262144,
+          "delta_fraction_of_observed": -0.20899517267054407,
+          "delta_ps": -2500618.9017333984,
+          "dispatch_floor_ps": 6919519.901275635,
+          "eager_control_ps": 18884479.999542236,
+          "method": "graph",
+          "observed_ps": 11964960.098266602,
+          "predicted_ps": 14465579,
+          "within_tolerance": false
+        }
+      ],
+      "selection": {
+        "fallback_payload_bytes": [],
+        "methods_present": [
+          "eager",
+          "graph"
+        ],
+        "rows_selected": 22
+      }
+    }
+  },
+  "expectations": [
+    {
+      "class": "fatal",
+      "detail": "every physical ceiling held: peak unidirectional 777.53 GB/s, peak bus bandwidth 572.40 GB/s, fastest row 6218.2 ns",
+      "id": "E1",
+      "observed": {
+        "fastest_row_ns": 6218.240261077882,
+        "peak_bytes_per_second": {
+          "busbw": 572399991073.9473,
+          "fanin_aggregate": 0.0,
+          "p1_bidirectional": 1545194127936.0513,
+          "p1_unidirectional": 777532900018.8351,
+          "p2_bidirectional": 1275642329804.865,
+          "p2_unidirectional": 682723602817.84
+        }
+      },
+      "passed": true
+    },
+    {
+      "class": "structural",
+      "detail": "peer copy 0->1: beta 780.54 GB/s in [500.0, 900.0] with R^2 0.99977, floor 0.99",
+      "id": "E2-0->1-fit",
+      "observed": {
+        "alpha_us": 20.459847558510045,
+        "beta_bytes_per_second": 780539492426.8489,
+        "fit_degenerate": false,
+        "fit_points": 10,
+        "fit_reason": "",
+        "holdout_bytes": 67108864,
+        "holdout_error_fraction": 0.012378106456748235,
+        "holdout_observed_us": 105.1360011100769,
+        "holdout_predicted_us": 106.43738572425424,
+        "r_squared": 0.9997678850036393,
+        "selection": {
+          "fallback_payload_bytes": [],
+          "methods_present": [
+            "eager",
+            "graph"
+          ],
+          "rows_selected": 22
+        },
+        "slope_seconds_per_byte": 1.2811651552579432e-12,
+        "window_payload_bytes": [
+          1048576,
+          2097152,
+          4194304,
+          8388608,
+          16777216,
+          33554432,
+          134217728,
+          268435456,
+          536870912,
+          1073741824
+        ]
+      },
+      "passed": true
+    },
+    {
+      "class": "scored",
+      "detail": "peer copy 0->1: the 64 MiB holdout predicts 106.44 us against 105.14 us observed, error 1.24 percent, limit 10.0 percent",
+      "id": "E2-0->1-holdout",
+      "observed": {
+        "alpha_us": 20.459847558510045,
+        "beta_bytes_per_second": 780539492426.8489,
+        "fit_degenerate": false,
+        "fit_points": 10,
+        "fit_reason": "",
+        "holdout_bytes": 67108864,
+        "holdout_error_fraction": 0.012378106456748235,
+        "holdout_observed_us": 105.1360011100769,
+        "holdout_predicted_us": 106.43738572425424,
+        "r_squared": 0.9997678850036393,
+        "selection": {
+          "fallback_payload_bytes": [],
+          "methods_present": [
+            "eager",
+            "graph"
+          ],
+          "rows_selected": 22
+        },
+        "slope_seconds_per_byte": 1.2811651552579432e-12,
+        "window_payload_bytes": [
+          1048576,
+          2097152,
+          4194304,
+          8388608,
+          16777216,
+          33554432,
+          134217728,
+          268435456,
+          536870912,
+          1073741824
+        ]
+      },
+      "passed": true
+    },
+    {
+      "class": "reported",
+      "detail": "peer copy 0->1: the 8 B point is 6.451 us by the graph method, recorded against the [1.0, 30.0] us expectation and not scored",
+      "id": "E2-0->1-small-payload",
+      "observed": {
+        "method": "graph",
+        "small_payload_us": 6.450560092926025
+      },
+      "passed": true
+    },
+    {
+      "class": "structural",
+      "detail": "peer copy 1->0: beta 781.66 GB/s in [500.0, 900.0] with R^2 0.99974, floor 0.99",
+      "id": "E2-1->0-fit",
+      "observed": {
+        "alpha_us": 21.089388734989146,
+        "beta_bytes_per_second": 781657002855.5333,
+        "fit_degenerate": false,
+        "fit_points": 10,
+        "fit_reason": "",
+        "holdout_bytes": 67108864,
+        "holdout_error_fraction": 0.030273246947881517,
+        "holdout_observed_us": 103.80159616470337,
+        "holdout_predicted_us": 106.9440075189817,
+        "r_squared": 0.9997379420559945,
+        "selection": {
+          "fallback_payload_bytes": [],
+          "methods_present": [
+            "eager",
+            "graph"
+          ],
+          "rows_selected": 22
+        },
+        "slope_seconds_per_byte": 1.279333513736614e-12,
+        "window_payload_bytes": [
+          1048576,
+          2097152,
+          4194304,
+          8388608,
+          16777216,
+          33554432,
+          134217728,
+          268435456,
+          536870912,
+          1073741824
+        ]
+      },
+      "passed": true
+    },
+    {
+      "class": "scored",
+      "detail": "peer copy 1->0: the 64 MiB holdout predicts 106.94 us against 103.80 us observed, error 3.03 percent, limit 10.0 percent",
+      "id": "E2-1->0-holdout",
+      "observed": {
+        "alpha_us": 21.089388734989146,
+        "beta_bytes_per_second": 781657002855.5333,
+        "fit_degenerate": false,
+        "fit_points": 10,
+        "fit_reason": "",
+        "holdout_bytes": 67108864,
+        "holdout_error_fraction": 0.030273246947881517,
+        "holdout_observed_us": 103.80159616470337,
+        "holdout_predicted_us": 106.9440075189817,
+        "r_squared": 0.9997379420559945,
+        "selection": {
+          "fallback_payload_bytes": [],
+          "methods_present": [
+            "eager",
+            "graph"
+          ],
+          "rows_selected": 22
+        },
+        "slope_seconds_per_byte": 1.279333513736614e-12,
+        "window_payload_bytes": [
+          1048576,
+          2097152,
+          4194304,
+          8388608,
+          16777216,
+          33554432,
+          134217728,
+          268435456,
+          536870912,
+          1073741824
+        ]
+      },
+      "passed": true
+    },
+    {
+      "class": "reported",
+      "detail": "peer copy 1->0: the 8 B point is 7.549 us by the graph method, recorded against the [1.0, 30.0] us expectation and not scored",
+      "id": "E2-1->0-small-payload",
+      "observed": {
+        "method": "graph",
+        "small_payload_us": 7.548639774322509
+      },
+      "passed": true
+    },
+    {
+      "class": "structural",
+      "detail": "NCCL point to point 0->1: beta 697.50 GB/s in [400.0, 900.0] with R^2 0.99589, floor 0.99",
+      "id": "E3-fit",
+      "observed": {
+        "alpha_us": 52.875253631025494,
+        "beta_bytes_per_second": 697497148215.8905,
+        "fit_degenerate": false,
+        "fit_points": 10,
+        "fit_reason": "",
+        "holdout_bytes": 67108864,
+        "holdout_error_fraction": 0.02158147406444894,
+        "holdout_observed_us": 152.37760543823242,
+        "holdout_predicted_us": 149.08907209846438,
+        "r_squared": 0.9958901040168652,
+        "selection": {
+          "fallback_payload_bytes": [],
+          "methods_present": [
+            "eager",
+            "graph"
+          ],
+          "rows_selected": 22
+        },
+        "slope_seconds_per_byte": 1.4336976180589032e-12,
+        "window_payload_bytes": [
+          1048576,
+          2097152,
+          4194304,
+          8388608,
+          16777216,
+          33554432,
+          134217728,
+          268435456,
+          536870912,
+          1073741824
+        ]
+      },
+      "passed": true
+    },
+    {
+      "class": "scored",
+      "detail": "NCCL point to point 0->1: the 64 MiB holdout predicts 149.09 us against 152.38 us observed, error 2.16 percent, limit 10.0 percent",
+      "id": "E3-holdout",
+      "observed": {
+        "alpha_us": 52.875253631025494,
+        "beta_bytes_per_second": 697497148215.8905,
+        "fit_degenerate": false,
+        "fit_points": 10,
+        "fit_reason": "",
+        "holdout_bytes": 67108864,
+        "holdout_error_fraction": 0.02158147406444894,
+        "holdout_observed_us": 152.37760543823242,
+        "holdout_predicted_us": 149.08907209846438,
+        "r_squared": 0.9958901040168652,
+        "selection": {
+          "fallback_payload_bytes": [],
+          "methods_present": [
+            "eager",
+            "graph"
+          ],
+          "rows_selected": 22
+        },
+        "slope_seconds_per_byte": 1.4336976180589032e-12,
+        "window_payload_bytes": [
+          1048576,
+          2097152,
+          4194304,
+          8388608,
+          16777216,
+          33554432,
+          134217728,
+          268435456,
+          536870912,
+          1073741824
+        ]
+      },
+      "passed": true
+    },
+    {
+      "class": "reported",
+      "detail": "NCCL point to point 0->1: the 8 B point is 23.644 us by the graph method, recorded against the [3.0, 60.0] us expectation and not scored",
+      "id": "E3-small-payload",
+      "observed": {
+        "method": "graph",
+        "small_payload_us": 23.644320964813236
+      },
+      "passed": true
+    },
+    {
+      "class": "reported",
+      "detail": "width 2 before error: worst row misses the frozen prediction by 2.569 us; the profile is not validated at this width",
+      "id": "E4-w2",
+      "observed": {
+        "rows": [
+          {
+            "bytes": 8,
+            "delta_fraction_of_observed": -0.3151330406628202,
+            "delta_ps": -2569267.057182311,
+            "dispatch_floor_ps": 9863360.524177551,
+            "eager_control_ps": 18016320.46699524,
+            "method": "graph",
+            "observed_ps": 8152959.942817689,
+            "predicted_ps": 10722227,
+            "within_tolerance": false
+          },
+          {
+            "bytes": 1024,
+            "delta_fraction_of_observed": -0.30093040700980284,
+            "delta_ps": -2483614.816055298,
+            "dispatch_floor_ps": 10842239.85671997,
+            "eager_control_ps": 19095360.040664673,
+            "method": "graph",
+            "observed_ps": 8253120.183944702,
+            "predicted_ps": 10736735,
+            "within_tolerance": false
+          },
+          {
+            "bytes": 4096,
+            "delta_fraction_of_observed": -0.2633125567705257,
+            "delta_ps": -2247004.0272750854,
+            "dispatch_floor_ps": 9824319.48184967,
+            "eager_control_ps": 18357919.454574585,
+            "method": "graph",
+            "observed_ps": 8533599.972724915,
+            "predicted_ps": 10780604,
+            "within_tolerance": false
+          },
+          {
+            "bytes": 65536,
+            "delta_fraction_of_observed": 0.0034144154620531103,
+            "delta_ps": 39941.56083679013,
+            "dispatch_floor_ps": 6442719.697952272,
+            "eager_control_ps": 18140640.258789062,
+            "method": "graph",
+            "observed_ps": 11697920.56083679,
+            "predicted_ps": 11657979,
+            "within_tolerance": true
+          },
+          {
+            "bytes": 262144,
+            "delta_fraction_of_observed": -0.20899517267054407,
+            "delta_ps": -2500618.9017333984,
+            "dispatch_floor_ps": 6919519.901275635,
+            "eager_control_ps": 18884479.999542236,
+            "method": "graph",
+            "observed_ps": 11964960.098266602,
+            "predicted_ps": 14465579,
+            "within_tolerance": false
+          }
+        ],
+        "selection": {
+          "fallback_payload_bytes": [],
+          "methods_present": [
+            "eager",
+            "graph"
+          ],
+          "rows_selected": 22
+        }
+      },
+      "passed": false
+    },
+    {
+      "class": "structural",
+      "detail": "refit over 9 rows at widths [2]: shared slope 68888931479 bytes per second with intercepts 2:9088984 ps, R^2 0.62361",
+      "id": "E5-fit",
+      "observed": {
+        "band_ps": {
+          "2": [
+            8152843,
+            10746592
+          ]
+        },
+        "bandwidth_bytes_per_second": 68888931479,
+        "fit_degenerate": false,
+        "fit_rows": 9,
+        "fit_rows_by_width": {
+          "2": [
+            8,
+            1024,
+            2048,
+            8192,
+            16384,
+            32768,
+            65536,
+            131072,
+            262144
+          ]
+        },
+        "intercept_ps": {
+          "2": 9088984
+        },
+        "max_abs_residual_ps": {
+          "2": 1657607.6898884196
+        },
+        "ps_per_byte": 14.516120057781427,
+        "r_squared": 0.6236055721250899,
+        "selection": {
+          "2": {
+            "fallback_payload_bytes": [],
+            "methods_present": [
+              "eager",
+              "graph"
+            ],
+            "rows_selected": 22
+          }
+        },
+        "widths": [
+          2
+        ]
+      },
+      "passed": true
+    },
+    {
+      "class": "scored",
+      "detail": "width 2 4 KiB holdout predicts 9148443 ps against 8533600 ps observed, error 0.615 us, allowed 1.000 us",
+      "id": "E5-holdout-w2",
+      "observed": {
+        "allowed_ps": 1000000.0,
+        "endpoint_bytes": 4096,
+        "error_ps": 614843.0272750854,
+        "method": "graph",
+        "observed_ps": 8533599.972724915,
+        "predicted_ps": 9148443
+      },
+      "passed": true
+    },
+    {
+      "class": "structural",
+      "detail": "the window slope is 68.89 GB/s against a large-payload all-reduce asymptote of 575.47 GB/s, a ratio of 0.1197 against the frozen quarter; bus bandwidth first reaches 90 percent of the asymptote at 536870912 B",
+      "id": "E6",
+      "observed": {
+        "all_reduce_asymptote": {
+          "alpha_us": 36.28804803199915,
+          "beta_bytes_per_second": 575469671848.5795,
+          "fit_degenerate": false,
+          "fit_points": 11,
+          "fit_reason": "",
+          "r_squared": 0.9990660326871073,
+          "slope_seconds_per_byte": 1.7377110366002489e-12
+        },
+        "busbw_90_percent_payload_bytes": 536870912,
+        "e2_beta_bytes_per_second": 780539492426.8489,
+        "e5_fit_degenerate": false,
+        "e5_slope_bytes_per_second": 68888931479,
+        "slope_over_asymptote": 0.1197090565306566
+      },
+      "passed": true
+    },
+    {
+      "class": "structural",
+      "detail": "stage 2 did not run",
+      "id": "E7",
+      "observed": {},
+      "passed": null
+    },
+    {
+      "class": "fatal-external",
+      "detail": "run separately, see RESULTS.md: the five vLLM reference manifest digests of the PLACE-13 freeze",
+      "id": "E8-placement-records",
+      "observed": {},
+      "passed": null
+    },
+    {
+      "class": "fatal-external",
+      "detail": "run separately, see RESULTS.md: the tracked results of examples/collective_latency_floor_v1",
+      "id": "E8-floor-study-check",
+      "observed": {},
+      "passed": null
+    },
+    {
+      "class": "fatal-external",
+      "detail": "run separately, see RESULTS.md: every existing test",
+      "id": "E8-existing-tests",
+      "observed": {},
+      "passed": null
+    },
+    {
+      "class": "fatal-external",
+      "detail": "run separately, see RESULTS.md: b200-nccl-2.27-local-v1 resolves to the same constants",
+      "id": "E8-profile-by-name",
+      "observed": {},
+      "passed": null
+    }
+  ],
+  "expectations_task": "TRAF-31",
+  "fatal": [],
+  "fatal_violations": 0,
+  "graph_rows_summary": "every lane carries graph rows of record",
+  "identity_guards_pending": [
+    "E8-placement-records",
+    "E8-floor-study-check",
+    "E8-existing-tests",
+    "E8-profile-by-name"
+  ],
+  "p1_graph_rows_available": true,
+  "p2_graph_rows_available": true,
+  "p3_graph_rows_available": true,
+  "proposed_profile": {
+    "bandwidth_bytes_per_second": 68888931479,
+    "participant_latency_ps": [
+      [
+        2,
+        9088984
+      ]
+    ],
+    "profile_id": "b200-nccl-2.27-local-firstparty-v1",
+    "propagation_reference_ps": 2000000,
+    "provenance": {
+      "evidence_class": "calibrated",
+      "locator": "the refit intercepts of examples/b200_nvlink_envelope_v1, one intercept per measured width under one shared slope, held out at 4 KiB with errors of 0.615 us at width 2",
+      "participant_latency_band_ps": [
+        [
+          2,
+          8152843,
+          10746592
+        ]
+      ],
+      "source": "first-party float32 sum ALL-REDUCE capture of vast.ai, verified host B200 GPUs in the pytorch/pytorch:2.8.0-cuda12.8-cudnn9-runtime container, NCCL [2, 27, 3] through PyTorch 2.8.0+cu128 on driver 595.91.07, taken by examples/b200_nvlink_envelope_v1 between 2026-09-15T23:50:12Z and 2026-09-15T23:50:34Z",
+      "transfer": "the intra-node ALL-REDUCE intercept is charged unchanged as the per-collective surcharge of any supported collective, and the profile refuses every width this study did not measure"
+    },
+    "source_payload_bytes_max": 262144,
+    "source_payload_bytes_min": 8,
+    "supported_participant_counts": [
+      2
+    ]
+  },
+  "proposed_profile_reason": "the refit produced the constants below",
+  "refit": {
+    "band_ps": {
+      "2": [
+        8152843,
+        10746592
+      ]
+    },
+    "bandwidth_bytes_per_second": 68888931479,
+    "fit_degenerate": false,
+    "fit_rows": 9,
+    "fit_rows_by_width": {
+      "2": [
+        8,
+        1024,
+        2048,
+        8192,
+        16384,
+        32768,
+        65536,
+        131072,
+        262144
+      ]
+    },
+    "holdouts": {
+      "2": {
+        "allowed_ps": 1000000.0,
+        "endpoint_bytes": 4096,
+        "error_ps": 614843.0272750854,
+        "method": "graph",
+        "observed_ps": 8533599.972724915,
+        "predicted_ps": 9148443
+      }
+    },
+    "intercept_ps": {
+      "2": 9088984
+    },
+    "max_abs_residual_ps": {
+      "2": 1657607.6898884196
+    },
+    "ps_per_byte": 14.516120057781427,
+    "r_squared": 0.6236055721250899,
+    "selection": {
+      "2": {
+        "fallback_payload_bytes": [],
+        "methods_present": [
+          "eager",
+          "graph"
+        ],
+        "rows_selected": 22
+      }
+    },
+    "widths": [
+      2
+    ]
+  },
+  "schema": "simllm-b200-nvlink-envelope-scored-v1",
+  "scored_passed": 4,
+  "scored_total": 4,
+  "stages_present": [
+    "stage1"
+  ],
+  "study": "b200_nvlink_envelope_v1",
+  "timing_methods": [
+    "eager",
+    "graph"
+  ],
+  "void": false,
+  "void_scope": "void is decided by cell E1, the physical ceilings, over the rows in this result. The E8 identity guards are equally fatal but are run separately and reported in RESULTS.md, so a false value here never means E8 held"
+}

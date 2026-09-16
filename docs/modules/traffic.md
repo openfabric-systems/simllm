@@ -172,6 +172,21 @@ projection without charging the analytic local duration again.
   endpoint rate and adds one width-indexed semantic-collective base latency
   outside the phase-local maximum. TRAF-31 owns the missing same-generation
   point-to-point capture.
+- `b200-nccl-2.27-local-firstparty-v1` is the first-party answer to part of
+  that clause: 9,088,984 ps at width 2 over 68,888,931,479 bytes/s, refitted
+  from this project's own capture of two NVLink-joined B200 GPUs in a rented
+  container, where every row at or below 1 MiB is a CUDA graph replay of 200
+  captured iterations so no host dispatch sits between them. It measures one
+  width and refuses every other, its held-out 4 KiB row lands 0.615 us from
+  its prediction, and an independent rental, whose result is tracked beside the
+  record, reproduced the constants to within 0.8 percent. It claims nothing about widths 4 and 8, about switched
+  eight-GPU boards, about cross-node paths, or about bare metal: the capture
+  is a marketplace container, and the public
+  `b200-nccl-2.27-local-v1` it was compared against keeps its own constants,
+  which this study leaves untouched. Four of that profile's five width-2
+  before-error rows fall outside the acceptance band on this board, all low by
+  up to 2.569 us, which is why the study refits rather than validates. See
+  [the B200 NVLink envelope results](../../examples/b200_nvlink_envelope_v1/RESULTS.md).
 - `CollectiveFixedCostEnvelope` is that same selection expressed as a named
   bracket rather than one silently chosen constant. An envelope names a
   `lower` and an `upper` profile beside the `off` arm that charges nothing,
@@ -1829,7 +1844,20 @@ NVSwitch allocation; it does not qualify an eight-GPU switched board.
   asymptotic value at 1 GiB is 141.93 GB/s. A slope fitted inside the
   latency-dominated regime is not a fabric bandwidth, so the B200 refit must
   extend past the payload where bus bandwidth flattens rather than only adding
-  point-to-point samples inside the existing window.
+  point-to-point samples inside the existing window. The first slice ran on
+  2026-09-15 and registered `b200-nccl-2.27-local-firstparty-v1` from a
+  two-GPU capture; see
+  [the results](../../examples/b200_nvlink_envelope_v1/RESULTS.md) and the
+  [freeze](../../examples/b200_nvlink_envelope_v1/expectations.md) it ran
+  under. What remains open is what that slice could not measure: the width-4
+  and width-8 intercepts under the same shared slope, each with its own
+  held-out payload; the eight-GPU placement cells, the all-pairs spread, the
+  disjoint pairs and the fan-in and fan-out cells, which need a healthy
+  eight-GPU board (the one rented had a GPU with every NVLink inactive and was
+  refused before timing); and the switch-side observations no container can
+  make, which stay with PLACE-12. The public profile's width-2 row is now
+  refuted on first-party evidence, so the widths that still rest on it are the
+  reason this task stays open.
 - TRAF-94 (Precision; P1; L): identify the channel model's GPU and control
   service costs with the [standardized primitive experiment](../design/nccl-primitive-identification-v1.md)
   and its [versioned matrix](../../examples/nccl_primitive_identification_v1/manifest.json).

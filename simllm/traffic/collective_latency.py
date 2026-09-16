@@ -603,6 +603,38 @@ B200_NCCL_2_27_LOCAL_PROFILE = CollectiveLatencyProfile(
     ),
 )
 
+B200_NCCL_2_27_LOCAL_FIRSTPARTY_PROFILE = CollectiveLatencyProfile(
+    profile_id="b200-nccl-2.27-local-firstparty-v1",
+    bandwidth_bytes_per_second=68_888_931_479,
+    participant_latency_ps=((2, 9_088_984),),
+    source_payload_bytes_min=8,
+    source_payload_bytes_max=262_144,
+    propagation_reference_ps=COLLECTIVE_PROPAGATION_REFERENCE_PS,
+    provenance=CollectiveLatencyProvenance(
+        evidence_class="calibrated",
+        source=(
+            "first-party float32 sum ALL-REDUCE capture of two NVIDIA B200 GPUs "
+            "linked by NV18, rented on the vast.ai marketplace on 2026-09-15 and "
+            "measured inside the provider's pytorch/pytorch:2.8.0-cuda12.8-cudnn9"
+            "-runtime container on driver 595.91.07 with NCCL 2.27.3 through "
+            "PyTorch 2.8.0; each timed point is a CUDA graph replay of 200 "
+            "captured iterations, so no host dispatch sits between them"
+        ),
+        locator=(
+            "the width-2 refit of examples/b200_nvlink_envelope_v1 over 8 B to "
+            "256 KiB excluding the 4 KiB holdout, whose error is 0.615 us; the "
+            "band is the inclusive minimum and maximum of the intercept plus the "
+            "fit residuals, widened to the holdout error when that is larger"
+        ),
+        transfer=(
+            "the intra-node ALL-REDUCE intercept is charged unchanged as the "
+            "per-collective surcharge of any supported collective; the profile "
+            "carries only the width this study measured and refuses every other"
+        ),
+        participant_latency_band_ps=((2, 8_152_843, 10_746_592),),
+    ),
+)
+
 COLLECTIVE_FIXED_COST_FLOOR_PROFILE = CollectiveLatencyProfile(
     profile_id="collective-fixed-cost-floor-v1",
     bandwidth_bytes_per_second=B200_NCCL_2_27_LOCAL_PROFILE.bandwidth_bytes_per_second,
@@ -980,6 +1012,7 @@ CROSS_NODE_COLLECTIVE_FIXED_COST_ENVELOPE = CollectiveFixedCostEnvelope(
 
 _NAMED_COLLECTIVE_LATENCY_PROFILES = (
     B200_NCCL_2_27_LOCAL_PROFILE,
+    B200_NCCL_2_27_LOCAL_FIRSTPARTY_PROFILE,
     COLLECTIVE_FIXED_COST_FLOOR_PROFILE,
     B200_NCCL_2_27_CROSS_NODE_PROVISIONAL_PROFILE,
     A100_NCCL_2_31_CROSS_NODE_SOCKET_PROFILE,
