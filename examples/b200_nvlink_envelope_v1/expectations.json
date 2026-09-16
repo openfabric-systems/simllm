@@ -1,0 +1,84 @@
+{
+  "schema": "simllm-b200-nvlink-envelope-expectations-v1",
+  "task": "TRAF-31",
+  "slice": 1,
+  "date": "2026-09-15",
+  "baseline": {
+    "commit": "2a4abea67b9b1ce793781b76f330574059ffe817",
+    "profile_under_test": "b200-nccl-2.27-local-v1",
+    "profile_constants": {
+      "bandwidth_bytes_per_second": 70027079100,
+      "participant_latency_ps": {"2": 10722112, "4": 15745167, "8": 30128029},
+      "source_payload_bytes": [8, 262144],
+      "band_ps": {"2": [10461112, 10983112], "4": [15398167, 16092167], "8": [30048029, 30208029]}
+    },
+    "profile_predictions_ps": {
+      "2": {"8": 10722227, "1024": 10736735, "4096": 10780604, "65536": 11657979, "262144": 14465579},
+      "4": {"8": 15745339, "1024": 15767102, "4096": 15832905, "65536": 17148967, "262144": 21360367},
+      "8": {"8": 30128229, "1024": 30153620, "4096": 30230390, "65536": 31765796, "262144": 36679095}
+    },
+    "placement_records": {
+      "worked_example_tp4_pp2_dp2": {"bytes": 10832, "sha256": "2e46eadcaccd83de1778ea98c368585b452b83067489b9a2df064e25a14d857e"},
+      "m4_tp8": {"bytes": 5698, "sha256": "3812aef241d93f2af8d86da0f6bbb606dae9c43c768ceb3efb8d649dc3bacfd6"},
+      "rail_pp8": {"bytes": 52310, "sha256": "8d38cf4b6990bfd75fc90dcfe994180c3c1150adce297b6f71983fd8c9c877db"},
+      "m5_tp1_dp8": {"bytes": 5698, "sha256": "0894fae1687217d88466b5692034a8d1863fb8c658afdfde2c317d1c412f60a5"},
+      "width_tp64": {"bytes": 102050, "sha256": "bed8d26c72feaf117f48b651ec18b4fb0caf39df2e47866a550f74252972aecd"}
+    },
+    "floor_study_check_reproduces": true
+  },
+  "substrate": {
+    "marketplace": "vast.ai, verified host",
+    "gpu_pci_device": "0x10de:0x2901",
+    "sm": 100,
+    "image": "pytorch/pytorch:2.8.0-cuda12.8-cudnn9-runtime",
+    "torch": "2.8.0",
+    "cuda": "12.8",
+    "nccl_expected": "2.27.3",
+    "timing": "CUDA events on the issuing stream",
+    "bandwidth_unit": "decimal bytes per second",
+    "stages": {
+      "1": {"gpus": 2, "cap_minutes": 20, "required": true},
+      "2": {"gpus": 8, "cap_minutes": 20, "required": false, "condition": "eight-GPU offer listed and combined rental under 30 USD"}
+    },
+    "precheck": "abort before timing if any NVLink is inactive or the pair lacks NV in the topology matrix"
+  },
+  "nameplate": {
+    "lanes_per_gpu": 18,
+    "lane_payload_bps": 400000000000,
+    "gpu_direction_ceiling_bytes_per_second": 900000000000,
+    "pair_bidirectional_ceiling_bytes_per_second": 1800000000000,
+    "floor_1gib_copy_ns": 1193047,
+    "floor_7donor_1gib_fanin_ns": 8351326,
+    "floor_any_timed_row_ns": 1000,
+    "busbw_factors": {"all_reduce": "2(n-1)/n", "all_gather": "(n-1)/n", "reduce_scatter": "(n-1)/n"}
+  },
+  "lanes": {
+    "payload_bytes": [8, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824],
+    "warmup_iterations": 5,
+    "timed_iterations": 20,
+    "timed_iterations_above_64mib": 10,
+    "p1": {"primitive": "torch copy_ between devices with peer access verified", "directions": ["0->1", "1->0", "bidirectional"], "stage2": {"all_pairs_payloads": [65536, 16777216, 1073741824], "disjoint_pairs_payload": 67108864, "fanout_payload": 67108864, "fanin_donors": [1, 2, 3, 4, 5, 6, 7], "fanin_payload": 67108864}},
+    "p2": {"primitive": "torch.distributed isend/irecv over NCCL with an 8-byte completion token", "directions": ["0->1", "bidirectional"], "stage2_pairs": [[0, 1], [0, 7], [3, 4], [7, 0]], "stage2_payloads": [65536, 16777216, 1073741824]},
+    "p3": {"ops": ["all_reduce", "all_gather", "reduce_scatter"], "dtype": "float32", "reduction": "sum", "widths_stage1": [2], "widths_stage2": [2, 4, 8], "time_rule": "max across ranks", "correctness": "all_reduce elements equal sum of rank indices plus width"},
+    "evidence": ["capture_container.sh inventory", "ls /sys/class/infiniband", "ibdev2netdev", "ibv_devinfo", "NCCL_DEBUG NET lines", "nvidia-smi topo -m with NIC columns"]
+  },
+  "cells": {
+    "e1_physical_ceilings": {"class": "fatal", "unidirectional_max_bytes_per_second": 900000000000, "bidirectional_max_bytes_per_second": 1800000000000, "busbw_max_bytes_per_second": 900000000000, "fanin_aggregate_max_bytes_per_second": 900000000000, "min_timed_row_ns": 1000, "all_reduce_correct": true},
+    "e2_p1_asymptote": {"class": "structural plus scored holdout", "fit_window_bytes": [1048576, 1073741824], "holdout_bytes": 67108864, "r2_min": 0.99, "beta_band_bytes_per_second": [500000000000, 900000000000], "holdout_tolerance_fraction": 0.10, "small_payload_8b_band_us": [1, 30], "small_payload_scored": false},
+    "e3_p2_asymptote": {"class": "structural plus scored holdout", "fit_window_bytes": [1048576, 1073741824], "holdout_bytes": 67108864, "r2_min": 0.99, "beta_band_bytes_per_second": [400000000000, 900000000000], "holdout_tolerance_fraction": 0.10, "small_payload_8b_band_us": [3, 60], "small_payload_scored": false},
+    "e4_before_error": {"class": "reported, decides validate or refit", "rows_bytes": [8, 1024, 4096, 65536, 262144], "widths_stage1": [2], "widths_stage2": [2, 4, 8], "validated_if_every_row_within": "max(10 percent, 1 microsecond)"},
+    "e5_refit_holdout": {"class": "scored holdout", "fit_rows_bytes": [8, 1024, 2048, 8192, 16384, 32768, 65536, 131072, 262144], "holdout_bytes": 4096, "endpoint_bytes_rule": "E = 2(W-1)S/W", "tolerance": "max(10 percent, 1 microsecond)", "new_profile_id": "b200-nccl-2.27-local-firstparty-v1", "existing_profile_unmodified": true},
+    "e6_serializer_question": {"class": "structural, unscored", "reports": ["e5 slope", "all_reduce asymptote over 1 MiB to 1 GiB", "payload where busbw reaches 90 percent of asymptote", "e2 beta"], "expectation": "window slope below one quarter of the large-payload asymptote"},
+    "e7_stage2_structure": {"class": "structural, only if stage 2 runs", "all_pairs_16mib_spread_max_fraction": 0.15, "disjoint_pairs_64mib_slowdown_max_fraction": 0.15, "fanin_7_rule": "time >= 7 * isolated_64mib_time * beta_pair / 900e9"},
+    "e8_identity_guards": {"class": "fatal", "placement_records": true, "floor_study_check": true, "existing_tests": true, "profile_by_name_unchanged": "b200-nccl-2.27-local-v1"}
+  },
+  "physical_sanity": {"width2_all_reduce_256kib_serialization_floor_ns": 291, "width2_all_reduce_256kib_public_prediction_us": 14.47, "explain_if_below_us": 5, "explain_if_above_us": 100},
+  "evidence": {
+    "scored": ["e2 holdout 0->1", "e2 holdout 1->0", "e3 holdout", "e5 holdout per measured width"],
+    "fatal": ["e1_physical_ceilings", "e8_identity_guards"],
+    "reported": ["e4_before_error"],
+    "structural": ["e6_serializer_question", "e7_stage2_structure"]
+  },
+  "budget": {"total_rental_usd_max": 30, "ledger": "notes, not tracked"},
+  "closure": {"narrows": "TRAF-31 to unmeasured widths and switch-side observations", "closes": false, "registers_profile": "b200-nccl-2.27-local-firstparty-v1"}
+}

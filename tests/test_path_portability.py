@@ -18,6 +18,8 @@ IMMUTABLE_MERLIN_FREEZE_LITERALS = (
     "~" + "/simllm-data/",
     "/" + "data3/yifeng/simllm-dev/planmode-runs/traf77-t2/",
 )
+IMMUTABLE_B200_FREEZE_PATH = Path("examples/b200_nvlink_envelope_v1/expectations.md")
+IMMUTABLE_B200_FREEZE_LITERALS = ("/" + "sys/class/infiniband",)
 PORTABLE_SUFFIXES = {
     ".cc",
     ".cpp",
@@ -141,6 +143,15 @@ def test_markdown_and_cpp_paths_are_portable() -> None:
             # expectations-only freeze. Mask only the two binding paths that
             # freeze already carried, and keep every other path check active.
             for literal in IMMUTABLE_MERLIN_FREEZE_LITERALS:
+                assert text.count(literal) == 1
+                text = text.replace(literal, "", 1)
+        if relative_path == IMMUTABLE_B200_FREEZE_PATH:
+            # The TRAF-31 freeze is binding and names one kernel device
+            # directory as the RDMA evidence to capture. It is a sysfs
+            # location present on every Linux host, not a machine-local or
+            # personal hierarchy, and the freeze cannot be edited. Mask that
+            # one literal and keep every other path check active.
+            for literal in IMMUTABLE_B200_FREEZE_LITERALS:
                 assert text.count(literal) == 1
                 text = text.replace(literal, "", 1)
         if relative_path.suffix.lower() in {".markdown", ".md"}:
