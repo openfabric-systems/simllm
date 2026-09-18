@@ -1,0 +1,602 @@
+{
+  "schema": "simllm-vllm-pipeline-study-v1",
+  "expectations_commit": "575f94c7",
+  "vllm_version": "0.27.1+cpu",
+  "evidence_class": "real-engine declared-runtime; no hardware calibration",
+  "exact_oracles": [
+    {
+      "pp": 2,
+      "batches": 2,
+      "rate_bps": 100000000000,
+      "compute_ps": 10000,
+      "send_ps": 40960,
+      "actual_completion_ps": [
+        60960,
+        111920
+      ],
+      "expected_completion_ps": [
+        60960,
+        111920
+      ],
+      "causal_floor_ps": 60960,
+      "serial_ceiling_ps": 121920
+    },
+    {
+      "pp": 2,
+      "batches": 2,
+      "rate_bps": 200000000000,
+      "compute_ps": 10000,
+      "send_ps": 20480,
+      "actual_completion_ps": [
+        40480,
+        70960
+      ],
+      "expected_completion_ps": [
+        40480,
+        70960
+      ],
+      "causal_floor_ps": 40480,
+      "serial_ceiling_ps": 80960
+    },
+    {
+      "pp": 2,
+      "batches": 4,
+      "rate_bps": 100000000000,
+      "compute_ps": 10000,
+      "send_ps": 40960,
+      "actual_completion_ps": [
+        60960,
+        111920,
+        162880,
+        213840
+      ],
+      "expected_completion_ps": [
+        60960,
+        111920,
+        162880,
+        213840
+      ],
+      "causal_floor_ps": 60960,
+      "serial_ceiling_ps": 243840
+    },
+    {
+      "pp": 2,
+      "batches": 4,
+      "rate_bps": 200000000000,
+      "compute_ps": 10000,
+      "send_ps": 20480,
+      "actual_completion_ps": [
+        40480,
+        70960,
+        101440,
+        131920
+      ],
+      "expected_completion_ps": [
+        40480,
+        70960,
+        101440,
+        131920
+      ],
+      "causal_floor_ps": 40480,
+      "serial_ceiling_ps": 161920
+    },
+    {
+      "pp": 4,
+      "batches": 2,
+      "rate_bps": 100000000000,
+      "compute_ps": 10000,
+      "send_ps": 40960,
+      "actual_completion_ps": [
+        162880,
+        213840
+      ],
+      "expected_completion_ps": [
+        162880,
+        213840
+      ],
+      "causal_floor_ps": 162880,
+      "serial_ceiling_ps": 325760
+    },
+    {
+      "pp": 4,
+      "batches": 2,
+      "rate_bps": 200000000000,
+      "compute_ps": 10000,
+      "send_ps": 20480,
+      "actual_completion_ps": [
+        101440,
+        131920
+      ],
+      "expected_completion_ps": [
+        101440,
+        131920
+      ],
+      "causal_floor_ps": 101440,
+      "serial_ceiling_ps": 202880
+    },
+    {
+      "pp": 4,
+      "batches": 4,
+      "rate_bps": 100000000000,
+      "compute_ps": 10000,
+      "send_ps": 40960,
+      "actual_completion_ps": [
+        162880,
+        213840,
+        264800,
+        315760
+      ],
+      "expected_completion_ps": [
+        162880,
+        213840,
+        264800,
+        315760
+      ],
+      "causal_floor_ps": 162880,
+      "serial_ceiling_ps": 651520
+    },
+    {
+      "pp": 4,
+      "batches": 4,
+      "rate_bps": 200000000000,
+      "compute_ps": 10000,
+      "send_ps": 20480,
+      "actual_completion_ps": [
+        101440,
+        131920,
+        162400,
+        192880
+      ],
+      "expected_completion_ps": [
+        101440,
+        131920,
+        162400,
+        192880
+      ],
+      "causal_floor_ps": 101440,
+      "serial_ceiling_ps": 405760
+    }
+  ],
+  "status": "PASS",
+  "bandwidth_relation_instances": 4,
+  "full_report_sha256": "6a29d9dcac83c22bb6b47b5c71fd1df32566b242abdfb3d8ac9452dd02f906cf",
+  "resident_window_checks": "Additional post-specified checks after the decode-only scope clarification.",
+  "cases": [
+    {
+      "pp": 2,
+      "tp": 1,
+      "rnic_rate_bps": 100000000000,
+      "layer_ranges": [
+        [
+          0,
+          3
+        ],
+        [
+          3,
+          5
+        ]
+      ],
+      "rank_map": [
+        0,
+        8
+      ],
+      "median_decode_tpot_ps": 2718468.5714285714,
+      "resident_decode": {
+        "window_ps": 19730720,
+        "initial_computed_tokens": [
+          53,
+          51,
+          50,
+          48
+        ],
+        "decoded_tokens_per_request": [
+          8,
+          8,
+          8,
+          8
+        ],
+        "tokens_per_simulated_second": 1621836.4053617911,
+        "mean_request_token_interval_ps": 2466340.0,
+        "no_prefill_or_preemption_in_window": true
+      },
+      "pure_decode_steps": 13,
+      "max_queued_steps": 2,
+      "fatal_guards": "pass",
+      "decode_weight_only_floor_ps": 1900544
+    },
+    {
+      "pp": 2,
+      "tp": 1,
+      "rnic_rate_bps": 200000000000,
+      "layer_ranges": [
+        [
+          0,
+          3
+        ],
+        [
+          3,
+          5
+        ]
+      ],
+      "rank_map": [
+        0,
+        8
+      ],
+      "median_decode_tpot_ps": 2482948.5714285714,
+      "resident_decode": {
+        "window_ps": 19084920,
+        "initial_computed_tokens": [
+          53,
+          51,
+          50,
+          48
+        ],
+        "decoded_tokens_per_request": [
+          8,
+          8,
+          8,
+          8
+        ],
+        "tokens_per_simulated_second": 1676716.48610526,
+        "mean_request_token_interval_ps": 2385615.0,
+        "no_prefill_or_preemption_in_window": true
+      },
+      "pure_decode_steps": 13,
+      "max_queued_steps": 2,
+      "fatal_guards": "pass",
+      "decode_weight_only_floor_ps": 1900544
+    },
+    {
+      "pp": 2,
+      "tp": 2,
+      "rnic_rate_bps": 100000000000,
+      "layer_ranges": [
+        [
+          0,
+          3
+        ],
+        [
+          3,
+          5
+        ]
+      ],
+      "rank_map": [
+        0,
+        1,
+        8,
+        9
+      ],
+      "median_decode_tpot_ps": 1590467.1428571427,
+      "resident_decode": {
+        "window_ps": 11418384,
+        "initial_computed_tokens": [
+          53,
+          51,
+          50,
+          48
+        ],
+        "decoded_tokens_per_request": [
+          8,
+          8,
+          8,
+          8
+        ],
+        "tokens_per_simulated_second": 2802498.1468481002,
+        "mean_request_token_interval_ps": 1427298.0,
+        "no_prefill_or_preemption_in_window": true
+      },
+      "pure_decode_steps": 13,
+      "max_queued_steps": 2,
+      "fatal_guards": "pass",
+      "decode_weight_only_floor_ps": 1081344
+    },
+    {
+      "pp": 2,
+      "tp": 2,
+      "rnic_rate_bps": 200000000000,
+      "layer_ranges": [
+        [
+          0,
+          3
+        ],
+        [
+          3,
+          5
+        ]
+      ],
+      "rank_map": [
+        0,
+        1,
+        8,
+        9
+      ],
+      "median_decode_tpot_ps": 1483063.714285714,
+      "resident_decode": {
+        "window_ps": 11172624,
+        "initial_computed_tokens": [
+          53,
+          51,
+          50,
+          48
+        ],
+        "decoded_tokens_per_request": [
+          8,
+          8,
+          8,
+          8
+        ],
+        "tokens_per_simulated_second": 2864143.6425319603,
+        "mean_request_token_interval_ps": 1396578.0,
+        "no_prefill_or_preemption_in_window": true
+      },
+      "pure_decode_steps": 13,
+      "max_queued_steps": 2,
+      "fatal_guards": "pass",
+      "decode_weight_only_floor_ps": 1081344
+    },
+    {
+      "pp": 4,
+      "tp": 1,
+      "rnic_rate_bps": 100000000000,
+      "layer_ranges": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          4,
+          5
+        ]
+      ],
+      "rank_map": [
+        0,
+        8,
+        16,
+        24
+      ],
+      "median_decode_tpot_ps": 2901997.1428571427,
+      "resident_decode": {
+        "window_ps": 19267160,
+        "initial_computed_tokens": [
+          51,
+          50,
+          49,
+          48
+        ],
+        "decoded_tokens_per_request": [
+          8,
+          8,
+          8,
+          8
+        ],
+        "tokens_per_simulated_second": 1660857.1268417349,
+        "mean_request_token_interval_ps": 2408395.0,
+        "no_prefill_or_preemption_in_window": true
+      },
+      "pure_decode_steps": 19,
+      "max_queued_steps": 4,
+      "fatal_guards": "pass",
+      "decode_weight_only_floor_ps": 1900544
+    },
+    {
+      "pp": 4,
+      "tp": 1,
+      "rnic_rate_bps": 200000000000,
+      "layer_ranges": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          4,
+          5
+        ]
+      ],
+      "rank_map": [
+        0,
+        8,
+        16,
+        24
+      ],
+      "median_decode_tpot_ps": 2607962.8571428573,
+      "resident_decode": {
+        "window_ps": 18325080,
+        "initial_computed_tokens": [
+          51,
+          50,
+          49,
+          48
+        ],
+        "decoded_tokens_per_request": [
+          8,
+          8,
+          8,
+          8
+        ],
+        "tokens_per_simulated_second": 1746240.671254914,
+        "mean_request_token_interval_ps": 2290635.0,
+        "no_prefill_or_preemption_in_window": true
+      },
+      "pure_decode_steps": 19,
+      "max_queued_steps": 4,
+      "fatal_guards": "pass",
+      "decode_weight_only_floor_ps": 1900544
+    },
+    {
+      "pp": 4,
+      "tp": 2,
+      "rnic_rate_bps": 100000000000,
+      "layer_ranges": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          4,
+          5
+        ]
+      ],
+      "rank_map": [
+        0,
+        1,
+        8,
+        9,
+        16,
+        17,
+        24,
+        25
+      ],
+      "median_decode_tpot_ps": 1691173.4285714286,
+      "resident_decode": {
+        "window_ps": 11141704,
+        "initial_computed_tokens": [
+          51,
+          50,
+          49,
+          48
+        ],
+        "decoded_tokens_per_request": [
+          8,
+          8,
+          8,
+          8
+        ],
+        "tokens_per_simulated_second": 2872092.0965051665,
+        "mean_request_token_interval_ps": 1392713.0,
+        "no_prefill_or_preemption_in_window": true
+      },
+      "pure_decode_steps": 19,
+      "max_queued_steps": 4,
+      "fatal_guards": "pass",
+      "decode_weight_only_floor_ps": 1081344
+    },
+    {
+      "pp": 4,
+      "tp": 2,
+      "rnic_rate_bps": 200000000000,
+      "layer_ranges": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          4,
+          5
+        ]
+      ],
+      "rank_map": [
+        0,
+        1,
+        8,
+        9,
+        16,
+        17,
+        24,
+        25
+      ],
+      "median_decode_tpot_ps": 1568396.2857142857,
+      "resident_decode": {
+        "window_ps": 10866496,
+        "initial_computed_tokens": [
+          51,
+          50,
+          49,
+          48
+        ],
+        "decoded_tokens_per_request": [
+          8,
+          8,
+          8,
+          8
+        ],
+        "tokens_per_simulated_second": 2944831.5261883866,
+        "mean_request_token_interval_ps": 1358312.0,
+        "no_prefill_or_preemption_in_window": true
+      },
+      "pure_decode_steps": 19,
+      "max_queued_steps": 4,
+      "fatal_guards": "pass",
+      "decode_weight_only_floor_ps": 1081344
+    },
+    {
+      "pp": 2,
+      "tp": 4,
+      "rnic_rate_bps": 100000000000,
+      "layer_ranges": [
+        [
+          0,
+          3
+        ],
+        [
+          3,
+          5
+        ]
+      ],
+      "rank_map": [
+        0,
+        1,
+        2,
+        3,
+        8,
+        9,
+        10,
+        11
+      ],
+      "median_decode_tpot_ps": 1118800.4285714286,
+      "resident_decode": {
+        "window_ps": 7794240,
+        "initial_computed_tokens": [
+          53,
+          51,
+          50,
+          48
+        ],
+        "decoded_tokens_per_request": [
+          8,
+          8,
+          8,
+          8
+        ],
+        "tokens_per_simulated_second": 4105595.92724884,
+        "mean_request_token_interval_ps": 974280.0,
+        "no_prefill_or_preemption_in_window": true
+      },
+      "pure_decode_steps": 13,
+      "max_queued_steps": 2,
+      "fatal_guards": "pass",
+      "decode_weight_only_floor_ps": 671744
+    }
+  ]
+}
