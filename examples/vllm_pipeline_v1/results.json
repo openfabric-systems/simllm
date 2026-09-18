@@ -159,7 +159,7 @@
   ],
   "status": "PASS",
   "bandwidth_relation_instances": 4,
-  "full_report_sha256": "6a29d9dcac83c22bb6b47b5c71fd1df32566b242abdfb3d8ac9452dd02f906cf",
+  "full_report_sha256": "97853ae18dba744c443c1ed472d0ccf63d0747e345912886996510e9430c9cba",
   "resident_window_checks": "Additional post-specified checks after the decode-only scope clarification.",
   "cases": [
     {
@@ -598,5 +598,6 @@
       "fatal_guards": "pass",
       "decode_weight_only_floor_ps": 671744
     }
-  ]
+  ],
+  "implementation_commit": "c8927e73583f6687977114673e9719f71fbeb8f4"
 }

@@ -12,6 +12,8 @@ These results do not establish MI210 or CX6 performance accuracy.
 Expectations commit `575f94c7` precedes implementation and every study run.
 It freezes PP2/PP4, TP1/TP2, 100/200 Gb/s, an uneven split, chunked prefill,
 an eight-rank smoke, output identity and compute/communication relations.
+The final repeated sweep executes implementation commit `c8927e73` and
+reproduces every reported timing exactly.
 The additional common resident-KV window follows the maintainer's decode-only
 scope clarification. Those window checks are additional post-specified
 regressions, not a rewritten expectation freeze. All fatal guards pass.
