@@ -152,6 +152,11 @@ from simllm.backends.nic_profile import (
     gap_fields,
     scale_profile,
 )
+from simllm.backends.pipeline_step_sink import (
+    PipelineRuntimeStepSink,
+    PipelineStageOutcome,
+    PipelineStepOutcome,
+)
 from simllm.backends.rnic_records import (
     BypassArtifactComparison,
     BypassArtifactPaths,
@@ -339,6 +344,9 @@ __all__ = [
     "NvlinkTxConfig",
     "NvlinkVisibilityEvent",
     "ObservedStepLowerer",
+    "PipelineRuntimeStepSink",
+    "PipelineStageOutcome",
+    "PipelineStepOutcome",
     "RequestLatencyTotals",
     "RnicAuthorityCounters",
     "RnicBookkeepingProjection",

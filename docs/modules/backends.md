@@ -5,6 +5,13 @@ backend submodules.
 
 ## Interface
 
+- `PipelineRuntimeStepSink` binds explicit stage lowerers and boundary graphs,
+  reserves them on one persistent `CoarseDeviceRuntime`, and returns immutable
+  `PipelineStepOutcome` and `PipelineStageOutcome` projections. It does not
+  advance the adapter clock or run the serial `CompletionReducer`. The vLLM
+  FIFO retires its result; VLLM-52 owns request-level PP decomposition and
+  physical calibration. `rank_map` declares the logical-to-runtime endpoints.
+
 - `PacketPortContext`, `PacketPortLedger` and the neutral native
   `simllm/ports/packet_port.h` expose one version 2 packet vocabulary to wire
   and GPU peer ports. Immutable capability and timestamp-boundary context
