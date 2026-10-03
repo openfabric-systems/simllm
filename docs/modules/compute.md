@@ -9,6 +9,24 @@ remain offline; none runs once per serving step.
 
 ## Interface
 
+The opt-in `simllm.compute.volta.V100_PCIE_FP16` analytical envelope carries the Tesla V100 PCIe
+nameplate ceilings of 112 TFLOP/s for FP16 tensor arithmetic and 900 GB/s for
+HBM. It is not a BF16 profile or a measured sustained rate. Existing default
+profiles retain their identities and behavior.
+
+`simllm.calibration.sm70_replay.Sm70OfflineReplay` provides an optional,
+disabled-by-default offline adapter for serial captured SM70 SASS. It checks
+the official source pins, hashes the input closure and executable, requires
+one captured stream, disables power modeling and forces one active kernel.
+Complete simulator output produces a candidate observation retaining the
+QV100-SASS profile, config and executable identities. QV100 is a simulator
+profile; it is not automatically calibrated Tesla V100 PCIe evidence.
+The CUDA probe `tools/compute_capture/sm70_serial_probe.cu` runs actual FP16
+matrix arithmetic and an ordered row sum on one stream and checks a CPU
+oracle. Its timing includes first use and host gaps and is diagnostic only.
+COMP-1 and COMP-51 retain numerical correlation, real capture and reproducible
+dependency-envelope acceptance.
+
 - `KernelSpec`: fused work plus its stable shape key. A fused transformer step
   also carries the exact `family_kernels` projection used to apportion work
   and the ordered per-request token shapes used by exact record selection;

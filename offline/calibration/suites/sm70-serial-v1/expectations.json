@@ -1,0 +1,30 @@
+{
+  "schema": "simllm-study-freeze-v1",
+  "study": "sm70-serial-v1",
+  "authored_against": "622188a1308b379f2c1c7943e4f45ccfe7583e8f",
+  "execution_scope": "offline-adapter-tests-and-cuda-compilation",
+  "architecture": "sm70",
+  "framework_pin": "3016c658f810bdae9a14bf4534ee99e9945eedae",
+  "gpgpu_sim_pin": "6c3cf4ff32110908386d605a7034fc67666a92de",
+  "parameters": {
+    "kernel_counts": [1, 2, 4],
+    "core_clock_hz": [1000000000, 2000000000],
+    "cycles_per_kernel": [10, 20]
+  },
+  "relations": [
+    "serial-service-duration-is-sum-of-positive-kernel-cycles",
+    "doubling-clock-halves-duration-with-at-most-one-picosecond-rounding",
+    "adding-identical-kernels-scales-total-service-linearly",
+    "v100-pcie-fp16-peak-is-112-teraflops-and-900-gigabytes-per-second"
+  ],
+  "fatal_guards": [
+    "disabled-adapter-runs-no-subprocess",
+    "reject-unsupported-architecture-and-concurrency",
+    "reject-file-or-pin-identity-mismatch",
+    "reject-empty-or-truncated-statistics",
+    "fixture-output-is-test-evidence-never-a-simulator-measurement",
+    "cuda-compilation-is-not-execution-or-calibration",
+    "no-default-provider-or-runtime-timestamp-changes"
+  ],
+  "real_replay_gate": "requires-hash-locked-real-captured-sm70-traces-and-supported-installed-simulator"
+}
