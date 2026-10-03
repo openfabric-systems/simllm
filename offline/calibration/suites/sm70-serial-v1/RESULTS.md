@@ -11,6 +11,8 @@ in `simllm.compute.volta` so retained historical source freezes remain exact.
 | Affected compute, calibration, runtime, execution and overlap checks | 127 passed | Regression |
 | Module format | 11 modules pass | Documentation |
 | Changed Python lint and whitespace | Pass | Static checks |
+| Complete final `pytest -q` | 6,984 passed, 45 skipped | Full regression |
+| Complete `ruff check .` | Pass | Static checks |
 | CUDA 12.4.99 compilation with `-arch=sm_70` | Pass | Compilation |
 | Code object inspection | Two SM70 ELF objects | Binary inspection |
 | Execution on a non-SM70 verification GPU | Exit 1 with explicit SM70 requirement | Capability refusal |
@@ -27,6 +29,8 @@ first additive envelope edit touched the protected transformer source. The
 untouched `622188a1` baseline passed both implicated files, 24 cases total.
 Moving the optional envelope into its own module restored their 24 passes.
 The interrupted full suite is retained evidence, not a complete-suite pass.
+The repaired complete suite finishes separately in 1,534.87 seconds, with
+4,689 warnings and exit 0. Its retained log is `build/full-pytest-final.log`.
 
 Real replay remains gated on authentic captured SM70 traces and a supported
 installed simulator. No trace is synthesized by the adapter. The official
