@@ -1341,6 +1341,17 @@ created" statement stands and refers to different, never-registered work.
 
 ### Precision
 
+- HTSIM-43 (Precision; P1; L): calibrate the single-C3232C TM1 component
+  against the physical bench before using its queue or timing values as
+  hardware guarantees. The active surrogate uses complete-frame
+  forwarding, retained active-frame cells and explicit replicated XPE masks;
+  actual NX-OS lane-to-pipe mapping, cell rounding, pool/PG reservations,
+  descriptor limits and cut-through eligibility are unmeasured. Capture
+  isolated frame-size/port-pair sweeps, congestion admission thresholds and
+  per-class backlog/latency, then replace those surrogates and compare exact
+  cell-boundary transitions plus measured latency/error bands. The paired
+  `examples/asu_tm1_single_switch_v1` study provides component evidence only.
+
 - BACK-13 (Precision; P1; L): build a versioned CX-7 observable-state model
   and capture schema. Inventory only public Linux mlx5, rdma-core, NVIDIA
   MFT/DOCA and device-reported fields. Tag each as `documented`,
@@ -1487,6 +1498,18 @@ created" statement stands and refers to different, never-registered work.
   or minus 10 ms after the last cut) against the campaign values.
 
 ### Completeness
+
+- HTSIM-44 (Completeness; P2; M): connect the optional TM1 admission and
+  output-service component to the existing RNIC/NetworkPort runtime for a
+  matched standard ECN/DCQCN RC comparison. The standalone single-switch
+  experiment deliberately executes synthetic UDP with a preinstalled demand
+  calendar; it does not execute distributed DECLARE/GRANT delivery, RC retries,
+  CNP, PFC or receiver resequencing. Preserve that explicit component scope and
+  default runtime identity. Enabled acceptance uses the same packet/wire
+  workload and calibrated switch policy for both transports, with CE/CNP,
+  rate, retry, fairness and phase-completion observations; bypass preserves
+  legacy timestamps and metrics. Confirm ECN and 25G PTP timestamp behavior
+  on the exact switch/software separately before hardware claims.
 
 - BACK-74 (Completeness; P1; L): extend the native NVSwitch model from
   crossbar grants to switch queue and credit ownership through the existing
