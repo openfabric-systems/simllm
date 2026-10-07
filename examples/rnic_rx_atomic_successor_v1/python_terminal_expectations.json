@@ -1,0 +1,54 @@
+{
+  "schema": "simllm-python-terminal-recapture-expectations-v1",
+  "scope": "Fresh full Python regression with independent actual child exit and source identity capture; no native or behavior change.",
+  "behavior_source_commit": "09c19ddc840a50915a59a45e4a2c76935f255238",
+  "original_native_expectations_commit": "dbb60ad3fc9f864a372188c143b44b282b22530c",
+  "original_native_expectations_sha256": "d505bdd1ba040d47bb7d6a8a56fff620cd480b529b8a24e3e0e3e4131c28be4b",
+  "preserved_incomplete_attempt": {
+    "bulk_relative_path": "pytest_final_001",
+    "refusal_sha256": "9cc72171108a90bf120072d9ad903f1dde0f9995a1594203d3481bd5d1ca985f",
+    "log_sha256": "e84c1038bc82a03c29b11c44f358a3b31da67208bf2b8982c22c08613ba0aa31",
+    "launch_sha256": "bcc178e014d0114a4d08aaacd75d1bce0a5e8428add0f4d5c192c2ea2e6bfcb5",
+    "sources_before_sha256": "260b3f1272a6bab7fab21921643f66af2ef642955f05caf3e2d18064ed157450",
+    "postspecified_sources_after_sha256": "260b3f1272a6bab7fab21921643f66af2ef642955f05caf3e2d18064ed157450",
+    "credit": "None; summary alone does not establish child exit."
+  },
+  "command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q",
+    "-p",
+    "no:cacheprovider",
+    "--basetemp=<fresh-bulk-test-directory>"
+  ],
+  "guards": {
+    "full_suite_seconds": 7200,
+    "termination_grace_seconds": 5,
+    "absolute_deadline_renewal": false,
+    "existing_output_namespace": "Refuse",
+    "owned_process_group": "Record UID, PID, SID and start time; terminate only that group on timeout or external signal.",
+    "parallel_pytest_suites": 1
+  },
+  "capture": {
+    "launch": "Record source HEAD, expectation Git blob, controller and independent child wrapper hashes, Python actual executable hash, source manifest, process identity and absolute deadline before execution.",
+    "independent_child": "A dedicated wrapper records actual pytest return code and timeout or signal disposition immediately after wait, before slow source hashing.",
+    "controller": "Record its terminal code separately; detached launch returns only launch acknowledgement.",
+    "source_integrity": "Before and after hashes for all tracked and nonignored untracked regular files; source HEAD unchanged.",
+    "artifact_integrity": "Pin log, launch, independent child result and source manifests."
+  },
+  "acceptance": [
+    "Actual pytest child exit zero.",
+    "Actual child wrapper and outer controller exit zero.",
+    "No frozen guard breach or external termination.",
+    "Pytest terminal summary has zero failed and zero error cases.",
+    "Source byte manifest and HEAD unchanged.",
+    "Independent child result agrees with outer capture."
+  ],
+  "non_acceptance": [
+    "No credit from prior positive log summary without actual exit.",
+    "No interpretation of an absent terminal as success.",
+    "No changed tests, selections, skip policy, clock, native behavior or source after launch."
+  ],
+  "next_step": "Publish the reviewed native correction only after this gate and the existing lint, native and independent review gates pass."
+}
