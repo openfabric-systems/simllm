@@ -103,6 +103,96 @@ void scheduling() {
     clamped.validateInvariants();
 
 }
+void atomicSuccessors() {
+    // Literal deadlines freeze the 21B head and 64B successor boundary,
+    // including arbitrary off-grid arrivals and positive empty intervals.
+    for (const auto width : {64ULL, 128ULL}) {
+        for (const auto arrival : {2500ULL, 7499ULL, 7500ULL, 7501ULL,
+                                   12500ULL, 52500ULL}) {
+            RnicRxPipeline rx(configuration(width));
+            rx.onPacket(packet(21), 2500);
+            rx.onPacket(packet(64), arrival);
+            const auto deadline = arrival <= 7500 ? 12500ULL
+                : arrival == 7501 ? 17500ULL
+                : arrival == 12500 ? 22500ULL : 62500ULL;
+            rx.progress(7500 > arrival ? 7500 : arrival);
+            check(rx.ingressOccupancyBytes() == 64,
+                  "atomic successor retains exactly64B before later clock");
+            check(rx.nextServiceTime() == deadline,
+                  "atomic successor literal deadline");
+            rx.progress(deadline);
+            check(rx.ingressOccupancyBytes() == 0, "atomic successor finishes once");
+            rx.validateInvariants();
+        }
+        RnicRxPipeline walk(configuration(width));
+        walk.progress(0); walk.progress(0);
+        check(!walk.nextServiceTime() && walk.counters().packets_offered == 0,
+              "zero-time progress neither offers nor schedules work");
+        walk.onPacket(packet(21), 2500);
+        check(walk.nextServiceTime() == 7500 && walk.nextServiceTime() == 7500,
+              "read-only queries preserve first debit");
+        walk.progress(7500); walk.progress(7500);
+        check(!walk.hasPendingService() && !walk.nextServiceTime(),
+              "same-time earned remainder has no pending service");
+        walk.validateInvariants();
+        rejects([&] { walk.onPacket(packet(0), 7500); }, "invalid wire fails closed");
+        walk.validateInvariants();
+        check(walk.counters().packets_offered == 1 && !walk.nextServiceTime(),
+              "invalid offer cannot activate empty live credit");
+        walk.onPacket(packet(64), 7500);
+        walk.progress(7500); walk.progress(7500);
+        check(walk.ingressOccupancyBytes() == 64 && walk.nextServiceTime() == 12500,
+              "valid same-time admission moves candidate once");
+        walk.progress(12500); walk.validateInvariants();
+
+        RnicRxPipeline off_grid(configuration(width));
+        off_grid.onPacket(packet(21), 2500);
+        off_grid.progress(7500); off_grid.progress(7500); off_grid.progress(7501);
+        rejects([&] { off_grid.onPacket(packet(64), 7500); }, "backdated arrival rejected");
+        off_grid.onPacket(packet(64), 7501);
+        check(off_grid.nextServiceTime() == 17500, "one picosecond empty interval expires credit");
+        off_grid.progress(17500); off_grid.validateInvariants();
+
+        for (const auto rejection : {0, 1}) {
+            auto config = configuration(width, 96600000000ULL, rejection == 0 ? 64 : 262016);
+            config.ud_pps_per_qp = rejection == 1 ? 1 : 0;
+            RnicRxPipeline rx(config);
+            rx.onPacket(packet(21), 2500);
+            check(rx.onPacket(packet(rejection == 0 ? 65 : 64), 7500).outcome
+                      == RnicRxOutcome::DiscardedSilently,
+                  "capacity or rate gate rejects boundary offer");
+            rx.validateInvariants();
+            check(!rx.nextServiceTime(), "rejected boundary offer schedules no work");
+            auto valid = packet(64); valid.qpn = 1;
+            rx.onPacket(valid, 7500);
+            check(rx.nextServiceTime() == 12500, "later valid same-time offer retains earned candidate");
+            rx.progress(12500); rx.validateInvariants();
+        }
+        for (const auto psn : {0U, 3U}) {
+            RnicRxPipeline rx(configuration(width));
+            auto head = packet(21); head.service = RnicTransportService::ReliableConnected;
+            rx.onPacket(head, 2500);
+            auto successor = head; successor.wire_bytes = 64; successor.payload_bytes = 64;
+            successor.psn = psn;
+            check(rx.onPacket(successor, 7500).outcome == (psn == 0
+                      ? RnicRxOutcome::DiscardedDuplicate : RnicRxOutcome::DiscardedOutOfSequence),
+                  "transport rejection preserves admitted service record");
+            check(rx.nextServiceTime() == 12500, "admitted sequence rejection receives earned credit");
+            rx.progress(12500); rx.validateInvariants();
+        }
+        const auto maximum = std::numeric_limits<std::uint64_t>::max();
+        const auto last_clock = maximum - (maximum - 2500) % 5000;
+        RnicRxPipeline terminal(configuration(width, 160000000000ULL));
+        terminal.onPacket(packet(21), last_clock - 1);
+        terminal.progress(last_clock);
+        check(!terminal.nextServiceTime(), "fully drained terminal head has no event");
+        rejects([&] { terminal.onPacket(packet(64), last_clock); },
+                "same-time candidate cannot invent terminal following clock");
+        check(terminal.counters().packets_offered == 1 && terminal.ingressOccupancyBytes() == 0,
+              "terminal admission rejected before counters or enqueue");
+        terminal.validateInvariants();
+    }
+}
 void capacityAndProcessing() {
     // Exactly 16384B, with an 85B head. The first useful debit is 64B or 85B.
     // A new 85B packet therefore fits only the wider serialized geometry.
@@ -349,7 +439,7 @@ void facade(const std::string& output) {
 }  // namespace
 int main(int argc, char** argv) {
     try {
-        scheduling(); capacityAndProcessing(); arithmeticAndInvalid();
+        scheduling(); atomicSuccessors(); capacityAndProcessing(); arithmeticAndInvalid();
         facade(argc == 2 ? argv[1] : ".");
     } catch (const std::exception& error) {
         check(false, error.what());

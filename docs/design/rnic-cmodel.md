@@ -105,7 +105,13 @@ One packet-aligned beat is eligible per clock. Rate credit uses an exact
 8e12-unit denominator per byte and is clamped to token capacity. A beat consumes
 its entire useful length only when affordable. Tail bytes do not pack with the
 next packet; service precedes arrivals at the same timestamp. New packets wait
-for the next clock and empty queue credit clears. The selected occupancy owns
+for the next clock. Final debit and successful admission at the exact same
+timestamp form one boundary: the successor retains earned remainder. Any
+positive-duration empty interval, including one picosecond, clears it. An empty
+FIFO has zero live credit; its private same-time candidate is neither pending
+physical work nor a scheduler event. Only successful admission activates it,
+and read-only queries or repeated progress never debit twice. Off-grid monotone
+arrivals retain their timestamps. The selected occupancy owns
 admission, loss, high-water and congestion notification. Existing sequence and
 packet-rate checks retain their arrival-time meaning.
 
@@ -123,6 +129,9 @@ returns an explicit error; already applied debits remain projected into public
 occupancy. The [36-row native study](../../examples/rnic_rx_serialized_service_v1/RESULTS.md)
 records exact independent deadlines, geometry/rate monotonicity, lifecycle and
 negative controls, and unchanged default-fluid results across three revisions.
+The [atomic-successor study](../../examples/rnic_rx_atomic_successor_v1/RESULTS.md)
+checks this boundary through native and C facade controls, exact width/rate
+relations, compiled negative copies and default-fluid ABI/trace identity.
 Framework hardware records and request metric propagation remain BACK-76.
 
 ### Profile

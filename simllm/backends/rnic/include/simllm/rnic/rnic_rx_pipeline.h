@@ -205,6 +205,11 @@ private:
         RateGate rate;
     };
 
+    struct SameTimeCredit {
+        Picoseconds timestamp_ps{0};
+        std::uint64_t numerator{0};
+    };
+
     void drainTo(Picoseconds now_ps);
     void drainSerializedTo(Picoseconds now_ps);
     void accrueServiceCredit(std::uint64_t ticks);
@@ -230,6 +235,9 @@ private:
     std::deque<std::uint64_t> service_records_;
     std::optional<Picoseconds> next_tick_ps_;
     std::uint64_t service_credit_{0};
+    // An empty FIFO has no live credit. This earned remainder can move only
+    // into a successfully pushed replacement at the exact debit timestamp.
+    std::optional<SameTimeCredit> same_time_credit_;
     std::uint64_t service_refill_{0};
     std::uint64_t service_cap_{0};
     std::uint64_t service_bytes_{0};

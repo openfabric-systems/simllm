@@ -242,6 +242,11 @@ bool RnicRxPipeline::hasPendingService() const noexcept {
 }
 
 void RnicRxPipeline::drainSerializedTo(Picoseconds now_ps) {
+    if (same_time_credit_.has_value()
+        && now_ps > same_time_credit_->timestamp_ps) {
+        // Even an off-grid positive empty interval ends the earned epoch.
+        same_time_credit_.reset();
+    }
     while (hasPendingService() && next_tick_ps_.has_value()
            && *next_tick_ps_ <= now_ps) {
         const auto next = nextServiceTime();
@@ -264,13 +269,16 @@ void RnicRxPipeline::drainSerializedTo(Picoseconds now_ps) {
         if (service_records_.front() == 0) {
             service_records_.pop_front();
         }
+        if (!hasPendingService() && *next == now_ps && service_credit_ != 0) {
+            same_time_credit_ = SameTimeCredit{now_ps, service_credit_};
+        }
         clockAfter(*next);
     }
     if (hasPendingService() && !next_tick_ps_.has_value()) {
         throw std::overflow_error("RNIC receive service timestamp horizon exhausted");
     }
     if (!hasPendingService()) {
-        // No earned credit survives an empty interval or funds its successor.
+        // The private exact-time candidate is not live credit or pending work.
         service_credit_ = 0;
         clockAfter(now_ps);
     }
@@ -400,6 +408,13 @@ RnicRxResult RnicRxPipeline::onPacket(
 
     if (config_.service.mode == RnicRxServiceMode::SerializedPacketBeats) {
         service_records_.push_back(packet.wire_bytes);
+        // Every admission gate and the potentially throwing FIFO push has
+        // succeeded. A transport sequence rejection still consumes ingress.
+        if (same_time_credit_.has_value()
+            && same_time_credit_->timestamp_ps == now_ps) {
+            service_credit_ = same_time_credit_->numerator;
+            same_time_credit_.reset();
+        }
     }
     occupancy_bytes_ += packet.wire_bytes;
     if (occupancy_bytes_ > counters_.ingress_high_watermark_bytes) {
@@ -520,6 +535,17 @@ void RnicRxPipeline::validateInvariants() const {
         throw std::logic_error("RNIC ingress buffer overfilled");
     }
     if (config_.service.mode == RnicRxServiceMode::SerializedPacketBeats) {
+        if (same_time_credit_.has_value()) {
+            const auto& candidate = *same_time_credit_;
+            if (hasPendingService() || service_credit_ != 0
+                || candidate.numerator == 0 || candidate.numerator > service_cap_
+                || candidate.timestamp_ps != last_now_ps_
+                || candidate.timestamp_ps < config_.service.phase_ps
+                || (candidate.timestamp_ps - config_.service.phase_ps)
+                    % config_.service.period_ps != 0) {
+                throw std::logic_error("RNIC same-time receive credit isolation failed");
+            }
+        }
         std::uint64_t queued = 0;
         for (const auto remaining : service_records_) {
             if (remaining == 0 || remaining > occupancy_bytes_ - queued) {
