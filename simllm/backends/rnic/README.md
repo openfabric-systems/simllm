@@ -272,6 +272,35 @@ It was still received, parsed and sequence-checked, so it consumed the ingress
 service its bytes were metered for. Refunding it would make go-back-N free at
 the receiver and pin the equilibrium goodput to the drain rate.
 
+`RnicRxServiceConfig` selects an immutable receive service authority. Its
+identity default is the original fluid meter. `SerializedPacketBeats` declares
+implementation geometry through beat width, clock period and phase, and token
+capacity. It is a component reference for an interface-compatible open
+implementation; the measured CX5 profile and its fluid calibration are retained.
+
+The selected serializer stores accepted packet lengths in FIFO order. At each
+configured clock it accrues exact rational rate credit, clamps it to token
+capacity, then debits at most one affordable packet-aligned beat. A tail cannot
+share a clock with the next packet. Service precedes same-clock arrivals, new
+arrivals wait for a later clock, and an empty queue clears unused credit. One
+selected occupancy drives capacity admission, drops, high-water and congestion
+notification. Sequence processing and packet-rate checks retain their existing
+arrival-time behavior.
+
+Only continuously ready downstream service is accepted. Unknown configuration,
+unsafe arithmetic and an unrepresentable pending deadline fail explicitly.
+Successful partial service remains visible in counters on an exceptional exit.
+`RnicDevice::nextEventTime` includes pending receive service even without SQ work;
+accepted receive backlog prevents host-memory teardown until service drains.
+
+The additive `rnic_cm_create_with_rx_service` constructor accepts a separately
+versioned `rnic_cm_rx_service_config`. Original `rnic_cm_create` and all original
+ABI1 structure sizes and offsets retain their fluid semantics. A fluid option
+requires zero geometry. The [native receive study](../../../examples/rnic_rx_serialized_service_v1/RESULTS.md)
+qualifies both widths and three rates, exact occupancy and admission, negative
+copies and three-way default-path identity. Framework selection and request
+TTFT/TPOT propagation are registered as BACK-76 in the owning module.
+
 The requester transport lives in the transmit pipeline behind
 `transport_enabled`, whose off path is the unchanged slice-B code. It keeps
 per-QP sequence and acknowledgement state and recovers by go-back-N: a NAK

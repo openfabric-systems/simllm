@@ -86,6 +86,12 @@ backend submodules.
   allocation, page, submission, ownership and canonical-hash rejection. The
   reusable bypass checker guards the full reference input tuple and compares
   the four frozen behavioral artifact classes byte for byte.
+- `RnicRxServiceConfig` and additive `rnic_cm_create_with_rx_service` select
+  original fluid ingress or declared packet-aligned service. Immutable public
+  width, clock period/phase and token capacity select one occupancy/admission
+  authority. Only continuously ready service is accepted. Original facade ABI1
+  layouts and default CX5 semantics remain unchanged. Framework configuration
+  and request metric propagation are BACK-76.
 - `RnicHwProfile` + the RNIC anomaly table + `rnic_cmodel_c.h`: the
   golden-model surface of the native endpoint, specified in
   [the golden-model design](../design/rnic-cmodel.md). The profile is the
@@ -805,6 +811,17 @@ The unselected Python path loads no native library.
 
 ## Status
 
+The [native receive geometry study](../../examples/rnic_rx_serialized_service_v1/RESULTS.md)
+qualifies explicit packet-aligned service at 64 and 128 bytes per 5 ns clock.
+All 36 width/rate/length/capacity rows have exact independent service deadlines
+and conservation; three forbidden-service copies fail. Native lifecycle and
+arithmetic controls preserve public occupancy after partial service failures.
+Original facade ABI1 layouts, receive results/counters and packetized transmit
+results/replay traces are identical across the older vendor pin, upstream base
+and the optional-service checkpoint. This is component evidence with declared
+geometry; it does not replace measured CX5 fluid calibration. BACK-76 owns
+framework selection and request TTFT/TPOT propagation.
+
 The [live peer packet study](../../examples/local_peer_packet_runtime_v1/RESULTS.md) establishes the shared packet vocabulary and
 packet-derived local request timing. Its 136 exact timing checks have zero
 picosecond residual; all 36 instances in four behavioral families hold with
@@ -1488,6 +1505,17 @@ created" statement stands and refers to different, never-registered work.
 
 ### Completeness
 
+- BACK-76 (Completeness; P2; M): expose declared receive service geometry
+  through the framework's strict effective-hardware/session configuration and
+  carry selected native receive events into `StepResult`, TTFT and TPOT. The
+  native serializer and additive C facade are qualified by the 36-row component
+  study; framework selection is absent. Acceptance: select width, period, phase,
+  token capacity and supported ready semantics explicitly with one retained
+  native authority, reject unsupported combinations, and vary width and rate in
+  a request-level study with independently derived service directions. Absent
+  selection preserves original configuration hashes, traces and request metrics
+  byte for byte. Component drain time remains distinct from transport delivery
+  and request completion.
 - BACK-74 (Completeness; P1; L): extend the native NVSwitch model from
   crossbar grants to switch queue and credit ownership through the existing
   `NvlinkCausalEngine`, `NvlinkPhysicalBinding` and neutral packet-port

@@ -1,0 +1,61 @@
+{
+  "schema": "simllm-rnic-rx-serialized-service-results-v1",
+  "date": "2026-10-07",
+  "expectations_commit": "b022b3f3e1ec0e1ca186c4dc5cf276110fe8dff5",
+  "implementation_commit": "aaba0b0e6e570965d04fba78d1777aedba45a152",
+  "artifact_root": "$SIMLLM_DATA_ROOT/upstream_serialized_rx",
+  "gates": {
+    "native": "10/10 PASS",
+    "grid": "36/36 exact PASS",
+    "mutants": "3/3 caught",
+    "default_compatibility": "Three-way original ABI, RX and packetized TX bytes identical",
+    "ruff": "PASS",
+    "full_pytest": {
+      "status": "pending",
+      "preserved_attempt": {
+        "returncode": -15,
+        "reason": "owned_timeout",
+        "elapsed_seconds": 1800.18923330307,
+        "source_bytes_unchanged": true,
+        "changed_files": []
+      }
+    }
+  },
+  "artifacts": [
+    {
+      "path": "checkpoint_acceptance/results.json",
+      "sha256": "6fccf3f0c08dbd378836cd3d41f7f33889b9d3aa9a5367e544432c4dd2b07442",
+      "bytes": 156
+    },
+    {
+      "path": "checkpoint_acceptance/grid.csv",
+      "sha256": "3e2530eb8ce136378d3015fb7b67121264447a19d3ba0f38a63775921e759629",
+      "bytes": 2846
+    },
+    {
+      "path": "checkpoint_acceptance/sources.json",
+      "sha256": "219a124be6e5b403bb700c05a68bba40fdb58c8709870fb4a6b9d5c63fcd3a48",
+      "bytes": 5951
+    },
+    {
+      "path": "checkpoint_report.json",
+      "sha256": "9c33a5a72449f5ec9c4ecfe2ee8911343f3cb59959a92942da6b8528c203753a",
+      "bytes": 3671
+    },
+    {
+      "path": "three_way_fluid_conformance.json",
+      "sha256": "aa454dd98820726de3299e770d86d868a2fac966f78295c78f3cb6ecf84e010a",
+      "bytes": 1132
+    },
+    {
+      "path": "three_way_tx_conformance.json",
+      "sha256": "e38e72d3537f101dd1c58a0bf0a13dbf8d34797c9aee6ebd60eb5976b78bdf3e",
+      "bytes": 835
+    },
+    {
+      "path": "pytest_owned/result.json",
+      "sha256": "e6bb75ead7ac5e704d969119c014871e10f2edf52a10367741b0755cf41115b3",
+      "bytes": 149
+    }
+  ]
+}
