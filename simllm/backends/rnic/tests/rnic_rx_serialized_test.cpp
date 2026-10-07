@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -333,8 +334,8 @@ void facade(const std::string& output) {
         rnic_cm_nic_counter_set a{}, b{};
         rnic_cm_nic_counters(old, &a); rnic_cm_nic_counters(explicit_fluid, &b);
         check(std::memcmp(&a, &b, sizeof(a)) == 0, "fluid counter bytes identical");
-        const auto legacy_path = output + "/legacy_fluid.trace";
-        const auto explicit_path = output + "/explicit_fluid.trace";
+        const auto legacy_path = (std::filesystem::path(output) / "legacy_fluid.trace").string();
+        const auto explicit_path = (std::filesystem::path(output) / "explicit_fluid.trace").string();
         check(rnic_cm_trace(old, legacy_path.c_str()) == RNIC_CM_OK
               && rnic_cm_trace(explicit_fluid, explicit_path.c_str()) == RNIC_CM_OK,
               "fluid traces written");
