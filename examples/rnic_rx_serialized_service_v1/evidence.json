@@ -11,7 +11,7 @@
     "default_compatibility": "Three-way original ABI, RX and packetized TX bytes identical",
     "ruff": "PASS",
     "full_pytest": {
-      "status": "repaired_gate_pending",
+      "status": "PASS",
       "preserved_incomplete_attempt": {
         "returncode": -15,
         "reason": "owned_timeout",
@@ -35,7 +35,19 @@
         ],
         "next_gate": "One fresh full suite after portable test joins and task-progress metadata repair."
       },
-      "next_gate": "Fresh complete gate on the corrected test paths and final documentation source."
+      "corrected_complete_attempt": {
+        "source_commit": "612d3d989246b4d2dbea96c915150e2f07efb5aa",
+        "returncode": 0,
+        "reason": "terminal",
+        "elapsed_seconds": 3160.7087054252625,
+        "source_bytes_unchanged": true,
+        "changed_files": [],
+        "passed": 6994,
+        "failed": 0,
+        "skipped": 33,
+        "pytest_elapsed_seconds": 3158.48,
+        "scope": "Full upstream suite on corrected paths and task-progress metadata; subsequent changes record this terminal evidence only."
+      }
     },
     "path_fix_native": "10/10 PASS, fresh warnings-as-errors build at portable-test checkpoint ceb18dd3",
     "docs_and_portability": "28 focused tests PASS"
@@ -80,6 +92,31 @@
       "path": "pytest_final/result.json",
       "sha256": "c7d268e220150b5db48a790134a02d01f2e5e501d3e9d9103951bb084b740745",
       "bytes": 143
+    },
+    {
+      "path": "pytest_corrected/result.json",
+      "sha256": "d4670d0950cbaf19d427662c0e6ddd719deac20a45ce4d0cb14568d9c8e8cd12",
+      "bytes": 144
+    },
+    {
+      "path": "pytest_corrected/pytest.log",
+      "sha256": "b0adf3a57a3b972afd81bdbfd9898df53fcf4df46ee942b31ab1de575741dd1b",
+      "bytes": 7886
+    },
+    {
+      "path": "pytest_corrected/sources_before.json",
+      "sha256": "3b0c0b119c6367dde1b71a8bc2e4523bd8f60b96cd36b7ce7adb5e7d61345012",
+      "bytes": 342686
+    },
+    {
+      "path": "pytest_corrected/sources_after.json",
+      "sha256": "3b0c0b119c6367dde1b71a8bc2e4523bd8f60b96cd36b7ce7adb5e7d61345012",
+      "bytes": 342686
+    },
+    {
+      "path": "pytest_corrected/launch.json",
+      "sha256": "62ab12a8167b1d6922c2c23b8649604074ac1cc18a39a2988f299d32b396d2d2",
+      "bytes": 452
     }
   ],
   "portable_test_commit": "ceb18dd3c0c1ca2301e116a95f3681f93c7704bd"

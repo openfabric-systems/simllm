@@ -86,9 +86,11 @@ extension: two test filename joins violate the portable-path gate, and the
 backend open-task count was not regenerated after BACK-76 was declared.
 Portable filesystem joins and the generated progress/count metadata repair
 those failures; the 14 focused portability and task-progress tests pass.
-A fresh complete Python gate remains required before publication. Frozen
-expectations, component measurements and earlier outcomes retain their
-original sources and chronology.
+The corrected complete suite at `612d3d989246b4d2dbea96c915150e2f07efb5aa`
+passes 6994 tests with 33 declared skips in 3158.48 seconds. Its owned process
+returns zero, and before/after source hashes agree with no changed file.
+Subsequent changes record this verdict only. Frozen expectations, component
+measurements and earlier outcomes retain their original sources and chronology.
 
 Generated source pins, grid, traces, compiler logs, mutation verdicts and
 compatibility records remain below `${SIMLLM_DATA_ROOT}`. The compact artifact
