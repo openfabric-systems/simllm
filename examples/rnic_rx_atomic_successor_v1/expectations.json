@@ -1,0 +1,507 @@
+{
+  "schema": "simllm-rnic-rx-atomic-successor-expectations-v1",
+  "date": "2026-10-07",
+  "base": "e64e0fdf6afaf2e600ca5cf5ee9f3534f785954b",
+  "classification": "Prospective boundary-correction expectations before implementation and new native runs. Prior downstream attribution and passive diagnostic are post-specified evidence; historical original E032 remains FAIL against its original pin and strict64-byte band.",
+  "independence": "Literals derive only from useful packet bytes, immutable public grid/rate/capacity, strict later-clock admission and the proposed positive-empty-interval rule. No DUT/internal output is an oracle input.",
+  "configuration": {
+    "width_bytes": [
+      64,
+      128
+    ],
+    "rate_bps": 96600000000,
+    "period_ps": 5000,
+    "phase_ps": 2500,
+    "token_capacity_bytes": 4224,
+    "ingress_capacity_bytes": 262016,
+    "initial_credit": 0,
+    "ready": "continuous"
+  },
+  "units": {
+    "byte_credit_denominator": 8000000000000,
+    "refill_numerator": 483000000000000,
+    "head_cost_numerator": 168000000000000,
+    "candidate_numerator": 315000000000000,
+    "next_clock_available_numerator": 798000000000000,
+    "successor64_cost_numerator": 512000000000000
+  },
+  "exact_rows": [
+    {
+      "name": "exact_replacement",
+      "arrivals": [
+        [
+          2500,
+          21
+        ],
+        [
+          7500,
+          64
+        ]
+      ],
+      "debit_times_ps": [
+        7500,
+        12500
+      ],
+      "debit_bytes": [
+        21,
+        64
+      ]
+    },
+    {
+      "name": "already_queued",
+      "arrivals": [
+        [
+          2500,
+          21
+        ],
+        [
+          2500,
+          64
+        ]
+      ],
+      "debit_times_ps": [
+        7500,
+        12500
+      ],
+      "debit_bytes": [
+        21,
+        64
+      ]
+    },
+    {
+      "name": "one_ps_before",
+      "arrivals": [
+        [
+          2500,
+          21
+        ],
+        [
+          7499,
+          64
+        ]
+      ],
+      "debit_times_ps": [
+        7500,
+        12500
+      ],
+      "debit_bytes": [
+        21,
+        64
+      ]
+    },
+    {
+      "name": "one_ps_after",
+      "arrivals": [
+        [
+          2500,
+          21
+        ],
+        [
+          7501,
+          64
+        ]
+      ],
+      "debit_times_ps": [
+        7500,
+        17500
+      ],
+      "debit_bytes": [
+        21,
+        64
+      ]
+    },
+    {
+      "name": "actual_idle_successor",
+      "arrivals": [
+        [
+          2500,
+          21
+        ],
+        [
+          12500,
+          64
+        ]
+      ],
+      "debit_times_ps": [
+        7500,
+        22500
+      ],
+      "debit_bytes": [
+        21,
+        64
+      ]
+    },
+    {
+      "name": "positive_off_grid_progress",
+      "arrivals": [
+        [
+          2500,
+          21
+        ],
+        [
+          7501,
+          64
+        ]
+      ],
+      "progress_before_second": [
+        7500,
+        7500,
+        7501
+      ],
+      "debit_times_ps": [
+        7500,
+        17500
+      ],
+      "debit_bytes": [
+        21,
+        64
+      ]
+    },
+    {
+      "name": "large_idle_jump",
+      "arrivals": [
+        [
+          2500,
+          21
+        ],
+        [
+          52500,
+          64
+        ]
+      ],
+      "debit_times_ps": [
+        7500,
+        62500
+      ],
+      "debit_bytes": [
+        21,
+        64
+      ]
+    }
+  ],
+  "fatal_controls": [
+    {
+      "name": "zero_progress",
+      "calls": [
+        "progress(0)",
+        "progress(0)",
+        "read counters",
+        "nextServiceTime"
+      ],
+      "expect": "occupancy0, offered0, no event, unchanged configuration"
+    },
+    {
+      "name": "repeat_query_progress",
+      "calls": [
+        "head21@2500",
+        "nextServiceTime x2",
+        "progress7500 x2",
+        "nextServiceTime x2",
+        "validateInvariants",
+        "successor64@7500",
+        "progress7500 x2"
+      ],
+      "expect": "only head21 debited at7500; final occupancy64; next event12500"
+    },
+    {
+      "name": "direct_vs_event_walk",
+      "variants": [
+        "onPacket64@7500 directly",
+        "progress7500 then onPacket64@7500",
+        "onPacket64@7500 then progress7500"
+      ],
+      "expect": "identical occupancy, disposition, byte accounting and next deadline; trace call records compared only within identical call sequences"
+    },
+    {
+      "name": "invalid_wire_reject_only",
+      "calls": [
+        "head21@2500",
+        "wire0@7500 (error)",
+        "queries/invariants",
+        "valid64@12500"
+      ],
+      "expect": "no offered/enqueued invalid packet; no event after finalhead; later successor22500; invalid call never activates live credit"
+    },
+    {
+      "name": "capacity_reject_only",
+      "override": {
+        "ingress_capacity_bytes": 64
+      },
+      "calls": [
+        "head21@2500",
+        "oversize65@7500 (meter discard)",
+        "queries/invariants",
+        "valid64@12500"
+      ],
+      "expect": "one meter drop; no rejected service record; later successor22500"
+    },
+    {
+      "name": "rate_reject_only",
+      "override": {
+        "ud_pps_per_qp": 1
+      },
+      "calls": [
+        "head21 qpn1@2500",
+        "same-qpn64@7500 (rate discard)",
+        "queries/invariants",
+        "new-qpn64@12500"
+      ],
+      "expect": "one rate drop; no rejected service record; later successor22500"
+    },
+    {
+      "name": "reject_then_valid_exact_time",
+      "variants": [
+        "wire0 reject",
+        "oversize65 reject under cap64",
+        "rate-gated same-QP reject then new-QP valid"
+      ],
+      "calls": [
+        "head21@2500",
+        "rejected offer@7500",
+        "valid64@7500"
+      ],
+      "expect": "only valid service admission activates candidate; successor12500"
+    },
+    {
+      "name": "admitted_sequence_rejection",
+      "variants": [
+        "duplicate RC PSN",
+        "out-of-sequence RC PSN"
+      ],
+      "calls": [
+        "head21 RC@2500",
+        "admitted64 RC@7500 with sequence outcome"
+      ],
+      "expect": "record remains charged by existing semantics; next service12500 despite transport rejection"
+    },
+    {
+      "name": "regressed_time",
+      "calls": [
+        "head21@2500",
+        "progress7500",
+        "progress7501",
+        "arrival64@7500"
+      ],
+      "expect": "time-regression error; no backdated admission or candidate revival"
+    },
+    {
+      "name": "partial_terminal_horizon",
+      "override": {
+        "rate_bps": 160000000000
+      },
+      "calls": [
+        "85B at last_grid_clock-1",
+        "progress(last_grid_clock) repeatedly",
+        "next event repeatedly"
+      ],
+      "expect": "width64 applies exactly64B then retains21B; native throws/facade ERROR_STATE while pending; no NO_EVENT or second debit"
+    },
+    {
+      "name": "fully_drained_terminal_horizon",
+      "override": {
+        "rate_bps": 160000000000
+      },
+      "calls": [
+        "21B at last_grid_clock-1",
+        "progress(last_grid_clock)",
+        "64B at same last_grid_clock"
+      ],
+      "expect": "head fully drains; no pending event; new arrival fails horizon before enqueue/counters; candidate cannot invent following clock"
+    },
+    {
+      "name": "default_fluid_identity",
+      "variants": [
+        "old default rnic_cm_create",
+        "explicit-fluid create_with_rx_service",
+        "new default rnic_cm_create"
+      ],
+      "expect": "old/fixed default results, counters and identical-sequence traces byte-identical; original ABI1 sizes/offsets and default configuration unchanged"
+    },
+    {
+      "name": "public_input_identity",
+      "expect": "only accepted packet metadata/configuration controls service; no reads of DUT occupancy/tokens/head/debit/ready"
+    },
+    {
+      "name": "same_time_candidate_is_not_work",
+      "calls": [
+        "head21@2500",
+        "progress7500",
+        "next event",
+        "hasPendingPhysicalWork",
+        "validateInvariants"
+      ],
+      "expect": "occupancy0/live-credit0, NO_EVENT, no pending physical RX; candidate expires on subsequent positive empty advance"
+    }
+  ],
+  "two_parameter_component_rows": [
+    {
+      "width_bytes": 64,
+      "rate_bps": 40000000000,
+      "arrivals": [
+        [
+          2500,
+          21
+        ],
+        [
+          7500,
+          85
+        ]
+      ],
+      "successor_completed_ps": 27500,
+      "service_debits": 3
+    },
+    {
+      "width_bytes": 128,
+      "rate_bps": 40000000000,
+      "arrivals": [
+        [
+          2500,
+          21
+        ],
+        [
+          7500,
+          85
+        ]
+      ],
+      "successor_completed_ps": 27500,
+      "service_debits": 2
+    },
+    {
+      "width_bytes": 64,
+      "rate_bps": 96600000000,
+      "arrivals": [
+        [
+          2500,
+          21
+        ],
+        [
+          7500,
+          85
+        ]
+      ],
+      "successor_completed_ps": 17500,
+      "service_debits": 3
+    },
+    {
+      "width_bytes": 128,
+      "rate_bps": 96600000000,
+      "arrivals": [
+        [
+          2500,
+          21
+        ],
+        [
+          7500,
+          85
+        ]
+      ],
+      "successor_completed_ps": 12500,
+      "service_debits": 2
+    },
+    {
+      "width_bytes": 64,
+      "rate_bps": 160000000000,
+      "arrivals": [
+        [
+          2500,
+          21
+        ],
+        [
+          7500,
+          85
+        ]
+      ],
+      "successor_completed_ps": 17500,
+      "service_debits": 3
+    },
+    {
+      "width_bytes": 128,
+      "rate_bps": 160000000000,
+      "arrivals": [
+        [
+          2500,
+          21
+        ],
+        [
+          7500,
+          85
+        ]
+      ],
+      "successor_completed_ps": 12500,
+      "service_debits": 2
+    }
+  ],
+  "evidence_classes": "Report behavioral relation families/instances, exact oracle rows, fatal controls and executables separately. Any fatal guard breach voids the run.",
+  "mutants": [
+    "eager_clear",
+    "stale_candidate",
+    "duplicate_tick",
+    "reject_activates_candidate",
+    "tail_pack"
+  ],
+  "mutant_acceptance": "Each modified source copy must compile and reach a named expected fixture failure, not merely fail compilation.",
+  "hard_semantics": [
+    "The native serialized receive pipeline alone owns admitted FIFO records, occupancy, exact rational credit, clock consumption and service accounting. The C facade and device expose projections only.",
+    "A final debit and an actually admitted replacement at the exact same timestamp form one boundary. Earned remainder is retained for that replacement, which remains ineligible until the strictly following configured clock.",
+    "A positive-duration empty interval, including one picosecond off-grid, clears earned remainder. Arbitrary monotone picosecond arrivals retain their existing domain and are never rounded to the service grid.",
+    "An empty FIFO retains zero live credit. A private same-time candidate has no occupancy, scheduled event, refill or pending physical work. It expires on any positive empty advance.",
+    "Candidate credit may move once only after all envelope, horizon, capacity, rate and push gates succeed. Rejected offers do not activate live credit; a later valid admission at the same timestamp may still consume the candidate. Admitted sequence or duplicate rejection retains its existing ingress charge.",
+    "Repeated progress at the same time and read-only event, counter and invariant queries cannot accrue or debit twice. Existing inclusive service-before-admission ordering and strict later-clock eligibility remain unchanged.",
+    "Partial terminal-horizon service retains applied-byte accounting and reports the existing pending error; neither NO_EVENT nor an invented following clock is allowed. A fully drained terminal head does not authorize an unrepresentable successor.",
+    "Original C ABI1 layouts, defaults and traces stay exact. No configuration or service version, Fluid semantics, transport window, receive capacity, rate, band or arrival stream is tuned."
+  ],
+  "component_relation_families": [
+    {
+      "name": "configured_rate_direction",
+      "instances": 2,
+      "expect": "For each fixed width, successor completion is nonincreasing as rate rises40 to96.6 to160Gb/s. Geometry saturation is explicit, not a universal inverse-rate claim."
+    },
+    {
+      "name": "width_direction",
+      "instances": 3,
+      "expect": "For each rate, width128 completion is no later than width64; differences are exactly0,5000,5000ps in increasing-rate order."
+    },
+    {
+      "name": "physics_bounds",
+      "scored": false,
+      "expect": "Service completion cannot precede the useful-byte affordability bound or packet-aligned beat count on the strict following-clock grid. For these uncapped cells the completion clock index is max(ceil(106/refill_bytes),1+ceil(85/width_bytes)); timestamp2500+index*5000ps."
+    }
+  ],
+  "gates": [
+    "Warnings-as-errors native build and complete RNIC CTest.",
+    "Native and C facade fixtures for each exact row, ordering, rejection, invariants, monotonic time and finite-horizon controls.",
+    "Separate width/rate component study with exact literal rows and independently checked directions and physical bounds.",
+    "Each of five negative copies compiles and reaches a named expected fixture failure; compiler failures do not count.",
+    "Fresh original36-row serialized study plus its three existing forbidden-behavior mutants, preserving historical expectation/result records.",
+    "Old and fixed default Fluid ABI sizes/offsets, native/facade result/counter/trace identity and unchanged source snapshots.",
+    "Independent numerical and lifecycle review; docs-format and portability enforcement.",
+    "Ruff and complete Python pytest suite before upstream push, followed by all applicable review and remote CI gates before landing.",
+    "Upstream main lands before downstream pinned export/conformance advance; original downstream matching bands stay unchanged."
+  ],
+  "guards_seconds": {
+    "native_build": 900,
+    "native_ctest": 600,
+    "atomic_study": 1800,
+    "each_mutant_build_and_run": 300,
+    "old_study": 1800,
+    "python_suite": 7200
+  },
+  "non_claims": [
+    "Native receive-service completion is component evidence, not host delivery, ACK, CQE or request completion.",
+    "BACK-76 framework selection and request TTFT/TPOT work remains open.",
+    "No new CX5 calibration, arbitrary-ready modeling, full ingress closure, performance certification or HACC programming follows from this native result."
+  ],
+  "baseline_source_sha256": {
+    "simllm/backends/rnic/src/rnic_rx_pipeline.cpp": "d605fc03b57dab8b680ddf4207735a38dbe4b6560579a542c399a53256a27c20",
+    "simllm/backends/rnic/include/simllm/rnic/rnic_rx_pipeline.h": "269648c96da248856f142039c7b5559380fabfb3531890a2104cca4437ce972c",
+    "simllm/backends/rnic/src/rnic_device.cpp": "a670884c3f681c79cf5a3f0567dad145556d50efdb65ad133160652e38d966af",
+    "simllm/backends/rnic/src/rnic_cmodel_c.cpp": "c5d27d137c6954bdedba45d973fff2612e851662bbc28b23e0556b13597fe4f6",
+    "simllm/backends/rnic/include/simllm/rnic/rnic_cmodel_c.h": "d7ad66ed091a153c4f4c76c7cdd771883eb2b9a66c3a982f9233dff72f20a84a",
+    "simllm/backends/rnic/tests/rnic_rx_serialized_test.cpp": "0479df6b044269cbf9221fb928de78f335909e95ab7f4314fabfface68a8ee06",
+    "examples/rnic_rx_serialized_service_v1/expectations.json": "6ea5b9f0dfc96d74d35abecc2cb67a25455cfb7f66942b69674c8718d51b15b0",
+    "examples/rnic_rx_serialized_service_v1/run_native.py": "d2a4b05287349f7d18faf9f4d78711a97c5b5110a604e31cd38228c39442eef8",
+    "simllm/backends/rnic/README.md": "66c7fe94f5d36a5ca5b57764f2930be4d8b64bd28aa5a30c6351619dde9723bc",
+    "docs/design/rnic-cmodel.md": "1cb558b0f870d554cc932b4f0f0e5ac48067e304545627f2601bc74343cc4e0a",
+    "docs/modules/backends.md": "299b4bbfe50295d507f1f16c69648afbe739e7dfb2859c722be77f69b4e8259c"
+  }
+}
