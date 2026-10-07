@@ -78,9 +78,17 @@ An initial arithmetic-horizon fixture was corrected with its failed log
 retained. Independent review then exposed receive-only teardown, silent
 pending-deadline exhaustion and partial-service counter projection defects;
 all three have narrow native/facade hazard fixtures and repaired outcomes.
-An initial full Python process terminated with exit 143 and no verdict; its
-log remains an incomplete attempt. The owned bounded rerun is separately
-recorded. Frozen expectations and historical outcomes were not rewritten.
+An initial full Python process terminated with exit 143 and no verdict. The
+next owned attempt reached its 1800-second host limit without a verdict. Both
+remain incomplete evidence. The frozen longer run finishes with 6992 passed,
+33 skipped and two failures after 2888.03 seconds. Both failures concern this
+extension: two test filename joins violate the portable-path gate, and the
+backend open-task count was not regenerated after BACK-76 was declared.
+Portable filesystem joins and the generated progress/count metadata repair
+those failures; the 14 focused portability and task-progress tests pass.
+A fresh complete Python gate remains required before publication. Frozen
+expectations, component measurements and earlier outcomes retain their
+original sources and chronology.
 
 Generated source pins, grid, traces, compiler logs, mutation verdicts and
 compatibility records remain below `${SIMLLM_DATA_ROOT}`. The compact artifact

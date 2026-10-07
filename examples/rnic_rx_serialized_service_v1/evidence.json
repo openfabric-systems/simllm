@@ -11,15 +11,34 @@
     "default_compatibility": "Three-way original ABI, RX and packetized TX bytes identical",
     "ruff": "PASS",
     "full_pytest": {
-      "status": "pending",
-      "preserved_attempt": {
+      "status": "repaired_gate_pending",
+      "preserved_incomplete_attempt": {
         "returncode": -15,
         "reason": "owned_timeout",
         "elapsed_seconds": 1800.18923330307,
         "source_bytes_unchanged": true,
         "changed_files": []
-      }
-    }
+      },
+      "completed_failed_attempt": {
+        "status": "failed_then_repair_pending",
+        "source_commit": "8f9409da93f3b43a22d3540a1edd592912d78233",
+        "returncode": 1,
+        "passed": 6992,
+        "failed": 2,
+        "skipped": 33,
+        "pytest_elapsed_seconds": 2888.03,
+        "controller_elapsed_seconds": 2891.054223060608,
+        "source_bytes_unchanged": true,
+        "failures": [
+          "Portable path gate rejected two slash-leading filename fragments in the new C++ test; production model bytes unchanged.",
+          "README_PRO backend open-task count was not regenerated after BACK76 was declared."
+        ],
+        "next_gate": "One fresh full suite after portable test joins and task-progress metadata repair."
+      },
+      "next_gate": "Fresh complete gate on the corrected test paths and final documentation source."
+    },
+    "path_fix_native": "10/10 PASS, fresh warnings-as-errors build at portable-test checkpoint ceb18dd3",
+    "docs_and_portability": "28 focused tests PASS"
   },
   "artifacts": [
     {
@@ -56,6 +75,12 @@
       "path": "pytest_owned/result.json",
       "sha256": "e6bb75ead7ac5e704d969119c014871e10f2edf52a10367741b0755cf41115b3",
       "bytes": 149
+    },
+    {
+      "path": "pytest_final/result.json",
+      "sha256": "c7d268e220150b5db48a790134a02d01f2e5e501d3e9d9103951bb084b740745",
+      "bytes": 143
     }
-  ]
+  ],
+  "portable_test_commit": "ceb18dd3c0c1ca2301e116a95f3681f93c7704bd"
 }
