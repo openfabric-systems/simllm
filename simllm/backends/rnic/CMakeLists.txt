@@ -190,6 +190,18 @@ if(SIMLLM_RNIC_BUILD_TESTS)
     add_test(NAME simllm_rnic_cc_test
              COMMAND simllm_rnic_cc_test)
 
+    add_executable(simllm_rnic_rx_serialized_test tests/rnic_rx_serialized_test.cpp)
+    target_link_libraries(simllm_rnic_rx_serialized_test PRIVATE simllm::rnic)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(simllm_rnic_rx_serialized_test PRIVATE -Wall -Wextra -Wpedantic)
+        if(SIMLLM_RNIC_WARNINGS_AS_ERRORS)
+            target_compile_options(simllm_rnic_rx_serialized_test PRIVATE -Werror)
+        endif()
+    endif()
+    add_test(NAME simllm_rnic_rx_serialized_test
+             COMMAND simllm_rnic_rx_serialized_test "${CMAKE_CURRENT_BINARY_DIR}")
+    set_tests_properties(simllm_rnic_rx_serialized_test PROPERTIES TIMEOUT 30)
+
     add_executable(simllm_rnic_cmodel_test
         tests/rnic_cmodel_test.cpp
     )
@@ -315,4 +327,15 @@ endif()
     add_test(NAME simllm_rnic_wq_probe_rejects_negative_service
              COMMAND ${CMAKE_COMMAND}
                      -P "${SIMLLM_RNIC_NEGATIVE_PROBE_CHECK}")
+endif()
+
+if(SIMLLM_RNIC_BUILD_TOOLS)
+    add_executable(simllm_rnic_rx_serialized_probe tools/rx_serialized_probe.cpp)
+    target_link_libraries(simllm_rnic_rx_serialized_probe PRIVATE simllm::rnic)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(simllm_rnic_rx_serialized_probe PRIVATE -Wall -Wextra -Wpedantic)
+        if(SIMLLM_RNIC_WARNINGS_AS_ERRORS)
+            target_compile_options(simllm_rnic_rx_serialized_probe PRIVATE -Werror)
+        endif()
+    endif()
 endif()

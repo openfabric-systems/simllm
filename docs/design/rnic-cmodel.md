@@ -72,6 +72,7 @@ plain structs with fixed-width integers and picosecond timestamps:
 | entry | role |
 |---|---|
 | `rnic_cm_create(const rnic_cm_profile*, const rnic_cm_config*)` | construct one endpoint from a profile and queue configuration |
+| `rnic_cm_create_with_rx_service(profile, config, service)` | construct with an explicit immutable receive service option |
 | `rnic_cm_post(handle, const rnic_cm_wqe*, now_ps)` | post one work request (opcode, bytes, SGE count, destination, signaled) |
 | `rnic_cm_doorbell(handle, now_ps)` | publish the accepted prefix as one doorbell batch |
 | `rnic_cm_rx_packet(handle, const rnic_cm_packet*, now_ps)` | deliver one wire packet (data, ack, nak, cnp, pause) to the receive side |
@@ -89,6 +90,40 @@ own. Determinism is a contract: the same stimulus sequence and profile
 produce byte-identical traces, so a trace recorded from SimLLM is the
 expected-result file for the RTL testbench, and a divergence localizes to
 the first differing timestamp or counter.
+
+### Declared receive service geometry
+
+The original fluid ingress meter remains the measured CX5 default.
+`RnicRxServiceConfig` version 1 adds an immutable, explicit
+`SerializedPacketBeats` mode for a declared implementation geometry. Width,
+period, phase and token capacity are public inputs. The model consumes accepted
+wire packet lengths and those inputs; it never reads RTL occupancy, credits or
+output events. The additive C facade constructor selects the same authority
+without changing the original ABI1 layouts.
+
+One packet-aligned beat is eligible per clock. Rate credit uses an exact
+8e12-unit denominator per byte and is clamped to token capacity. A beat consumes
+its entire useful length only when affordable. Tail bytes do not pack with the
+next packet; service precedes arrivals at the same timestamp. New packets wait
+for the next clock and empty queue credit clears. The selected occupancy owns
+admission, loss, high-water and congestion notification. Existing sequence and
+packet-rate checks retain their arrival-time meaning.
+
+For constant packet length L, width W and period T picoseconds, the raw useful
+service ceiling is `8L*1e12/(T*ceil(L/W))` bits per second. At 5 ns an 85-byte
+stream has a 68 Gb/s ceiling with 64-byte beats and 136 Gb/s with 128-byte beats.
+Token rate and finite token capacity can reduce that service; they do not imply
+that a fluid rate is realizable by this geometry. Finite initial-credit and tail
+rounding remain in reported completion times.
+
+Only continuously ready service is supported. Unsupported configuration and
+arithmetic fail closed. Pending receive work remains scheduled without SQ work
+and protects live host memory from teardown. An impossible future service clock
+returns an explicit error; already applied debits remain projected into public
+occupancy. The [36-row native study](../../examples/rnic_rx_serialized_service_v1/RESULTS.md)
+records exact independent deadlines, geometry/rate monotonicity, lifecycle and
+negative controls, and unchanged default-fluid results across three revisions.
+Framework hardware records and request metric propagation remain BACK-76.
 
 ### Profile
 

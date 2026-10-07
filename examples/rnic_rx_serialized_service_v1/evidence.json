@@ -1,0 +1,123 @@
+{
+  "schema": "simllm-rnic-rx-serialized-service-results-v1",
+  "date": "2026-10-07",
+  "expectations_commit": "b022b3f3e1ec0e1ca186c4dc5cf276110fe8dff5",
+  "implementation_commit": "aaba0b0e6e570965d04fba78d1777aedba45a152",
+  "artifact_root": "$SIMLLM_DATA_ROOT/upstream_serialized_rx",
+  "gates": {
+    "native": "10/10 PASS",
+    "grid": "36/36 exact PASS",
+    "mutants": "3/3 caught",
+    "default_compatibility": "Three-way original ABI, RX and packetized TX bytes identical",
+    "ruff": "PASS",
+    "full_pytest": {
+      "status": "PASS",
+      "preserved_incomplete_attempt": {
+        "returncode": -15,
+        "reason": "owned_timeout",
+        "elapsed_seconds": 1800.18923330307,
+        "source_bytes_unchanged": true,
+        "changed_files": []
+      },
+      "completed_failed_attempt": {
+        "status": "failed_then_repair_pending",
+        "source_commit": "8f9409da93f3b43a22d3540a1edd592912d78233",
+        "returncode": 1,
+        "passed": 6992,
+        "failed": 2,
+        "skipped": 33,
+        "pytest_elapsed_seconds": 2888.03,
+        "controller_elapsed_seconds": 2891.054223060608,
+        "source_bytes_unchanged": true,
+        "failures": [
+          "Portable path gate rejected two slash-leading filename fragments in the new C++ test; production model bytes unchanged.",
+          "README_PRO backend open-task count was not regenerated after BACK76 was declared."
+        ],
+        "next_gate": "One fresh full suite after portable test joins and task-progress metadata repair."
+      },
+      "corrected_complete_attempt": {
+        "source_commit": "612d3d989246b4d2dbea96c915150e2f07efb5aa",
+        "returncode": 0,
+        "reason": "terminal",
+        "elapsed_seconds": 3160.7087054252625,
+        "source_bytes_unchanged": true,
+        "changed_files": [],
+        "passed": 6994,
+        "failed": 0,
+        "skipped": 33,
+        "pytest_elapsed_seconds": 3158.48,
+        "scope": "Full upstream suite on corrected paths and task-progress metadata; subsequent changes record this terminal evidence only."
+      }
+    },
+    "path_fix_native": "10/10 PASS, fresh warnings-as-errors build at portable-test checkpoint ceb18dd3",
+    "docs_and_portability": "28 focused tests PASS"
+  },
+  "artifacts": [
+    {
+      "path": "checkpoint_acceptance/results.json",
+      "sha256": "6fccf3f0c08dbd378836cd3d41f7f33889b9d3aa9a5367e544432c4dd2b07442",
+      "bytes": 156
+    },
+    {
+      "path": "checkpoint_acceptance/grid.csv",
+      "sha256": "3e2530eb8ce136378d3015fb7b67121264447a19d3ba0f38a63775921e759629",
+      "bytes": 2846
+    },
+    {
+      "path": "checkpoint_acceptance/sources.json",
+      "sha256": "219a124be6e5b403bb700c05a68bba40fdb58c8709870fb4a6b9d5c63fcd3a48",
+      "bytes": 5951
+    },
+    {
+      "path": "checkpoint_report.json",
+      "sha256": "9c33a5a72449f5ec9c4ecfe2ee8911343f3cb59959a92942da6b8528c203753a",
+      "bytes": 3671
+    },
+    {
+      "path": "three_way_fluid_conformance.json",
+      "sha256": "aa454dd98820726de3299e770d86d868a2fac966f78295c78f3cb6ecf84e010a",
+      "bytes": 1132
+    },
+    {
+      "path": "three_way_tx_conformance.json",
+      "sha256": "e38e72d3537f101dd1c58a0bf0a13dbf8d34797c9aee6ebd60eb5976b78bdf3e",
+      "bytes": 835
+    },
+    {
+      "path": "pytest_owned/result.json",
+      "sha256": "e6bb75ead7ac5e704d969119c014871e10f2edf52a10367741b0755cf41115b3",
+      "bytes": 149
+    },
+    {
+      "path": "pytest_final/result.json",
+      "sha256": "c7d268e220150b5db48a790134a02d01f2e5e501d3e9d9103951bb084b740745",
+      "bytes": 143
+    },
+    {
+      "path": "pytest_corrected/result.json",
+      "sha256": "d4670d0950cbaf19d427662c0e6ddd719deac20a45ce4d0cb14568d9c8e8cd12",
+      "bytes": 144
+    },
+    {
+      "path": "pytest_corrected/pytest.log",
+      "sha256": "b0adf3a57a3b972afd81bdbfd9898df53fcf4df46ee942b31ab1de575741dd1b",
+      "bytes": 7886
+    },
+    {
+      "path": "pytest_corrected/sources_before.json",
+      "sha256": "3b0c0b119c6367dde1b71a8bc2e4523bd8f60b96cd36b7ce7adb5e7d61345012",
+      "bytes": 342686
+    },
+    {
+      "path": "pytest_corrected/sources_after.json",
+      "sha256": "3b0c0b119c6367dde1b71a8bc2e4523bd8f60b96cd36b7ce7adb5e7d61345012",
+      "bytes": 342686
+    },
+    {
+      "path": "pytest_corrected/launch.json",
+      "sha256": "62ab12a8167b1d6922c2c23b8649604074ac1cc18a39a2988f299d32b396d2d2",
+      "bytes": 452
+    }
+  ],
+  "portable_test_commit": "ceb18dd3c0c1ca2301e116a95f3681f93c7704bd"
+}

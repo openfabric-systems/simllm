@@ -10,6 +10,11 @@ namespace {
 
 constexpr std::uint64_t kPicosecondsPerSecond = 1000000000000ULL;
 constexpr std::uint64_t kAckWireBytes = 64;
+constexpr std::uint64_t kByteCreditDenominator = 8 * kPicosecondsPerSecond;
+
+std::uint64_t ceilDivide(std::uint64_t numerator, std::uint64_t denominator) {
+    return numerator / denominator + (numerator % denominator != 0 ? 1 : 0);
+}
 // A RoCEv2 congestion notification packet is one BTH plus its padding on the
 // wire, which is the same envelope an acknowledgement occupies.
 constexpr std::uint64_t kCnpWireBytes = 64;
@@ -58,6 +63,33 @@ void validateRnicRxPipelineConfig(const RnicRxPipelineConfig& config) {
     if (config.ingress_bytes != 0 && config.drain_bps == 0) {
         throw std::invalid_argument(
             "a bounded RNIC ingress buffer needs a positive drain rate");
+    }
+    const RnicRxServiceConfig& service = config.service;
+    if (service.version != kRnicRxServiceConfigVersion
+        || service.ready != RnicRxReadySemantics::ContinuouslyReady) {
+        throw std::invalid_argument("unsupported RNIC receive service configuration");
+    }
+    if (service.mode == RnicRxServiceMode::Fluid) {
+        if (service.beat_bytes != 0 || service.period_ps != 0
+            || service.phase_ps != 0 || service.token_capacity_bytes != 0) {
+            throw std::invalid_argument("fluid receive service has no beat geometry");
+        }
+    } else if (service.mode == RnicRxServiceMode::SerializedPacketBeats) {
+        if (service.beat_bytes == 0 || service.period_ps == 0
+            || service.phase_ps >= service.period_ps || config.drain_bps == 0
+            || service.token_capacity_bytes < service.beat_bytes) {
+            throw std::invalid_argument("invalid RNIC serialized receive geometry");
+        }
+        const auto maximum = std::numeric_limits<std::uint64_t>::max();
+        if (service.token_capacity_bytes > maximum / kByteCreditDenominator) {
+            throw std::overflow_error("RNIC receive token capacity overflow");
+        }
+        const auto cap = service.token_capacity_bytes * kByteCreditDenominator;
+        if (config.drain_bps > (maximum - cap) / service.period_ps) {
+            throw std::overflow_error("RNIC receive clock refill overflow");
+        }
+    } else {
+        throw std::invalid_argument("unknown RNIC receive service mode");
     }
     if (config.pause_discard_interval == 0) {
         throw std::invalid_argument(
@@ -112,6 +144,11 @@ RnicRxPipeline::RnicRxPipeline(RnicRxPipelineConfig config)
     : config_(std::move(config)) {
     validateRnicRxPipelineConfig(config_);
     nic_rate_.rate = config_.pps_per_nic;
+    if (config_.service.mode == RnicRxServiceMode::SerializedPacketBeats) {
+        next_tick_ps_ = config_.service.phase_ps;
+        service_cap_ = config_.service.token_capacity_bytes * kByteCreditDenominator;
+        service_refill_ = config_.drain_bps * config_.service.period_ps;
+    }
     if (config_.notification.enabled) {
         notification_ = std::make_unique<RnicCcNotificationPoint>(
             config_.notification);
@@ -121,6 +158,11 @@ RnicRxPipeline::RnicRxPipeline(RnicRxPipelineConfig config)
 void RnicRxPipeline::drainTo(Picoseconds now_ps) {
     if (now_ps < last_now_ps_) {
         throw std::logic_error("RNIC receive pipeline time regressed");
+    }
+    if (config_.service.mode == RnicRxServiceMode::SerializedPacketBeats) {
+        drainSerializedTo(now_ps);
+        last_now_ps_ = now_ps;
+        return;
     }
     const Picoseconds elapsed = now_ps - last_now_ps_;
     last_now_ps_ = now_ps;
@@ -148,6 +190,89 @@ void RnicRxPipeline::drainTo(Picoseconds now_ps) {
         drain_remainder_ = 0;
     } else {
         occupancy_bytes_ -= drained_bytes;
+    }
+}
+
+void RnicRxPipeline::clockAfter(Picoseconds now_ps) noexcept {
+    const auto phase = config_.service.phase_ps;
+    const auto period = config_.service.period_ps;
+    if (now_ps < phase) {
+        next_tick_ps_ = phase;
+        return;
+    }
+    const auto distance = period - (now_ps - phase) % period;
+    if (distance > std::numeric_limits<Picoseconds>::max() - now_ps) {
+        next_tick_ps_.reset();
+    } else {
+        next_tick_ps_ = now_ps + distance;
+    }
+}
+
+void RnicRxPipeline::accrueServiceCredit(std::uint64_t ticks) {
+    const auto room = service_cap_ - service_credit_;
+    // Compare before multiplying, including a leap over a long credit wait.
+    if (ticks >= ceilDivide(room, service_refill_)) {
+        service_credit_ = service_cap_;
+    } else {
+        service_credit_ += ticks * service_refill_;
+    }
+}
+
+std::optional<Picoseconds> RnicRxPipeline::nextServiceTime() const {
+    if (!hasPendingService()) {
+        return std::nullopt;
+    }
+    if (!next_tick_ps_.has_value()) {
+        throw std::overflow_error("RNIC receive service timestamp horizon exhausted");
+    }
+    const auto cost = std::min(config_.service.beat_bytes, service_records_.front())
+                      * kByteCreditDenominator;
+    const auto owed = cost > service_credit_ ? cost - service_credit_ : 0;
+    const auto ticks = std::max<std::uint64_t>(1, ceilDivide(owed, service_refill_));
+    if (ticks - 1 > (std::numeric_limits<Picoseconds>::max() - *next_tick_ps_)
+                   / config_.service.period_ps) {
+        throw std::overflow_error("RNIC receive service timestamp horizon exhausted");
+    }
+    return *next_tick_ps_ + (ticks - 1) * config_.service.period_ps;
+}
+
+bool RnicRxPipeline::hasPendingService() const noexcept {
+    return config_.service.mode == RnicRxServiceMode::SerializedPacketBeats
+           && !service_records_.empty();
+}
+
+void RnicRxPipeline::drainSerializedTo(Picoseconds now_ps) {
+    while (hasPendingService() && next_tick_ps_.has_value()
+           && *next_tick_ps_ <= now_ps) {
+        const auto next = nextServiceTime();
+        if (!next.has_value() || *next > now_ps) {
+            // Finite backlog and a tiny rate must not loop once per idle clock.
+            const auto ticks = (now_ps - *next_tick_ps_) / config_.service.period_ps + 1;
+            accrueServiceCredit(ticks);
+            clockAfter(now_ps);
+            return;
+        }
+        const auto ticks = (*next - *next_tick_ps_) / config_.service.period_ps + 1;
+        accrueServiceCredit(ticks);
+        const auto bytes = std::min(config_.service.beat_bytes, service_records_.front());
+        service_credit_ -= bytes * kByteCreditDenominator;
+        occupancy_bytes_ -= bytes;
+        // A legal debit remains observable even if the next clock overflows.
+        counters_.ingress_occupancy_bytes = occupancy_bytes_;
+        service_bytes_ += bytes;
+        service_records_.front() -= bytes;
+        if (service_records_.front() == 0) {
+            service_records_.pop_front();
+        }
+        clockAfter(*next);
+    }
+    if (hasPendingService() && !next_tick_ps_.has_value()) {
+        throw std::overflow_error("RNIC receive service timestamp horizon exhausted");
+    }
+    if (!hasPendingService()) {
+        // No earned credit survives an empty interval or funds its successor.
+        service_credit_ = 0;
+        clockAfter(now_ps);
     }
 }
 
@@ -221,6 +346,14 @@ RnicRxResult RnicRxPipeline::onPacket(
         throw std::invalid_argument("RNIC receive packet has no wire envelope");
     }
 
+    if (config_.service.mode == RnicRxServiceMode::SerializedPacketBeats) {
+        const auto maximum = std::numeric_limits<std::uint64_t>::max();
+        if (!next_tick_ps_.has_value()
+            || packet.wire_bytes > maximum - occupancy_bytes_
+            || packet.wire_bytes > maximum - counters_.wire_bytes_offered) {
+            throw std::overflow_error("RNIC serialized receive packet arithmetic overflow");
+        }
+    }
     ++counters_.packets_offered;
     counters_.wire_bytes_offered += packet.wire_bytes;
     ++nic_counters_.rx_packets_phy;
@@ -265,6 +398,9 @@ RnicRxResult RnicRxPipeline::onPacket(
     qp.rate.charge(now_ps, 1);
     nic_rate_.charge(now_ps, 1);
 
+    if (config_.service.mode == RnicRxServiceMode::SerializedPacketBeats) {
+        service_records_.push_back(packet.wire_bytes);
+    }
     occupancy_bytes_ += packet.wire_bytes;
     if (occupancy_bytes_ > counters_.ingress_high_watermark_bytes) {
         counters_.ingress_high_watermark_bytes = occupancy_bytes_;
@@ -382,6 +518,20 @@ void RnicRxPipeline::validateInvariants() const {
     if (config_.ingress_bytes != 0
         && occupancy_bytes_ > config_.ingress_bytes) {
         throw std::logic_error("RNIC ingress buffer overfilled");
+    }
+    if (config_.service.mode == RnicRxServiceMode::SerializedPacketBeats) {
+        std::uint64_t queued = 0;
+        for (const auto remaining : service_records_) {
+            if (remaining == 0 || remaining > occupancy_bytes_ - queued) {
+                throw std::logic_error("RNIC serialized receive FIFO accounting failed");
+            }
+            queued += remaining;
+        }
+        if (queued != occupancy_bytes_ || service_credit_ > service_cap_
+            || service_bytes_ != counters_.wire_bytes_admitted - occupancy_bytes_
+            || (!hasPendingService() && service_credit_ != 0)) {
+            throw std::logic_error("RNIC serialized receive conservation failed");
+        }
     }
     if (nic_counters_.np_ecn_marked_roce_packets != 0
         || nic_counters_.rx_pause_ctrl_phy != 0

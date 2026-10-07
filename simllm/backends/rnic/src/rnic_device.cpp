@@ -829,7 +829,8 @@ void RnicDevice::teardownHostMemory(Picoseconds now_ps) {
         throw std::logic_error("RNIC device has no live host memory");
     }
     validateCallerTime(now_ps);
-    if (work_queue_->hasPendingPhysicalWork()
+    if ((rx_pipeline_ && rx_pipeline_->hasPendingService())
+        || work_queue_->hasPendingPhysicalWork()
         || work_queue_->occupiedSqEntries() != 0
         || work_queue_->completionQueueDepth() != 0
         || work_queue_->unpublishedWqeCount() != 0) {
@@ -880,7 +881,9 @@ std::optional<Picoseconds> RnicDevice::nextEventTime() const {
     const std::optional<Picoseconds> queue_time =
         work_queue_->nextEventTime();
     if (tx_pipeline_) {
-        return earlier(queue_time, tx_pipeline_->nextEventTime());
+        const auto receive_time = rx_pipeline_ ? rx_pipeline_->nextServiceTime()
+                                                : std::nullopt;
+        return earlier(earlier(queue_time, tx_pipeline_->nextEventTime()), receive_time);
     }
     if (config_.network.enabled) {
         return queue_time;
@@ -889,6 +892,9 @@ std::optional<Picoseconds> RnicDevice::nextEventTime() const {
 }
 
 bool RnicDevice::hasPendingPhysicalWork() const noexcept {
+    if (rx_pipeline_ && rx_pipeline_->hasPendingService()) {
+        return true;
+    }
     if (tx_pipeline_ && tx_pipeline_->hasPendingWork()) {
         return true;
     }

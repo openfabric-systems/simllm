@@ -241,6 +241,27 @@ typedef struct rnic_cm_config {
     uint64_t mtu_bytes;
 } rnic_cm_config;
 
+#define SIMLLM_RNIC_CM_RX_SERVICE_VERSION 1u
+
+enum {
+    RNIC_CM_RX_SERVICE_FLUID = 0,
+    RNIC_CM_RX_SERVICE_SERIALIZED_PACKET_BEATS = 1,
+    RNIC_CM_RX_READY_CONTINUOUS = 0
+};
+
+/* An additive construction option; original ABI1 structures keep their size.
+ * Fluid mode requires zero geometry. Serialized mode never reads DUT state. */
+typedef struct rnic_cm_rx_service_config {
+    uint32_t version;
+    uint32_t mode;
+    uint32_t ready_semantics;
+    uint32_t reserved0;
+    uint64_t beat_bytes;
+    uint64_t period_ps;
+    uint64_t phase_ps;
+    uint64_t token_capacity_bytes;
+} rnic_cm_rx_service_config;
+
 typedef struct rnic_cm_wqe {
     uint64_t wr_id;
     uint64_t flow_id;
@@ -451,6 +472,13 @@ int rnic_cm_profile_sha256(
 rnic_cm_device* rnic_cm_create(
     const rnic_cm_profile* profile,
     const rnic_cm_config* config);
+
+/* Explicit immutable receive service. Requires receive and packetization;
+ * null or unsupported options fail closed. Original create remains fluid. */
+rnic_cm_device* rnic_cm_create_with_rx_service(
+    const rnic_cm_profile* profile,
+    const rnic_cm_config* config,
+    const rnic_cm_rx_service_config* service);
 
 int rnic_cm_post(
     rnic_cm_device* device,
