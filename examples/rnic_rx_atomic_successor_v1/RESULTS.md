@@ -91,9 +91,16 @@ process-group cleanup. Recorded runner and probe bytes, initial outcomes and
 fresh evidence retain their own hashes. Native results are not relabelled as
 executions of the later helper.
 
-The [compact evidence](evidence.json) records native source and artifact pins;
-the complete Python, Ruff and publication gates are recorded there before
-upstream landing. Native component evidence establishes this boundary repair.
+The complete Python suite passes6,994 tests with33 skips. The qualified
+third capture independently records actual pytest, wrapper and outer-controller
+exits of zero, no signals, and unchanged2,765 source files and source HEAD.
+The first capture lacks terminal exit records; the second retains passing
+child exits but lacks an independently waited outer-controller exit. Neither
+earlier capture receives publication-gate credit. Ruff passes.
+
+The [compact evidence](evidence.json) records native source and artifact pins
+and the qualified Python capture. Native component evidence establishes this
+boundary repair.
 Framework service selection and request TTFT/TPOT remain BACK-76. Downstream
 production synchronization requires reviewed upstream main landing and fresh
 reference conformance and original-case regression. No RTL, physical FPGA,

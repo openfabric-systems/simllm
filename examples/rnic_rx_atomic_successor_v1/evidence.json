@@ -79,11 +79,40 @@
     "old_serialized_001/study/results.json": "6fccf3f0c08dbd378836cd3d41f7f33889b9d3aa9a5367e544432c4dd2b07442",
     "old_serialized_001/commands.json": "7c1ad969a05473128bfe97d732dd99a91665186063eabb73307c26e2b021a78b",
     "final_provenance_001/collector_pins.json": "64794616ee9d75ef7b9bc90aa586981d17b37d877aa5192c45d7b3f8c6236a18",
-    "maintained_helper_control_001/result.json": "2e89262a4bcb0c9e2c70094a0757c4de78f469c6cfa6ff078f642cad7108ca3d"
+    "maintained_helper_control_001/result.json": "2e89262a4bcb0c9e2c70094a0757c4de78f469c6cfa6ff078f642cad7108ca3d",
+    "pytest_final_003/result.json": "d2644b5edf8e280f7d3c1a257946ebfca76b9203dc3603eb3fb487ec57e41028",
+    "pytest_final_003/independent_child_result.json": "fa7fda9c3ac52bb1821765099e4d66ecfa928f5b60ed7a04c333568319c1df16",
+    "pytest_final_003/wrapper_wait.json": "fb3557c7fadd858b4db35ce2a3cc73fb71bac45a2ee889ed53498c6eef23ddc1",
+    "pytest_final_003/pytest.log": "d3fad3258a4596055d5e933ef5a005b22f61774611c23056b4628f1764abe58b",
+    "pytest_final_003/sources_before.json": "5f75beb6350eecd9a841345b57c543d6c256ccf8d0e0d45b80917ff98ce0dcd4",
+    "pytest_final_003/sources_after.json": "5f75beb6350eecd9a841345b57c543d6c256ccf8d0e0d45b80917ff98ce0dcd4",
+    "pytest_launch_bindings_003.json": "02554e833d3249b182972334e55a05c77dce15d13f5f289ca4a663104a61788a",
+    "pytest_supervisor_003_launch.json": "bb8e81cc9eef4c29ba9bfa87aa68cb16546bea2e7d4464fae12fc17c54d8e9c5",
+    "pytest_supervisor_003_controller_wait.json": "cebabd4d711e7262f430cd338c1bccf571546229defea71c5b960c4c243427d7",
+    "pytest_supervisor_003_terminal.json": "73aa69021ca7ce454b77e3f4ff70c4bcd224f58cead62aefae0101ed97b97491",
+    "pytest_durable_controller_003.py": "b3bcc99911ae94bf34f84882d8da567d34671b0dd42f87b7a7c6c2c6edf0a249",
+    "pytest_child_capture_003.py": "2f69efbc79f4e963f50e62277cf1a4ab5320fa874a4dc9732285196af5bdfac7",
+    "pytest_controller_supervisor_003.py": "3b20e34b966ed5eb6996792d2ee2b3b5fbd8c45c3954a716294bee3627ed362d"
   },
   "preserved_incomplete_attempt": "attempt_001, inert tail-pack mutation receives no sensitivity credit",
   "python_gate": {
-    "status": "NOT_RUN_YET"
+    "status": "PASS_FULL_PYTHON_GATE",
+    "qualified_attempt": "pytest_final_003",
+    "expectations_commit": "8ce7a36293f16d6110a8298247950aad8bdfed67",
+    "expectations_sha256": "b1670be14c18800824d2ef38c75b3083ff17312d61d7977aa63156c22534ebfa",
+    "passed": 6994,
+    "skipped": 33,
+    "pytest_seconds": 1894.4,
+    "actual_pytest_exit": 0,
+    "actual_wrapper_exit": 0,
+    "actual_controller_exit": 0,
+    "controller_exit_source": "Independent supervisor Popen wait, separate from controller self-report.",
+    "terminal_reason": "terminal",
+    "received_signals": [],
+    "source_files": 2765,
+    "source_head": "8ce7a36293f16d6110a8298247950aad8bdfed67",
+    "source_bytes_and_head_unchanged": true,
+    "independent_review": "ACCEPTED_FINAL_003"
   },
   "ruff_gate": {
     "status": "PASS",
@@ -127,6 +156,21 @@
       "attempt_001": "Retrospective record of observed outer tool-session exit1; all child raw exits retained.",
       "attempt_002": "Retrospective record of observed outer tool-session exit0; all child raw exits retained.",
       "old_serialized_001": "Original retained controller result exit0."
+    }
+  },
+  "preserved_python_attempts": {
+    "pytest_final_001": {
+      "publication_credit": false,
+      "pytest_summary": "6994 passed, 33 skipped",
+      "outer_tool_exit": 143,
+      "reason": "No native wrapper or controller terminal record; signal origin unknown."
+    },
+    "pytest_final_002": {
+      "publication_credit": false,
+      "actual_pytest_exit": 0,
+      "actual_wrapper_exit": 0,
+      "actual_controller_exit": null,
+      "reason": "Child suite passed; controller zero was self-reported without an independent actual wait."
     }
   }
 }
