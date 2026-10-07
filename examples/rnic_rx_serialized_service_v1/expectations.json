@@ -1,0 +1,76 @@
+{
+  "schema": "simllm-rnic-rx-serialized-service-expectations-v1",
+  "date": "2026-10-07",
+  "base": "2b5c3f8621d952e009b990c93e8bf613befdb813",
+  "scope": "Explicit receive service geometry for interface-compatible open implementations; original measured CX5 fluid semantics remain the default.",
+  "classification": "Prospective service-model relations before implementation or new study; prior downstream attribution is post-specified evidence, never a calibration input.",
+  "configuration": {
+    "modes": [
+      "fluid",
+      "serialized_packet_beats"
+    ],
+    "beat_bytes": [
+      64,
+      128
+    ],
+    "period_ps": 5000,
+    "phase_ps": 2500,
+    "token_capacity_bytes": 4224,
+    "rates_bps": [
+      40000000000,
+      96600000000,
+      160000000000
+    ],
+    "packet_lengths_bytes": [
+      64,
+      85,
+      4096
+    ],
+    "ingress_capacity_bytes": [
+      262016,
+      16384
+    ],
+    "initial_credit": "zero",
+    "ready_domain": "continuously ready downstream"
+  },
+  "hard_semantics": [
+    "One mutable occupancy and admission authority is selected immutably at construction; neither mode advances the other in an enabled run.",
+    "Default fluid construction and original C facade ABI1 layouts, counters, timestamps and trace results remain byte-equivalent.",
+    "Serialized service uses FIFO accepted packet lengths and public clock/configuration only, never RTL outputs, credits or occupancy.",
+    "At each clock, exact rational rate credit is accrued and clamped to token capacity; at most one packet-aligned beat is debited if its entire useful length is affordable.",
+    "Tail beats cannot be packed with the next packet in one clock. Debit precedes same-clock arrivals. An arrival cannot be served before the following clock.",
+    "Empty queue credit is cleared; idle intervals cannot accumulate credit for a future packet. The clock phase is a configuration input, never fitted to outputs.",
+    "Selected service occupancy drives capacity admission, drops, high-water and notifications, retaining existing sequence and packet-rate processing.",
+    "Invalid mode/configuration, zero period, zero width, unsafe arithmetic and unsupported ready semantics fail explicitly.",
+    "Finite backlog updates must avoid iteration proportional to unbounded idle time; exact rational arithmetic and overflow checks are required."
+  ],
+  "physical_relations": [
+    "For a continuously backlogged constant length L and width W, raw useful service ceiling is8L/(period_ps*ceil(L/W))*1e12 bits/s.",
+    "An85-byte stream at5ns has raw ceiling68Gb/s for64-byte beats and136Gb/s for128-byte beats.",
+    "Token budget is an additional ceiling, not guaranteed useful throughput; beat-quantized debit may use fewer bytes than the fluid budget.",
+    "Increasing width or configured rate cannot worsen the constant-length steady service completion metric; saturation at the geometric ceiling is reported explicitly.",
+    "Below the serialization ceiling and away from finite start/tail effects, doubling a limiting token rate approximately halves the service term, with an exact clock-rounding bound derived before each fixture.",
+    "Selected occupancy equals accepted bytes minus serviced bytes exactly, never negative, and admission never exceeds capacity."
+  ],
+  "independent_controls": [
+    "Hand-derived64/85/4096-byte scheduling fixtures for both widths and exact rational rates.",
+    "Same-clock arrival/service ordering and different explicit clock phases.",
+    "Empty-credit reset, finite token cap, capacity equality/rejection, FIFO packet tail and queued successor.",
+    "Default-fluid identity fixture and facade ABI/default failure behavior.",
+    "Negative copies for forbidden tail packing and idle credit banking must be caught by independent fixtures.",
+    "A selected service admission mutation that consults fluid occupancy must be caught at a geometry-dependent capacity edge."
+  ],
+  "gates": [
+    "Native CMake build with warnings as errors and complete RNIC tests.",
+    "C facade ABI/default-fluid conformance, strict invalid-config and arithmetic-edge tests.",
+    "Small native receive example varying width and rate, with exact-or-bounded completion/occupancy/admission metrics against independent derived expectations.",
+    "Independent mathematical and code review of scheduling, conservation, monotonicity and physical bounds.",
+    "Owning module and example result records, docs-format check, ruff and pytest before upstream push.",
+    "Upstream lands on main before the downstream production vendor pin advances."
+  ],
+  "non_claims": [
+    "This opt-in component mode is not a new CX5 silicon calibration.",
+    "No fabric-wide, request TTFT/TPOT, arbitrary downstream readiness or two-node wire certification closure follows from native component evidence.",
+    "Downstream strict64/128-byte matching bands remain unchanged and historical failed rows keep their original oracle and pin."
+  ]
+}
