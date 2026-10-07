@@ -2,6 +2,7 @@
 #define SIMLLM_RNIC_RNIC_RX_PIPELINE_H
 
 #include <cstdint>
+#include <deque>
 #include <map>
 #include <optional>
 #include <vector>
@@ -15,6 +16,29 @@
 namespace simllm::rnic {
 
 inline constexpr std::uint32_t kRnicRxPipelineConfigVersion = 1;
+
+inline constexpr std::uint32_t kRnicRxServiceConfigVersion = 1;
+
+enum class RnicRxServiceMode : std::uint32_t {
+    Fluid = 0,
+    SerializedPacketBeats = 1,
+};
+
+enum class RnicRxReadySemantics : std::uint32_t {
+    ContinuouslyReady = 0,
+};
+
+// Geometry is declared by the implementation, not calibrated to CX5 silicon.
+// It is immutable after construction and selects the sole ingress authority.
+struct RnicRxServiceConfig {
+    std::uint32_t version{kRnicRxServiceConfigVersion};
+    RnicRxServiceMode mode{RnicRxServiceMode::Fluid};
+    RnicRxReadySemantics ready{RnicRxReadySemantics::ContinuouslyReady};
+    std::uint64_t beat_bytes{0};
+    Picoseconds period_ps{0};
+    Picoseconds phase_ps{0};
+    std::uint64_t token_capacity_bytes{0};
+};
 
 enum class RnicTransportService : std::uint8_t {
     ReliableConnected,
@@ -59,6 +83,7 @@ struct RnicRxPipelineConfig {
     // pipeline behaves exactly as it did before this block existed and raises
     // nothing, so every accepted slice-C row is unchanged.
     RnicCcNotificationConfig notification;
+    RnicRxServiceConfig service;
 };
 
 // One inbound wire packet as the port presents it.
@@ -149,6 +174,11 @@ public:
     // without traffic keeps the occupancy honest by calling this.
     void progress(Picoseconds now_ps);
 
+    // Fluid mode announces no new event, preserving its original clock path.
+    // Pending service beyond the timestamp domain raises an explicit error.
+    std::optional<Picoseconds> nextServiceTime() const;
+    bool hasPendingService() const noexcept;
+
     const RnicRxPipelineConfig& config() const noexcept;
     const RnicRxPipelineCounters& counters() const noexcept;
     const RnicNicCounters& nicCounters() const noexcept;
@@ -176,6 +206,9 @@ private:
     };
 
     void drainTo(Picoseconds now_ps);
+    void drainSerializedTo(Picoseconds now_ps);
+    void accrueServiceCredit(std::uint64_t ticks);
+    void clockAfter(Picoseconds now_ps) noexcept;
     QpState& qpState(const RnicRxPacket& packet);
     void notePause();
     // Runs the notification point against the occupancy this packet observes
@@ -192,6 +225,14 @@ private:
     // Fractional bytes the drain has earned but not yet spent, kept as a
     // numerator over `drain_bps` so the meter is exact over a long run.
     std::uint64_t drain_remainder_{0};
+    // Only serialized mode uses these records. Occupancy remains above,
+    // shared by admission, notifications and the public counter projection.
+    std::deque<std::uint64_t> service_records_;
+    std::optional<Picoseconds> next_tick_ps_;
+    std::uint64_t service_credit_{0};
+    std::uint64_t service_refill_{0};
+    std::uint64_t service_cap_{0};
+    std::uint64_t service_bytes_{0};
     std::uint64_t discards_since_pause_{0};
     RateGate nic_rate_;
     // Null unless the notification point is configured, which is what keeps

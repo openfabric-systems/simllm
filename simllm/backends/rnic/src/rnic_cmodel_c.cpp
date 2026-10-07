@@ -446,10 +446,19 @@ int rnic_cm_profile_sha256(
     }
 }
 
-rnic_cm_device* rnic_cm_create(
+static rnic_cm_device* createWithRxService(
     const rnic_cm_profile* profile,
-    const rnic_cm_config* config) {
+    const rnic_cm_config* config,
+    const rnic_cm_rx_service_config* service) {
     if (profile == nullptr || config == nullptr) {
+        return nullptr;
+    }
+    if (service != nullptr
+        && (config->receive != 1 || config->packetization != 1
+            || service->version != SIMLLM_RNIC_CM_RX_SERVICE_VERSION
+            || service->ready_semantics != RNIC_CM_RX_READY_CONTINUOUS
+            || service->reserved0 != 0
+            || service->mode > RNIC_CM_RX_SERVICE_SERIALIZED_PACKET_BEATS)) {
         return nullptr;
     }
     if (config->version != SIMLLM_RNIC_CM_ABI_VERSION) {
@@ -562,6 +571,14 @@ rnic_cm_device* rnic_cm_create(
             }
             simllm::rnic::RnicRxPipelineConfig receive;
             receive.enabled = true;
+            if (service != nullptr) {
+                receive.service.mode = static_cast<simllm::rnic::RnicRxServiceMode>(
+                    service->mode);
+                receive.service.beat_bytes = service->beat_bytes;
+                receive.service.period_ps = service->period_ps;
+                receive.service.phase_ps = service->phase_ps;
+                receive.service.token_capacity_bytes = service->token_capacity_bytes;
+            }
             receive.ingress_bytes = handle->profile.rx_ingress_bytes;
             receive.drain_bps = handle->profile.rx_drain_bps;
             receive.rc_pps_per_qp = handle->profile.rx_pps_per_qp_rc;
@@ -605,10 +622,36 @@ rnic_cm_device* rnic_cm_create(
                 + keyValue("cq_depth", config->cq_depth) + " "
                 + keyValue("qpn", config->qpn) + " "
                 + keyValue("packetization", handle->packetized ? 1 : 0));
+        if (service != nullptr
+            && service->mode == RNIC_CM_RX_SERVICE_SERIALIZED_PACKET_BEATS) {
+            handle->note(0, "rx_service mode=serialized_packet_beats "
+                + keyValue("version", service->version) + " "
+                + keyValue("beat_bytes", service->beat_bytes) + " "
+                + keyValue("period_ps", service->period_ps) + " "
+                + keyValue("phase_ps", service->phase_ps) + " "
+                + keyValue("token_capacity_bytes", service->token_capacity_bytes)
+                + " ready=continuous");
+        }
         return handle.release();
     } catch (const std::exception&) {
         return nullptr;
     }
+}
+
+rnic_cm_device* rnic_cm_create(
+    const rnic_cm_profile* profile,
+    const rnic_cm_config* config) {
+    return createWithRxService(profile, config, nullptr);
+}
+
+rnic_cm_device* rnic_cm_create_with_rx_service(
+    const rnic_cm_profile* profile,
+    const rnic_cm_config* config,
+    const rnic_cm_rx_service_config* service) {
+    if (service == nullptr) {
+        return nullptr;
+    }
+    return createWithRxService(profile, config, service);
 }
 
 int rnic_cm_post(

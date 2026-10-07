@@ -12,6 +12,8 @@
 #include <utility>
 #include <vector>
 
+#include "fake_network.h"
+
 #include "simllm/rnic/host_memory.h"
 #include "simllm/rnic/rnic_device.h"
 #include "simllm/rnic/session_record.h"
@@ -784,6 +786,51 @@ std::vector<StudyRow> studyRows() {
     return rows;
 }
 
+// Post-specified lifecycle control from independent review: RX service owns
+// live host memory even when this endpoint has never posted an SQ entry.
+void testSerializedReceiveTeardown(TestRunner& test) {
+    RnicDeviceConfig config = hostMemoryConfig(4096);
+    config.network.enabled = true;
+    config.network.abi_version = simllm::rnic::kNetworkPortAbiVersionV2;
+    config.network.packetization.enabled = true;
+    config.network.packetization.wire_bps_per_qp = 100000000000ULL;
+    config.network.packetization.wire_bps_per_nic = 100000000000ULL;
+    auto& receive = config.network.receive;
+    receive.enabled = true;
+    receive.ingress_bytes = 16384;
+    receive.drain_bps = 96600000000ULL;
+    receive.service.mode = simllm::rnic::RnicRxServiceMode::SerializedPacketBeats;
+    receive.service.beat_bytes = 64;
+    receive.service.period_ps = 5000;
+    receive.service.phase_ps = 2500;
+    receive.service.token_capacity_bytes = 4224;
+    simllm::rnic::testing::FakeV2NetworkPort port(
+        simllm::rnic::testing::FakeV2NetworkConfig{});
+    RnicDeviceAttachments attachments;
+    attachments.network_port = &port;
+    RnicDevice device(config, attachments);
+    simllm::rnic::RnicRxPacket packet;
+    packet.qpn = kQpn;
+    packet.wire_bytes = 64;
+    packet.payload_bytes = 64;
+    packet.service = simllm::rnic::RnicTransportService::Unreliable;
+    device.onReceivedPacket(packet, 2500);
+    test.check(device.occupiedSqEntries() == 0 && device.hasPendingPhysicalWork(),
+               "accepted serialized RX owns physical work with an empty SQ");
+    test.expectThrowAs<std::logic_error>(
+        [&] { device.teardownHostMemory(2500); },
+        "host memory teardown rejects pending serialized receive service");
+    test.check(device.nextEventTime() == 12500,
+               "rejected teardown retains live receive event access");
+    device.progress(12500);
+    test.check(!device.hasPendingPhysicalWork()
+                   && device.rxPipeline()->ingressOccupancyBytes() == 0,
+               "receive service drains before host memory teardown");
+    device.teardownHostMemory(12500);
+    test.expectThrowAs<std::logic_error>(
+        [&] { device.progress(12500); }, "successful teardown closes host-memory access");
+}
+
 void printStudyCsv(const std::vector<StudyRow>& rows) {
     std::cout
         << "page_size_bytes,batch_size,qpc_fetches,qpc_icm_transactions,"
@@ -840,6 +887,7 @@ int main(int argc, char** argv) {
         testRequestRejectionAtomicity(test);
         testDisabledIdentityMode(test);
         testEffectiveHardwareRecord(test);
+        testSerializedReceiveTeardown(test);
         if (test.failures() != 0) {
             std::cerr << test.failures() << " host-memory checks failed\n";
             return 1;
