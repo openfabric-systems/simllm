@@ -15,6 +15,8 @@ from simllm.backends.htsim_nvlink import (
     NvlinkAlignedOptions,
     NvlinkCandidateProfile,
     NvlinkFlitPacket,
+    NvlinkOperation,
+    NvlinkPacketDirection,
     NvlinkTransfer,
 )
 from simllm.backends.nvlink_runtime import NvlinkCausalEngine, NvlinkPhysicalBinding
@@ -127,7 +129,10 @@ class GpuPeerPacketSession:
                 session_id, port.config.port_id, tx_start_boundary="link_grant",
                 link_ids=tuple(link.link_id for link in binding.fabric.links
                                if link.endpoint_a in port.physical_port_ids or link.endpoint_b in port.physical_port_ids),
-                packet_kinds=("data",),
+                # A retained peer read adds a zero-payload request before its
+                # payload-bearing response.  The common ledger keeps that
+                # control geometry separate from logical data coverage.
+                packet_kinds=("data", "other_control"),
             )) for rank, port in by_rank.items()
         }
         self._engine = NvlinkCausalEngine(profile, options or NvlinkAlignedOptions(),
@@ -145,6 +150,7 @@ class GpuPeerPacketSession:
         self._packet_events: list[PacketAttemptEvent] = []
         self._drained_result: NvlinkAlignedDomainResult | None = None
         self._visibility_callbacks: dict[str, Callable[[], None]] = {}
+        self._read_request_visibility_callbacks: dict[str, Callable[[], None]] = {}
 
     @property
     def now_ps(self) -> int:
@@ -153,6 +159,12 @@ class GpuPeerPacketSession:
     @property
     def has_pending_physical_work(self) -> bool:
         return self._engine.has_pending_physical_work
+
+    @property
+    def captures_critical_path(self) -> bool:
+        """Whether packet-only causal reporting owns this session."""
+
+        return self._critical_phases is not None
 
     @property
     def extents(self) -> tuple[GpuPacketExtent, ...]:
@@ -227,8 +239,15 @@ class GpuPeerPacketSession:
     def port_snapshots(self, *, final: bool = False) -> tuple[tuple[int, PacketPortSnapshot], ...]:
         return tuple((rank, ledger.snapshot(final=final)) for rank, ledger in self._ledgers.items())
 
-    def _prepare(self, execution_id: str, operation_id: str, transfers: Sequence[NvlinkTransfer],
-                 *, ready_at_ps: int | None = None):
+    def _prepare(
+        self,
+        execution_id: str,
+        operation_id: str,
+        transfers: Sequence[NvlinkTransfer],
+        *,
+        ready_at_ps: int | None = None,
+        externally_gated_reads: Sequence[str] = (),
+    ):
         for name, value in (("execution_id", execution_id), ("operation_id", operation_id)):
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{name} must be nonblank")
@@ -236,7 +255,11 @@ class GpuPeerPacketSession:
         ready = self.now_ps if ready_at_ps is None else ready_at_ps
         if type(ready) is not int or not self.now_ps <= ready < 2**64:
             raise ValueError("GPU packet preflight needs a nonrewinding uint64 ready boundary")
-        packets = self._engine.preview(transfers, include_switch=self.binding.fabric.switched)
+        packets = self._engine.preview(
+            transfers,
+            include_switch=self.binding.fabric.switched,
+            externally_gated_reads=externally_gated_reads,
+        )
         for transfer in transfers:
             if transfer.released_at_ps != ready:
                 raise ValueError("GPU packet phase must be admitted at its current ready boundary")
@@ -257,9 +280,16 @@ class GpuPeerPacketSession:
             admissions.append((transfer.source, admission))
             offset = 0
             for packet, token in zip(children, attempt_tokens, strict=True):
+                packet_kind = (
+                    "other_control"
+                    if (packet.direction is NvlinkPacketDirection.REQUEST
+                        and packet.payload_bytes == 0)
+                    else "data"
+                )
                 descriptors[packet.packet_id] = PacketAttemptEvent(
                     token, extent_token, extent_token, "packet_tx_started", packet.released_at_ps,
-                    0, packet.sequence, 0, offset, packet.payload_bytes, packet.wire_bytes, "data",
+                    0, packet.sequence, 0, offset, packet.payload_bytes, packet.wire_bytes,
+                    packet_kind,
                 )
                 offset += packet.payload_bytes
             extents.append(extent)
@@ -271,11 +301,60 @@ class GpuPeerPacketSession:
         self._prepare(execution_id, operation_id, transfers, ready_at_ps=ready_at_ps)
 
     def admit(self, execution_id: str, operation_id: str, transfers: Sequence[NvlinkTransfer]) -> tuple[GpuPacketExtent, ...]:
-        transfers, extents, descriptors, admissions, next_token = self._prepare(execution_id, operation_id, transfers)
+        """Admit an ordinary retained peer-write phase."""
+
+        return self._admit(execution_id, operation_id, transfers, {})
+
+    def admit_read(
+        self,
+        execution_id: str,
+        operation_id: str,
+        transfer: NvlinkTransfer,
+        on_request_visible: Callable[[], None],
+    ) -> tuple[GpuPacketExtent, ...]:
+        """Admit one externally serviced peer read.
+
+        The callback runs exactly once after the zero-payload read request is
+        visible at the buffer owner.  It may schedule owner-side memory work on
+        this calendar and must eventually call :meth:`release_read_response`.
+        Keeping that work outside the packet engine lets the GPU resource model
+        own memory contention while transport remains the sole packet clock.
+        """
+
+        if not isinstance(transfer, NvlinkTransfer) or transfer.operation is not NvlinkOperation.PEER_READ:
+            raise ValueError("retained read admission requires one peer-read transfer")
+        if not callable(on_request_visible):
+            raise TypeError("retained read admission requires a request-visibility callback")
+        return self._admit(
+            execution_id,
+            operation_id,
+            (transfer,),
+            {transfer.extent_id: on_request_visible},
+        )
+
+    def _admit(
+        self,
+        execution_id: str,
+        operation_id: str,
+        transfers: Sequence[NvlinkTransfer],
+        read_callbacks: dict[str, Callable[[], None]],
+    ) -> tuple[GpuPacketExtent, ...]:
+        gated_reads = tuple(read_callbacks)
+        transfers, extents, descriptors, admissions, next_token = self._prepare(
+            execution_id,
+            operation_id,
+            transfers,
+            externally_gated_reads=gated_reads,
+        )
         # No callbacks run during calendar admission. All projection records and
         # capability checks are valid before this sole mutable authority commits.
-        self._engine.admit(transfers, include_switch=self.binding.fabric.switched)
+        self._engine.admit(
+            transfers,
+            include_switch=self.binding.fabric.switched,
+            externally_gated_reads=gated_reads,
+        )
         self._drained_result = None
+        self._read_request_visibility_callbacks.update(read_callbacks)
         for rank, admission in admissions:
             self._ledgers[rank].admit(admission)
         self._next_token = next_token
@@ -291,6 +370,11 @@ class GpuPeerPacketSession:
             ))
         return extents
 
+    def release_read_response(self, extent_id: str) -> None:
+        """Release a gated response after its owner-side service completes."""
+
+        self._engine.release_read_response(extent_id)
+
     def _emit(self, extent: GpuPacketExtent, phase: EventPhase, at_ps: int) -> None:
         self._events.append(CompletionEvent(
             extent.execution_id, extent.operation_id, phase, at_ps,
@@ -303,6 +387,13 @@ class GpuPeerPacketSession:
         extent = self._extents[packet.extent_id]
         if kind == "consumer_visible":
             self._visible.add(packet.packet_id)
+            if packet.direction is NvlinkPacketDirection.REQUEST:
+                callback = self._read_request_visibility_callbacks.pop(packet.extent_id, None)
+                if callback is not None:
+                    # The packet engine has already committed request visibility
+                    # before notifying us.  The callback may enqueue GPU work,
+                    # but calendar re-entry remains prohibited by the engine.
+                    callback()
             if all(name in self._visible for name in extent.packet_ids):
                 self._emit(extent, EventPhase.COMPLETED, at_ps)
                 callback = self._visibility_callbacks.pop(packet.extent_id, None)
