@@ -821,6 +821,14 @@ results/replay traces are identical across the older vendor pin, upstream base
 and the optional-service checkpoint. This is component evidence with declared
 geometry; it does not replace measured CX5 fluid calibration. BACK-76 owns
 framework selection and request TTFT/TPOT propagation.
+The [atomic-successor study](../../examples/rnic_rx_atomic_successor_v1/RESULTS.md)
+qualifies earned-credit transfer only on actual same-timestamp admission and
+clears it over every positive empty interval. Native and facade controls
+preserve service-before-admission, strict later-clock eligibility, monotone
+off-grid timestamps, finite-horizon errors and original Fluid ABI/trace results.
+This is native receive-service component evidence; framework selection and
+request-level metrics remain BACK-76.
+
 
 The [live peer packet study](../../examples/local_peer_packet_runtime_v1/RESULTS.md) establishes the shared packet vocabulary and
 packet-derived local request timing. Its 136 exact timing checks have zero

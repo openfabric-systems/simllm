@@ -1,0 +1,53 @@
+{
+  "schema": "simllm-python-controller-wait-expectations-v1",
+  "scope": "Fresh full regression with independent external controller wait. No production, tests, selections, skip policy or native study changes.",
+  "behavior_commit": "09c19ddc840a50915a59a45e4a2c76935f255238",
+  "previous_capture_expectations_commit": "27ed37a6288269cf991b7bc308746fbc32b2331f",
+  "previous_capture_expectations_sha256": "d72a219076d569c4516ce37430bcbeb944342d7fbacf71b5dd44432030af1810",
+  "retained_002": {
+    "result_sha256": "7a5c2ebc94eba21dc00b291f342245f3e49cab06f6deb17f13a3ae0ae63570a5",
+    "actual_pytest_returncode": 0,
+    "actual_wrapper_returncode": 0,
+    "controller_self_reported_exit": 0,
+    "actual_controller_returncode": null,
+    "passed": 6994,
+    "skipped": 33,
+    "source_unchanged": true,
+    "verdict": "Actual outer exit requirement not proven; retained child outcome is positive, no complete frozen publication gate credit."
+  },
+  "new_output_namespace": "pytest_final_003",
+  "command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q",
+    "-p",
+    "no:cacheprovider",
+    "--basetemp=<fresh-bulk-test-directory>"
+  ],
+  "guards": {
+    "full_suite_seconds": 7200,
+    "termination_grace_seconds": 5,
+    "absolute_deadline_renewal": false,
+    "concurrent_full_suites": 1,
+    "existing_output_namespace": "Refuse"
+  },
+  "capture": {
+    "controller": "Same002 source snapshot, native child wait, wrapper wait and terminal handling, updated only fresh003 namespace and new expectation binding.",
+    "external_supervisor": "Own controller child; record actual wait returncode immediately after it exits in a separate atomic JSON file. Launch acknowledgement and controller self-declared code are not substituted for actual wait.",
+    "ownership": "Record UID, PID, PGID, SID, start ticks, exact argv and controller hash at launch. Terminate only owned group on guard or explicit signal.",
+    "terminal": "Require actual pytest, wrapper and controller wait codes zero, complete matching terminal summary, unchanged source bytes/HEAD and no guard or external signal.",
+    "provenance": "Preserve prior001/002 records and unqualified publication draft. Pin expectation Git blob, controller, child wrapper, supervisor, Python executable, command, logs and all terminal records."
+  },
+  "acceptance": [
+    "All original27ed requirements remain in force.",
+    "External actual controller wait agrees with internal terminal code and independent child/wrapper outcomes.",
+    "No public gate pass or authorized upstream publication until all records agree."
+  ],
+  "mutation_prohibition": [
+    "No source edits during full suite.",
+    "No prior files rewritten.",
+    "No behavior or score-band changes.",
+    "No native positive replay required."
+  ]
+}

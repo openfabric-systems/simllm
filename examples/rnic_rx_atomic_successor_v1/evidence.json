@@ -1,0 +1,176 @@
+{
+  "schema": "simllm-rnic-rx-atomic-successor-evidence-v1",
+  "expectations_commit": "dbb60ad3fc9f864a372188c143b44b282b22530c",
+  "expectations_sha256": "d505bdd1ba040d47bb7d6a8a56fff620cd480b529b8a24e3e0e3e4131c28be4b",
+  "base_commit": "e64e0fdf6afaf2e600ca5cf5ee9f3534f785954b",
+  "native_status": "PASS_COMPONENT_ONLY",
+  "native_result": {
+    "abi_field_offsets": 213,
+    "behavioral_relation_families": 2,
+    "behavioral_relation_instances": 5,
+    "component_exact_rows": 6,
+    "default_fluid_baseline_identity": {
+      "base": "e64e0fdf6afaf2e600ca5cf5ee9f3534f785954b",
+      "files": 25,
+      "verdict": "PASS"
+    },
+    "exact_oracle_rows": 14,
+    "fatal_control_families": 14,
+    "frontends": [
+      "facade",
+      "native"
+    ],
+    "mutants": [
+      {
+        "compiled": true,
+        "exit_code": 1,
+        "fixture": "exact_replacement",
+        "name": "eager_clear"
+      },
+      {
+        "compiled": true,
+        "exit_code": 1,
+        "fixture": "positive_off_grid_progress",
+        "name": "stale_candidate"
+      },
+      {
+        "compiled": true,
+        "exit_code": 1,
+        "fixture": "repeat_query_progress",
+        "name": "duplicate_tick"
+      },
+      {
+        "compiled": true,
+        "exit_code": 1,
+        "fixture": "invalid_wire_reject_only",
+        "name": "reject_activates_candidate"
+      },
+      {
+        "compiled": true,
+        "exit_code": 1,
+        "fixture": "already_queued",
+        "name": "tail_pack"
+      }
+    ],
+    "observations": 96,
+    "physics_bounds": "PASS",
+    "public_input_source_audit": "PASS",
+    "verdict": "PASS"
+  },
+  "source_sha256": {
+    "simllm/backends/rnic/src/rnic_rx_pipeline.cpp": "f74edd8e5a9d5c48f5a19790f2bb708fa8c24d82138c7d7e07777923eab470bb",
+    "simllm/backends/rnic/include/simllm/rnic/rnic_rx_pipeline.h": "7b77e49c271009cf2c4de7068db85372d584905f9eaf0db4393307739775696a",
+    "simllm/backends/rnic/tests/rnic_rx_serialized_test.cpp": "79e244ea1ef0e0f89402c92ec19f1fd85bcc9536f861efb1b3d0acf04abc19c2",
+    "simllm/backends/rnic/tools/rx_atomic_successor_probe.cpp": "4d273b0dd8d9c30a2ccd963c5082071d383c3bbfdada78de2dd8d84841968f0f",
+    "simllm/backends/rnic/CMakeLists.txt": "349e1cea5e76a11ae321e4374c5c38d21a948ae89836fe985b145d1588cd4faf"
+  },
+  "bulk_convention": "${SIMLLM_DATA_ROOT}/advanced_rx_atomic_model_runs_001",
+  "artifacts_sha256": {
+    "attempt_002/results.json": "91230a590e7060e3090c76bafd4826bce2bec3bdb457533235a2c4d57c5291a0",
+    "attempt_002/sources.json": "8291be3a0884f072aae18e875da51f0171e4a75f85ae84c931efa2dd81b7d789",
+    "attempt_002/commands.json": "1de81fc9fd6068db7174ab705dc0235d96d05a30c86e885b0d137bc9d906a747",
+    "attempt_002/ctest.log": "148bc0958ebc86e3a361d26f478b271fa1802dc11de8d350f47363ead5f02f34",
+    "attempt_002/rows.csv": "7e5e6e21c39f04f349622eb9d4e437b63201570b667fe973d49741187f9c1392",
+    "attempt_002/abi_layout_fixed.txt": "ab272dbc21e197ed9cdd0297763cd79317ff98594f2b7d15cf9bed281c1f5bac",
+    "attempt_002/abi_layout_baseline.txt": "ab272dbc21e197ed9cdd0297763cd79317ff98594f2b7d15cf9bed281c1f5bac",
+    "attempt_002/binary_pins.json": "fa666e07ab32bda5e7180bc1dd9855215f49a35be6d8dd16cfdf800890f106d2",
+    "attempt_002/trace_pins.json": "ddc95b3ae849d375db69e2224e4206a38d091052965786332cd96f8c57f55611",
+    "attempt_002/superseded_tail_pack.json": "daa480b46bdeaacb4c9ecb04b84aa176ba42d6ba39badb6f76ced7774a93c75f",
+    "old_serialized_001/study/results.json": "6fccf3f0c08dbd378836cd3d41f7f33889b9d3aa9a5367e544432c4dd2b07442",
+    "old_serialized_001/commands.json": "7c1ad969a05473128bfe97d732dd99a91665186063eabb73307c26e2b021a78b",
+    "final_provenance_001/collector_pins.json": "64794616ee9d75ef7b9bc90aa586981d17b37d877aa5192c45d7b3f8c6236a18",
+    "maintained_helper_control_001/result.json": "2e89262a4bcb0c9e2c70094a0757c4de78f469c6cfa6ff078f642cad7108ca3d",
+    "pytest_final_003/result.json": "d2644b5edf8e280f7d3c1a257946ebfca76b9203dc3603eb3fb487ec57e41028",
+    "pytest_final_003/independent_child_result.json": "fa7fda9c3ac52bb1821765099e4d66ecfa928f5b60ed7a04c333568319c1df16",
+    "pytest_final_003/wrapper_wait.json": "fb3557c7fadd858b4db35ce2a3cc73fb71bac45a2ee889ed53498c6eef23ddc1",
+    "pytest_final_003/pytest.log": "d3fad3258a4596055d5e933ef5a005b22f61774611c23056b4628f1764abe58b",
+    "pytest_final_003/sources_before.json": "5f75beb6350eecd9a841345b57c543d6c256ccf8d0e0d45b80917ff98ce0dcd4",
+    "pytest_final_003/sources_after.json": "5f75beb6350eecd9a841345b57c543d6c256ccf8d0e0d45b80917ff98ce0dcd4",
+    "pytest_launch_bindings_003.json": "02554e833d3249b182972334e55a05c77dce15d13f5f289ca4a663104a61788a",
+    "pytest_supervisor_003_launch.json": "bb8e81cc9eef4c29ba9bfa87aa68cb16546bea2e7d4464fae12fc17c54d8e9c5",
+    "pytest_supervisor_003_controller_wait.json": "cebabd4d711e7262f430cd338c1bccf571546229defea71c5b960c4c243427d7",
+    "pytest_supervisor_003_terminal.json": "73aa69021ca7ce454b77e3f4ff70c4bcd224f58cead62aefae0101ed97b97491",
+    "pytest_durable_controller_003.py": "b3bcc99911ae94bf34f84882d8da567d34671b0dd42f87b7a7c6c2c6edf0a249",
+    "pytest_child_capture_003.py": "2f69efbc79f4e963f50e62277cf1a4ab5320fa874a4dc9732285196af5bdfac7",
+    "pytest_controller_supervisor_003.py": "3b20e34b966ed5eb6996792d2ee2b3b5fbd8c45c3954a716294bee3627ed362d"
+  },
+  "preserved_incomplete_attempt": "attempt_001, inert tail-pack mutation receives no sensitivity credit",
+  "python_gate": {
+    "status": "PASS_FULL_PYTHON_GATE",
+    "qualified_attempt": "pytest_final_003",
+    "expectations_commit": "8ce7a36293f16d6110a8298247950aad8bdfed67",
+    "expectations_sha256": "b1670be14c18800824d2ef38c75b3083ff17312d61d7977aa63156c22534ebfa",
+    "passed": 6994,
+    "skipped": 33,
+    "pytest_seconds": 1894.4,
+    "actual_pytest_exit": 0,
+    "actual_wrapper_exit": 0,
+    "actual_controller_exit": 0,
+    "controller_exit_source": "Independent supervisor Popen wait, separate from controller self-report.",
+    "terminal_reason": "terminal",
+    "received_signals": [],
+    "source_files": 2765,
+    "source_head": "8ce7a36293f16d6110a8298247950aad8bdfed67",
+    "source_bytes_and_head_unchanged": true,
+    "independent_review": "ACCEPTED_FINAL_003"
+  },
+  "ruff_gate": {
+    "status": "PASS",
+    "command": "ruff check ."
+  },
+  "independent_review": {
+    "status": "ACCEPT_COMPONENT_SCOPE",
+    "source_and_lifecycle": "No production blocker; atomic carry, positive-empty expiry, strict later clock, idempotence and horizon behavior accepted.",
+    "verified_rows": {
+      "exact_observations": 28,
+      "component_observations": 12,
+      "unscored_fatal_observations": 56,
+      "relation_instances": 5
+    },
+    "verified_pin_records": {
+      "public_source": 5,
+      "public_artifacts_before_collector_append": 12,
+      "collector_files": 25,
+      "raw_evidence": 564,
+      "native_binaries": 413,
+      "tools": 15,
+      "runtime_libraries": 5
+    },
+    "scope": "No framework, request metric, downstream, physical or HACC closure."
+  },
+  "upstream_landing": {
+    "status": "PENDING"
+  },
+  "limitations": [
+    "Native component result only; framework selection and request metrics remain BACK-76.",
+    "Recorded native runs precede maintained runner provenance hardening; exact run helper pins remain separate.",
+    "Original downstream strict bands and failed evidence remain unchanged; downstream qualification requires exact reviewed main import."
+  ],
+  "helper_chronology": {
+    "qualified_run_helper_sha256": "a472f51ee7a0c94a9ed93ef9ddb2be28db4a3f9d8ac97483aac8281d31748766",
+    "maintained_helper_sha256": "6b72c29c3053053a475c95ce3cae60928e5f3e792d0c8f779e338264cb104dc7",
+    "native_positive_jobs_replayed_after_helper_hardening": false,
+    "timeout_cleanup_control": "PASS_OWNED_PARENT_AND_CHILD_TERMINATED",
+    "tool_and_library_sha_timing": "Post-run collector hashes of currently installed files, not fabricated execution-time pins. Original commands record tool versions.",
+    "controller_exit_sources": {
+      "attempt_001": "Retrospective record of observed outer tool-session exit1; all child raw exits retained.",
+      "attempt_002": "Retrospective record of observed outer tool-session exit0; all child raw exits retained.",
+      "old_serialized_001": "Original retained controller result exit0."
+    }
+  },
+  "preserved_python_attempts": {
+    "pytest_final_001": {
+      "publication_credit": false,
+      "pytest_summary": "6994 passed, 33 skipped",
+      "outer_tool_exit": 143,
+      "reason": "No native wrapper or controller terminal record; signal origin unknown."
+    },
+    "pytest_final_002": {
+      "publication_credit": false,
+      "actual_pytest_exit": 0,
+      "actual_wrapper_exit": 0,
+      "actual_controller_exit": null,
+      "reason": "Child suite passed; controller zero was self-reported without an independent actual wait."
+    }
+  }
+}

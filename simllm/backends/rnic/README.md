@@ -282,7 +282,12 @@ The selected serializer stores accepted packet lengths in FIFO order. At each
 configured clock it accrues exact rational rate credit, clamps it to token
 capacity, then debits at most one affordable packet-aligned beat. A tail cannot
 share a clock with the next packet. Service precedes same-clock arrivals, new
-arrivals wait for a later clock, and an empty queue clears unused credit. One
+arrivals wait for a later clock. Final debit and successful admission at the
+exact same timestamp preserve earned remainder across their zero-duration
+intermediate empty state. Any positive empty interval clears it, including an
+off-grid one-picosecond advance. An empty FIFO has zero live credit; a private
+same-time candidate is not work or an event and activates only after successful
+admission. Repeated queries and progress calls cannot debit twice. One
 selected occupancy drives capacity admission, drops, high-water and congestion
 notification. Sequence processing and packet-rate checks retain their existing
 arrival-time behavior.
@@ -384,3 +389,9 @@ ctest --test-dir build/rnic --output-on-failure
 
 When this directory is consumed with `add_subdirectory`, tests and validation
 tools default off. The link target is `simllm::rnic`.
+
+The [atomic-successor study](../../../examples/rnic_rx_atomic_successor_v1/RESULTS.md)
+qualifies this boundary with independent native/facade controls and five
+compiled semantic negatives, preserving the original Fluid ABI and trace
+results. This receive-service component result leaves framework selection and
+request-metric propagation in BACK-76.
