@@ -6,6 +6,16 @@ the flow-level work the GOAL emitter renders.
 
 ## Interface
 
+`compose_pipeline_graph(..., boundary_graphs=...)` accepts explicit typed
+boundary graphs in place of its default single forward tensor. It validates
+adjacent-stage membership, release identity, complete terminal frontiers and
+canonical collective plans, then preserves stage-local queues and causal
+frontiers. The dense vLLM producer declares two TP-sharded tensors and
+receiver gathers through this seam. TRAF-8 retains physical capture and
+packet-backed concurrent serving closure; VLLM-52 owns the declared PP
+adapter's calibration and attribution.
+
+
 `step_routed_moe_work` retains every selected expert row, including local
 assignments and several experts on one destination, together with the existing
 deduplicated dispatch/combine tables. The same immutable projection supplies

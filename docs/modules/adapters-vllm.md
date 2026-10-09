@@ -52,18 +52,14 @@ the three abstract methods (`_init_executor`, `collective_rpc`,
   length and rejects an early EOS or stop token and a
   prompt-plus-oracle length beyond `max_model_len`. The complete replay batch
   validates before the sink, record stream or virtual clock changes;
-  `execute_model` returns an already-completed `Future` when `non_block=True`
-  (`EngineCore.step()` always calls it that way and immediately reads
-  `.result()`); `sample_tokens` is served defensively (it raises if no
-  output is pending) but the engine never takes it in supported configs;
-- keeps `supports_async_scheduling()` False, which is what makes vLLM's
-  config post-init auto-disable async scheduling, and `supports_pp` False:
-  the PP > 1 batch-queue loop interleaves `execute_model` and
-  `sample_tokens` across in-flight steps, which needs a pending-output FIFO
-  the executor does not have yet (VLLM-10). The CLI dotted-path spelling
-  could never reach PP anyway: vLLM reads `supports_pp` off the string
-  before resolving it, so `--pipeline-parallel-size > 1` fails in
-  `EngineArgs` regardless;
+  PP1 returns an already-completed `Future` and retains its original timing
+  and output path. PP > 1 reserves work without advancing virtual time and
+  publishes the oldest pending output when the engine consumes its future;
+- keeps `supports_async_scheduling()` False and sets `supports_pp` True.
+  The synchronous batch queue has a bounded execute/sample FIFO. Empty
+  batches consume no sampling slot. Re-reading a future is idempotent,
+  out-of-order reads retire the preceding tickets first, and a failed
+  submission cannot turn into fabricated success;
 - refuses configurations the fabricated token would silently corrupt:
   speculative decoding raises at construction (every draft would be
   rejected, i.e. an unstated 0% acceptance rate) and structured output
@@ -322,6 +318,62 @@ costs one optional field, it does not fail the capture run.
 
 The v1 scheduler, KV-cache manager, block pool and prefix hashing are CPU-side
 bookkeeping in the scheduler process and run unmodified.
+
+## Dense pipeline execution
+
+`SimExecutor` runs dense eager Llama, Qwen2 and Qwen3 with PP > 1 using the
+pinned engine's real batch queue. Use the executor class in Python, or the
+adapter's API entry point, which resolves the class before vLLM checks PP:
+
+```python
+from vllm import LLM
+from simllm.adapters.vllm import SimExecutor
+
+llm = LLM(model="Qwen/Qwen3-8B", distributed_executor_backend=SimExecutor,
+          tensor_parallel_size=4, pipeline_parallel_size=2,
+          enforce_eager=True, async_scheduling=False,
+          num_gpu_blocks_override=8192)
+```
+
+```bash
+python -m simllm.adapters.vllm.serve --model Qwen/Qwen3-8B \
+    --tensor-parallel-size 4 --pipeline-parallel-size 2 \
+    --enforce-eager --no-async-scheduling --num-gpu-blocks-override 8192
+```
+
+The stage partition comes from vLLM's `get_pp_indices`, including an explicit
+`VLLM_PP_LAYER_PARTITION`. Each layer has one owner; only the final stage owns
+the LM-head term. Every eager boundary contains hidden states and residuals.
+Each TP lane sends its contiguous shard to the next stage's matching lane,
+then the receiver gathers both tensors across its TP group. The declared
+all-gather expansion carries `(TP-1)` times the tensor bytes and is refined
+against device captures under VLLM-52. Non-divisible element counts are
+rejected. A source-stage GPU fence preserves the worker's wait for its prior
+send before beginning the next batch.
+
+`PipelineRuntimeStepSink` uses the existing persistent `CoarseDeviceRuntime`.
+Its immutable outcomes join graph operations, completion events, stage rank
+and layer ownership, and parent `StepRecord` identity. The adapter advances
+its sole clock on FIFO retirement. Enqueue latency and resource wait are
+retained in `StepResult.step_latency_ps`; overlapping latencies must not be
+summed into a request decomposition. Paced mode sleeps only the new clock
+increment when several batches overlap.
+
+Use `configure(step_sink=PipelineRuntimeStepSink(...))` to select a runtime
+and endpoint map in an in-process driver. For example, `rank_map=(0,1,2,3,
+8,9,10,11)` places TP4 groups on two nodes of the coarse eight-slot profile.
+Unspecified placement uses consecutive endpoint IDs. The identity is a
+declared study topology; COMP-35 and VLLM-52 qualify MI210/xGMI/CX6 profiles.
+A legacy single-stage sink is rejected when PP is enabled.
+
+The [pipeline study](../../examples/vllm_pipeline_v1/RESULTS.md) exercises
+PP2/PP4, TP1/TP2, two link rates and a TP4 x PP2 smoke through the actual CPU
+vLLM engine. It also prefills a fixed cohort before opening a resident-KV
+decode window. Initialization TTFT is separate from scored decode timing;
+aggregated/disaggregated PD comparison belongs to a subsequent experiment.
+Generate-only, synchronous, text-only eager execution is explicit. Other
+architectures, LoRA, speculative/structured output, external KV transfer,
+DP/context/sequence parallelism and DBO fail at the PP boundary (VLLM-8).
 
 ## Status
 
@@ -770,6 +822,20 @@ A100.
 
 ### Precision
 
+- VLLM-52 (Precision; P1; L): qualify dense pipeline timing against physical
+  serving captures. Replace the declared pairwise receiver all-gather,
+  zero metadata/sampling transport cost, stage-fused compute and default
+  eight-slot coarse topology with observed algorithms, host service, final
+  stage sampling cost and explicit device placement. VLLM-12 owns native
+  capture, COMP-35 owns AMD peer/RCCL calibration and TRAF-54 owns collective
+  protocol fidelity. Add overlapping-request critical-path attribution to
+  the PP `StepResult`; current returned completions determine token times,
+  but do not publish per-request additive decompositions. Freeze matched
+  resident-KV decode shapes and compare stage boundaries, bytes, token
+  intervals and throughput with and without the refined terms. Target <=10%
+  median error in calibrated cells and <=15% on a separate holdout; preserve
+  the exact PP1 bypass and report fit error separately from mechanism tests.
+
 - VLLM-4 (Precision; P1; L) (remaining half): a paced-mode run whose TTFT/TPOT
   are compared with a real capture, a `vllm serve` run confirming the drain
   record lands under the `EngineCore` busy loop (source-verified only; the
@@ -1067,15 +1133,11 @@ A100.
   structured output are refused with explicit errors (fabricated tokens would
   silently model 0% draft acceptance or first-token grammar deaths); pooling
   models (`pooler_output`) and encoder/multimodal inputs are serviced with
-  empty or `None` answers rather than fabricated outputs.
+  empty or `None` answers rather than fabricated outputs. The dense PP path
+  explicitly rejects other architectures, LoRA, KV transfer, DP/context/sequence
+  parallelism, DBO and asynchronous scheduling. Extend each with captured
+  stage/tensor semantics and an exact disabled-path regression before enabling it.
 
 - VLLM-9 (Completeness; P2; M): render the accumulated `step_records` into a
   `simllm.core.GoalTrace` (the offline open-loop mode's second half; the
   records already carry phases, token counts and completions).
-
-- VLLM-10 (Completeness; P1; L): pipeline parallelism. Needs a pending-output
-  FIFO so the batch-queue loop's interleaved `execute_model`/`sample_tokens`
-  pairs map to the right steps, plus per-stage step accounting; until then
-  `supports_pp` stays False and vLLM rejects PP > 1 up front.
-  P1 since 2026-09-07: the pipeline-parallel traffic slice (TRAF-8) and
-  TRAF-88 need a framework producer of pipeline stage attribution.

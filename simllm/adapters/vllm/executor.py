@@ -78,9 +78,8 @@ Configurations the fabricated token would silently corrupt are refused
 loudly instead: speculative decoding (every draft would be rejected, i.e. a
 0% acceptance rate) raises at construction, structured output (the grammar
 rejects the fabricated id, killing every request at its first token) raises
-at the first step that schedules one, and pipeline parallelism is rejected
-via ``supports_pp = False`` until the batch-queue output FIFO exists
-(VLLM-8, VLLM-10 in docs/modules/adapters-vllm.md).
+at the first step that schedules one (VLLM-8). Dense eager pipeline
+parallelism uses a deferred output FIFO and declared per-stage work.
 
 Objects passed in code (a :class:`~simllm.compute.ComputeProvider`, a
 :class:`~simllm.compute.HostInitiationModel`, a step sink) go through
@@ -1551,14 +1550,8 @@ class SimExecutor(_ExecutorBase):
     """
 
     uses_ray = False
-    #: Pipeline parallelism is off until the batch-queue output FIFO exists
-    #: (VLLM-10): the PP > 1 engine loop interleaves execute_model and
-    #: sample_tokens across in-flight steps, which a single pending-output
-    #: slot serves wrongly and silently. Note the CLI dotted-path spelling
-    #: could never reach PP anyway: vLLM reads supports_pp off the *string*
-    #: before resolving it, so --pipeline-parallel-size > 1 fails in
-    #: EngineArgs regardless of this attribute.
-    supports_pp = False
+    #: PP uses a separate deferred FIFO; PP1 retains its immediate step path.
+    supports_pp = True
 
     def __init__(
         self,
@@ -1663,6 +1656,11 @@ class SimExecutor(_ExecutorBase):
             for rank in range(self.world_size)
         ]
         self._pending_output: Any | None = None
+        self._pipeline = None
+        if self.pp_size > 1:
+            from simllm.adapters.vllm.pipeline import PipelineController
+
+            self._pipeline = PipelineController(self)
         self._rank_handlers = self._build_rank_handlers()
         #: RPCs answered once for the whole world rather than per rank
         self._list_handlers = {
@@ -1707,10 +1705,8 @@ class SimExecutor(_ExecutorBase):
         vLLM v0.26.0 moved batch-queue depth onto ``VllmConfig`` (breaking
         item 4 of the M2 API review): an executor can no longer force
         ``batch_queue=None``, and returning False here is what makes the
-        config post-init auto-disable async scheduling. Together with
-        ``supports_pp = False`` this keeps the step loop on the simple
-        ``EngineCore.step()`` path, where every ``execute_model`` output is
-        consumed inline.
+        config post-init auto-disable async scheduling. PP1 uses the simple
+        step loop; PP > 1 uses the synchronous batch queue.
         """
         return False
 
@@ -1852,10 +1848,10 @@ class SimExecutor(_ExecutorBase):
         Answered as a list handler on purpose: a per-rank handler would
         simulate (and record) the same step once per rank.
         """
-        return [self._run_step(scheduler_output)] + [None] * (self.world_size - 1)
+        return [self.execute_model(scheduler_output)] + [None] * (self.world_size - 1)
 
     def _rpc_sample_tokens(self, grammar_output: Any = None) -> list[Any]:
-        return [self._take_pending_output()] + [None] * (self.world_size - 1)
+        return [self.sample_tokens(grammar_output)] + [None] * (self.world_size - 1)
 
     def execute_model(self, scheduler_output: Any, non_block: bool = False) -> Any:
         """Simulate one step and fabricate its ``ModelRunnerOutput``.
@@ -1864,6 +1860,8 @@ class SimExecutor(_ExecutorBase):
         then immediately calls ``.result()``, so an already-completed future
         is both sufficient and honest: the simulated work is done inline.
         """
+        if getattr(self, "_pipeline", None) is not None:
+            return self._pipeline.execute(scheduler_output, non_block)
         output = self._run_step(scheduler_output)
         return _completed_future(output) if non_block else output
 
@@ -1876,11 +1874,11 @@ class SimExecutor(_ExecutorBase):
     def sample_tokens(self, grammar_output: Any = None, non_block: bool = False) -> Any:
         """Return the output stashed by :meth:`execute_model`, exactly once.
 
-        With ``supports_pp = False`` and structured output refused, the
-        engine never takes this path today (it reads the non-None return of
-        ``execute_model`` directly); it is served defensively so a changed
-        engine loop fails loudly here instead of silently dropping a step.
+        PP consumes the oldest unsampled ticket. PP1 keeps its existing
+        immediate output slot, which the ordinary step loop reads directly.
         """
+        if getattr(self, "_pipeline", None) is not None:
+            return self._pipeline.sample(non_block)
         output = self._take_pending_output()
         return _completed_future(output) if non_block else output
 
@@ -2030,6 +2028,8 @@ class SimExecutor(_ExecutorBase):
 
     def shutdown(self) -> None:
         """Nothing to flush: every record is durable when its step completes."""
+        if getattr(self, "_pipeline", None) is not None:
+            self._pipeline.close()
         path = self.config.step_records_path
         if path and self.step_records:
             logger.info(

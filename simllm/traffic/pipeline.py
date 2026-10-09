@@ -130,6 +130,8 @@ def compose_pipeline_graph(
     pipeline_width: int,
     pp_stages: Sequence[int | Sequence[int]],
     stage_graphs: Sequence[ExecutionGraph],
+    *,
+    boundary_graphs: Sequence[ExecutionGraph] | None = None,
 ) -> ExecutionGraph:
     """Join complete stage graphs with causal forward activation transfers.
 
@@ -159,12 +161,16 @@ def compose_pipeline_graph(
         if pipeline_width > 1:
             _stage_terminals(graph)
     if pipeline_width == 1:
+        if boundary_graphs:
+            raise ValueError("a single-stage pipeline has no boundaries")
         return graphs[0]
     for graph in graphs:
         if graph.collective_plans and graph.collective_plans != (
             plan_execution_graph_collectives(replace(graph, collective_plans=())).collective_plans
         ):
             raise ValueError("PP composition requires canonical traffic-owned stage plans")
+    if boundary_graphs is not None:
+        return _compose_boundaries(record, stages, graphs, tuple(boundary_graphs))
     if not activations:
         if any(graph.operations for graph in graphs):
             raise ValueError("a zero-token pipeline must have empty stage graphs")
@@ -221,6 +227,57 @@ def compose_pipeline_graph(
     )
     validate_execution_graph(graph)
     return plan_execution_graph_collectives(graph)
+
+
+def _compose_boundaries(record, stages, graphs, boundaries):
+    """Join producer-declared boundary graphs without inventing their traffic."""
+    if len(boundaries) != len(stages) - 1:
+        raise ValueError("one boundary graph is required between adjacent stages")
+    pieces = []
+    for index, stage_graph in enumerate(graphs):
+        pieces.append((f"pp-stage-{index}", stage_graph))
+        if index == len(boundaries):
+            continue
+        boundary = boundaries[index]
+        validate_execution_graph(boundary)
+        if boundary.collective_plans and boundary.collective_plans != (
+            plan_execution_graph_collectives(replace(boundary, collective_plans=())).collective_plans
+        ):
+            raise ValueError("PP composition requires canonical traffic-owned boundary plans")
+        if (boundary.step_index != record.step_index
+                or boundary.released_at_ps != record.virtual_time_ps):
+            raise ValueError("boundary graph step and release must agree with the StepRecord")
+        allowed = set(stages[index]) | set(stages[index + 1])
+        if any(not set(operation_participant_ranks(op)) <= allowed
+               for op in boundary.operations):
+            raise ValueError("boundary graph contains ranks outside its adjacent stages")
+        if record.total_new_tokens and not boundary.operations:
+            raise ValueError("a nonempty pipeline step requires boundary work")
+        _stage_terminals(boundary)
+        pieces.append((f"pp-boundary-{index}", boundary))
+    execution_id = graphs[0].execution_id
+    operations = []
+    frontier = ()
+    for prefix, piece in pieces:
+        ids = {op.operation_id: f"{execution_id}:{prefix}:{op.operation_id}"
+               for op in piece.operations}
+        targets = {edge.operation_id for edge in effective_dependency_edges(piece)}
+        for op in piece.operations:
+            dependencies = tuple(ids[name] for name in op.depends_on)
+            if op.operation_id not in targets:
+                dependencies += frontier
+            operations.append(replace(
+                op, operation_id=ids[op.operation_id],
+                logical_queue=f"{prefix}:{op.logical_queue}",
+                depends_on=dependencies,
+                participant_local_depends_on=tuple(
+                    ids[name] for name in op.participant_local_depends_on),
+            ))
+        frontier = tuple(ids[name] for name in _stage_terminals(piece))
+    combined = ExecutionGraph(execution_id, record.step_index, record.virtual_time_ps,
+                              tuple(operations), frontier)
+    validate_execution_graph(combined)
+    return plan_execution_graph_collectives(combined)
 
 
 class PipelineStepLowerer:
