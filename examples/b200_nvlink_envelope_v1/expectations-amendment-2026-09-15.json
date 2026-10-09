@@ -1,0 +1,31 @@
+{
+  "schema": "simllm-b200-nvlink-envelope-amendment-v1",
+  "task": "TRAF-31",
+  "amends": "expectations.json",
+  "date": "2026-09-15",
+  "trigger": {
+    "capture": "stage 1 attempt 3, two-GPU B200 slice, driver 595.84, NCCL 2.27.3 via PyTorch 2.8.0",
+    "retained_as": "measurements/stage1_eager_attempt3_result.json",
+    "observed_floors_us": {"p1_copy_8b_to_1mib": [43, 100], "p2_exchange_8b_to_1mib": [117, 184], "p3_all_reduce_w2_8b_to_1mib": [68, 79]},
+    "large_payload_rows": {"p1_1gib_bytes_per_second": 767332021875, "p2_1gib_bytes_per_second": 659982493576, "p3_all_gather_1gib_algbw_bytes_per_second": 899290916236},
+    "e5_fit": "slope non-positive, bandwidth not finite",
+    "cause": "eager per-iteration Python dispatch and a host round trip per point-to-point iteration bound the issue rate below 1 MiB"
+  },
+  "timing_method_of_record": {
+    "rows_at_or_below_bytes": 1048576,
+    "method": "CUDA graph replay of the timed iterations captured once after warmup on a side stream",
+    "eager_rows": "retained beside the graph rows as an unscored control at every payload",
+    "timed_iterations_at_or_below_1mib": 200,
+    "warmup_iterations": 5,
+    "p2_exchange": "captured send of the payload and 8-byte reply, no host token"
+  },
+  "cells_affected": {
+    "e2": "graph rows at or below 1 MiB, eager rows above; bands unchanged",
+    "e3": "graph rows at or below 1 MiB, eager rows above; bands unchanged",
+    "e4": "before error from graph rows, eager control reported beside it",
+    "e5": "graph rows; degenerate fit reported as a failed holdout, never a crash",
+    "e6": "graph rows for the window slope, eager rows for the asymptote",
+    "e1": "applies to both methods"
+  },
+  "unchanged": ["substrate", "stages", "caps", "budget", "payload set", "nameplate", "refit form", "holdouts", "new profile name", "closure rule"]
+}

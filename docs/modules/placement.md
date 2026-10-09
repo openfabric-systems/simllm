@@ -254,7 +254,12 @@ slots, and reproduces every live DGX cell identically with the bound fabric.
   rental is pending) and NIC affinity on switched boards (the join declares
   NICs absent and refuses a board exposing a GPU Direct RDMA NIC; the H200
   inventory shows one ConnectX virtual function per PCIe switch but NCCL's
-  dump carries no RDMA row). Preserve host and network
+  dump carries no RDMA row; the two B200 hosts of the
+  [B200 NVLink envelope study](../../examples/b200_nvlink_envelope_v1/RESULTS.md)
+  add the same negative from a third and fourth container, listing fourteen
+  and two InfiniBand class devices respectively while `ibv_devinfo` reports
+  none and NCCL falls back to the socket network, so the clause still has no
+  host that shows a usable RDMA path). Preserve host and network
   attachments as separate identities: HGX is the GPU baseboard/platform and
   DGX the complete server. The archived public A100 link table has an
   apparent `233` switch-port typo, so do not silently turn it into

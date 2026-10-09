@@ -1,0 +1,7247 @@
+{
+  "header": {
+    "amendment": "expectations-amendment-2026-09-15",
+    "backend": "nccl",
+    "cuda_version": "12.8",
+    "devices": [
+      {
+        "multi_processor_count": 148,
+        "name": "NVIDIA B200",
+        "ordinal": 0,
+        "pci_bus_id": "00000000:86:00.0",
+        "total_memory_bytes": 191495471104
+      },
+      {
+        "multi_processor_count": 148,
+        "name": "NVIDIA B200",
+        "ordinal": 1,
+        "pci_bus_id": "00000000:87:00.0",
+        "total_memory_bytes": 191495471104
+      }
+    ],
+    "driver_version": "595.91.07",
+    "finished_utc": "2026-09-15T23:50:34Z",
+    "frozen_payload_bytes": [
+      8,
+      1024,
+      2048,
+      4096,
+      8192,
+      16384,
+      32768,
+      65536,
+      131072,
+      262144,
+      524288,
+      1048576,
+      2097152,
+      4194304,
+      8388608,
+      16777216,
+      33554432,
+      67108864,
+      134217728,
+      268435456,
+      536870912,
+      1073741824
+    ],
+    "graph_capture_enabled": true,
+    "graph_capture_reason": "",
+    "graph_row_max_bytes": 1048576,
+    "hostname": "redacted",
+    "methods": [
+      "eager",
+      "graph"
+    ],
+    "mock": false,
+    "mock_payload_cap_bytes": null,
+    "mock_timed_iterations": null,
+    "nccl_version": [
+      2,
+      27,
+      3
+    ],
+    "payload_bytes": [
+      8,
+      1024,
+      2048,
+      4096,
+      8192,
+      16384,
+      32768,
+      65536,
+      131072,
+      262144,
+      524288,
+      1048576,
+      2097152,
+      4194304,
+      8388608,
+      16777216,
+      33554432,
+      67108864,
+      134217728,
+      268435456,
+      536870912,
+      1073741824
+    ],
+    "started_utc": "2026-09-15T23:50:12Z",
+    "timed_iterations": 20,
+    "timed_iterations_above_64mib": 10,
+    "timed_iterations_at_or_below_1mib": 200,
+    "torch_version": "2.8.0+cu128",
+    "untimed_replays": 1,
+    "visible_device_count": 2,
+    "warmup_iterations": 5,
+    "world_size": 2
+  },
+  "p1": [
+    {
+      "aggregate_bytes": 8,
+      "aggregate_bytes_per_second": 3430.2487474692907,
+      "bytes": 8,
+      "bytes_per_second": 3430.2487474692907,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        2332192.3828125005
+      ],
+      "requested_bytes": 8,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2332192.3828125005,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 8,
+      "aggregate_bytes_per_second": 1240202.3831656354,
+      "bytes": 8,
+      "bytes_per_second": 1240202.3831656354,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        6450.560092926025
+      ],
+      "requested_bytes": 8,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 6450.560092926025,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 8,
+      "aggregate_bytes_per_second": 232526.77412165687,
+      "bytes": 8,
+      "bytes_per_second": 232526.77412165687,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        34404.64019775391
+      ],
+      "requested_bytes": 8,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 34404.64019775391,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 8,
+      "aggregate_bytes_per_second": 1059793.5839000875,
+      "bytes": 8,
+      "bytes_per_second": 1059793.5839000875,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        7548.639774322509
+      ],
+      "requested_bytes": 8,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 7548.639774322509,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 16,
+      "aggregate_bytes_per_second": 6861.895082062906,
+      "bytes": 8,
+      "bytes_per_second": 3430.947541031453,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2331717.3767089844,
+        65752.15816497803
+      ],
+      "requested_bytes": 8,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2331717.3767089844,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 16,
+      "aggregate_bytes_per_second": 1199184.5907085654,
+      "bytes": 8,
+      "bytes_per_second": 599592.2953542827,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        13342.39959716797,
+        13341.280221939087
+      ],
+      "requested_bytes": 8,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 13342.39959716797,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 1024,
+      "aggregate_bytes_per_second": 439023.0665354612,
+      "bytes": 1024,
+      "bytes_per_second": 439023.0665354612,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        2332451.4770507812
+      ],
+      "requested_bytes": 1024,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2332451.4770507812,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 1024,
+      "aggregate_bytes_per_second": 146008719.14958027,
+      "bytes": 1024,
+      "bytes_per_second": 146008719.14958027,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        7013.2797956466675
+      ],
+      "requested_bytes": 1024,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 7013.2797956466675,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 1024,
+      "aggregate_bytes_per_second": 30483013.564441048,
+      "bytes": 1024,
+      "bytes_per_second": 30483013.564441048,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        33592.47922897339
+      ],
+      "requested_bytes": 1024,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 33592.47922897339,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 1024,
+      "aggregate_bytes_per_second": 161763224.8940245,
+      "bytes": 1024,
+      "bytes_per_second": 161763224.8940245,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        6330.239772796632
+      ],
+      "requested_bytes": 1024,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 6330.239772796632,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 2048,
+      "aggregate_bytes_per_second": 878334.46851685,
+      "bytes": 1024,
+      "bytes_per_second": 439167.234258425,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2331685.791015625,
+        64673.60019683838
+      ],
+      "requested_bytes": 1024,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2331685.791015625,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 2048,
+      "aggregate_bytes_per_second": 131580303.61122517,
+      "bytes": 1024,
+      "bytes_per_second": 65790151.80561259,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        15564.63956832886,
+        15564.479827880861
+      ],
+      "requested_bytes": 1024,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 15564.63956832886,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 2048,
+      "aggregate_bytes_per_second": 878197.2873307721,
+      "bytes": 2048,
+      "bytes_per_second": 878197.2873307721,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        2332050.018310547
+      ],
+      "requested_bytes": 2048,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2332050.018310547,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 2048,
+      "aggregate_bytes_per_second": 292872659.1573863,
+      "bytes": 2048,
+      "bytes_per_second": 292872659.1573863,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        6992.800235748291
+      ],
+      "requested_bytes": 2048,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 6992.800235748291,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 2048,
+      "aggregate_bytes_per_second": 62331387.17635505,
+      "bytes": 2048,
+      "bytes_per_second": 62331387.17635505,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        32856.64081573486
+      ],
+      "requested_bytes": 2048,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 32856.64081573486,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 2048,
+      "aggregate_bytes_per_second": 328205121.4334764,
+      "bytes": 2048,
+      "bytes_per_second": 328205121.4334764,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        6240.000128746033
+      ],
+      "requested_bytes": 2048,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 6240.000128746033,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 4096,
+      "aggregate_bytes_per_second": 1756915.7869776196,
+      "bytes": 2048,
+      "bytes_per_second": 878457.8934888098,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2331358.184814453,
+        65729.27951812744
+      ],
+      "requested_bytes": 2048,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2331358.184814453,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 4096,
+      "aggregate_bytes_per_second": 310894682.88229436,
+      "bytes": 2048,
+      "bytes_per_second": 155447341.44114718,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        13174.879550933836,
+        13169.440031051638
+      ],
+      "requested_bytes": 2048,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 13174.879550933836,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 4096,
+      "aggregate_bytes_per_second": 124247119.88571492,
+      "bytes": 4096,
+      "bytes_per_second": 124247119.88571492,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        32966.55893325806
+      ],
+      "requested_bytes": 4096,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 32966.55893325806,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 4096,
+      "aggregate_bytes_per_second": 599953123.8178402,
+      "bytes": 4096,
+      "bytes_per_second": 599953123.8178402,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        6827.2000551223755
+      ],
+      "requested_bytes": 4096,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 6827.2000551223755,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 4096,
+      "aggregate_bytes_per_second": 125822635.34220685,
+      "bytes": 4096,
+      "bytes_per_second": 125822635.34220685,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        32553.76100540161
+      ],
+      "requested_bytes": 4096,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 32553.76100540161,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 4096,
+      "aggregate_bytes_per_second": 654564030.4229809,
+      "bytes": 4096,
+      "bytes_per_second": 654564030.4229809,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        6257.60018825531
+      ],
+      "requested_bytes": 4096,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 6257.60018825531,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 8192,
+      "aggregate_bytes_per_second": 3513929.088616485,
+      "bytes": 4096,
+      "bytes_per_second": 1756964.5443082424,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2331293.487548828,
+        65660.1619720459
+      ],
+      "requested_bytes": 4096,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2331293.487548828,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 8192,
+      "aggregate_bytes_per_second": 642642845.2087721,
+      "bytes": 4096,
+      "bytes_per_second": 321321422.60438603,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        12747.360467910768,
+        12747.360467910768
+      ],
+      "requested_bytes": 4096,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 12747.360467910768,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 8192,
+      "aggregate_bytes_per_second": 251525366.32137546,
+      "bytes": 8192,
+      "bytes_per_second": 251525366.32137546,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        32569.279670715332
+      ],
+      "requested_bytes": 8192,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 32569.279670715332,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 8192,
+      "aggregate_bytes_per_second": 1265760220.529822,
+      "bytes": 8192,
+      "bytes_per_second": 1265760220.529822,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        6471.999883651733
+      ],
+      "requested_bytes": 8192,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 6471.999883651733,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 8192,
+      "aggregate_bytes_per_second": 247433832.85918957,
+      "bytes": 8192,
+      "bytes_per_second": 247433832.85918957,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        33107.84101486206
+      ],
+      "requested_bytes": 8192,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 33107.84101486206,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 8192,
+      "aggregate_bytes_per_second": 1314134622.490346,
+      "bytes": 8192,
+      "bytes_per_second": 1314134622.490346,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        6233.760118484498
+      ],
+      "requested_bytes": 8192,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 6233.760118484498,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 16384,
+      "aggregate_bytes_per_second": 7026805.423380438,
+      "bytes": 8192,
+      "bytes_per_second": 3513402.711690219,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2331642.7612304688,
+        64893.59855651856
+      ],
+      "requested_bytes": 8192,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2331642.7612304688,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 16384,
+      "aggregate_bytes_per_second": 1301093967.3803868,
+      "bytes": 8192,
+      "bytes_per_second": 650546983.6901934,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        12592.480182647705,
+        12591.999769210814
+      ],
+      "requested_bytes": 8192,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 12592.480182647705,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 16384,
+      "aggregate_bytes_per_second": 508493931.44277525,
+      "bytes": 16384,
+      "bytes_per_second": 508493931.44277525,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        32220.640182495117
+      ],
+      "requested_bytes": 16384,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 32220.640182495117,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 16384,
+      "aggregate_bytes_per_second": 2634829037.172,
+      "bytes": 16384,
+      "bytes_per_second": 2634829037.172,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        6218.240261077882
+      ],
+      "requested_bytes": 16384,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 6218.240261077882,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 16384,
+      "aggregate_bytes_per_second": 496143249.1406773,
+      "bytes": 16384,
+      "bytes_per_second": 496143249.1406773,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        33022.72081375122
+      ],
+      "requested_bytes": 16384,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 33022.72081375122,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 16384,
+      "aggregate_bytes_per_second": 2545743783.1626215,
+      "bytes": 16384,
+      "bytes_per_second": 2545743783.1626215,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        6435.840129852295
+      ],
+      "requested_bytes": 16384,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 6435.840129852295,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 32768,
+      "aggregate_bytes_per_second": 14055394.370534433,
+      "bytes": 16384,
+      "bytes_per_second": 7027697.1852672165,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2331346.893310547,
+        64691.83921813965
+      ],
+      "requested_bytes": 16384,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2331346.893310547,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 32768,
+      "aggregate_bytes_per_second": 2626583823.510722,
+      "bytes": 16384,
+      "bytes_per_second": 1313291911.755361,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        12473.280429840088,
+        12475.520372390749
+      ],
+      "requested_bytes": 16384,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 12475.520372390749,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 32768,
+      "aggregate_bytes_per_second": 1021777645.484915,
+      "bytes": 32768,
+      "bytes_per_second": 1021777645.484915,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        32069.599628448486
+      ],
+      "requested_bytes": 32768,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 32069.599628448486,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 32768,
+      "aggregate_bytes_per_second": 5141981865.696128,
+      "bytes": 32768,
+      "bytes_per_second": 5141981865.696128,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        6372.640132904053
+      ],
+      "requested_bytes": 32768,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 6372.640132904053,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 32768,
+      "aggregate_bytes_per_second": 1011827692.2651058,
+      "bytes": 32768,
+      "bytes_per_second": 1011827692.2651058,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        32384.960651397705
+      ],
+      "requested_bytes": 32768,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 32384.960651397705,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 32768,
+      "aggregate_bytes_per_second": 4978365406.327215,
+      "bytes": 32768,
+      "bytes_per_second": 4978365406.327215,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        6582.080125808717
+      ],
+      "requested_bytes": 32768,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 6582.080125808717,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 65536,
+      "aggregate_bytes_per_second": 28107210.657131303,
+      "bytes": 32768,
+      "bytes_per_second": 14053605.328565652,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2331643.6767578125,
+        65316.638946533196
+      ],
+      "requested_bytes": 32768,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2331643.6767578125,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 65536,
+      "aggregate_bytes_per_second": 5253572261.278912,
+      "bytes": 32768,
+      "bytes_per_second": 2626786130.639456,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        12474.559545516968,
+        12472.159862518312
+      ],
+      "requested_bytes": 32768,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 12474.559545516968,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 65536,
+      "aggregate_bytes_per_second": 2004678934.556959,
+      "bytes": 65536,
+      "bytes_per_second": 2004678934.556959,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        32691.519260406498
+      ],
+      "requested_bytes": 65536,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 32691.519260406498,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 65536,
+      "aggregate_bytes_per_second": 10502025190.99252,
+      "bytes": 65536,
+      "bytes_per_second": 10502025190.99252,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        6240.320205688477
+      ],
+      "requested_bytes": 65536,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 6240.320205688477,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 65536,
+      "aggregate_bytes_per_second": 1936826117.194233,
+      "bytes": 65536,
+      "bytes_per_second": 1936826117.194233,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        33836.801052093506
+      ],
+      "requested_bytes": 65536,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 33836.801052093506,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 65536,
+      "aggregate_bytes_per_second": 10251532634.781988,
+      "bytes": 65536,
+      "bytes_per_second": 10251532634.781988,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        6392.800211906433
+      ],
+      "requested_bytes": 65536,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 6392.800211906433,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 131072,
+      "aggregate_bytes_per_second": 56218736.87251411,
+      "bytes": 65536,
+      "bytes_per_second": 28109368.436257053,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2331464.6911621094,
+        64418.87855529785
+      ],
+      "requested_bytes": 65536,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2331464.6911621094,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 131072,
+      "aggregate_bytes_per_second": 10453379303.402536,
+      "bytes": 65536,
+      "bytes_per_second": 5226689651.701268,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        12538.72036933899,
+        12536.319494247437
+      ],
+      "requested_bytes": 65536,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 12538.72036933899,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 131072,
+      "aggregate_bytes_per_second": 3990666504.220371,
+      "bytes": 131072,
+      "bytes_per_second": 3990666504.220371,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        32844.63882446289
+      ],
+      "requested_bytes": 131072,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 32844.63882446289,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 131072,
+      "aggregate_bytes_per_second": 20999204498.117638,
+      "bytes": 131072,
+      "bytes_per_second": 20999204498.117638,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        6241.76025390625
+      ],
+      "requested_bytes": 131072,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 6241.76025390625,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 131072,
+      "aggregate_bytes_per_second": 3915458149.967548,
+      "bytes": 131072,
+      "bytes_per_second": 3915458149.967548,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        33475.520610809326
+      ],
+      "requested_bytes": 131072,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 33475.520610809326,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 131072,
+      "aggregate_bytes_per_second": 17986212152.383728,
+      "bytes": 131072,
+      "bytes_per_second": 17986212152.383728,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        7287.359833717346
+      ],
+      "requested_bytes": 131072,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 7287.359833717346,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 262144,
+      "aggregate_bytes_per_second": 112414747.25203395,
+      "bytes": 131072,
+      "bytes_per_second": 56207373.626016974,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2331936.03515625,
+        64078.72200012208
+      ],
+      "requested_bytes": 131072,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2331936.03515625,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 262144,
+      "aggregate_bytes_per_second": 20007082519.21715,
+      "bytes": 131072,
+      "bytes_per_second": 10003541259.608576,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        13102.560043334961,
+        13102.400302886963
+      ],
+      "requested_bytes": 131072,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 13102.560043334961,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 262144,
+      "aggregate_bytes_per_second": 8074157416.249951,
+      "bytes": 262144,
+      "bytes_per_second": 8074157416.249951,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        32467.041015625004
+      ],
+      "requested_bytes": 262144,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 32467.041015625004,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 262144,
+      "aggregate_bytes_per_second": 41418713536.91071,
+      "bytes": 262144,
+      "bytes_per_second": 41418713536.91071,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        6329.119801521301
+      ],
+      "requested_bytes": 262144,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 6329.119801521301,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 262144,
+      "aggregate_bytes_per_second": 8083519167.339428,
+      "bytes": 262144,
+      "bytes_per_second": 8083519167.339428,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        32429.440021514896
+      ],
+      "requested_bytes": 262144,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 32429.440021514896,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 262144,
+      "aggregate_bytes_per_second": 40102800966.87031,
+      "bytes": 262144,
+      "bytes_per_second": 40102800966.87031,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        6536.800265312196
+      ],
+      "requested_bytes": 262144,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 6536.800265312196,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 524288,
+      "aggregate_bytes_per_second": 224817211.07938534,
+      "bytes": 262144,
+      "bytes_per_second": 112408605.53969267,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2332063.446044922,
+        64100.16059875489
+      ],
+      "requested_bytes": 262144,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2332063.446044922,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 524288,
+      "aggregate_bytes_per_second": 39825473464.48978,
+      "bytes": 262144,
+      "bytes_per_second": 19912736732.24489,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        13164.639472961426,
+        13161.920309066772
+      ],
+      "requested_bytes": 262144,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 13164.639472961426,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 524288,
+      "aggregate_bytes_per_second": 16243895902.119854,
+      "bytes": 524288,
+      "bytes_per_second": 16243895902.119854,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        32276.0009765625
+      ],
+      "requested_bytes": 524288,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 32276.0009765625,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 524288,
+      "aggregate_bytes_per_second": 84065776112.23026,
+      "bytes": 524288,
+      "bytes_per_second": 84065776112.23026,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        6236.640214920044
+      ],
+      "requested_bytes": 524288,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 6236.640214920044,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 524288,
+      "aggregate_bytes_per_second": 15957224174.438261,
+      "bytes": 524288,
+      "bytes_per_second": 15957224174.438261,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        32855.83972930909
+      ],
+      "requested_bytes": 524288,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 32855.83972930909,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 524288,
+      "aggregate_bytes_per_second": 82185047284.00725,
+      "bytes": 524288,
+      "bytes_per_second": 82185047284.00725,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        6379.35996055603
+      ],
+      "requested_bytes": 524288,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 6379.35996055603,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 1048576,
+      "aggregate_bytes_per_second": 449666727.3860966,
+      "bytes": 524288,
+      "bytes_per_second": 224833363.6930483,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2331895.9045410156,
+        65330.71994781495
+      ],
+      "requested_bytes": 524288,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2331895.9045410156,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 1048576,
+      "aggregate_bytes_per_second": 80270443762.44289,
+      "bytes": 524288,
+      "bytes_per_second": 40135221881.22144,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        13063.039779663086,
+        13059.999942779541
+      ],
+      "requested_bytes": 524288,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 13063.039779663086,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 1048576,
+      "aggregate_bytes_per_second": 32450150927.78929,
+      "bytes": 1048576,
+      "bytes_per_second": 32450150927.78929,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        32313.439846038815
+      ],
+      "requested_bytes": 1048576,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 32313.439846038815,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 1048576,
+      "aggregate_bytes_per_second": 160540887524.88577,
+      "bytes": 1048576,
+      "bytes_per_second": 160540887524.88577,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        6531.519889831543
+      ],
+      "requested_bytes": 1048576,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 6531.519889831543,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 1048576,
+      "aggregate_bytes_per_second": 32230396908.25969,
+      "bytes": 1048576,
+      "bytes_per_second": 32230396908.25969,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        32533.76007080078
+      ],
+      "requested_bytes": 1048576,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 32533.76007080078,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 1048576,
+      "aggregate_bytes_per_second": 167204995837.1795,
+      "bytes": 1048576,
+      "bytes_per_second": 167204995837.1795,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        6271.200180053711
+      ],
+      "requested_bytes": 1048576,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 6271.200180053711,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 2097152,
+      "aggregate_bytes_per_second": 899372354.9783754,
+      "bytes": 1048576,
+      "bytes_per_second": 449686177.4891877,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2331795.0439453125,
+        65791.2015914917
+      ],
+      "requested_bytes": 1048576,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2331795.0439453125,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 2097152,
+      "aggregate_bytes_per_second": 160154446941.94452,
+      "bytes": 1048576,
+      "bytes_per_second": 80077223470.97226,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        13094.240427017214,
+        13094.55990791321
+      ],
+      "requested_bytes": 1048576,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 13094.55990791321,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 2097152,
+      "aggregate_bytes_per_second": 62266981706.75807,
+      "bytes": 2097152,
+      "bytes_per_second": 62266981706.75807,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        33680.00090122223
+      ],
+      "requested_bytes": 2097152,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 33680.00090122223,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 2097152,
+      "aggregate_bytes_per_second": 298569482882.23346,
+      "bytes": 2097152,
+      "bytes_per_second": 298569482882.23346,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        7023.9998400211325
+      ],
+      "requested_bytes": 2097152,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 7023.9998400211325,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 2097152,
+      "aggregate_bytes_per_second": 62459852765.07965,
+      "bytes": 2097152,
+      "bytes_per_second": 62459852765.07965,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        33575.999736785896
+      ],
+      "requested_bytes": 2097152,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 33575.999736785896,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 2097152,
+      "aggregate_bytes_per_second": 296542977807.61194,
+      "bytes": 2097152,
+      "bytes_per_second": 296542977807.61194,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        7072.000205516815
+      ],
+      "requested_bytes": 2097152,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 7072.000205516815,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 4194304,
+      "aggregate_bytes_per_second": 1798491618.45686,
+      "bytes": 2097152,
+      "bytes_per_second": 899245809.22843,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2332123.1842041016,
+        75115.1978969574
+      ],
+      "requested_bytes": 2097152,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2332123.1842041016,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 4194304,
+      "aggregate_bytes_per_second": 455032123372.12494,
+      "bytes": 2097152,
+      "bytes_per_second": 227516061686.06247,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        7499.200105667114,
+        9217.599779367447
+      ],
+      "requested_bytes": 2097152,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 9217.599779367447,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 4194304,
+      "aggregate_bytes_per_second": 127937530350.09637,
+      "bytes": 4194304,
+      "bytes_per_second": 127937530350.09637,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        32784.00003910065
+      ],
+      "requested_bytes": 4194304,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 32784.00003910065,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 4194304,
+      "aggregate_bytes_per_second": 426597234071.4566,
+      "bytes": 4194304,
+      "bytes_per_second": 426597234071.4566,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        9831.999987363815
+      ],
+      "requested_bytes": 4194304,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 9831.999987363815,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 4194304,
+      "aggregate_bytes_per_second": 118296032956.82402,
+      "bytes": 4194304,
+      "bytes_per_second": 118296032956.82402,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        35455.99877834321
+      ],
+      "requested_bytes": 4194304,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 35455.99877834321,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 4194304,
+      "aggregate_bytes_per_second": 426666651575.1023,
+      "bytes": 4194304,
+      "bytes_per_second": 426666651575.1023,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        9830.400347709656
+      ],
+      "requested_bytes": 4194304,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 9830.400347709656,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 8388608,
+      "aggregate_bytes_per_second": 3597200356.79139,
+      "bytes": 4194304,
+      "bytes_per_second": 1798600178.395695,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2331982.421875,
+        69344.00200843811
+      ],
+      "requested_bytes": 4194304,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2331982.421875,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 8388608,
+      "aggregate_bytes_per_second": 644484307668.7996,
+      "bytes": 4194304,
+      "bytes_per_second": 322242153834.3998,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        11201.5999853611,
+        13016.000390052794
+      ],
+      "requested_bytes": 4194304,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 13016.000390052794,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 8388608,
+      "aggregate_bytes_per_second": 245959850113.38403,
+      "bytes": 8388608,
+      "bytes_per_second": 245959850113.38403,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        34105.59892654419
+      ],
+      "requested_bytes": 8388608,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 34105.59892654419,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 8388608,
+      "aggregate_bytes_per_second": 537731270956.60767,
+      "bytes": 8388608,
+      "bytes_per_second": 537731270956.60767,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        15600.000321865084
+      ],
+      "requested_bytes": 8388608,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 15600.000321865084,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 8388608,
+      "aggregate_bytes_per_second": 233079048984.9486,
+      "bytes": 8388608,
+      "bytes_per_second": 233079048984.9486,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        35990.39912223816
+      ],
+      "requested_bytes": 8388608,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 35990.39912223816,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 8388608,
+      "aggregate_bytes_per_second": 541955778851.3251,
+      "bytes": 8388608,
+      "bytes_per_second": 541955778851.3251,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        15478.39939594269
+      ],
+      "requested_bytes": 8388608,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 15478.39939594269,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 16777216,
+      "aggregate_bytes_per_second": 7194420720.471575,
+      "bytes": 8388608,
+      "bytes_per_second": 3597210360.2357874,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2331975.9368896484,
+        69124.79996681213
+      ],
+      "requested_bytes": 8388608,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2331975.9368896484,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 16777216,
+      "aggregate_bytes_per_second": 950916847971.4692,
+      "bytes": 8388608,
+      "bytes_per_second": 475458423985.7346,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        15507.200360298155,
+        17643.199861049652
+      ],
+      "requested_bytes": 8388608,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 17643.199861049652,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 16777216,
+      "aggregate_bytes_per_second": 424989259892.2681,
+      "bytes": 16777216,
+      "bytes_per_second": 424989259892.2681,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        39476.799964904785
+      ],
+      "requested_bytes": 16777216,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 39476.799964904785,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 16777216,
+      "aggregate_bytes_per_second": 607166161230.1179,
+      "bytes": 16777216,
+      "bytes_per_second": 607166161230.1179,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        27632.001042366028
+      ],
+      "requested_bytes": 16777216,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 27632.001042366028,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 16777216,
+      "aggregate_bytes_per_second": 420254101963.53894,
+      "bytes": 16777216,
+      "bytes_per_second": 420254101963.53894,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        39921.599626541145
+      ],
+      "requested_bytes": 16777216,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 39921.599626541145,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 16777216,
+      "aggregate_bytes_per_second": 605763174418.0707,
+      "bytes": 16777216,
+      "bytes_per_second": 605763174418.0707,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        27695.99854946137
+      ],
+      "requested_bytes": 16777216,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 27695.99854946137,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 33554432,
+      "aggregate_bytes_per_second": 14388830849.039188,
+      "bytes": 16777216,
+      "bytes_per_second": 7194415424.519594,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2331977.653503418,
+        72825.59871673584
+      ],
+      "requested_bytes": 16777216,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2331977.653503418,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 33554432,
+      "aggregate_bytes_per_second": 1106501388401.9932,
+      "bytes": 16777216,
+      "bytes_per_second": 553250694200.9966,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        28848.00136089325,
+        30324.798822402958
+      ],
+      "requested_bytes": 16777216,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 30324.798822402958,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 33554432,
+      "aggregate_bytes_per_second": 556185239212.344,
+      "bytes": 33554432,
+      "bytes_per_second": 556185239212.344,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        60329.598188400276
+      ],
+      "requested_bytes": 33554432,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 60329.598188400276,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 33554432,
+      "aggregate_bytes_per_second": 655851899694.5673,
+      "bytes": 33554432,
+      "bytes_per_second": 655851899694.5673,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        51161.59915924072
+      ],
+      "requested_bytes": 33554432,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 51161.59915924072,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 33554432,
+      "aggregate_bytes_per_second": 539224506514.2885,
+      "bytes": 33554432,
+      "bytes_per_second": 539224506514.2885,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        62227.20146179199
+      ],
+      "requested_bytes": 33554432,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 62227.20146179199,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 33554432,
+      "aggregate_bytes_per_second": 654174297544.1205,
+      "bytes": 33554432,
+      "bytes_per_second": 654174297544.1205,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        51292.80090332032
+      ],
+      "requested_bytes": 33554432,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 51292.80090332032,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 67108864,
+      "aggregate_bytes_per_second": 28780109811.212692,
+      "bytes": 33554432,
+      "bytes_per_second": 14390054905.606346,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2331779.2892456055,
+        67924.79753494263
+      ],
+      "requested_bytes": 33554432,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2331779.2892456055,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 67108864,
+      "aggregate_bytes_per_second": 1236674126007.8928,
+      "bytes": 33554432,
+      "bytes_per_second": 618337063003.9464,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        52516.80016517639,
+        54265.60044288635
+      ],
+      "requested_bytes": 33554432,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 54265.60044288635,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 67108864,
+      "aggregate_bytes_per_second": 638305274039.6444,
+      "bytes": 67108864,
+      "bytes_per_second": 638305274039.6444,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        105136.0011100769
+      ],
+      "requested_bytes": 67108864,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 105136.0011100769,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 67108864,
+      "aggregate_bytes_per_second": 707565030813.9437,
+      "bytes": 67108864,
+      "bytes_per_second": 707565030813.9437,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        94844.80023384094
+      ],
+      "requested_bytes": 67108864,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 94844.80023384094,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 67108864,
+      "aggregate_bytes_per_second": 646510906186.0424,
+      "bytes": 67108864,
+      "bytes_per_second": 646510906186.0424,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        103801.59616470337
+      ],
+      "requested_bytes": 67108864,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 103801.59616470337,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 67108864,
+      "aggregate_bytes_per_second": 708222143900.1487,
+      "bytes": 67108864,
+      "bytes_per_second": 708222143900.1487,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        94756.79993629456
+      ],
+      "requested_bytes": 67108864,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 94756.79993629456,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 134217728,
+      "aggregate_bytes_per_second": 57573099732.80761,
+      "bytes": 67108864,
+      "bytes_per_second": 28786549866.403805,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2331257.6293945317,
+        108052.80208587646
+      ],
+      "requested_bytes": 67108864,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2331257.6293945317,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 134217728,
+      "aggregate_bytes_per_second": 1376625963753.0332,
+      "bytes": 67108864,
+      "bytes_per_second": 688312981876.5166,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        95713.59753608704,
+        97497.60031700134
+      ],
+      "requested_bytes": 67108864,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 97497.60031700134,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 134217728,
+      "aggregate_bytes_per_second": 699983957902.3706,
+      "bytes": 134217728,
+      "bytes_per_second": 699983957902.3706,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        191744.00568008423
+      ],
+      "requested_bytes": 134217728,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 191744.00568008423,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 134217728,
+      "aggregate_bytes_per_second": 741711416620.585,
+      "bytes": 134217728,
+      "bytes_per_second": 741711416620.585,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        180956.80475234985
+      ],
+      "requested_bytes": 134217728,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 180956.80475234985,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 134217728,
+      "aggregate_bytes_per_second": 703600635048.2909,
+      "bytes": 134217728,
+      "bytes_per_second": 703600635048.2909,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        190758.39519500732
+      ],
+      "requested_bytes": 134217728,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 190758.39519500732,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 134217728,
+      "aggregate_bytes_per_second": 740493631446.8539,
+      "bytes": 134217728,
+      "bytes_per_second": 740493631446.8539,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        181254.39882278442
+      ],
+      "requested_bytes": 134217728,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 181254.39882278442,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 268435456,
+      "aggregate_bytes_per_second": 114656420418.17508,
+      "bytes": 134217728,
+      "bytes_per_second": 57328210209.08754,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2341216.0873413086,
+        197235.20278930664
+      ],
+      "requested_bytes": 134217728,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2341216.0873413086,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 268435456,
+      "aggregate_bytes_per_second": 1444443918671.3782,
+      "bytes": 134217728,
+      "bytes_per_second": 722221959335.6891,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        183459.19847488403,
+        185839.99872207642
+      ],
+      "requested_bytes": 134217728,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 185839.99872207642,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 268435456,
+      "aggregate_bytes_per_second": 733808730833.8151,
+      "bytes": 268435456,
+      "bytes_per_second": 733808730833.8151,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        365811.2049102783
+      ],
+      "requested_bytes": 268435456,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 365811.2049102783,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 268435456,
+      "aggregate_bytes_per_second": 761748946255.7448,
+      "bytes": 268435456,
+      "bytes_per_second": 761748946255.7448,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        352393.60332489014
+      ],
+      "requested_bytes": 268435456,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 352393.60332489014,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 268435456,
+      "aggregate_bytes_per_second": 739032308588.1377,
+      "bytes": 268435456,
+      "bytes_per_second": 739032308588.1377,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        363225.6031036377
+      ],
+      "requested_bytes": 268435456,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 363225.6031036377,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 268435456,
+      "aggregate_bytes_per_second": 761582979909.3488,
+      "bytes": 268435456,
+      "bytes_per_second": 761582979909.3488,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        352470.39794921875
+      ],
+      "requested_bytes": 268435456,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 352470.39794921875,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 536870912,
+      "aggregate_bytes_per_second": 229260525264.76526,
+      "bytes": 268435456,
+      "bytes_per_second": 114630262632.38263,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2341750.3356933594,
+        369158.411026001
+      ],
+      "requested_bytes": 268435456,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2341750.3356933594,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 536870912,
+      "aggregate_bytes_per_second": 1503159695401.029,
+      "bytes": 268435456,
+      "bytes_per_second": 751579847700.5145,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        354809.5941543579,
+        357161.5934371948
+      ],
+      "requested_bytes": 268435456,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 357161.5934371948,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 536870912,
+      "aggregate_bytes_per_second": 758182572346.6261,
+      "bytes": 536870912,
+      "bytes_per_second": 758182572346.6261,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        708102.4169921875
+      ],
+      "requested_bytes": 536870912,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 708102.4169921875,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 536870912,
+      "aggregate_bytes_per_second": 772645099380.2739,
+      "bytes": 536870912,
+      "bytes_per_second": 772645099380.2739,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        694848.0129241943
+      ],
+      "requested_bytes": 536870912,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 694848.0129241943,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 536870912,
+      "aggregate_bytes_per_second": 757668989567.7498,
+      "bytes": 536870912,
+      "bytes_per_second": 757668989567.7498,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        708582.4012756348
+      ],
+      "requested_bytes": 536870912,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 708582.4012756348,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 536870912,
+      "aggregate_bytes_per_second": 772079763096.2465,
+      "bytes": 536870912,
+      "bytes_per_second": 772079763096.2465,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        695356.7981719971
+      ],
+      "requested_bytes": 536870912,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 695356.7981719971,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 1073741824,
+      "aggregate_bytes_per_second": 458421431976.3547,
+      "bytes": 536870912,
+      "bytes_per_second": 229210715988.17734,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2342259.216308594,
+        711817.5983428955
+      ],
+      "requested_bytes": 536870912,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2342259.216308594,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 1073741824,
+      "aggregate_bytes_per_second": 1527743087898.3901,
+      "bytes": 536870912,
+      "bytes_per_second": 763871543949.1951,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        699945.592880249,
+        702828.7887573243
+      ],
+      "requested_bytes": 536870912,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 702828.7887573243,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 1073741824,
+      "aggregate_bytes_per_second": 769159552794.8073,
+      "bytes": 1073741824,
+      "bytes_per_second": 769159552794.8073,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        1395993.6141967773
+      ],
+      "requested_bytes": 1073741824,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 1395993.6141967773,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 1073741824,
+      "aggregate_bytes_per_second": 777374369582.1469,
+      "bytes": 1073741824,
+      "bytes_per_second": 777374369582.1469,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ]
+      ],
+      "per_stream_time_ns": [
+        1381241.6076660156
+      ],
+      "requested_bytes": 1073741824,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 1381241.6076660156,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 1073741824,
+      "aggregate_bytes_per_second": 769687100423.6486,
+      "bytes": 1073741824,
+      "bytes_per_second": 769687100423.6486,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        1395036.792755127
+      ],
+      "requested_bytes": 1073741824,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 1395036.792755127,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 1073741824,
+      "aggregate_bytes_per_second": 777532900018.8351,
+      "bytes": 1073741824,
+      "bytes_per_second": 777532900018.8351,
+      "cell": "unidirectional",
+      "direction": "1->0",
+      "dst": 0,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        1380959.9876403809
+      ],
+      "requested_bytes": 1073741824,
+      "src": 1,
+      "status": "measured",
+      "time_ns": 1380959.9876403809,
+      "timed_on": "source"
+    },
+    {
+      "aggregate_bytes": 2147483648,
+      "aggregate_bytes_per_second": 916753952096.2628,
+      "bytes": 1073741824,
+      "bytes_per_second": 458376976048.1314,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        2342486.3815307617,
+        1400527.9541015625
+      ],
+      "requested_bytes": 1073741824,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 2342486.3815307617,
+      "timed_on": "destination"
+    },
+    {
+      "aggregate_bytes": 2147483648,
+      "aggregate_bytes_per_second": 1545194127936.0513,
+      "bytes": 1073741824,
+      "bytes_per_second": 772597063968.0256,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "pairs": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "per_stream_time_ns": [
+        1386969.5663452148,
+        1389782.428741455
+      ],
+      "requested_bytes": 1073741824,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 1389782.428741455,
+      "timed_on": "source"
+    }
+  ],
+  "p2": [
+    {
+      "bytes": 8,
+      "bytes_per_second": 219331.9175928158,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 8,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 36474.39956665039,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 16,
+      "aggregate_bytes_per_second": 512040.62822367495,
+      "bytes": 8,
+      "bytes_per_second": 256020.31411183748,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 8,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 31247.520446777344
+    },
+    {
+      "bytes": 8,
+      "bytes_per_second": 338347.6316323636,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 8,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 23644.320964813236,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 16,
+      "aggregate_bytes_per_second": 1630629.7268879805,
+      "bytes": 8,
+      "bytes_per_second": 815314.8634439902,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 8,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 9812.16013431549
+    },
+    {
+      "bytes": 1024,
+      "bytes_per_second": 28174222.954589956,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 1024,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 36345.27921676636,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 2048,
+      "aggregate_bytes_per_second": 64868591.71027458,
+      "bytes": 1024,
+      "bytes_per_second": 32434295.85513729,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 1024,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 31571.51937484741
+    },
+    {
+      "bytes": 1024,
+      "bytes_per_second": 43082556.79818833,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 1024,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 23768.320083618168,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 2048,
+      "aggregate_bytes_per_second": 204872120.11464813,
+      "bytes": 1024,
+      "bytes_per_second": 102436060.05732407,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 1024,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 9996.479749679567
+    },
+    {
+      "bytes": 2048,
+      "bytes_per_second": 57844739.711504065,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 2048,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 35405.120849609375,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 4096,
+      "aggregate_bytes_per_second": 133257679.29596594,
+      "bytes": 2048,
+      "bytes_per_second": 66628839.64798297,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 2048,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 30737.440586090088
+    },
+    {
+      "bytes": 2048,
+      "bytes_per_second": 85809863.39445226,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 2048,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 23866.72019958496,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 4096,
+      "aggregate_bytes_per_second": 403772770.1843267,
+      "bytes": 2048,
+      "bytes_per_second": 201886385.09216335,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 2048,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 10144.319534301758
+    },
+    {
+      "bytes": 4096,
+      "bytes_per_second": 114006299.35388859,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 4096,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 35927.839279174805,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 8192,
+      "aggregate_bytes_per_second": 260998110.92443404,
+      "bytes": 4096,
+      "bytes_per_second": 130499055.46221702,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 4096,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 31387.200355529792
+    },
+    {
+      "bytes": 4096,
+      "bytes_per_second": 170712194.0807729,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 4096,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 23993.599414825443,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 8192,
+      "aggregate_bytes_per_second": 779881499.9623221,
+      "bytes": 4096,
+      "bytes_per_second": 389940749.98116106,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 4096,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 10504.159927368164
+    },
+    {
+      "bytes": 8192,
+      "bytes_per_second": 227001673.97171456,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 8192,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 36087.83960342407,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 16384,
+      "aggregate_bytes_per_second": 547183918.1485614,
+      "bytes": 8192,
+      "bytes_per_second": 273591959.0742807,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 8192,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 29942.400455474854
+    },
+    {
+      "bytes": 8192,
+      "bytes_per_second": 334282208.7933235,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 8192,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 24506.239891052246,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 16384,
+      "aggregate_bytes_per_second": 1446266370.0310786,
+      "bytes": 8192,
+      "bytes_per_second": 723133185.0155393,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 8192,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 11328.480243682861
+    },
+    {
+      "bytes": 16384,
+      "bytes_per_second": 459075479.1837212,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 16384,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 35689.120292663574,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 32768,
+      "aggregate_bytes_per_second": 1079422961.976754,
+      "bytes": 16384,
+      "bytes_per_second": 539711480.988377,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 16384,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 30356.96029663086
+    },
+    {
+      "bytes": 16384,
+      "bytes_per_second": 636321264.0888546,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 16384,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 25748.000144958496,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 32768,
+      "aggregate_bytes_per_second": 2594539899.321118,
+      "bytes": 16384,
+      "bytes_per_second": 1297269949.660559,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 16384,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 12629.599571228027
+    },
+    {
+      "bytes": 32768,
+      "bytes_per_second": 925653904.4485404,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 32768,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 35399.839878082275,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 65536,
+      "aggregate_bytes_per_second": 2134122540.342544,
+      "bytes": 32768,
+      "bytes_per_second": 1067061270.171272,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 32768,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 30708.639621734623
+    },
+    {
+      "bytes": 32768,
+      "bytes_per_second": 1276211241.9800925,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 32768,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 25676.000118255615,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 65536,
+      "aggregate_bytes_per_second": 5240800325.264605,
+      "bytes": 32768,
+      "bytes_per_second": 2620400162.6323023,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 32768,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 12504.960298538208
+    },
+    {
+      "bytes": 65536,
+      "bytes_per_second": 1838535681.2208483,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 65536,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 35645.75910568237,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 131072,
+      "aggregate_bytes_per_second": 4209293055.180167,
+      "bytes": 65536,
+      "bytes_per_second": 2104646527.5900836,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 65536,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 31138.720512390133
+    },
+    {
+      "bytes": 65536,
+      "bytes_per_second": 2423224225.7974143,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 65536,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 27044.95906829834,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 131072,
+      "aggregate_bytes_per_second": 9470957869.162964,
+      "bytes": 65536,
+      "bytes_per_second": 4735478934.581482,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 65536,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 13839.360475540163
+    },
+    {
+      "bytes": 131072,
+      "bytes_per_second": 3681863895.425054,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 131072,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 35599.36046600342,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 262144,
+      "aggregate_bytes_per_second": 8374137644.507564,
+      "bytes": 131072,
+      "bytes_per_second": 4187068822.253782,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 131072,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 31303.999423980717
+    },
+    {
+      "bytes": 131072,
+      "bytes_per_second": 4828907523.274912,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 131072,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 27143.199443817142,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 262144,
+      "aggregate_bytes_per_second": 18756510701.137226,
+      "bytes": 131072,
+      "bytes_per_second": 9378255350.568613,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 131072,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 13976.160287857056
+    },
+    {
+      "bytes": 262144,
+      "bytes_per_second": 7281519009.967595,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 262144,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 36001.27935409546,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 524288,
+      "aggregate_bytes_per_second": 16816348342.59013,
+      "bytes": 262144,
+      "bytes_per_second": 8408174171.295065,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 262144,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 31177.279949188232
+    },
+    {
+      "bytes": 262144,
+      "bytes_per_second": 9399885251.449614,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 262144,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 27888.000011444095,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 524288,
+      "aggregate_bytes_per_second": 34260383256.555984,
+      "bytes": 262144,
+      "bytes_per_second": 17130191628.277992,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 262144,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 15303.039550781252
+    },
+    {
+      "bytes": 524288,
+      "bytes_per_second": 13520271742.611177,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 524288,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 38777.9188156128,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 1048576,
+      "aggregate_bytes_per_second": 23532369941.979782,
+      "bytes": 524288,
+      "bytes_per_second": 11766184970.989891,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 524288,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 44558.87794494629
+    },
+    {
+      "bytes": 524288,
+      "bytes_per_second": 17848855441.481373,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 524288,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 29373.760223388672,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 1048576,
+      "aggregate_bytes_per_second": 58363688337.80301,
+      "bytes": 524288,
+      "bytes_per_second": 29181844168.901505,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 524288,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 17966.239452362064
+    },
+    {
+      "bytes": 1048576,
+      "bytes_per_second": 27857905604.909527,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 1048576,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 37640.159130096436,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 2097152,
+      "aggregate_bytes_per_second": 66592491739.68091,
+      "bytes": 1048576,
+      "bytes_per_second": 33296245869.840454,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "requested_bytes": 1048576,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 31492.319107055668
+    },
+    {
+      "bytes": 1048576,
+      "bytes_per_second": 29498795485.994225,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 1048576,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 35546.40054702759,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 2097152,
+      "aggregate_bytes_per_second": 95246125385.15204,
+      "bytes": 1048576,
+      "bytes_per_second": 47623062692.57602,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "requested_bytes": 1048576,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 22018.239498138428
+    },
+    {
+      "bytes": 2097152,
+      "bytes_per_second": 54606505404.265686,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 2097152,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 38404.80148792267,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 4194304,
+      "aggregate_bytes_per_second": 118585003351.28514,
+      "bytes": 2097152,
+      "bytes_per_second": 59292501675.64257,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 2097152,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 35369.59886550903
+    },
+    {
+      "bytes": 2097152,
+      "bytes_per_second": 62988129052.38903,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 2097152,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 33294.400572776794,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 4194304,
+      "aggregate_bytes_per_second": 167269013468.79266,
+      "bytes": 2097152,
+      "bytes_per_second": 83634506734.39633,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 2097152,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 25075.20020008087
+    },
+    {
+      "bytes": 4194304,
+      "bytes_per_second": 109354242393.53465,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 4194304,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 38355.20148277283,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 8388608,
+      "aggregate_bytes_per_second": 226670128929.7191,
+      "bytes": 4194304,
+      "bytes_per_second": 113335064464.85954,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 4194304,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 37007.999420166016
+    },
+    {
+      "bytes": 4194304,
+      "bytes_per_second": 107273400794.66966,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 4194304,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 39099.198579788215,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 8388608,
+      "aggregate_bytes_per_second": 266028007263.31042,
+      "bytes": 4194304,
+      "bytes_per_second": 133014003631.65521,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 4194304,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 31532.80019760132
+    },
+    {
+      "bytes": 8388608,
+      "bytes_per_second": 165500169930.95883,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 8388608,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 50686.40112876892,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 16777216,
+      "aggregate_bytes_per_second": 346293267467.36536,
+      "bytes": 8388608,
+      "bytes_per_second": 173146633733.68268,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 8388608,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 48447.99935817719
+    },
+    {
+      "bytes": 8388608,
+      "bytes_per_second": 165176896833.98804,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 8388608,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 50785.6011390686,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 16777216,
+      "aggregate_bytes_per_second": 326720241219.50494,
+      "bytes": 8388608,
+      "bytes_per_second": 163360120609.75247,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 8388608,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 51350.40283203125
+    },
+    {
+      "bytes": 16777216,
+      "bytes_per_second": 244406226505.31238,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 16777216,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 68644.79780197144,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 33554432,
+      "aggregate_bytes_per_second": 509735042266.7787,
+      "bytes": 16777216,
+      "bytes_per_second": 254867521133.38934,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 16777216,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 65827.20279693604
+    },
+    {
+      "bytes": 16777216,
+      "bytes_per_second": 245143315519.4443,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 16777216,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 68438.39883804323,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 33554432,
+      "aggregate_bytes_per_second": 452958385694.0869,
+      "bytes": 16777216,
+      "bytes_per_second": 226479192847.04346,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 16777216,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 74078.39894294737
+    },
+    {
+      "bytes": 33554432,
+      "bytes_per_second": 349141280095.06415,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 33554432,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 96105.59940338136,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 67108864,
+      "aggregate_bytes_per_second": 522609127721.53357,
+      "bytes": 33554432,
+      "bytes_per_second": 261304563860.76678,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 33554432,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 128411.19766235352
+    },
+    {
+      "bytes": 33554432,
+      "bytes_per_second": 339889468395.38586,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 33554432,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 98721.59957885742,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 67108864,
+      "aggregate_bytes_per_second": 527990538301.205,
+      "bytes": 33554432,
+      "bytes_per_second": 263995269150.6025,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 33554432,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 127102.39887237547
+    },
+    {
+      "bytes": 67108864,
+      "bytes_per_second": 440411593337.46814,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 67108864,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 152377.60543823242,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 134217728,
+      "aggregate_bytes_per_second": 591955973720.4039,
+      "bytes": 67108864,
+      "bytes_per_second": 295977986860.20197,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 67108864,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 226735.9972000122
+    },
+    {
+      "bytes": 67108864,
+      "bytes_per_second": 442516481998.2456,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 67108864,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 151652.80103683475,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 134217728,
+      "aggregate_bytes_per_second": 592708795149.9602,
+      "bytes": 67108864,
+      "bytes_per_second": 296354397574.9801,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 67108864,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 226448.01139831543
+    },
+    {
+      "bytes": 134217728,
+      "bytes_per_second": 480623354259.7917,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 134217728,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 279257.607460022,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 268435456,
+      "aggregate_bytes_per_second": 634870567277.7477,
+      "bytes": 134217728,
+      "bytes_per_second": 317435283638.87384,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 134217728,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 422819.185256958
+    },
+    {
+      "bytes": 134217728,
+      "bytes_per_second": 483181350924.62524,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 134217728,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 277779.1976928711,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 268435456,
+      "aggregate_bytes_per_second": 640503311311.1584,
+      "bytes": 134217728,
+      "bytes_per_second": 320251655655.5792,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 134217728,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 419100.8090972901
+    },
+    {
+      "bytes": 268435456,
+      "bytes_per_second": 518785629062.12726,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 268435456,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 517430.4008483887,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 536870912,
+      "aggregate_bytes_per_second": 665815364483.3062,
+      "bytes": 268435456,
+      "bytes_per_second": 332907682241.6531,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 268435456,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 806336.0214233398
+    },
+    {
+      "bytes": 268435456,
+      "bytes_per_second": 520220546381.14886,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 268435456,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 516003.17955017096,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 536870912,
+      "aggregate_bytes_per_second": 667630314132.3479,
+      "bytes": 268435456,
+      "bytes_per_second": 333815157066.17395,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 268435456,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 804144.0010070801
+    },
+    {
+      "bytes": 536870912,
+      "bytes_per_second": 661985032659.2385,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 536870912,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 811001.5869140626,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 1073741824,
+      "aggregate_bytes_per_second": 1234390351386.9915,
+      "bytes": 536870912,
+      "bytes_per_second": 617195175693.4957,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 536870912,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 869855.9761047364
+    },
+    {
+      "bytes": 536870912,
+      "bytes_per_second": 659232972707.4504,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 536870912,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 814387.2261047364,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 1073741824,
+      "aggregate_bytes_per_second": 1244342113145.5366,
+      "bytes": 536870912,
+      "bytes_per_second": 622171056572.7683,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 536870912,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 862899.2080688478
+    },
+    {
+      "bytes": 1073741824,
+      "bytes_per_second": 681981257078.6826,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 1073741824,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 1574444.7708129883,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 2147483648,
+      "aggregate_bytes_per_second": 1275167292066.8188,
+      "bytes": 1073741824,
+      "bytes_per_second": 637583646033.4094,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "requested_bytes": 1073741824,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 1684079.933166504
+    },
+    {
+      "bytes": 1073741824,
+      "bytes_per_second": 682723602817.84,
+      "cell": "unidirectional",
+      "direction": "0->1",
+      "dst": 1,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 1073741824,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 1572732.8300476074,
+      "token_bytes": 8
+    },
+    {
+      "aggregate_bytes": 2147483648,
+      "aggregate_bytes_per_second": 1275642329804.865,
+      "bytes": 1073741824,
+      "bytes_per_second": 637821164902.4325,
+      "cell": "bidirectional",
+      "direction": "bidirectional",
+      "dst": 1,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "requested_bytes": 1073741824,
+      "src": 0,
+      "status": "measured",
+      "time_ns": 1683452.7969360352
+    }
+  ],
+  "p3": [
+    {
+      "algbw_bytes_per_second": 444041.83499374887,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 444041.83499374887,
+      "busbw_factor": 1.0,
+      "bytes": 8,
+      "bytes_per_second": 444041.83499374887,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 8,
+      "status": "measured",
+      "time_ns": 18016.32046699524,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 981238.7226368703,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 981238.7226368703,
+      "busbw_factor": 1.0,
+      "bytes": 8,
+      "bytes_per_second": 981238.7226368703,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 8,
+      "status": "measured",
+      "time_ns": 8152.959942817689,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 53625592.699971765,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 53625592.699971765,
+      "busbw_factor": 1.0,
+      "bytes": 1024,
+      "bytes_per_second": 53625592.699971765,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 1024,
+      "status": "measured",
+      "time_ns": 19095.360040664673,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 124074286.7154715,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 124074286.7154715,
+      "busbw_factor": 1.0,
+      "bytes": 1024,
+      "bytes_per_second": 124074286.7154715,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 1024,
+      "status": "measured",
+      "time_ns": 8253.120183944702,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 109947686.67153819,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 109947686.67153819,
+      "busbw_factor": 1.0,
+      "bytes": 2048,
+      "bytes_per_second": 109947686.67153819,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 2048,
+      "status": "measured",
+      "time_ns": 18627.04038619995,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 244508120.54939884,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 244508120.54939884,
+      "busbw_factor": 1.0,
+      "bytes": 2048,
+      "bytes_per_second": 244508120.54939884,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 2048,
+      "status": "measured",
+      "time_ns": 8375.999927520752,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 223118965.63961247,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 223118965.63961247,
+      "busbw_factor": 1.0,
+      "bytes": 4096,
+      "bytes_per_second": 223118965.63961247,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 4096,
+      "status": "measured",
+      "time_ns": 18357.919454574585,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 479985002.002863,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 479985002.002863,
+      "busbw_factor": 1.0,
+      "bytes": 4096,
+      "bytes_per_second": 479985002.002863,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 4096,
+      "status": "measured",
+      "time_ns": 8533.599972724915,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 447482039.6063691,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 447482039.6063691,
+      "busbw_factor": 1.0,
+      "bytes": 8192,
+      "bytes_per_second": 447482039.6063691,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 8192,
+      "status": "measured",
+      "time_ns": 18306.879997253418,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 940467640.3655562,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 940467640.3655562,
+      "busbw_factor": 1.0,
+      "bytes": 8192,
+      "bytes_per_second": 940467640.3655562,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 8192,
+      "status": "measured",
+      "time_ns": 8710.560202598572,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 907761169.2295946,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 907761169.2295946,
+      "busbw_factor": 1.0,
+      "bytes": 16384,
+      "bytes_per_second": 907761169.2295946,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 16384,
+      "status": "measured",
+      "time_ns": 18048.800230026245,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 1599400190.9426525,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 1599400190.9426525,
+      "busbw_factor": 1.0,
+      "bytes": 16384,
+      "bytes_per_second": 1599400190.9426525,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 16384,
+      "status": "measured",
+      "time_ns": 10243.840217590332,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 1794114797.4869668,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 1794114797.4869668,
+      "busbw_factor": 1.0,
+      "bytes": 32768,
+      "bytes_per_second": 1794114797.4869668,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 32768,
+      "status": "measured",
+      "time_ns": 18264.16015625,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 3237739969.4315815,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 3237739969.4315815,
+      "busbw_factor": 1.0,
+      "bytes": 32768,
+      "bytes_per_second": 3237739969.4315815,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 32768,
+      "status": "measured",
+      "time_ns": 10120.63980102539,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 3612661905.2625823,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 3612661905.2625823,
+      "busbw_factor": 1.0,
+      "bytes": 65536,
+      "bytes_per_second": 3612661905.2625823,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 65536,
+      "status": "measured",
+      "time_ns": 18140.640258789062,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 5602363228.504604,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 5602363228.504604,
+      "busbw_factor": 1.0,
+      "bytes": 65536,
+      "bytes_per_second": 5602363228.504604,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 65536,
+      "status": "measured",
+      "time_ns": 11697.92056083679,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 7291305273.583858,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 7291305273.583858,
+      "busbw_factor": 1.0,
+      "bytes": 131072,
+      "bytes_per_second": 7291305273.583858,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 131072,
+      "status": "measured",
+      "time_ns": 17976.479530334473,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 11091554012.431892,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 11091554012.431892,
+      "busbw_factor": 1.0,
+      "bytes": 131072,
+      "bytes_per_second": 11091554012.431892,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 131072,
+      "status": "measured",
+      "time_ns": 11817.280054092407,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 13881451859.217432,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 13881451859.217432,
+      "busbw_factor": 1.0,
+      "bytes": 262144,
+      "bytes_per_second": 13881451859.217432,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 262144,
+      "status": "measured",
+      "time_ns": 18884.479999542236,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 21909308334.256588,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 21909308334.256588,
+      "busbw_factor": 1.0,
+      "bytes": 262144,
+      "bytes_per_second": 21909308334.256588,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 262144,
+      "status": "measured",
+      "time_ns": 11964.960098266602,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 28122693905.00449,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 28122693905.00449,
+      "busbw_factor": 1.0,
+      "bytes": 524288,
+      "bytes_per_second": 28122693905.00449,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 524288,
+      "status": "measured",
+      "time_ns": 18642.879724502563,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 41347112967.93639,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 41347112967.93639,
+      "busbw_factor": 1.0,
+      "bytes": 524288,
+      "bytes_per_second": 41347112967.93639,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 524288,
+      "status": "measured",
+      "time_ns": 12680.1598072052,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 55568181312.38325,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 55568181312.38325,
+      "busbw_factor": 1.0,
+      "bytes": 1048576,
+      "bytes_per_second": 55568181312.38325,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 1048576,
+      "status": "measured",
+      "time_ns": 18870.079517364502,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 73446149597.16933,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 73446149597.16933,
+      "busbw_factor": 1.0,
+      "bytes": 1048576,
+      "bytes_per_second": 73446149597.16933,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 1048576,
+      "status": "measured",
+      "time_ns": 14276.800155639648,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 90877073266.49438,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 90877073266.49438,
+      "busbw_factor": 1.0,
+      "bytes": 2097152,
+      "bytes_per_second": 90877073266.49438,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 2097152,
+      "status": "measured",
+      "time_ns": 23076.799511909485,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 106199964319.16942,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 106199964319.16942,
+      "busbw_factor": 1.0,
+      "bytes": 2097152,
+      "bytes_per_second": 106199964319.16942,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 2097152,
+      "status": "measured",
+      "time_ns": 19747.20060825348,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 104798912552.50221,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 104798912552.50221,
+      "busbw_factor": 1.0,
+      "bytes": 4194304,
+      "bytes_per_second": 104798912552.50221,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 4194304,
+      "status": "measured",
+      "time_ns": 40022.40002155304,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 108024893262.93654,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 108024893262.93654,
+      "busbw_factor": 1.0,
+      "bytes": 4194304,
+      "bytes_per_second": 108024893262.93654,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 4194304,
+      "status": "measured",
+      "time_ns": 38827.1987438202,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 187923576144.15976,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 187923576144.15976,
+      "busbw_factor": 1.0,
+      "bytes": 8388608,
+      "bytes_per_second": 187923576144.15976,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 8388608,
+      "status": "measured",
+      "time_ns": 44638.40126991272,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 194975081292.896,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 194975081292.896,
+      "busbw_factor": 1.0,
+      "bytes": 8388608,
+      "bytes_per_second": 194975081292.896,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 8388608,
+      "status": "measured",
+      "time_ns": 43024.00052547455,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 299063372126.8303,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 299063372126.8303,
+      "busbw_factor": 1.0,
+      "bytes": 16777216,
+      "bytes_per_second": 299063372126.8303,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 16777216,
+      "status": "measured",
+      "time_ns": 56099.20024871826,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 309487902851.8036,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 309487902851.8036,
+      "busbw_factor": 1.0,
+      "bytes": 16777216,
+      "bytes_per_second": 309487902851.8036,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 16777216,
+      "status": "measured",
+      "time_ns": 54209.60187911987,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 404855587414.8421,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 404855587414.8421,
+      "busbw_factor": 1.0,
+      "bytes": 33554432,
+      "bytes_per_second": 404855587414.8421,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 33554432,
+      "status": "measured",
+      "time_ns": 82880.00226020813,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 409280242825.31714,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 409280242825.31714,
+      "busbw_factor": 1.0,
+      "bytes": 33554432,
+      "bytes_per_second": 409280242825.31714,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 33554432,
+      "status": "measured",
+      "time_ns": 81984.00139808655,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 389841444675.37756,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 389841444675.37756,
+      "busbw_factor": 1.0,
+      "bytes": 67108864,
+      "bytes_per_second": 389841444675.37756,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 67108864,
+      "status": "measured",
+      "time_ns": 172143.99576187134,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 430560385092.347,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 430560385092.347,
+      "busbw_factor": 1.0,
+      "bytes": 67108864,
+      "bytes_per_second": 430560385092.347,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 67108864,
+      "status": "measured",
+      "time_ns": 155864.00032043457,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 460532951420.7534,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 460532951420.7534,
+      "busbw_factor": 1.0,
+      "bytes": 134217728,
+      "bytes_per_second": 460532951420.7534,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 134217728,
+      "status": "measured",
+      "time_ns": 291440.01007080084,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 463956294745.83527,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 463956294745.83527,
+      "busbw_factor": 1.0,
+      "bytes": 134217728,
+      "bytes_per_second": 463956294745.83527,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 134217728,
+      "status": "measured",
+      "time_ns": 289289.59369659424,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 504147319230.3825,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 504147319230.3825,
+      "busbw_factor": 1.0,
+      "bytes": 268435456,
+      "bytes_per_second": 504147319230.3825,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 268435456,
+      "status": "measured",
+      "time_ns": 532454.3952941895,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 507075962968.1948,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 507075962968.1948,
+      "busbw_factor": 1.0,
+      "bytes": 268435456,
+      "bytes_per_second": 507075962968.1948,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 268435456,
+      "status": "measured",
+      "time_ns": 529379.1770935059,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 546243584993.5119,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 546243584993.5119,
+      "busbw_factor": 1.0,
+      "bytes": 536870912,
+      "bytes_per_second": 546243584993.5119,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 536870912,
+      "status": "measured",
+      "time_ns": 982841.5870666504,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 546827562968.52936,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 546827562968.52936,
+      "busbw_factor": 1.0,
+      "bytes": 536870912,
+      "bytes_per_second": 546827562968.52936,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 536870912,
+      "status": "measured",
+      "time_ns": 981791.9731140137,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 569749572722.0054,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 569749572722.0054,
+      "busbw_factor": 1.0,
+      "bytes": 1073741824,
+      "bytes_per_second": 569749572722.0054,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_reduce",
+      "requested_bytes": 1073741824,
+      "status": "measured",
+      "time_ns": 1884585.5712890627,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 572399991073.9473,
+      "all_reduce_correct": true,
+      "busbw_bytes_per_second": 572399991073.9473,
+      "busbw_factor": 1.0,
+      "bytes": 1073741824,
+      "bytes_per_second": 572399991073.9473,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_reduce",
+      "requested_bytes": 1073741824,
+      "status": "measured",
+      "time_ns": 1875859.2605590823,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 498593.9724013052,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 249296.9862006526,
+      "busbw_factor": 0.5,
+      "bytes": 8,
+      "bytes_per_second": 498593.9724013052,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 8,
+      "status": "measured",
+      "time_ns": 16045.119762420652,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 1176138.5129403714,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 588069.2564701857,
+      "busbw_factor": 0.5,
+      "bytes": 8,
+      "bytes_per_second": 1176138.5129403714,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 8,
+      "status": "measured",
+      "time_ns": 6801.91993713379,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 62928328.6445633,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 31464164.32228165,
+      "busbw_factor": 0.5,
+      "bytes": 1024,
+      "bytes_per_second": 62928328.6445633,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 1024,
+      "status": "measured",
+      "time_ns": 16272.480487823485,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 150234747.37546292,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 75117373.68773146,
+      "busbw_factor": 0.5,
+      "bytes": 1024,
+      "bytes_per_second": 150234747.37546292,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 1024,
+      "status": "measured",
+      "time_ns": 6815.999746322632,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 118045243.71959136,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 59022621.85979568,
+      "busbw_factor": 0.5,
+      "bytes": 2048,
+      "bytes_per_second": 118045243.71959136,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 2048,
+      "status": "measured",
+      "time_ns": 17349.28011894226,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 294781456.5609277,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 147390728.28046384,
+      "busbw_factor": 0.5,
+      "bytes": 2048,
+      "bytes_per_second": 294781456.5609277,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 2048,
+      "status": "measured",
+      "time_ns": 6947.519779205323,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 243248895.26922604,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 121624447.63461302,
+      "busbw_factor": 0.5,
+      "bytes": 4096,
+      "bytes_per_second": 243248895.26922604,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 4096,
+      "status": "measured",
+      "time_ns": 16838.719844818115,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 571785948.8690333,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 285892974.43451667,
+      "busbw_factor": 0.5,
+      "bytes": 4096,
+      "bytes_per_second": 571785948.8690333,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 4096,
+      "status": "measured",
+      "time_ns": 7163.519859313965,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 501385655.59154326,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 250692827.79577163,
+      "busbw_factor": 0.5,
+      "bytes": 8192,
+      "bytes_per_second": 501385655.59154326,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 8192,
+      "status": "measured",
+      "time_ns": 16338.720321655273,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 1095421499.1655555,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 547710749.5827777,
+      "busbw_factor": 0.5,
+      "bytes": 8192,
+      "bytes_per_second": 1095421499.1655555,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 8192,
+      "status": "measured",
+      "time_ns": 7478.399872779847,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 1035776801.0003945,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 517888400.50019723,
+      "busbw_factor": 0.5,
+      "bytes": 16384,
+      "bytes_per_second": 1035776801.0003945,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 16384,
+      "status": "measured",
+      "time_ns": 15818.079710006712,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 1839675225.6744802,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 919837612.8372401,
+      "busbw_factor": 0.5,
+      "bytes": 16384,
+      "bytes_per_second": 1839675225.6744802,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 16384,
+      "status": "measured",
+      "time_ns": 8905.919790267944,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 2021857431.9567122,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 1010928715.9783561,
+      "busbw_factor": 0.5,
+      "bytes": 32768,
+      "bytes_per_second": 2021857431.9567122,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 32768,
+      "status": "measured",
+      "time_ns": 16206.879615783691,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 3700290937.6441445,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 1850145468.8220723,
+      "busbw_factor": 0.5,
+      "bytes": 32768,
+      "bytes_per_second": 3700290937.6441445,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 32768,
+      "status": "measured",
+      "time_ns": 8855.519890785217,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 4033957631.1471796,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 2016978815.5735898,
+      "busbw_factor": 0.5,
+      "bytes": 65536,
+      "bytes_per_second": 4033957631.1471796,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 65536,
+      "status": "measured",
+      "time_ns": 16246.080398559572,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 6395403011.85106,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 3197701505.92553,
+      "busbw_factor": 0.5,
+      "bytes": 65536,
+      "bytes_per_second": 6395403011.85106,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 65536,
+      "status": "measured",
+      "time_ns": 10247.360467910767,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 7975311017.708558,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 3987655508.854279,
+      "busbw_factor": 0.5,
+      "bytes": 131072,
+      "bytes_per_second": 7975311017.708558,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 131072,
+      "status": "measured",
+      "time_ns": 16434.719562530518,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 12776044499.16053,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 6388022249.580265,
+      "busbw_factor": 0.5,
+      "bytes": 131072,
+      "bytes_per_second": 12776044499.16053,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 131072,
+      "status": "measured",
+      "time_ns": 10259.20033454895,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 15416172351.06831,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 7708086175.534155,
+      "busbw_factor": 0.5,
+      "bytes": 262144,
+      "bytes_per_second": 15416172351.06831,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 262144,
+      "status": "measured",
+      "time_ns": 17004.480361938477,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 25072688999.23745,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 12536344499.618725,
+      "busbw_factor": 0.5,
+      "bytes": 262144,
+      "bytes_per_second": 25072688999.23745,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 262144,
+      "status": "measured",
+      "time_ns": 10455.360412597656,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 14264135099.53329,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 7132067549.766645,
+      "busbw_factor": 0.5,
+      "bytes": 524288,
+      "bytes_per_second": 14264135099.53329,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 524288,
+      "status": "measured",
+      "time_ns": 36755.68103790283,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 46668753309.1595,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 23334376654.57975,
+      "busbw_factor": 0.5,
+      "bytes": 524288,
+      "bytes_per_second": 46668753309.1595,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 524288,
+      "status": "measured",
+      "time_ns": 11234.240531921387,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 58705078324.05314,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 29352539162.02657,
+      "busbw_factor": 0.5,
+      "bytes": 1048576,
+      "bytes_per_second": 58705078324.05314,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 1048576,
+      "status": "measured",
+      "time_ns": 17861.759662628177,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 80265528831.25374,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 40132764415.62687,
+      "busbw_factor": 0.5,
+      "bytes": 1048576,
+      "bytes_per_second": 80265528831.25374,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 1048576,
+      "status": "measured",
+      "time_ns": 13063.839673995972,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 105194222507.71088,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 52597111253.85544,
+      "busbw_factor": 0.5,
+      "bytes": 2097152,
+      "bytes_per_second": 105194222507.71088,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 2097152,
+      "status": "measured",
+      "time_ns": 19935.99981069565,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 121610692422.82738,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 60805346211.41369,
+      "busbw_factor": 0.5,
+      "bytes": 2097152,
+      "bytes_per_second": 121610692422.82738,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 2097152,
+      "status": "measured",
+      "time_ns": 17244.799435138702,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 165735605133.97162,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 82867802566.98581,
+      "busbw_factor": 0.5,
+      "bytes": 4194304,
+      "bytes_per_second": 165735605133.97162,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 4194304,
+      "status": "measured",
+      "time_ns": 25307.199358940125,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 168613881882.54758,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 84306940941.27379,
+      "busbw_factor": 0.5,
+      "bytes": 4194304,
+      "bytes_per_second": 168613881882.54758,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 4194304,
+      "status": "measured",
+      "time_ns": 24875.199794769287,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 257432976383.346,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 128716488191.673,
+      "busbw_factor": 0.5,
+      "bytes": 8388608,
+      "bytes_per_second": 257432976383.346,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 8388608,
+      "status": "measured",
+      "time_ns": 32585.60001850128,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 263805965422.74704,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 131902982711.37352,
+      "busbw_factor": 0.5,
+      "bytes": 8388608,
+      "bytes_per_second": 263805965422.74704,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 8388608,
+      "status": "measured",
+      "time_ns": 31798.401474952698,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 417642888052.7876,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 208821444026.3938,
+      "busbw_factor": 0.5,
+      "bytes": 16777216,
+      "bytes_per_second": 417642888052.7876,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 16777216,
+      "status": "measured",
+      "time_ns": 40171.20003700256,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 430255631573.4456,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 215127815786.7228,
+      "busbw_factor": 0.5,
+      "bytes": 16777216,
+      "bytes_per_second": 430255631573.4456,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 16777216,
+      "status": "measured",
+      "time_ns": 38993.60001087189,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 569506856714.7256,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 284753428357.3628,
+      "busbw_factor": 0.5,
+      "bytes": 33554432,
+      "bytes_per_second": 569506856714.7256,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 33554432,
+      "status": "measured",
+      "time_ns": 58918.39861869812,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 583287557340.6189,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 291643778670.30945,
+      "busbw_factor": 0.5,
+      "bytes": 33554432,
+      "bytes_per_second": 583287557340.6189,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 33554432,
+      "status": "measured",
+      "time_ns": 57526.397705078125,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 655421467556.6195,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 327710733778.30975,
+      "busbw_factor": 0.5,
+      "bytes": 67108864,
+      "bytes_per_second": 655421467556.6195,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 67108864,
+      "status": "measured",
+      "time_ns": 102390.39659500122,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 663015735976.7502,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 331507867988.3751,
+      "busbw_factor": 0.5,
+      "bytes": 67108864,
+      "bytes_per_second": 663015735976.7502,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 67108864,
+      "status": "measured",
+      "time_ns": 101217.60368347168,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 726953544534.8823,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 363476772267.44116,
+      "busbw_factor": 0.5,
+      "bytes": 134217728,
+      "bytes_per_second": 726953544534.8823,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 134217728,
+      "status": "measured",
+      "time_ns": 184630.40590286255,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 735636310657.5762,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 367818155328.7881,
+      "busbw_factor": 0.5,
+      "bytes": 134217728,
+      "bytes_per_second": 735636310657.5762,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 134217728,
+      "status": "measured",
+      "time_ns": 182451.2004852295,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 793526606079.3235,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 396763303039.66174,
+      "busbw_factor": 0.5,
+      "bytes": 268435456,
+      "bytes_per_second": 793526606079.3235,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 268435456,
+      "status": "measured",
+      "time_ns": 338281.60762786865,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 798816161900.96,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 399408080950.48,
+      "busbw_factor": 0.5,
+      "bytes": 268435456,
+      "bytes_per_second": 798816161900.96,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 268435456,
+      "status": "measured",
+      "time_ns": 336041.59355163574,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 852106822253.2753,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 426053411126.63763,
+      "busbw_factor": 0.5,
+      "bytes": 536870912,
+      "bytes_per_second": 852106822253.2753,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 536870912,
+      "status": "measured",
+      "time_ns": 630051.1837005614,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 855452265883.1749,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 427726132941.58746,
+      "busbw_factor": 0.5,
+      "bytes": 536870912,
+      "bytes_per_second": 855452265883.1749,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 536870912,
+      "status": "measured",
+      "time_ns": 627587.2230529785,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 903779254401.4181,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 451889627200.70905,
+      "busbw_factor": 0.5,
+      "bytes": 1073741824,
+      "bytes_per_second": 903779254401.4181,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "op": "all_gather",
+      "requested_bytes": 1073741824,
+      "status": "measured",
+      "time_ns": 1188057.6133728027,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 905762704988.3596,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 452881352494.1798,
+      "busbw_factor": 0.5,
+      "bytes": 1073741824,
+      "bytes_per_second": 905762704988.3596,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "op": "all_gather",
+      "requested_bytes": 1073741824,
+      "status": "measured",
+      "time_ns": 1185455.9898376465,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 452157.22940633533,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 226078.61470316767,
+      "busbw_factor": 0.5,
+      "bytes": 8,
+      "bytes_per_second": 452157.22940633533,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 8,
+      "status": "measured",
+      "time_ns": 17692.960500717163,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 1213562.8020339229,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 606781.4010169614,
+      "busbw_factor": 0.5,
+      "bytes": 8,
+      "bytes_per_second": 1213562.8020339229,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 8,
+      "status": "measured",
+      "time_ns": 6592.159867286683,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 56725519.18278178,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 28362759.59139089,
+      "busbw_factor": 0.5,
+      "bytes": 1024,
+      "bytes_per_second": 56725519.18278178,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 1024,
+      "status": "measured",
+      "time_ns": 18051.84006690979,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 152857724.35645342,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 76428862.17822671,
+      "busbw_factor": 0.5,
+      "bytes": 1024,
+      "bytes_per_second": 152857724.35645342,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 1024,
+      "status": "measured",
+      "time_ns": 6699.039936065674,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 114278572.33180283,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 57139286.165901415,
+      "busbw_factor": 0.5,
+      "bytes": 2048,
+      "bytes_per_second": 114278572.33180283,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 2048,
+      "status": "measured",
+      "time_ns": 17921.11992835999,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 302400301.90974814,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 151200150.95487407,
+      "busbw_factor": 0.5,
+      "bytes": 2048,
+      "bytes_per_second": 302400301.90974814,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 2048,
+      "status": "measured",
+      "time_ns": 6772.480010986327,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 225942829.37418553,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 112971414.68709277,
+      "busbw_factor": 0.5,
+      "bytes": 4096,
+      "bytes_per_second": 225942829.37418553,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 4096,
+      "status": "measured",
+      "time_ns": 18128.479719161987,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 595736780.2643871,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 297868390.13219357,
+      "busbw_factor": 0.5,
+      "bytes": 4096,
+      "bytes_per_second": 595736780.2643871,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 4096,
+      "status": "measured",
+      "time_ns": 6875.519752502441,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 473364024.6388126,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 236682012.3194063,
+      "busbw_factor": 0.5,
+      "bytes": 8192,
+      "bytes_per_second": 473364024.6388126,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 8192,
+      "status": "measured",
+      "time_ns": 17305.920124053955,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 1130617167.2822697,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 565308583.6411349,
+      "busbw_factor": 0.5,
+      "bytes": 8192,
+      "bytes_per_second": 1130617167.2822697,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 8192,
+      "status": "measured",
+      "time_ns": 7245.60022354126,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 910691720.6333808,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 455345860.3166904,
+      "busbw_factor": 0.5,
+      "bytes": 16384,
+      "bytes_per_second": 910691720.6333808,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 16384,
+      "status": "measured",
+      "time_ns": 17990.72027206421,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 1877589924.3801181,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 938794962.1900591,
+      "busbw_factor": 0.5,
+      "bytes": 16384,
+      "bytes_per_second": 1877589924.3801181,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 16384,
+      "status": "measured",
+      "time_ns": 8726.08006000519,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 1868903059.8013418,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 934451529.9006709,
+      "busbw_factor": 0.5,
+      "bytes": 32768,
+      "bytes_per_second": 1868903059.8013418,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 32768,
+      "status": "measured",
+      "time_ns": 17533.27965736389,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 3752840208.777901,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 1876420104.3889506,
+      "busbw_factor": 0.5,
+      "bytes": 32768,
+      "bytes_per_second": 3752840208.777901,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 32768,
+      "status": "measured",
+      "time_ns": 8731.520175933838,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 2007764420.0078228,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 1003882210.0039114,
+      "busbw_factor": 0.5,
+      "bytes": 65536,
+      "bytes_per_second": 2007764420.0078228,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 65536,
+      "status": "measured",
+      "time_ns": 32641.279697418217,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 6496018994.383174,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 3248009497.191587,
+      "busbw_factor": 0.5,
+      "bytes": 65536,
+      "bytes_per_second": 6496018994.383174,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 65536,
+      "status": "measured",
+      "time_ns": 10088.640451431274,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 7135764004.614606,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 3567882002.307303,
+      "busbw_factor": 0.5,
+      "bytes": 131072,
+      "bytes_per_second": 7135764004.614606,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 131072,
+      "status": "measured",
+      "time_ns": 18368.32046508789,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 12997809697.481098,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 6498904848.740549,
+      "busbw_factor": 0.5,
+      "bytes": 131072,
+      "bytes_per_second": 12997809697.481098,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 131072,
+      "status": "measured",
+      "time_ns": 10084.160566329956,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 14755176405.709248,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 7377588202.854624,
+      "busbw_factor": 0.5,
+      "bytes": 262144,
+      "bytes_per_second": 14755176405.709248,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 262144,
+      "status": "measured",
+      "time_ns": 17766.239643096924,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 25679849070.321053,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 12839924535.160526,
+      "busbw_factor": 0.5,
+      "bytes": 262144,
+      "bytes_per_second": 25679849070.321053,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 262144,
+      "status": "measured",
+      "time_ns": 10208.159685134888,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 14570096300.440556,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 7285048150.220278,
+      "busbw_factor": 0.5,
+      "bytes": 524288,
+      "bytes_per_second": 14570096300.440556,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 524288,
+      "status": "measured",
+      "time_ns": 35983.83903503418,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 47440351627.705696,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 23720175813.852848,
+      "busbw_factor": 0.5,
+      "bytes": 524288,
+      "bytes_per_second": 47440351627.705696,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 524288,
+      "status": "measured",
+      "time_ns": 11051.520109176636,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 57843406889.39519,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 28921703444.697594,
+      "busbw_factor": 0.5,
+      "bytes": 1048576,
+      "bytes_per_second": 57843406889.39519,
+      "iterations": 200,
+      "method": "eager",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 1048576,
+      "status": "measured",
+      "time_ns": 18127.8395652771,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 85414518432.75533,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 42707259216.37766,
+      "busbw_factor": 0.5,
+      "bytes": 1048576,
+      "bytes_per_second": 85414518432.75533,
+      "iterations": 200,
+      "method": "graph",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 1048576,
+      "status": "measured",
+      "time_ns": 12276.320457458496,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 97061608638.5463,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 48530804319.27315,
+      "busbw_factor": 0.5,
+      "bytes": 2097152,
+      "bytes_per_second": 97061608638.5463,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 2097152,
+      "status": "measured",
+      "time_ns": 21606.40060901642,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 138818051161.91223,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 69409025580.95612,
+      "busbw_factor": 0.5,
+      "bytes": 2097152,
+      "bytes_per_second": 138818051161.91223,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 2097152,
+      "status": "measured",
+      "time_ns": 15107.199549674988,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 182908175384.08673,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 91454087692.04337,
+      "busbw_factor": 0.5,
+      "bytes": 4194304,
+      "bytes_per_second": 182908175384.08673,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 4194304,
+      "status": "measured",
+      "time_ns": 22931.2002658844,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 199500754917.47943,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 99750377458.73972,
+      "busbw_factor": 0.5,
+      "bytes": 4194304,
+      "bytes_per_second": 199500754917.47943,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 4194304,
+      "status": "measured",
+      "time_ns": 21024.000644683838,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 261986800378.98477,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 130993400189.49239,
+      "busbw_factor": 0.5,
+      "bytes": 8388608,
+      "bytes_per_second": 261986800378.98477,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 8388608,
+      "status": "measured",
+      "time_ns": 32019.20092105866,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 267603100964.4132,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 133801550482.2066,
+      "busbw_factor": 0.5,
+      "bytes": 8388608,
+      "bytes_per_second": 267603100964.4132,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 8388608,
+      "status": "measured",
+      "time_ns": 31347.200274467472,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 416481708000.0316,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 208240854000.0158,
+      "busbw_factor": 0.5,
+      "bytes": 16777216,
+      "bytes_per_second": 416481708000.0316,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 16777216,
+      "status": "measured",
+      "time_ns": 40283.20014476776,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 427675993811.22284,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 213837996905.61142,
+      "busbw_factor": 0.5,
+      "bytes": 16777216,
+      "bytes_per_second": 427675993811.22284,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 16777216,
+      "status": "measured",
+      "time_ns": 39228.79993915558,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 553922893593.575,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 276961446796.7875,
+      "busbw_factor": 0.5,
+      "bytes": 33554432,
+      "bytes_per_second": 553922893593.575,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 33554432,
+      "status": "measured",
+      "time_ns": 60575.997829437256,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 572413668604.3477,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 286206834302.1738,
+      "busbw_factor": 0.5,
+      "bytes": 33554432,
+      "bytes_per_second": 572413668604.3477,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 33554432,
+      "status": "measured",
+      "time_ns": 58619.20118331909,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 651198408090.5143,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 325599204045.25714,
+      "busbw_factor": 0.5,
+      "bytes": 67108864,
+      "bytes_per_second": 651198408090.5143,
+      "iterations": 20,
+      "method": "eager",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 67108864,
+      "status": "measured",
+      "time_ns": 103054.40425872803,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 653542361751.3845,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 326771180875.69226,
+      "busbw_factor": 0.5,
+      "bytes": 67108864,
+      "bytes_per_second": 653542361751.3845,
+      "iterations": 20,
+      "method": "graph",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 67108864,
+      "status": "measured",
+      "time_ns": 102684.79585647583,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 719842093038.4786,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 359921046519.2393,
+      "busbw_factor": 0.5,
+      "bytes": 134217728,
+      "bytes_per_second": 719842093038.4786,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 134217728,
+      "status": "measured",
+      "time_ns": 186454.40340042114,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 728190411972.9182,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 364095205986.4591,
+      "busbw_factor": 0.5,
+      "bytes": 134217728,
+      "bytes_per_second": 728190411972.9182,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 134217728,
+      "status": "measured",
+      "time_ns": 184316.8020248413,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 810736361563.1177,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 405368180781.55884,
+      "busbw_factor": 0.5,
+      "bytes": 268435456,
+      "bytes_per_second": 810736361563.1177,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 268435456,
+      "status": "measured",
+      "time_ns": 331100.79765319824,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 815171875983.3969,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 407585937991.6984,
+      "busbw_factor": 0.5,
+      "bytes": 268435456,
+      "bytes_per_second": 815171875983.3969,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 268435456,
+      "status": "measured",
+      "time_ns": 329299.2115020752,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 884165448220.7367,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 442082724110.36835,
+      "busbw_factor": 0.5,
+      "bytes": 536870912,
+      "bytes_per_second": 884165448220.7367,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 536870912,
+      "status": "measured",
+      "time_ns": 607206.3922882081,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 886389000841.8485,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 443194500420.92426,
+      "busbw_factor": 0.5,
+      "bytes": 536870912,
+      "bytes_per_second": 886389000841.8485,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 536870912,
+      "status": "measured",
+      "time_ns": 605683.183670044,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 909336654114.6248,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 454668327057.3124,
+      "busbw_factor": 0.5,
+      "bytes": 1073741824,
+      "bytes_per_second": 909336654114.6248,
+      "iterations": 10,
+      "method": "eager",
+      "of_record": true,
+      "op": "reduce_scatter",
+      "requested_bytes": 1073741824,
+      "status": "measured",
+      "time_ns": 1180796.8139648438,
+      "width": 2
+    },
+    {
+      "algbw_bytes_per_second": 910748431462.4934,
+      "all_reduce_correct": null,
+      "busbw_bytes_per_second": 455374215731.2467,
+      "busbw_factor": 0.5,
+      "bytes": 1073741824,
+      "bytes_per_second": 910748431462.4934,
+      "iterations": 10,
+      "method": "graph",
+      "of_record": false,
+      "op": "reduce_scatter",
+      "requested_bytes": 1073741824,
+      "status": "measured",
+      "time_ns": 1178966.4268493655,
+      "width": 2
+    }
+  ],
+  "peer_access": [
+    {
+      "can_access": true,
+      "dst": 1,
+      "src": 0
+    },
+    {
+      "can_access": true,
+      "dst": 0,
+      "src": 1
+    }
+  ],
+  "schema": "simllm-b200-nvlink-envelope-result-v1",
+  "stage": 1,
+  "study": "b200_nvlink_envelope_v1"
+}
